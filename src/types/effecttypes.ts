@@ -1,0 +1,1 @@
+../magical/effects/effecttypes.ts
