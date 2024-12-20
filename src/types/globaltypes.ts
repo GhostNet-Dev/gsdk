@@ -23,6 +23,8 @@ export enum EventTypes {
     Input = "input",
     CtrlObj = "ctrlObj",
     Equipment = "Equip",
+    Drop = "drop",
+    DirectDrop = "directdrop",
     BrickInfo = "bsize",
     TerrainInfo = "tsize",
     Attack = "attack",
@@ -31,5 +33,10 @@ export enum EventTypes {
     AppMode = "appmode",
     PlayMode = "playmode",
     PlayerStatus = "playerstatus",
-    Projectile = "Projectile"
+    Projectile = "Projectile",
+    AlarmWarning = "alarmwarning",
+    AlarmNormal = "alarmnormal",
+    AddInteractive = "addinter",
+    DelInteractive = "delinter",
+    UpdateBuff = "updatebuff",
 }

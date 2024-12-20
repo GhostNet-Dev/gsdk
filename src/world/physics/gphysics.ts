@@ -254,10 +254,6 @@ export class GPhysics {
 
     clock = new THREE.Clock()
     update() {
-        const delta = this.clock.getDelta()
-        this.objs.forEach(obj => {
-            obj.update(delta)
-        })
         this.movingBoxs.forEach((phy) => {
             const v = phy.model.BoxPos
             if(phy.box != undefined) {

@@ -1,16 +1,15 @@
 import * as THREE from "three";
 import { Loader } from "@Loader/loader"
-import { EventController } from "@Event/eventctrl"
-import { GPhysics } from "@Commons/physics/gphysics";
-import { Player } from "@Player/player";
-import { AttackOption, PlayerCtrl } from "@Player/playerctrl";
-import { Drop } from "@Inven/drop";
-import { MonDrop, MonsterDb  } from "./monsterdb";
-import { EffectType } from "@Effector/effector";
-import { IPhysicsObject } from "@Models/iobject";
 import { CreateMon } from "./createmon";
-import { MonsterId } from "./monsterid";
-import { DeckType } from "@Inven/items/deck";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { MonDrop, MonsterId } from "@Glibs/types/monstertypes";
+import { EffectType } from "@Glibs/types/effecttypes";
+import { AttackOption } from "@Glibs/types/playertypes";
+import { EventTypes } from "@Glibs/types/globaltypes";
+import { DeckType } from "@Glibs/types/inventypes";
+import IEventController, { ICanvas } from "@Glibs/interface/ievent";
+import { IGPhysic } from "@Glibs/interface/igphysics";
+import { MonsterDb } from "./monsterdb";
 
 export type MonsterSet = {
     monModel: IPhysicsObject,
@@ -47,7 +46,7 @@ export class Monsters {
     respawntimeout?:NodeJS.Timeout
     mode = false
     createMon = new CreateMon(this.loader, this.eventCtrl, this.player,
-        this.instanceBlock, this.meshBlock, this.gphysic, this.game, this.monDb)
+        this.instanceBlock, this.meshBlock, this.gphysic, this.canvas, this.game, this.monDb)
 
     get Enable() { return this.mode }
     set Enable(flag: boolean) { 
@@ -57,17 +56,16 @@ export class Monsters {
 
     constructor(
         private loader: Loader,
-        private eventCtrl: EventController,
+        private eventCtrl: IEventController,
         private game: THREE.Scene,
-        private player: Player,
-        private playerCtrl: PlayerCtrl,
+        private player: IPhysicsObject,
         private instanceBlock: (THREE.InstancedMesh | undefined)[],
         private meshBlock: THREE.Mesh[],
-        private gphysic: GPhysics,
-        private drop: Drop,
+        private gphysic: IGPhysic,
+        private canvas: ICanvas,
         private monDb: MonsterDb
     ) {
-        eventCtrl.RegisterAttackEvent("mon", (opts: AttackOption[]) => {
+        eventCtrl.RegisterEventListener(EventTypes.Attack + "mon", (opts: AttackOption[]) => {
             if (!this.mode) return
             opts.forEach((opt) => {
                 let obj = opt.obj as MonsterBox
@@ -82,9 +80,9 @@ export class Monsters {
                 this.ReceiveDemage(z, opt.damage, opt.effect)
             })
         })
-        eventCtrl.RegisterAttackEvent("monster", (opts: AttackOption[]) => {
+        eventCtrl.RegisterEventListener(EventTypes.Attack + "monster", (opts: AttackOption[]) => {
             if (!this.mode) return
-            const pos = this.player.CannonPos
+            const pos = this.player.Meshs.position
             const dist = opts[0].distance
             const damage = opts[0].damage
             const effect = opts[0].effect
@@ -93,7 +91,7 @@ export class Monsters {
                 for (let i = 0; i < mon.length; i++) {
                     const z = mon[i]
                     if (!z.live) continue
-                    const betw = z.monModel.CannonPos.distanceTo(pos)
+                    const betw = z.monModel.Meshs.position.distanceTo(pos)
                     if (betw < dist) {
                         this.ReceiveDemage(z, damage, effect)
                     }
@@ -105,11 +103,11 @@ export class Monsters {
         if (z && !z.monCtrl.ReceiveDemage(damage, effect)) {
             z.live = false
             z.deadtime = new Date().getTime()
-            this.drop.DropItem(
-                new THREE.Vector3(z.monModel.CannonPos.x, this.player.CenterPos.y, z.monModel.CannonPos.z), 
+            this.eventCtrl.SendEventMessage(EventTypes.Drop,
+                new THREE.Vector3(z.monModel.Meshs.position.x, this.player.CenterPos.y, z.monModel.Meshs.position.z), 
                 z.monCtrl.Drop
             )
-            this.playerCtrl.remove(z.monCtrl.MonsterBox)
+            this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, z.monCtrl.MonsterBox)
             this.respawntimeout = setTimeout(() => {
                 if(z.respawn) {
                     this.Spawning(z.monCtrl.MonsterBox.MonId, z.respawn, z, z.initPos)
@@ -160,7 +158,7 @@ export class Monsters {
             mon.forEach((z) => {
                 z.monModel.Visible = false
                 z.live = false
-                this.playerCtrl.remove(z.monCtrl.MonsterBox)
+                this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, z.monCtrl.MonsterBox)
                 this.game.remove(z.monModel.Meshs, z.monCtrl.MonsterBox)
             })
             console.log("Release", mon)
@@ -185,15 +183,15 @@ export class Monsters {
         mon.push(monSet)
 
         if(!pos) {
-            monSet.monModel.CannonPos.x = this.player.CannonPos.x + THREE.MathUtils.randInt(-20, 20)
-            monSet.monModel.CannonPos.z = this.player.CannonPos.z + THREE.MathUtils.randInt(-20, 20)
+            monSet.monModel.Meshs.position.x = this.player.Meshs.position.x + THREE.MathUtils.randInt(-20, 20)
+            monSet.monModel.Meshs.position.z = this.player.Meshs.position.z + THREE.MathUtils.randInt(-20, 20)
         } else {
-            monSet.monModel.CannonPos.copy(pos)
+            monSet.monModel.Meshs.position.copy(pos)
             monSet.initPos = pos
         }
 
         while (this.gphysic.Check(monSet.monModel)) {
-            monSet.monModel.CannonPos.y += 0.5
+            monSet.monModel.Meshs.position.y += 0.5
         }
         monSet.respawn = respawn
         monSet.live = true
@@ -202,7 +200,7 @@ export class Monsters {
         monSet.monModel.Visible = true
         console.log("Spawning", monSet, mon)
 
-        this.playerCtrl.add(monSet.monCtrl.MonsterBox)
+        this.eventCtrl.SendEventMessage(EventTypes.AddInteractive, monSet.monCtrl.MonsterBox)
         this.game.add(monSet.monModel.Meshs, monSet.monCtrl.MonsterBox)
     }
 }

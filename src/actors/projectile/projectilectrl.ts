@@ -1,8 +1,9 @@
 import * as THREE from "three";
-import { AttackType, PlayerCtrl } from "@Player/playerctrl";
-import { MonsterProperty } from "@Monsters/monsterdb";
-import { EventController } from "@Event/eventctrl";
 import { IProjectileModel } from "./projectile";
+import { AttackType } from "@Glibs/types/playertypes";
+import IEventController from "@Glibs/interface/ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
+import { MonsterProperty } from "@Glibs/types/monstertypes";
 
 
 
@@ -21,7 +22,7 @@ export class ProjectileCtrl {
     constructor(
         private projectile: IProjectileModel,
         private playerCtrl: PlayerCtrl,
-        private eventCtrl: EventController,
+        private eventCtrl: IEventController,
         private property: MonsterProperty,
     ){
     }
@@ -67,7 +68,7 @@ export class ProjectileCtrl {
         })
         if (msgs.size > 0) {
             msgs.forEach((v, k) => {
-                this.eventCtrl.OnAttackEvent(k, v)
+                this.eventCtrl.SendEventMessage(EventTypes.Attack + k, v)
             })
             return true
         }

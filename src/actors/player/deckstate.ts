@@ -1,9 +1,11 @@
 import * as THREE from "three";
 import { IPlayerAction, State } from "./playerstate"
-import { AttackType, PlayerCtrl } from "./playerctrl";
-import { ActionType, Player } from "./player";
-import { GPhysics } from "../../common/physics/gphysics";
-import { EventController } from "../../event/eventctrl";
+import { PlayerCtrl } from "./playerctrl";
+import { Player } from "./player";
+import { IGPhysic } from "@Glibs/interface/igphysics";
+import IEventController from "@Glibs/interface/ievent";
+import { ActionType, AttackType } from "./playertypes";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
 export class DeckState extends State implements IPlayerAction {
     next: IPlayerAction = this
@@ -11,7 +13,7 @@ export class DeckState extends State implements IPlayerAction {
     attackDir = new THREE.Vector3()
     raycast = new THREE.Raycaster()
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: GPhysics, private eventCtrl: EventController) {
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController) {
         super(playerPhy, player, gphysic)
     }
     Init(): void {
@@ -33,7 +35,7 @@ export class DeckState extends State implements IPlayerAction {
                     damage: 1,
                     obj: obj.object
                 }
-                this.eventCtrl.OnAttackEvent(k, [msg])
+                this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [msg])
             }
         } else {
             this.playerCtrl.IdleSt.Init()

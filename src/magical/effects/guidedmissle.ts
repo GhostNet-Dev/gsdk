@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { IEffect } from "./effector";
+import { IEffect } from "./ieffector";
 
 export class GuideMissle implements IEffect {
     process = false

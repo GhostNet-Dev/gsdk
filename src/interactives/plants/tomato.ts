@@ -1,16 +1,16 @@
 import * as THREE from "three";
-import { GhostModel } from "../models/ghostmodel";
-import { IAsset } from "../../loader/assetmodel";
-import { IPhysicsObject } from "../models/iobject";
-import { ProgressBar } from "../models/progressbar";
-import { FloatingName } from "../../common/floatingtxt";
 import { ITreeMotions } from "./treectrl";
+import { PhysicsObject } from "@Glibs/interface/iobject";
+import { ProgressBar } from "../../ux/progress/progressbar";
+import { IAsset } from "@Glibs/interface/iasset";
+import { FloatingName } from "../../ux/text/floatingtxt";
 
-export class Tomato extends GhostModel implements IPhysicsObject, ITreeMotions {
+export class Tomato extends PhysicsObject implements ITreeMotions {
     get BoxPos() { return this.asset.GetBoxPos(this.meshs) }
     gauge = new ProgressBar(0.1, 0.1, 2)
     gaugeEnable = false
     lv = 1
+    text: FloatingName
 
     constructor(
         private assets: IAsset[], 
@@ -20,6 +20,7 @@ export class Tomato extends GhostModel implements IPhysicsObject, ITreeMotions {
         this.text = new FloatingName("")
         this.text.SetText(this.meshName + "를 심어주세요")
         this.text.position.y = 7
+        this.meshs.add(this.text)
     }
 
     async Init() {

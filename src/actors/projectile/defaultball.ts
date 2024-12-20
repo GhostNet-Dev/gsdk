@@ -1,10 +1,10 @@
 import * as THREE from "three";
-import { GhostModel2 } from "@Models/ghostmodel";
 import { IProjectileModel } from "./projectile";
+import { GhostObject } from "@Glibs/interface/iobject";
 
-export class DefaultBall extends GhostModel2 implements IProjectileModel {
+export class DefaultBall extends GhostObject implements IProjectileModel {
     get BoxPos() {
-        const v = this.CannonPos
+        const v = this.Pos
         return new THREE.Vector3(v.x, v.y, v.z)
     }
     constructor(
@@ -18,11 +18,11 @@ export class DefaultBall extends GhostModel2 implements IProjectileModel {
         super(geometry, material)
     }
     create(position: THREE.Vector3): void {
-       this.CannonPos.copy(position) 
+       this.Pos.copy(position) 
        this.Visible = true
     }
     update(position: THREE.Vector3): void {
-       this.CannonPos.copy(position) 
+       this.Pos.copy(position) 
     }
     release(): void {
         this.Visible = false

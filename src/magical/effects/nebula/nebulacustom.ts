@@ -4,7 +4,7 @@ import {
   Emitter, Force, Rate, Span, RadialVelocity, Position, SphereZone, Vector3D,
   Color, Alpha, Scale, SpriteRenderer
 } from 'three-nebula';
-import { IEffect } from "../effector";
+import { IEffect } from "../ieffector";
 
 export class NebulaVfxCustom implements IEffect {
   processFlag = false

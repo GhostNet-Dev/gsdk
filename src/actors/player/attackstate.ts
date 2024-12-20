@@ -1,13 +1,16 @@
 import * as THREE from "three";
 import { IPlayerAction, State } from "./playerstate"
-import { AttackType, PlayerCtrl } from "./playerctrl";
-import { ActionType, Player } from "./player";
-import { GPhysics } from "../../common/physics/gphysics";
-import { EventController } from "../../event/eventctrl";
-import { AttackItemType } from "../../inventory/items/item";
+import { Player } from "./player";
 import { PlayerSpec } from "./playerspec";
-import { Bind } from "../../loader/assetmodel";
-import { MonsterId } from "../monsters/monsterid";
+import { AttackItemType } from "@Glibs/types/inventypes";
+import { PlayerCtrl } from "./playerctrl";
+import { MonsterId } from "@Glibs/types/monstertypes";
+import { AttackType } from "@Glibs/types/playertypes";
+import { IGPhysic } from "@Glibs/interface/igphysics";
+import IEventController from "@Glibs/interface/ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
+import { Bind } from "@Glibs/types/assettypes";
+import { ActionType } from "./playertypes";
 
 export class AttackState extends State implements IPlayerAction {
     raycast = new THREE.Raycaster()
@@ -22,8 +25,8 @@ export class AttackState extends State implements IPlayerAction {
     clock?: THREE.Clock
     meleeAttackMode = true
 
-    constructor(playerCtrl: PlayerCtrl, player: Player, gphysic: GPhysics, 
-        private eventCtrl: EventController, private spec: PlayerSpec
+    constructor(playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic, 
+        private eventCtrl: IEventController, private spec: PlayerSpec
     ) {
         super(playerCtrl, player, gphysic)
         this.raycast.params.Points.threshold = 20
@@ -78,7 +81,7 @@ export class AttackState extends State implements IPlayerAction {
         const startPos = new THREE.Vector3()
         this.player.Meshs.getWorldDirection(this.attackDir)
         this.player.GetItemPosition(startPos)
-        this.eventCtrl.OnProjectileEvent({
+        this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
             id: MonsterId.DefaultBullet, 
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
             src: startPos, 
@@ -109,7 +112,7 @@ export class AttackState extends State implements IPlayerAction {
                 }
             })
             msgs.forEach((v, k) => {
-                this.eventCtrl.OnAttackEvent(k, v)
+                this.eventCtrl.SendEventMessage(EventTypes.Attack + k, v)
             })
         }
         this.attackProcess = false
@@ -141,7 +144,7 @@ export class AttackState extends State implements IPlayerAction {
 }
 
 export class AttackIdleState extends State implements IPlayerAction {
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: GPhysics) {
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic) {
         super(playerPhy, player, gphysic)
     }
     Init(): void {

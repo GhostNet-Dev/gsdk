@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { IEffect } from "./effector";
+import { IEffect } from "./ieffector";
 import { Line2 } from "three/examples/jsm/lines/Line2"
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial"
 import { LineGeometry } from "three/examples/jsm/lines/LineGeometry"

@@ -1,38 +1,6 @@
-import { ItemId } from "../../inventory/items/itemdb"
-import { Char } from "../../loader/assetmodel"
-import { MadeBy } from "../furniture/furndb"
-import { MonDrop } from "../monsters/monsterdb"
-
-export class PlantId {
-    public static AppleTree = "appletree"
-    public static CoconutTree = "coconutree"
-    public static Tomato = "tomato"
-    public static Potato = "potato"
-    public static Carrot = "carrot"
-    public static List = [
-        this.AppleTree, this.CoconutTree, this.Tomato, this.Potato,
-        this.Carrot
-    ]
-}
-
-export enum PlantType {
-    Tree,
-    Vegetable,
-    Fruit,
-}
-
-export type PlantProperty = {
-    plantId: PlantId
-    type: PlantType
-    assetId: Char
-    name: string
-    namekr: string
-    maxLevel: number
-    levelUpTime: number
-    warteringTime: number
-    madeby?: MadeBy[]
-    drop?: MonDrop[]
-}
+import { Char } from "@Glibs/types/assettypes"
+import { ItemId } from "@Glibs/types/inventypes"
+import { PlantId, PlantProperty, PlantType } from "@Glibs/types/planttypes"
 
 export class PlantDb {
     plantDb = new Map<string, PlantProperty>()

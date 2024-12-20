@@ -1,16 +1,17 @@
 import * as THREE from "three";
-import { GPhysics } from "../../common/physics/gphysics"
-import { InvenFactory } from "../../inventory/invenfactory"
-import { IItem } from "../../inventory/items/item"
-import { ItemId } from "../../inventory/items/itemdb"
-import { ActionType, Player } from "./player"
-import { AttackOption, AttackType, PlayerCtrl } from "./playerctrl"
 import { IPlayerAction, State } from "./playerstate"
-import { EventController } from "../../event/eventctrl";
-import { Bind } from "../../loader/assetmodel";
-import { PlantBox, PlantState } from "../plants/farmer";
-import { FurnBox, FurnState } from "../furniture/carpenter";
-import { PlantType } from "../plants/plantdb";
+import { AttackOption, AttackType } from "@Glibs/types/playertypes";
+import { PlayerCtrl } from "./playerctrl";
+import { IGPhysic } from "@Glibs/interface/igphysics";
+import { ActionType } from "./playertypes";
+import { Player } from "./player";
+import IInventory, { IItem } from "@Glibs/interface/iinven";
+import { Bind } from "@Glibs/types/assettypes";
+import { ItemId } from "@Glibs/types/inventypes";
+import IEventController from "@Glibs/interface/ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
+import { FurnBox, FurnState } from "@Glibs/types/furntypes";
+import { PlantBox, PlantState, PlantType } from "@Glibs/types/planttypes";
 
 export class PickFruitState extends State implements IPlayerAction {
     next: IPlayerAction = this
@@ -22,7 +23,7 @@ export class PickFruitState extends State implements IPlayerAction {
     target?: string
     targetMsg?: AttackOption
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: GPhysics, private eventCtrl: EventController) {
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController) {
         super(playerPhy, player, gphysic)
     }
     Init(): void {
@@ -39,7 +40,7 @@ export class PickFruitState extends State implements IPlayerAction {
     Uninit(): void {
         if(!this.target || !this.targetMsg) return
         this.targetMsg.damage = 0
-        this.eventCtrl.OnAttackEvent(this.target, [this.targetMsg]) 
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + this.target, [this.targetMsg]) 
     }
     havest() {
         this.player.Meshs.getWorldDirection(this.attackDir)
@@ -66,7 +67,7 @@ export class PickFruitState extends State implements IPlayerAction {
                     damage: 1,
                     obj: obj.object
                 }
-                this.eventCtrl.OnAttackEvent(k, [msg])
+                this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [msg])
                 this.target = k
                 this.targetMsg = msg
             }
@@ -106,7 +107,7 @@ export class PickFruitTreeState extends State implements IPlayerAction {
     target?: string
     targetMsg?: AttackOption
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: GPhysics, private eventCtrl: EventController) {
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController) {
         super(playerPhy, player, gphysic)
     }
     Init(): void {
@@ -123,7 +124,7 @@ export class PickFruitTreeState extends State implements IPlayerAction {
     Uninit(): void {
         if(!this.target || !this.targetMsg) return
         this.targetMsg.damage = 0
-        this.eventCtrl.OnAttackEvent(this.target, [this.targetMsg]) 
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + this.target, [this.targetMsg]) 
     }
     havest() {
         this.player.Meshs.getWorldDirection(this.attackDir)
@@ -150,7 +151,7 @@ export class PickFruitTreeState extends State implements IPlayerAction {
                     damage: 1,
                     obj: obj.object
                 }
-                this.eventCtrl.OnAttackEvent(k, [msg])
+                this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [msg])
                 this.target = k
                 this.targetMsg = msg
             }
@@ -188,7 +189,7 @@ export class PlantAPlantState extends State implements IPlayerAction {
     targetMsg?: AttackOption
     trigger = false
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: GPhysics, private eventCtrl: EventController) {
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController) {
         super(playerPhy, player, gphysic)
     }
     Init(): void {
@@ -228,7 +229,7 @@ export class PlantAPlantState extends State implements IPlayerAction {
                     damage: 1,
                     obj: obj.object
                 }
-                this.eventCtrl.OnAttackEvent(k, [msg])
+                this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [msg])
                 this.target = k
                 this.targetMsg = msg
             }
@@ -240,7 +241,7 @@ export class PlantAPlantState extends State implements IPlayerAction {
     Uninit(): void {
         if(!this.target || !this.targetMsg) return
         this.targetMsg.damage = 0
-        this.eventCtrl.OnAttackEvent(this.target, [this.targetMsg])
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + this.target, [this.targetMsg])
     }
     Update(): IPlayerAction {
         const d = this.DefaultCheck()
@@ -270,9 +271,9 @@ export class WarteringState extends State implements IPlayerAction {
     constructor(
         playerPhy: PlayerCtrl, 
         player: Player, 
-        gphysic: GPhysics, 
-        private invenFab: InvenFactory, 
-        private eventCtrl: EventController
+        gphysic: IGPhysic, 
+        private inven: IInventory, 
+        private eventCtrl: IEventController
     ) {
         super(playerPhy, player, gphysic)
     }
@@ -284,7 +285,7 @@ export class WarteringState extends State implements IPlayerAction {
         if (id == undefined) return
         const mesh = this.player.Meshs.getObjectByName(id)
         if (!mesh) return 
-        const item = await this.invenFab.GetNewItem(ItemId.WarterCan)
+        const item = await this.inven.GetNewItem(ItemId.WarterCan)
         if (item && item.Mesh != undefined) {
             const find = mesh.getObjectById(item.Mesh.id)
             if(find) {
@@ -300,7 +301,7 @@ export class WarteringState extends State implements IPlayerAction {
         if (this.warteringCan && this.warteringCan.Mesh) this.warteringCan.Mesh.visible = false
         if (!this.target || !this.targetMsg) return
         this.targetMsg.damage = 0
-        this.eventCtrl.OnAttackEvent(this.target, [this.targetMsg])
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + this.target, [this.targetMsg])
     }
     wartering() {
         if(!this.trigger) return
@@ -317,7 +318,7 @@ export class WarteringState extends State implements IPlayerAction {
                     damage: 1,
                     obj: obj.object
                 }
-                this.eventCtrl.OnAttackEvent(k, [msg])
+                this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [msg])
                 this.target = k
                 this.targetMsg = msg
             })
@@ -352,7 +353,7 @@ export class DeleteState extends State implements IPlayerAction {
     attackSpeed = 2
     keytimeout?:NodeJS.Timeout
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: GPhysics, private eventCtrl: EventController) {
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController) {
         super(playerPhy, player, gphysic)
     }
     InitWithObj(obj: THREE.Intersection) {
@@ -362,7 +363,7 @@ export class DeleteState extends State implements IPlayerAction {
             damage: 1,
             obj: obj.object
         }
-        this.eventCtrl.OnAttackEvent(k, [msg])
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [msg])
         this.target = k
         this.targetMsg = msg
         this.Init()
@@ -386,7 +387,7 @@ export class DeleteState extends State implements IPlayerAction {
                     damage: 1,
                     obj: obj.object
                 }
-                this.eventCtrl.OnAttackEvent(k, [msg])
+                this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [msg])
                 this.target = k
                 this.targetMsg = msg
             }
@@ -400,7 +401,7 @@ export class DeleteState extends State implements IPlayerAction {
     Uninit(): void {
         if (!this.target || !this.targetMsg) return
         this.targetMsg.damage = 0
-        this.eventCtrl.OnAttackEvent(this.target, [this.targetMsg])
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + this.target, [this.targetMsg])
     }
     Update(delta: number): IPlayerAction {
         const d = this.DefaultCheck()
@@ -433,9 +434,9 @@ export class BuildingState extends State implements IPlayerAction {
     constructor(
         playerPhy: PlayerCtrl, 
         player: Player, 
-        gphysic: GPhysics, 
-        private invenFab: InvenFactory, 
-        private eventCtrl: EventController
+        gphysic: IGPhysic, 
+        private inven: IInventory, 
+        private eventCtrl: IEventController
     ) {
         super(playerPhy, player, gphysic)
     }
@@ -447,7 +448,7 @@ export class BuildingState extends State implements IPlayerAction {
         if (id == undefined) return
         const mesh = this.player.Meshs.getObjectByName(id)
         if (!mesh) return 
-        const item = await this.invenFab.GetNewItem(ItemId.Hammer)
+        const item = await this.inven.GetNewItem(ItemId.Hammer)
         if (item && item.Mesh != undefined) {
             const find = mesh.getObjectById(item.Mesh.id)
             if(find) {
@@ -463,7 +464,7 @@ export class BuildingState extends State implements IPlayerAction {
         if (this.hammer && this.hammer.Mesh) this.hammer.Mesh.visible = false
         if (!this.target || !this.targetMsg) return
         this.targetMsg.damage = 0
-        this.eventCtrl.OnAttackEvent(this.target, [this.targetMsg])
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + this.target, [this.targetMsg])
     }
     building() {
         if(!this.trigger) return
@@ -486,7 +487,7 @@ export class BuildingState extends State implements IPlayerAction {
                     damage: 1,
                     obj: obj.object
                 }
-                this.eventCtrl.OnAttackEvent(k, [msg])
+                this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [msg])
                 this.target = k
                 this.targetMsg = msg
             }

@@ -1,0 +1,1 @@
+../interactives/furniture/furntypes.ts

@@ -1,8 +1,7 @@
 import * as THREE from "three";
-import { FurnBox, FurnEntry, FurnState } from "./carpenter"
-import { IPhysicsObject } from "../models/iobject"
-import { FurnProperty } from "./furndb"
-import { GPhysics } from "../../common/physics/gphysics";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { FurnBox, FurnEntry, FurnProperty, FurnState } from "./furntypes";
+import { IGPhysic } from "@Glibs/interface/igphysics";
 
 
 export interface IFurnMotions {
@@ -31,11 +30,11 @@ export class FurnCtrl {
         private funi: IPhysicsObject, 
         private treeMotion: IFurnMotions,
         private property: FurnProperty,
-        private gphysic: GPhysics,
+        private gphysic: IGPhysic,
         private save: FurnEntry[],
         private saveEntry: FurnEntry,
     ) {
-        this.position = funi.CannonPos
+        this.position = funi.Meshs.position
         const size = funi.Size
         const geometry = new THREE.BoxGeometry(size.x , size.y, size.z)
         const material = new THREE.MeshBasicMaterial({ 
@@ -82,7 +81,7 @@ export class FurnCtrl {
             id: this.property.id, 
             createTime: this.lastBuildingTime, 
             state: this.saveEntry.state,
-            position: this.funi.CannonPos,
+            position: this.funi.Meshs.position,
             rotation: this.funi.Meshs.rotation
         })
         this.dom.style.display = "none"
@@ -107,17 +106,17 @@ export class FurnCtrl {
         this.checktime = 0
         if (this.gphysic.Check(this.funi)) {
             do {
-                this.funi.CannonPos.y += 0.2
+                this.funi.Meshs.position.y += 0.2
             } while (this.gphysic.Check(this.funi))
         } else {
             do {
-                this.funi.CannonPos.y -= 0.2
-            } while (!this.gphysic.Check(this.funi) && this.funi.CannonPos.y >= 0)
-            this.funi.CannonPos.y += 0.2
+                this.funi.Meshs.position.y -= 0.2
+            } while (!this.gphysic.Check(this.funi) && this.funi.Meshs.position.y >= 0)
+            this.funi.Meshs.position.y += 0.2
         }
-        this.saveEntry.position.x = this.funi.CannonPos.x
-        this.saveEntry.position.y = this.funi.CannonPos.y
-        this.saveEntry.position.z = this.funi.CannonPos.z
+        this.saveEntry.position.x = this.funi.Meshs.position.x
+        this.saveEntry.position.y = this.funi.Meshs.position.y
+        this.saveEntry.position.z = this.funi.Meshs.position.z
         this.phybox.position.copy(this.funi.BoxPos)
 
         switch(this.saveEntry.state) {

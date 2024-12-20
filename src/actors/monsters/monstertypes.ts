@@ -1,3 +1,5 @@
+import { Char } from "@Glibs/types/assettypes"
+
 export class MonsterId {
     public static Zombie = "Zombie"
     public static Minotaur = "Minataur"
@@ -33,3 +35,21 @@ export enum MonsterType {
     Wizard, Alien, Beast, Dinosaur,
     Lightning, Flame, Rock
 }
+
+export type MonDrop = {
+    itemId: string,
+    ratio: number
+}
+
+export type MonsterProperty = {
+    id: MonsterId
+    type: MonsterType
+    model: Char
+    health: number
+    speed: number
+    damageMin: number
+    damageMax: number
+    attackSpeed: number
+    drop?: MonDrop[]
+}
+

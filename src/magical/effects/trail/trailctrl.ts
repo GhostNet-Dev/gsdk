@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { IEffect } from "../effector";
+import { IEffect } from "../ieffector";
 import { TrailRenderer } from "./trailrenderer";
 
 enum TrailTypes {

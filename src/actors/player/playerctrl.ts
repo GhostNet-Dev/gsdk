@@ -2,9 +2,7 @@ import * as THREE from "three";
 import { Player } from "./player";
 import { DeadState, IPlayerAction, IdleState, JumpState, MagicH1State, MagicH2State, RunState } from "./playerstate";
 import { AttackIdleState, AttackState } from "./attackstate";
-import { Inventory } from "../../inventory/inventory";
 import { PlayerSpec } from "./playerspec";
-import { InvenFactory } from "../../inventory/invenfactory";
 import { BuildingState, DeleteState, PickFruitState, PickFruitTreeState, PlantAPlantState, WarteringState } from "./farmstate";
 import { DeckState } from "./deckstate";
 import { IBuffItem } from "@Glibs/interface/ibuff";
@@ -13,8 +11,9 @@ import IEventController, { IKeyCommand } from "@Glibs/interface/ievent";
 import { EventFlag, KeyType } from "@Glibs/types/eventtypes";
 import { AttackOption, AttackType } from "./playertypes";
 import { IGPhysic } from "@Glibs/interface/igphysics";
+import IInventory from "@Glibs/interface/iinven";
 
-export class PlayerCtrl implements IGPhysic {
+export class PlayerCtrl {
     mode: AppMode = AppMode.Play
     keyDownQueue: IKeyCommand[] = []
     keyUpQueue: IKeyCommand[] = []
@@ -41,8 +40,8 @@ export class PlayerCtrl implements IGPhysic {
     PickFruitTreeSt = new PickFruitTreeState(this, this.player, this.gphysic, this.eventCtrl)
     PlantASt = new PlantAPlantState(this, this.player, this.gphysic, this.eventCtrl)
     DeckSt = new DeckState(this, this.player, this.gphysic, this.eventCtrl)
-    WarteringSt = new WarteringState(this, this.player, this.gphysic, this.invenFab, this.eventCtrl)
-    BuildingSt = new BuildingState(this, this.player, this.gphysic, this.invenFab, this.eventCtrl)
+    WarteringSt = new WarteringState(this, this.player, this.gphysic, this.inventory, this.eventCtrl)
+    BuildingSt = new BuildingState(this, this.player, this.gphysic, this.inventory, this.eventCtrl)
     DeleteSt = new DeleteState(this, this.player, this.gphysic, this.eventCtrl)
     currentState: IPlayerAction = this.IdleSt
 
@@ -58,12 +57,10 @@ export class PlayerCtrl implements IGPhysic {
 
     constructor(
         private player: Player,
-        public inventory: Inventory,
-        public invenFab: InvenFactory,
-        private gphysic: GPhysics,
+        public inventory: IInventory,
+        private gphysic: IGPhysic,
         private eventCtrl: IEventController
     ) {
-        gphysic.Register(this)
         this.worker.onmessage = (e: any) => { console.log(e) }
 
         eventCtrl.RegisterEventListener(EventTypes.AppMode, (mode: AppMode, e: EventFlag) => {
@@ -73,7 +70,7 @@ export class PlayerCtrl implements IGPhysic {
                     case EventFlag.Start:
                         this.playEnable = true
                         while (this.gphysic.Check(player)) {
-                            player.CannonPos.y += 0.2
+                            player.Pos.y += 0.2
                         }
                         this.currentState = this.IdleSt
                         this.currentState.Init()
@@ -149,7 +146,15 @@ export class PlayerCtrl implements IGPhysic {
             })
             eventCtrl.SendEventMessage(EventTypes.PlayerStatus, this.spec.Status)
         })
-
+        eventCtrl.RegisterEventListener(EventTypes.AddInteractive, (obj: THREE.Object3D[]) => {
+            this.add(...obj)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.DelInteractive, (obj: THREE.Object3D) => {
+            this.remove(obj)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.UpdateBuff, (buff: IBuffItem[]) => {
+            this.UpdateBuff(buff)
+        })
     }
     add(...obj: THREE.Object3D[]) {
         this.targets.push(...obj)
@@ -180,7 +185,7 @@ export class PlayerCtrl implements IGPhysic {
         this.updateDownKey()
         this.updateUpKey()
 
-        if (!this.player.Visible) return
+        if (!this.player.meshs.visible) return
 
         this.currentState = this.currentState.Update(delta, this.moveDirection)
         this.player.Update()

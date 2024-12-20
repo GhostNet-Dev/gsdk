@@ -17,7 +17,7 @@ import {
     ApplyCollision,
     Gradient,
 } from 'three.quarks';
-import { IEffect } from "../effector";
+import { IEffect } from "../ieffector";
 
 export class Trail implements IEffect {
     totalTime = 0;

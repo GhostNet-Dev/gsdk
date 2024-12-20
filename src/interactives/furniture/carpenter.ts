@@ -1,36 +1,19 @@
 import * as THREE from "three";
-import { AppMode } from "../../app";
-import { EventController, EventFlag } from "../../event/eventctrl";
-import { IKeyCommand, KeyType } from "../../event/keycommand";
-import { GPhysics } from "../../common/physics/gphysics";
-import { IPhysicsObject } from "../models/iobject";
-import { IModelReload, ModelStore } from "../../common/modelstore";
-import SConf from "../../configs/staticconf";
-import { Loader } from "../../loader/loader";
-import { Game } from "../game";
-import { Player } from "../player/player";
-import { IViewer } from "../models/iviewer";
-import { Canvas } from "../../common/canvas";
-import { AttackOption, AttackType, PlayerCtrl } from "../player/playerctrl";
 import { FurnCtrl } from "./furnctrl";
-import { FurnDb, FurnId, FurnProperty } from "./furndb";
 import { FurnModel } from "./bed";
-import { Inventory, InventorySlot } from "../../inventory/inventory";
-import { Alarm, AlarmType } from "../../common/alarm";
-
-export enum FurnState {
-    NeedBuilding,
-    Building,
-    Suspend,
-    Done,
-}
-export type FurnEntry = {
-    id: FurnId
-    createTime: number // ms, 0.001 sec
-    state: FurnState
-    position: THREE.Vector3
-    rotation: THREE.Euler
-}
+import { FurnId } from "@Glibs/types/furntypes";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
+import IEventController, { IKeyCommand, ILoop } from "@Glibs/interface/ievent";
+import { Canvas } from "@Glibs/systems/event/canvas";
+import { Loader } from "@Glibs/loader/loader";
+import { IGPhysic } from "@Glibs/interface/igphysics";
+import { FurnDb } from "./furndb";
+import IInventory from "@Glibs/interface/iinven";
+import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
+import { EventFlag, KeyType } from "@Glibs/types/eventtypes";
+import { FurnBox, FurnEntry, FurnProperty, FurnState } from "./furntypes";
+import { InventorySlot } from "@Glibs/types/inventypes";
+import { AttackOption, AttackType } from "@Glibs/types/playertypes";
 
 export type FurnSet = {
     id: FurnId
@@ -38,41 +21,28 @@ export type FurnSet = {
     furnCtrl: FurnCtrl
     used: boolean
 }
-export class FurnBox extends THREE.Mesh {
-    constructor(public Id: number, public ObjName: string,
-        geo: THREE.BoxGeometry, mat: THREE.MeshBasicMaterial, public ctrl: FurnCtrl
-    ) {
-        super(geo, mat)
-        this.name = ObjName
-    }
-}
 
-export class Carpenter implements IModelReload, IViewer {
+export class Carpenter implements ILoop {
     controllable = false
     target?: IPhysicsObject
     targetId?: string
     furnFab = new Map<string, IPhysicsObject>()
     furnitures: FurnSet[] = []
-    saveData = this.store.Furn
+    private saveData: FurnEntry[] = []
 
     constructor(
         private loader: Loader,
-        private player: Player,
-        private playerCtrl: PlayerCtrl,
-        private game: Game,
-        private store: ModelStore,
-        private gphysic: GPhysics,
+        private player: IPhysicsObject,
+        private game: THREE.Scene,
+        private gphysic: IGPhysic,
         canvas: Canvas,
-        private eventCtrl: EventController,
+        private eventCtrl: IEventController,
         private furnDb: FurnDb,
-        private alarm: Alarm,
-        private inven: Inventory,
+        private inven: IInventory,
     ){
-        canvas.RegisterViewer(this)
-        store.RegisterStore(this)
+        canvas.RegisterLoop(this)
 
-
-        eventCtrl.RegisterAppModeEvent((mode: AppMode, e: EventFlag, id: string) => {
+        eventCtrl.RegisterEventListener(EventTypes.AppMode, (mode: AppMode, e: EventFlag, id: string) => {
             if(mode != AppMode.Furniture) return
 
             switch (e) {
@@ -83,8 +53,8 @@ export class Carpenter implements IModelReload, IViewer {
                     this.controllable = true
                     this.game.add(this.target.Meshs)
                     this.target.Visible = true
-                    this.CopyPosition(this.target.CannonPos, this.player.CannonPos)
-                    this.eventCtrl.OnChangeCtrlObjEvent(this.target)
+                    this.CopyPosition(this.target.Pos, this.player.Pos)
+                    this.eventCtrl.SendEventMessage(EventTypes.CtrlObj, this.target)
                     this.CheckCollision()
                     console.log(id)
                     break
@@ -97,7 +67,7 @@ export class Carpenter implements IModelReload, IViewer {
             }
         })
 
-        eventCtrl.RegisterKeyDownEvent((keyCommand: IKeyCommand) => {
+        eventCtrl.RegisterEventListener(EventTypes.KeyDown, (keyCommand: IKeyCommand) => {
             if(!this.controllable) return
             switch(keyCommand.Type) {
                 case KeyType.Action0:
@@ -106,13 +76,13 @@ export class Carpenter implements IModelReload, IViewer {
                         !this.CheckMaterial(this.targetId)) return
                     const e: FurnEntry = {
                         id: this.targetId,
-                        position: new THREE.Vector3().copy(this.target.CannonPos), 
+                        position: new THREE.Vector3().copy(this.target.Pos), 
                         rotation: new THREE.Euler().copy(this.target.Meshs.rotation),
                         state: FurnState.NeedBuilding,
                         createTime: 0
                     }
                     this.CreateFurn(e)
-                    eventCtrl.OnAppModeEvent(AppMode.EditPlay)
+                    eventCtrl.SendEventMessage(EventTypes.AppMode, AppMode.EditPlay)
                     break;
                 case KeyType.Action1:
                     if (!this.target || !this.targetId) return
@@ -125,7 +95,7 @@ export class Carpenter implements IModelReload, IViewer {
             }
         })
 
-        eventCtrl.RegisterAttackEvent("furniture", (opts: AttackOption[]) => {
+        eventCtrl.RegisterEventListener(EventTypes.Attack + "furniture", (opts: AttackOption[]) => {
             opts.forEach((opt) => {
                 let obj = opt.obj as FurnBox
                 if (obj == null) return
@@ -157,13 +127,13 @@ export class Carpenter implements IModelReload, IViewer {
         if(!this.target) return
         if (this.gphysic.Check(this.target)) {
             do {
-                this.target.CannonPos.y += 0.5
+                this.target.Pos.y += 0.5
             } while (this.gphysic.Check(this.target))
         } else {
             do {
-                this.target.CannonPos.y -= 0.5
-            } while (!this.gphysic.Check(this.target) && this.target.CannonPos.y >= 0)
-            this.target.CannonPos.y += 0.5
+                this.target.Pos.y -= 0.5
+            } while (!this.gphysic.Check(this.target) && this.target.Pos.y >= 0)
+            this.target.Pos.y += 0.5
         }
     }
 
@@ -172,7 +142,7 @@ export class Carpenter implements IModelReload, IViewer {
     }
     async Reload(): Promise<void> {
         this.ReleaseAllFurnPool()
-        this.saveData = this.store.Furn
+        //this.saveData = this.store.Furn
         if (this.saveData) this.saveData.forEach((e) => {
             this.CreateFurn(e)
         })
@@ -192,7 +162,7 @@ export class Carpenter implements IModelReload, IViewer {
             else {
                 const info = this.inven.GetItemInfo(e.itemId)
                 const name = info.namekr ?? info.name
-                this.alarm.NotifyInfo(name + "이 부족합니다.", AlarmType.Normal)
+                this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, name + "이 부족합니다.")
                 return true
             }
         })
@@ -216,16 +186,18 @@ export class Carpenter implements IModelReload, IViewer {
         //if (!furnset) furnset = await this.NewFurnEntryPool(furnEntry, property)
         const furnset = await this.NewFurnEntryPool(furnEntry, property)
 
-        this.playerCtrl.add(furnset.furnCtrl.phybox)
+        this.eventCtrl.SendEventMessage(EventTypes.AddInteractive, furnset.furnCtrl.phybox)
         this.game.add(furnset.furn.Meshs, furnset.furnCtrl.phybox)
     }
     DeleteFurn(id: number) {
         const furnset = this.furnitures[id];
         if(!furnset.used) return
         furnset.used = false
-        const idx = this.saveData.findIndex((item) => item.position.x == furnset.furn.CannonPos.x && item.position.z == furnset.furn.CannonPos.z)
+        /*
+        const idx = this.saveData.findIndex((item) => item.position.x == furnset.furn.Pos.x && item.position.z == furnset.furn.Pos.z)
         if (idx > -1) this.saveData.splice(idx, 1)
-        this.playerCtrl.remove(furnset.furnCtrl.phybox)
+        */
+        this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, furnset.furnCtrl.phybox)
         this.game.remove(furnset.furn.Meshs, furnset.furnCtrl.phybox)
     }
     
@@ -246,14 +218,14 @@ export class Carpenter implements IModelReload, IViewer {
         /*
         if (this.gphysic.Check(this.target)) {
             do {
-                this.target.CannonPos.y += 0.2
+                this.target.Pos.y += 0.2
             } while (this.gphysic.Check(this.target))
         } else {
             */
             do {
-                this.target.CannonPos.y -= 0.2
-            } while (!this.gphysic.Check(this.target) && this.target.CannonPos.y >= 0)
-            this.target.CannonPos.y += 0.2
+                this.target.Pos.y -= 0.2
+            } while (!this.gphysic.Check(this.target) && this.target.Pos.y >= 0)
+            this.target.Pos.y += 0.2
         //}
     }
     allocPos = 0
@@ -263,7 +235,7 @@ export class Carpenter implements IModelReload, IViewer {
             const e = this.furnitures[this.allocPos]
             if(e.id == property.id && e.used == false) {
                 e.used = true
-                e.furn.CannonPos.copy(furnEntry.position)
+                e.furn.Pos.copy(furnEntry.position)
                 e.furn.Meshs.rotation.copy(furnEntry.rotation)
                 e.furnCtrl.phybox.position.copy(e.furn.BoxPos)
                 return e
@@ -273,7 +245,7 @@ export class Carpenter implements IModelReload, IViewer {
     ReleaseAllFurnPool() {
         this.furnitures.forEach((set) => {
             set.used = false
-            this.playerCtrl.remove(set.furnCtrl.phybox)
+            this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, set.furnCtrl.phybox)
             this.game.remove(set.furn.Meshs, set.furnCtrl.phybox)
         })
         this.furnitures.length = 0
@@ -298,8 +270,7 @@ export class Carpenter implements IModelReload, IViewer {
             await this.allocModel(id, this.getModel(id))
         })
     }
-    async allocModel(id: string, model: FurnModel) {
-        const p = SConf.DefaultPortalPosition
+    async allocModel(id: string, model: FurnModel, p = new THREE.Vector3) {
         this.furnFab.set(id, model);
         await model.MassLoader(p);
     }

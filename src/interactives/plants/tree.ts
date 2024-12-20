@@ -1,9 +1,8 @@
+import { IAsset } from "@Glibs/interface/iasset";
+import { PhysicsObject } from "@Glibs/interface/iobject";
 import * as THREE from "three";
-import { IPhysicsObject } from "../models/iobject";
-import { GhostModel } from "../models/ghostmodel";
-import { IAsset } from "../../loader/assetmodel";
 
-export class Tree extends GhostModel implements IPhysicsObject {
+export class Tree extends PhysicsObject {
     constructor(asset: IAsset) {
         super(asset)
     }

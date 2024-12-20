@@ -1,33 +1,20 @@
 import * as THREE from "three";
-import { AppMode } from "../../app";
-import { EventController, EventFlag } from "../../event/eventctrl";
-import { IKeyCommand, KeyType } from "../../event/keycommand";
-import { GPhysics } from "../../common/physics/gphysics";
-import { IPhysicsObject } from "../models/iobject";
-import { IModelReload, ModelStore } from "../../common/modelstore";
-import SConf from "../../configs/staticconf";
-import { AppleTree } from "./appletree";
-import { Loader } from "../../loader/loader";
-import { Game } from "../game";
-import { Player } from "../player/player";
-import { PlantDb, PlantId, PlantProperty} from "./plantdb";
-import { IViewer } from "../models/iviewer";
-import { Canvas } from "../../common/canvas";
-import { TreeCtrl } from "./treectrl";
-import { AttackOption, AttackType, PlayerCtrl } from "../player/playerctrl";
-import { Alarm, AlarmType } from "../../common/alarm";
 import { Tomato } from "./tomato";
-import { Drop } from "../../inventory/drop";
+import { PlantId, PlantProperty } from "@Glibs/types/planttypes";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { TreeCtrl } from "./treectrl";
+import IEventController, { IKeyCommand, ILoop } from "@Glibs/interface/ievent";
+import { Loader } from "@Glibs/loader/loader";
+import { IGPhysic } from "@Glibs/interface/igphysics";
+import { Canvas } from "@Glibs/systems/event/canvas";
+import { PlantDb } from "./plantdb";
+import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
+import { EventFlag, KeyType } from "@Glibs/types/eventtypes";
+import { AttackOption, AttackType } from "@Glibs/types/playertypes";
+import { AppleTree } from "./appletree";
+import { PlantBox, PlantState } from "./planttypes";
 
-export enum PlantState {
-    NeedSeed,
-    Seeding,
-    Enough,
-    NeedWartering,
-    Wartering,
-    Death,
-    Delete,
-}
+
 export type PlantEntry = {
     id: string
     createTime: number // ms, 0.001 sec
@@ -44,16 +31,9 @@ export type PlantSet = {
     plantCtrl: TreeCtrl
     used: boolean
 }
-export class PlantBox extends THREE.Mesh {
-    constructor(public Id: number, public ObjName: string,
-        geo: THREE.BoxGeometry, mat: THREE.MeshBasicMaterial, public ctrl: TreeCtrl
-    ) {
-        super(geo, mat)
-        this.name = ObjName
-    }
-}
 
-export class Farmer implements IModelReload, IViewer {
+
+export class Farmer implements ILoop {
     controllable = false
     target?: IPhysicsObject
     targetId?: string
@@ -61,25 +41,19 @@ export class Farmer implements IModelReload, IViewer {
     plantsFab = new Map<string, IPhysicsObject>()
     plantset: PlantSet[] = []
     recycle: PlantSet[] = []
-    saveData = this.store.Plants
 
     constructor(
         private loader: Loader,
-        private player: Player,
-        private playerCtrl: PlayerCtrl,
-        private game: Game,
-        private store: ModelStore,
-        private gphysic: GPhysics,
+        private player: IPhysicsObject,
+        private game: THREE.Scene,
+        private gphysic: IGPhysic,
         canvas: Canvas,
-        private eventCtrl: EventController,
-        private alarm: Alarm,
-        private drop: Drop,
+        private eventCtrl: IEventController,
         private plantDb: PlantDb,
     ){
-        canvas.RegisterViewer(this)
-        store.RegisterStore(this)
+        canvas.RegisterLoop(this)
 
-        eventCtrl.RegisterAppModeEvent((mode: AppMode, e: EventFlag, id: string) => {
+        eventCtrl.RegisterEventListener(EventTypes.AppMode, (mode: AppMode, e: EventFlag, id: string) => {
             if(mode != AppMode.Farmer) return
 
             switch (e) {
@@ -90,10 +64,10 @@ export class Farmer implements IModelReload, IViewer {
                     this.controllable = true
                     this.game.add(this.target.Meshs)
                     this.target.Visible = true
-                    this.target.CannonPos.x = this.player.CannonPos.x
-                    this.target.CannonPos.z = this.player.CannonPos.z
+                    this.target.Pos.x = this.player.Pos.x
+                    this.target.Pos.z = this.player.Pos.z
 
-                    this.eventCtrl.OnChangeCtrlObjEvent(this.target)
+                    this.eventCtrl.SendEventMessage(EventTypes.CtrlObj, this.target)
                     this.CheckCollision()
                     break
                 case EventFlag.End:
@@ -105,13 +79,13 @@ export class Farmer implements IModelReload, IViewer {
             }
         })
 
-        eventCtrl.RegisterKeyDownEvent((keyCommand: IKeyCommand) => {
+        eventCtrl.RegisterEventListener(EventTypes.KeyDown, (keyCommand: IKeyCommand) => {
             if(!this.controllable) return
             switch(keyCommand.Type) {
                 case KeyType.Action0:
                     if (!this.target || !this.targetId || this.CheckPlantAPlant()) return
                     const e: PlantEntry = {
-                        position: new THREE.Vector3().copy(this.target.CannonPos), 
+                        position: new THREE.Vector3().copy(this.target.Pos), 
                         id: this.targetId, 
                         state: PlantState.NeedSeed,
                         lastWarteringTime: 0,
@@ -119,9 +93,8 @@ export class Farmer implements IModelReload, IViewer {
                         createTime: 0,
                         lastHarvestTime: 0,
                     }
-                    this.saveData.push(e)
                     this.CreatePlant(e)
-                    eventCtrl.OnAppModeEvent(AppMode.EditPlay)
+                    eventCtrl.SendEventMessage(EventTypes.AppMode, AppMode.EditPlay)
                     break;
                 default:
                     const position = keyCommand.ExecuteKeyDown()
@@ -130,7 +103,7 @@ export class Farmer implements IModelReload, IViewer {
             }
         })
 
-        eventCtrl.RegisterAttackEvent("farmtree", (opts: AttackOption[]) => {
+        eventCtrl.RegisterEventListener(EventTypes.Attack + "farmtree", (opts: AttackOption[]) => {
             opts.forEach((opt) => {
                 let obj = opt.obj as PlantBox
                 if (obj == null) return
@@ -167,10 +140,12 @@ export class Farmer implements IModelReload, IViewer {
     }
     async Reload(): Promise<void> {
         this.ReleaseAllPlantPool()
+        /*
         this.saveData = this.store.Plants
         if (this.saveData) this.saveData.forEach((e) => {
             this.CreatePlant(e)
         })
+        */
     }
     async Cityload(): Promise<void> {
         this.ReleaseAllPlantPool()
@@ -182,26 +157,28 @@ export class Farmer implements IModelReload, IViewer {
             return e.plant.Box.intersectsBox(obj.Box)
         })
         if(ret) {
-            this.alarm.NotifyInfo("다른 식물과 가깝습니다.", AlarmType.Normal)
+            this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, "다른 식물과 가깝습니다.")
             return true
         }
-        if(obj.CannonPos.y > 0.1){
-            this.alarm.NotifyInfo("지면에 심어야합니다.", AlarmType.Normal)
+        if(obj.Pos.y > 0.1){
+            this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, "지면에 심어야합니다.")
             return true
         } 
         return false
     }
     HavestPlant(id: number) {
         const plantset = this.plantset[id];
-        this.drop.DirectItem(plantset.plantCtrl.Drop)
+        this.eventCtrl.SendEventMessage(EventTypes.DirectDrop, plantset.plantCtrl.Drop)
     }
     DeletePlant(id: number) {
         const plantset = this.plantset[id];
         if(!plantset.used) return
         plantset.used = false
-        const idx = this.saveData.findIndex((item) => item.position.x == plantset.plant.CannonPos.x && item.position.z == plantset.plant.CannonPos.z)
+        /*
+        const idx = this.saveData.findIndex((item) => item.position.x == plantset.plant.Pos.x && item.position.z == plantset.plant.Pos.z)
         if (idx > -1) this.saveData.splice(idx, 1)
-        this.playerCtrl.remove(plantset.plantCtrl.phybox)
+        */
+        this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, plantset.plantCtrl.phybox)
         this.game.remove(plantset.plant.Meshs, plantset.plantCtrl.phybox)
     }
     async CreatePlant(plantEntry: PlantEntry) {
@@ -211,7 +188,7 @@ export class Farmer implements IModelReload, IViewer {
         //let plantset = this.AllocatePlantPool(property, plantEntry.position)
         //if (!plantset) plantset = await this.NewPlantEntryPool(plantEntry, property)
         const plantset = await this.NewPlantEntryPool(plantEntry, property)
-        this.playerCtrl.add(plantset.plantCtrl.phybox)
+        this.eventCtrl.SendEventMessage(EventTypes.AddInteractive, plantset.plantCtrl.phybox)
         this.game.add(plantset.plant.Meshs, plantset.plantCtrl.phybox)
     }
     moveEvent(v: THREE.Vector3) {
@@ -234,13 +211,13 @@ export class Farmer implements IModelReload, IViewer {
         if(!this.target) return
         if (this.gphysic.Check(this.target)) {
             do {
-                this.target.CannonPos.y += 0.5
+                this.target.Pos.y += 0.5
             } while (this.gphysic.Check(this.target))
         } else {
             do {
-                this.target.CannonPos.y -= 0.5
-            } while (!this.gphysic.Check(this.target) && this.target.CannonPos.y >= 0)
-            this.target.CannonPos.y += 0.5
+                this.target.Pos.y -= 0.5
+            } while (!this.gphysic.Check(this.target) && this.target.Pos.y >= 0)
+            this.target.Pos.y += 0.5
         }
     }
     allocPos = 0
@@ -258,7 +235,7 @@ export class Farmer implements IModelReload, IViewer {
     ReleaseAllPlantPool() {
         this.plantset.forEach((set) => {
             set.used = false
-            this.playerCtrl.remove(set.plantCtrl.phybox)
+            this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, set.plantCtrl.phybox)
             this.game.remove(set.plant.Meshs, set.plantCtrl.phybox)
         })
         this.plantset.length = 0
@@ -281,7 +258,7 @@ export class Farmer implements IModelReload, IViewer {
         })
     }
     async allocModel(id: PlantId, plantEntry?: PlantEntry){
-        const p = SConf.DefaultPortalPosition
+        const p = new THREE.Vector3()
         let plant
         switch(id) {
             default:

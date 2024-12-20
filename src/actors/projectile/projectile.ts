@@ -1,13 +1,11 @@
-import { Canvas } from "@Commons/canvas";
-import { EventController, EventFlag } from "@Event/eventctrl";
-import { Loader } from "@Loader/loader";
-import { IViewer } from "@Models/iviewer";
-import { MonsterDb } from "@Monsters/monsterdb";
-import { MonsterId } from "@Monsters/monsterid";
-import { PlayerCtrl } from "@Player/playerctrl";
+import { MonsterId } from "@Glibs/types/monstertypes";
 import { Bullet3 } from "./bullet3";
 import { DefaultBall } from "./defaultball";
 import { ProjectileCtrl } from "./projectilectrl";
+import IEventController, { ICanvas, ILoop } from "@Glibs/interface/ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
+import { EventFlag } from "@Glibs/types/eventtypes";
+import { MonsterDb } from "@Glibs/types/monsterdb";
 
 export interface IProjectileModel {
     get Meshs(): THREE.Mesh | THREE.Points | undefined
@@ -28,20 +26,19 @@ export type ProjectileSet = {
     ctrl: ProjectileCtrl
 }
 
-export class Projectile implements IViewer {
+export class Projectile implements ILoop {
     projectiles = new Map<MonsterId, ProjectileSet[]>()
     processing = false
 
     constructor(
-        _: Loader,
-        canvas: Canvas,
-        private eventCtrl: EventController,
+        canvas: ICanvas,
+        private eventCtrl: IEventController,
         private game: THREE.Scene,
         private playerCtrl: PlayerCtrl,
         private monDb: MonsterDb,
     ) {
         canvas.RegisterViewer(this)
-        eventCtrl.RegisterPlayModeEvent((e: EventFlag) => {
+        eventCtrl.RegisterEventListener(EventTypes.PlayMode, (e: EventFlag) => {
             switch (e) {
                 case EventFlag.Start:
                     this.processing = true
@@ -53,7 +50,7 @@ export class Projectile implements IViewer {
                     break
             }
         })
-        eventCtrl.RegisterProjectileEvent((opt: ProjectileMsg) => {
+        eventCtrl.RegisterEventListener(EventTypes.Projectile, (opt: ProjectileMsg) => {
                 this.AllocateProjPool(opt.id, opt.src, opt.dir, opt.damage)
         })
     }

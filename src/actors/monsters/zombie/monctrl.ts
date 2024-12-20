@@ -1,16 +1,16 @@
 import * as THREE from "three";
-import { EventController } from "@Event/eventctrl";
-import { IPhysicsObject } from "@Models/iobject";
-import { EffectType } from "@Effector/effector";
 import { Zombie } from "./zombie"
 import { AttackZState, DyingZState, IdleZState, JumpZState, RunZState } from "./monstate"
 import { IMonsterCtrl, IMonsterAction, MonsterBox } from "../monsters";
-import { MonsterProperty } from "../monsterdb";
-import { GPhysics, IGPhysic } from "@Commons/physics/gphysics";
+import { IGPhysic } from "@Glibs/interface/igphysics";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
+import IEventController, { ICanvas, ILoop } from "@Glibs/interface/ievent";
+import { MonsterProperty } from "../monstertypes";
+import { EffectType } from "@Glibs/types/effecttypes";
 
 
 
-export class MonsterCtrl implements IGPhysic, IMonsterCtrl {
+export class MonsterCtrl implements ILoop, IMonsterCtrl {
     IdleSt = new IdleZState(this, this.zombie, this.gphysic)
     AttackSt = new AttackZState(this, this.zombie, this.gphysic, this.eventCtrl, this.property)
     RunSt = new RunZState(this, this.zombie, this.gphysic, this.property)
@@ -32,11 +32,12 @@ export class MonsterCtrl implements IGPhysic, IMonsterCtrl {
         private zombie: Zombie, 
         private instanceBlock: (THREE.InstancedMesh | undefined)[],
         private meshBlock: THREE.Mesh[],
-        private gphysic: GPhysics,
-        private eventCtrl: EventController,
+        private gphysic: IGPhysic,
+        private eventCtrl: IEventController,
+        canvas: ICanvas,
         private property: MonsterProperty
     ) {
-        gphysic.Register(this)
+        canvas.RegisterLoop(this)
         const size = zombie.Size
         const geometry = new THREE.BoxGeometry(size.x * 2, size.y, size.z)
         const material = new THREE.MeshBasicMaterial({ 
@@ -47,7 +48,7 @@ export class MonsterCtrl implements IGPhysic, IMonsterCtrl {
         if (window.location.hostname == "hons.ghostwebservice.com") {
             this.phybox.visible = false
         }
-        this.phybox.position.copy(this.zombie.CannonPos)
+        this.phybox.position.copy(this.zombie.Pos)
     }
     Respawning() {
         this.health = 10
@@ -59,7 +60,7 @@ export class MonsterCtrl implements IGPhysic, IMonsterCtrl {
     update(delta: number): void {
         if (!this.zombie.Visible) return
 
-        const dist = this.zombie.CannonPos.distanceTo(this.player.CannonPos)
+        const dist = this.zombie.Pos.distanceTo(this.player.Pos)
 
         if (this.health > 0) {
             this.dir.subVectors(this.player.CenterPos, this.zombie.CenterPos)
@@ -93,7 +94,7 @@ export class MonsterCtrl implements IGPhysic, IMonsterCtrl {
         this.currentState = this.currentState.Update(delta, this.moveDirection, dist)
         this.zombie.update()
 
-        this.phybox.position.copy(this.zombie.CannonPos)
+        this.phybox.position.copy(this.zombie.Pos)
         this.phybox.rotation.copy(this.zombie.Meshs.rotation)
         this.phybox.position.y += this.zombie.Size.y / 2
     }

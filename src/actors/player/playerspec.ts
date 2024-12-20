@@ -1,7 +1,8 @@
-import { IBuffItem } from "../../buff/buff";
-import { Inventory } from "../../inventory/inventory";
-import { Bind } from "../../loader/assetmodel";
-import { PlayerStatus } from "./playerctrl";
+import { IBuffItem } from "@Glibs/interface/ibuff"
+import { PlayerStatus } from "./playertypes"
+import IInventory from "@Glibs/interface/iinven"
+import { Bind } from "@Glibs/types/assettypes"
+
 const defaultStatus: PlayerStatus = {
     level: 1,
     maxHealth: 100,
@@ -46,7 +47,7 @@ export class PlayerSpec {
     get Status() { return this.status}
     get Health() { return this.status.health }
 
-    constructor(private inven: Inventory) { }
+    constructor(private inven: IInventory) { }
 
     SetBuff(buff: IBuffItem[]) {
         this.buff = buff

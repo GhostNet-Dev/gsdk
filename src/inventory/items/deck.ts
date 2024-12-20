@@ -1,4 +1,5 @@
-import { MonsterId } from "@Monsters/monsterid"
+import { MonsterId } from "@Glibs/types/monstertypes"
+import { DeckId, DeckType } from "../inventypes"
 
 /*
 추가 Effect
@@ -7,41 +8,7 @@ import { MonsterId } from "@Monsters/monsterid"
 - 일꾼으로 활용가능하다.
 - Player에게 debuff를 한다. 
 */
-export class DeckId {
-    public static Zombie ="ZombieDeck"
-    public static Minotaur = "MinataurDeck"
-    public static Batpig = "BatpigDeck"
-    public static Bilby = "BilbyDeck"
-    public static Birdmon = "BirdmonDeck"
-    public static Crab = "CrabDeck"
-    public static Builder = "BuilderDeck"
-    public static Golem = "GolemDeck"
-    public static BigGolem = "BiggolemDeck"
-    public static KittenMonk = "KittenmonkDeck"
-    public static Skeleton = "SkeletonDeck"
-    public static Snake = "SnakeDeck"
-    public static ToadMage = "ToadmageDeck"
-    public static Viking = "VikingDeck"
-    public static WereWolf = "WerewolfDeck"
 
-    public static List = [
-        this.Zombie, this.Minotaur, this.Batpig, this.Bilby, this.Birdmon,
-        this.Crab, this.Builder, this.Golem, this.BigGolem, this.KittenMonk,
-        this.Skeleton, this.Snake, this.ToadMage, this.Viking, this.WereWolf
-    ]
-}
-
-export type DeckType = {
-    id: DeckId
-    title: string
-    contents: string
-    maxLv: number// 레벨업 한계
-    minTime: number // 소환 가능한 최소 시간
-    maxTime: number // 소환 가능한 최대 시간
-    maxSpawn: number // 소환 가능한 몬스터 수
-    uniq: boolean
-    monId: MonsterId
-}
 
 export class Deck {
     static DeckDb = new Map<DeckId, DeckType>()

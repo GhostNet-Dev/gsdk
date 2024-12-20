@@ -14,15 +14,8 @@ import { CometVfx } from "./fire/comet";
 import { FlameSmokeVfx } from "./fire/flamesmoke";
 import { SmokeVfx } from "./fire/smoke";
 import { EffectType } from "./effecttypes";
+import { IEffect } from "./ieffector";
 
-
-
-export interface IEffect {
-    get Mesh(): THREE.Group | THREE.Mesh
-    Start(...arg: any): void
-    Update(delta: number, ...arg: any): void
-    Complete(): void
-}
 
 export class Effector {
     effects: IEffect[] = []

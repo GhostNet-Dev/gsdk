@@ -11,6 +11,11 @@ export interface IKeyCommand {
     ExecuteKeyDown(): THREE.Vector3
 }
 
+export interface ICanvas {
+    RegisterLoop(obj: ILoop): void
+    RegisterViewer(obj: IViewer): void
+}
+
 export interface ILoop {
     update(delta: number): void
 }

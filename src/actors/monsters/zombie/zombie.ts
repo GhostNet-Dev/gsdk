@@ -1,13 +1,14 @@
 import * as THREE from "three";
-import { FloatingName } from "@Commons/floatingtxt";
-import { GhostModel } from "@Models/ghostmodel";
-import { Ani, IAsset } from "@Loader/assetmodel";
-import { IPhysicsObject } from "@Models/iobject";
-import { EffectType, Effector } from "@Effector/effector";
-import { MonsterId } from "../monsterid";
-import { ActionType } from "@Player/player";
+import { PhysicsObject } from "@Glibs/interface/iobject";
+import { IAsset } from "@Glibs/interface/iasset";
+import { MonsterId } from "../monstertypes";
+import { Effector } from "@Glibs/magical/effects/effector";
+import { FloatingName } from "@Glibs/ux/text/floatingtxt";
+import { EffectType } from "@Glibs/types/effecttypes";
+import { Ani } from "@Glibs/types/assettypes";
+import { ActionType } from "@Glibs/types/playertypes";
 
-export class Zombie extends GhostModel implements IPhysicsObject {
+export class Zombie extends PhysicsObject {
     mixer?: THREE.AnimationMixer
     currentAni?: THREE.AnimationAction
     currentClip?: THREE.AnimationClip
@@ -21,8 +22,8 @@ export class Zombie extends GhostModel implements IPhysicsObject {
 
     movePos = new THREE.Vector3()
     vFlag = true
+    text: FloatingName
 
-    get BoxPos() { return this.asset.GetBoxPos(this.meshs) }
     get Model() { return this.asset.Id }
     set ControllerEnable(flag: boolean) { this.controllerEnable = flag }
     get ControllerEnable(): boolean { return this.controllerEnable }

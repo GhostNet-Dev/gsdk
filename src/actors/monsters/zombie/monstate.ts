@@ -1,19 +1,19 @@
 import * as THREE from "three";
-import { GPhysics } from "@Commons/physics/gphysics"
-import { ActionType } from "@Player/player"
 import { Zombie } from "./zombie"
 import { MonsterCtrl } from "./monctrl";
 import { IMonsterAction } from "../monsters";
-import { EventController } from "@Event/eventctrl";
-import { AttackType } from "@Player/playerctrl";
-import { MonsterProperty } from "../monsterdb";
+import { IGPhysic } from "@Glibs/interface/igphysics";
+import IEventController from "@Glibs/interface/ievent";
+import { MonsterProperty } from "../monstertypes";
+import { ActionType, AttackType } from "@Glibs/types/playertypes";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
 class State {
     attackDist = 3
     constructor(
         protected zCtrl: MonsterCtrl,
         protected zombie: Zombie,
-        protected gphysic: GPhysics
+        protected gphysic: IGPhysic
     ) { }
 
     CheckRun(v: THREE.Vector3) {
@@ -42,7 +42,7 @@ export class JumpZState implements IMonsterAction {
     MX = new THREE.Matrix4()
     QT = new THREE.Quaternion()
 
-    constructor(private ctrl: MonsterCtrl, private zombie: Zombie, private gphysic: GPhysics) { }
+    constructor(private ctrl: MonsterCtrl, private zombie: Zombie, private gphysic: IGPhysic) { }
     Init(): void {
         console.log("Jump Init!!")
         this.velocity_y = 16
@@ -93,8 +93,8 @@ export class AttackZState extends State implements IMonsterAction {
     attackDamageMax = this.property.damageMax
     attackDamageMin = this.property.damageMin
 
-    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: GPhysics,
-        private eventCtrl: EventController, private property: MonsterProperty
+    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: IGPhysic,
+        private eventCtrl: IEventController, private property: MonsterProperty
     ) {
         super(zCtrl, zombie, gphysic)
     }
@@ -126,7 +126,7 @@ export class AttackZState extends State implements IMonsterAction {
         return this
     }
     attack() {
-        this.eventCtrl.OnAttackEvent("player", [{
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + "player", [{
             type: AttackType.NormalSwing,
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
         }])
@@ -136,7 +136,7 @@ export class AttackZState extends State implements IMonsterAction {
 }
 
 export class IdleZState extends State implements IMonsterAction {
-    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: GPhysics) {
+    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: IGPhysic) {
         super(zCtrl, zombie, gphysic)
         this.Init()
     }
@@ -156,7 +156,7 @@ export class IdleZState extends State implements IMonsterAction {
 export class DyingZState extends State implements IMonsterAction {
     fadeMode = false
     fade = 1
-    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: GPhysics, private eventCtrl: EventController) {
+    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: IGPhysic, private eventCtrl: IEventController) {
         super(zCtrl, zombie, gphysic)
     }
     Init(): void {
@@ -165,7 +165,7 @@ export class DyingZState extends State implements IMonsterAction {
         if (this.fadeMode) this.zombie.StopAnimation()
         else this.zombie.ChangeAction(ActionType.Dying)
 
-        this.eventCtrl.OnAttackEvent("player", [{
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + "player", [{
             type: AttackType.Exp,
             damage: 20,
         }])
@@ -184,7 +184,7 @@ export class DyingZState extends State implements IMonsterAction {
 }
 export class RunZState extends State implements IMonsterAction {
     speed = this.property.speed
-    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: GPhysics, private property: MonsterProperty) {
+    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: IGPhysic, private property: MonsterProperty) {
         super(zCtrl, zombie, gphysic)
     }
     Init(): void {

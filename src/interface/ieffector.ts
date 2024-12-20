@@ -1,0 +1,1 @@
+../magical/effects/ieffector.ts

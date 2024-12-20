@@ -1,24 +1,7 @@
-import { ItemId } from "@Inven/items/itemdb"
-import { Char } from "@Loader/assetmodel"
-import { MonsterId, MonsterType } from "./monsterid"
+import { ItemId } from "@Glibs/inventory/inventypes"
+import { Char } from "@Glibs/types/assettypes"
+import { MonsterId, MonsterProperty, MonsterType } from "@Glibs/types/monstertypes"
 
-
-export type MonDrop = {
-    itemId: string,
-    ratio: number
-}
-
-export type MonsterProperty = {
-    id: MonsterId
-    type: MonsterType
-    model: Char
-    health: number
-    speed: number
-    damageMin: number
-    damageMax: number
-    attackSpeed: number
-    drop?: MonDrop[]
-}
 
 export class MonsterDb {
     monDb = new Map<MonsterId, MonsterProperty>()

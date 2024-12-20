@@ -1,7 +1,8 @@
 import * as THREE from "three";
-import { PlantBox, PlantEntry, PlantState } from "./farmer";
-import { PlantProperty } from "./plantdb";
-import { IPhysicsObject } from "../models/iobject";
+import { PlantEntry } from "./farmer";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { PlantProperty } from "@Glibs/types/planttypes";
+import { PlantBox, PlantState } from "./planttypes";
 
 export interface ITreeMotions {
     SetProgress(ratio: number): void
@@ -44,7 +45,7 @@ export class TreeCtrl {
         private property: PlantProperty,
         private save: PlantEntry,
     ) {
-        this.position = tree.CannonPos
+        this.position = tree.Meshs.position
         const size = tree.Size
         const geometry = new THREE.BoxGeometry(size.x / 2, size.y, size.z / 2)
         const material = new THREE.MeshBasicMaterial({ 
@@ -62,7 +63,7 @@ export class TreeCtrl {
         this.msg = document.getElementById("job_label") as HTMLLabelElement
     }
     ReAlloc(pos: THREE.Vector3) {
-        this.tree.CannonPos.copy(pos)
+        this.tree.Meshs.position.copy(pos)
         this.phybox.position.copy(this.tree.BoxPos)
     }
     Release() {

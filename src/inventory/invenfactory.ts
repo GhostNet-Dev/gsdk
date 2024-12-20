@@ -1,17 +1,17 @@
-import { Alarm } from "@Commons/alarm";
 import { Loader } from "@Loader/loader";
 import { Inventory } from "./inventory";
 import { Item } from "./items/item";
 import { ItemDb } from "./items/itemdb";
+import IEventController from "@Glibs/interface/ievent";
 
 
 export class InvenFactory {
     itemDb = new ItemDb(this.loader)
-    inven = new Inventory(this.itemDb, this.alarm)
-    invenHouse = new Inventory(this.itemDb, this.alarm)
+    inven = new Inventory(this.itemDb, this.event)
+    invenHouse = new Inventory(this.itemDb, this.event)
 
     get ItemDb() { return this.itemDb }
-    constructor(private loader: Loader, private alarm: Alarm) { }
+    constructor(private loader: Loader, private event: IEventController) { }
 
     LoadItems(load: Inventory) {
         this.invenHouse = load

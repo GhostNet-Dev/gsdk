@@ -3,7 +3,6 @@ import { AreaAttack, AttackUp, Healing } from "./buffitem"
 import { IBuffItem } from "@Glibs/interface/ibuff";
 import { AttackOption, AttackType } from "@Glibs/types/playertypes";
 import IEventController from "@Glibs/interface/ievent";
-import IPlayerCtrl from "@Glibs/interface/iplayerctrl";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { EventFlag } from "@Glibs/types/eventtypes";
 
@@ -17,7 +16,7 @@ export class Buff {
     ]
     userBuff: IBuffItem[] = []
 
-    constructor(private eventCtrl: IEventController, private playCtrl: IPlayerCtrl) {
+    constructor(private eventCtrl: IEventController) {
         eventCtrl.RegisterEventListener(EventTypes.Attack + "player", (opts: AttackOption[]) => {
             opts.forEach((opt) => {
                 switch(opt.type) {
@@ -61,7 +60,7 @@ export class Buff {
             this.userBuff.push(buff)
         }
         buff.IncreaseLv()
-        this.playCtrl.UpdateBuff(this.userBuff)
+        this.eventCtrl.SendEventMessage(EventTypes.UpdateBuff, this.userBuff)
     }
     GetBuff() {
         return this.userBuff

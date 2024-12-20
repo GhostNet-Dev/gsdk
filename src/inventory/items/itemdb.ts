@@ -1,86 +1,9 @@
-import { Bind, IAsset } from "@Loader/assetmodel"
+import { Bind } from "@Loader/assetmodel"
 import { Loader } from "@Loader/loader"
-import { Deck, DeckType } from "./deck"
-import { AttackItemType, ItemType, Level } from "./item"
-
-export class ItemId {
-    public static Hanhwasbat = "Hanhwasbat"//Symbol("Hanhwa's Bat")
-    public static WarterCan = "WarterCan"//Symbol("Warter Can")
-    public static Hammer = "Hammer"//Symbol("Hammer H3")
-    public static DefaultGun = "DefaultGun"//Symbol("DefaultGun")
-    public static Leather = "Leather"//Symbol("Leather")
-    public static Logs = "Logs"//Symbol("Logs")
-    public static Rocks = "Rocks"//Symbol("Rocks")
-
-    public static ZombieDeck = "ZombieDeck"
-    public static MinataurDeck = "MinataurDeck"
-    public static BatPigDeck = "BatPigDeck"
-    public static BilbyDeck = "BilbyDeck"
-    public static BirdmonDeck = "BirdmonDeck"
-    public static CrabDeck = "CrabDeck"
-    public static BuilderDeck = "BuilderDeck"
-    public static GolemDeck = "GolemDeck"
-    public static BigGolemDeck = "BigGolemDeck"
-    public static KittenMonkDeck = "KittenMonkDeck"
-    public static SkeletonDeck = "SkeletonDeck"
-    public static SnakeDeck = "SnakeDeck"
-    public static ToadMageDeck = "GolemDeck"
-    public static VikingDeck = "VikingDeck"
-    public static WereWolfDeck = "WerewolfDeck"
-
-    public static Apple = "Apple"
-    public static Coconut = "Coconut"
-    public static Tomato = "Tomato"
-    public static Potato = "Potato"
-    public static Carrot = "Carrot"
-
-    public static DeckList: string[] = [
-        this.ZombieDeck, this.MinataurDeck, this.BatPigDeck, this.BilbyDeck,
-        this.BirdmonDeck, this.CrabDeck, this.SkeletonDeck, this.GolemDeck,
-        this.BigGolemDeck, this.KittenMonkDeck, this.SnakeDeck, this.BuilderDeck,
-        this.ToadMageDeck, this.VikingDeck, this.WereWolfDeck
-    ]
-    public static DropList: string[] = [
-        this.Leather, this.Logs, this.Rocks
-    ]
-    public static HavestList: string[] = [
-        this.Apple, this.Coconut, this.Tomato, this.Potato, this.Carrot
-    ]
-    public static ItemCategory: string[][] = [
-        this.DeckList, this.DropList, this.HavestList
-    ]
-}
+import { Deck } from "./deck"
+import { AttackItemType, ItemId, ItemProperty, ItemType, Level } from "../inventypes"
 
 
-export type ItemProperty = {
-    id: string
-    type: ItemType
-    weapon?: AttackItemType
-    bind?: Bind
-    asset?: IAsset
-    meshs?: THREE.Group
-
-    level?: Level
-    name: string
-    namekr?: string
-    icon: string
-    stackable: boolean
-    binding: boolean
-    price?: number
-
-    damageMin?: number
-    damageMax?: number
-    armor?: number
-
-    speed?: number
-
-    agility?: number
-    stamina?: number
-    fireResistance?: number
-    natureResistance?: number
-
-    deck?: DeckType
-}
 
 export class ItemDb {
     itemDb = new Map<ItemId, ItemProperty>()

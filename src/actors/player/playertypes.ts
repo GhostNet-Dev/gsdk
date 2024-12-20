@@ -17,6 +17,32 @@ export enum AttackType {
     Delete,
 }
 
+export enum ActionType {
+    Idle,
+    Run,
+    Jump,
+    Punch,
+    Sword,
+    Gun,
+    Bow,
+    Wand,
+    Fight,
+    Dance,
+    MagicH1,
+    MagicH2,
+    Dying,
+    Clim,
+    Swim,
+    Downfall,
+
+    PickFruit,
+    PickFruitTree,
+    PlantAPlant,
+    Hammering,
+    Watering,
+    Building,
+}
+
 export type AttackOption = {
     type: AttackType,
     effect?: EffectType,

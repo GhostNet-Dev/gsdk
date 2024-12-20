@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import { ILoop, IViewer } from "./ievent";
+import { ICanvas } from "@Glibs/interface/ievent";
 
 
-export class Canvas {
+export class Canvas implements ICanvas {
     canvas: HTMLCanvasElement
     width: number
     height: number

@@ -1,53 +1,7 @@
-import { Bind } from "@Loader/assetmodel"
-import { DeckType } from "./deck"
-import { ItemProperty } from "./itemdb"
-
-export enum ItemType {
-    Attack,
-    Shield,
-    Armor,
-    Potion,
-    Material,
-    Farm,
-    Deck,
-}
-
-export enum AttackItemType {
-    Blunt, //둔기 
-    Axe,
-    Knife,
-    Sword,
-    Bow,
-    Gun,
-    Wand,
-}
+import { IItem } from "@Glibs/interface/iinven"
+import { AttackItemType, ItemProperty, ItemType } from "@Glibs/inventory/inventypes"
 
 
-export enum Level {
-    Common,
-    Uncommon,
-    Rare,
-    Unique,
-    Legendary,
-    Mythic,
-}
-
-export interface IItem {
-    get Id(): string
-    get Name(): string
-    get DamageMin(): number
-    get DamageMax(): number
-    get ItemType(): ItemType
-    get Speed(): number
-    get IconPath(): string
-    get Bindable(): boolean
-    get Bind(): Bind | undefined
-    get Mesh(): THREE.Group | undefined
-    get AttackType(): AttackItemType | undefined
-    get Stackable(): boolean
-    get Deck(): DeckType | undefined
-    MakeInformation(): Array<{k?: string, v: string}>
-}
 export class Item implements IItem {
     get Id() { return this.property.id }
     get DamageMin() { return (this.property.damageMin == undefined) ? 0 : this.property.damageMin }

@@ -1,11 +1,10 @@
+import IEventController, { ICanvas, ILoop } from "@Glibs/interface/ievent";
+import IInventory from "@Glibs/interface/iinven";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { EventFlag } from "@Glibs/types/eventtypes";
+import { EventTypes } from "@Glibs/types/globaltypes";
+import { MonDrop } from "@Glibs/types/monstertypes";
 import * as THREE from "three";
-import { IViewer } from "@Models/iviewer";
-import { Player } from "@Player/player";
-import { Canvas } from "@Commons/canvas";
-import { MonDrop } from "@Monsters/monsterdb";
-import { Inventory } from "./inventory";
-import { Alarm, AlarmType } from "@Commons/alarm";
-import { EventController, EventFlag } from "@Event/eventctrl";
 
 type DropBox = {
     id: number
@@ -13,7 +12,7 @@ type DropBox = {
     items?: string[]
 }
 
-export class Drop implements IViewer {
+export class Drop implements ILoop {
     dropBox: DropBox[] = []
     activeDropBox: DropBox[] = []
     resetPos = new THREE.Vector3(0, -10, 0)
@@ -27,14 +26,13 @@ export class Drop implements IViewer {
     moveDirection = new THREE.Vector3()
 
     constructor(
-        private alarm: Alarm,
-        private inventory: Inventory,
-        private player: Player,
-        canvas: Canvas,
+        private inventory: IInventory,
+        private player: IPhysicsObject,
+        canvas: ICanvas,
         private scene: THREE.Scene,
-        eventCtrl: EventController,
+        private eventCtrl: IEventController,
     ) {
-        eventCtrl.RegisterPlayModeEvent((e: EventFlag) => {
+        eventCtrl.RegisterEventListener(EventTypes.PlayMode, (e: EventFlag) => {
             switch (e) {
                 case EventFlag.Start:
                     break
@@ -43,8 +41,14 @@ export class Drop implements IViewer {
                     break
             }
         })
+        eventCtrl.RegisterEventListener(EventTypes.Drop, (pos: THREE.Vector3, drop: MonDrop[] | undefined) => {
+            this.dropPoint(pos, drop)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.DirectDrop, (drop: MonDrop[] | undefined) => {
+            this.DirectItem(drop)
+        })
 
-        canvas.RegisterViewer(this)
+        canvas.RegisterLoop(this)
         //this.points = this.CreateInstancedMesh()//this.CreatePoints()
         this.points = this.CreatePoints()
         // frustumCulled 안하면 특정 각도에서 보이지 않는다.
@@ -71,16 +75,13 @@ export class Drop implements IViewer {
         points.needsUpdate = true
     }
 
-    DropItem(pos: THREE.Vector3, drop: MonDrop[] | undefined) {
-        this.dropPoint(pos, drop)
-    }
     DirectItem(drop: MonDrop[] | undefined) {
         if (drop != undefined) {
             const ticket = Math.random()
             drop.forEach((item) => {
                 if (item.ratio > ticket) {
                     const info = this.inventory.GetItemInfo(item.itemId)
-                    this.alarm.NotifyInfo(`${info.name}을 얻었습니다.`, AlarmType.Normal)
+                    this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `${info.name}을 얻었습니다.`)
                     this.inventory.NewItem(item.itemId)
                 }
             })
@@ -133,7 +134,7 @@ export class Drop implements IViewer {
                 this.activeDropBox.splice(i, 1)
                 b.items?.forEach(item => {
                     const info = this.inventory.GetItemInfo(item)
-                    this.alarm.NotifyInfo(`${info.name}을 얻었습니다.`, AlarmType.Normal)
+                    this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `${info.name}을 얻었습니다.`)
                     this.inventory.NewItem(item)
                 })
             } else if (dist < this.moveDist) {
@@ -300,7 +301,7 @@ export class Drop implements IViewer {
     }
     instanceUpdate(delta: number) {
         if (!this.activeDropBox.length) return
-        const tp = this.player.CannonPos
+        const tp = this.player.Meshs.position
         const instance = this.points as THREE.InstancedMesh
         const matrix = new THREE.Matrix4()
         const pos = new THREE.Vector3()

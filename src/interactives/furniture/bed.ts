@@ -1,12 +1,11 @@
+import { PhysicsObject } from "@Glibs/interface/iobject";
 import * as THREE from "three";
-import { GhostModel } from "../models/ghostmodel";
-import { IAsset } from "../../loader/assetmodel";
-import { IPhysicsObject } from "../models/iobject";
 import { IFurnMotions } from "./furnctrl";
-import { FloatingName } from "../../common/floatingtxt";
+import { IAsset } from "@Glibs/interface/iasset";
+import { FloatingName } from "@Glibs/ux/text/floatingtxt";
 
-export class FurnModel extends GhostModel implements IPhysicsObject, IFurnMotions {
-    get BoxPos() { return this.asset.GetBoxPos(this.meshs) }
+export class FurnModel extends PhysicsObject implements IFurnMotions {
+    text: FloatingName
     constructor(asset: IAsset, private name: string) {
         super(asset)
         this.text = new FloatingName("제작을 시작해주세요")

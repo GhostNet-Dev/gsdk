@@ -4,7 +4,7 @@ import {
     ParticleEmitter,
     QuarksLoader,
 } from 'three.quarks';
-import { IEffect } from "./effector";
+import { IEffect } from "./ieffector";
 
 
 export class QuarksVfx implements IEffect {

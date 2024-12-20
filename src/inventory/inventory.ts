@@ -1,27 +1,20 @@
-import { Alarm, AlarmType } from "@Commons/alarm";
-import { Bind } from "@Loader/assetmodel";
-import { IItem, Item } from "./items/item";
-import { ItemDb, ItemId } from "./items/itemdb";
-
-export type InventorySlot = {
-    item: IItem,
-    count: number,
-}
-
-export type InvenData = {
-    bodySlot: IItem []
-    inventroySlot: InventorySlot []
-}
+import IEventController from "@Glibs/interface/ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
+import { InvenData, InventorySlot, ItemId } from "@Glibs/inventory/inventypes";
+import { ItemDb } from "./items/itemdb";
+import { Item } from "./items/item";
+import IInventory, { IItem } from "@Glibs/interface/iinven";
+import { Bind } from "@Glibs/types/assettypes";
 
 const maxSlot = 15
 
-export class Inventory {
+export class Inventory implements IInventory {
     data: InvenData = {
         bodySlot: [],
         inventroySlot: []
     }
 
-    constructor(private itemDb: ItemDb, private alarm: Alarm) {
+    constructor(private itemDb: ItemDb, private event: IEventController) {
     }
     InsertInventory(item: IItem) {
         const find = this.data.inventroySlot.find((slot) => slot.item.Id == item.Id)
@@ -36,7 +29,7 @@ export class Inventory {
     }
     async NewItem(key: ItemId) {
         if(this.data.inventroySlot.length == maxSlot) {
-            this.alarm.NotifyInfo("인벤토리가 가득찼습니다.", AlarmType.Warning)
+            this.event.SendEventMessage(EventTypes.AlarmWarning, "인벤토리가 가득찼습니다.")
             return 
         }
         const item = new Item(this.itemDb.GetItem(key))
@@ -76,6 +69,11 @@ export class Inventory {
     }
     GetItemInfo(key: ItemId) {
         return this.itemDb.GetItem(key)
+    }
+    async GetNewItem(key: string) {
+        const item = new Item(this.itemDb.GetItem(key))
+        await item.Loader()
+        return item
     }
     Copy(inven: InvenData) {
         const data: InvenData = { bodySlot: [], inventroySlot: [] }

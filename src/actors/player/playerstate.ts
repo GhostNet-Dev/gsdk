@@ -1,9 +1,10 @@
 import * as THREE from "three";
-import { ActionType, Player } from "./player"
 import { PlayerCtrl } from "./playerctrl";
-import { KeyType } from "../../event/keycommand";
-import { GPhysics } from "../../common/physics/gphysics";
-import { AppMode } from "../../app";
+import { Player } from "./player";
+import { IGPhysic } from "@Glibs/interface/igphysics";
+import { KeyType } from "@Glibs/types/eventtypes";
+import { AppMode } from "@Glibs/types/globaltypes";
+import { ActionType } from "./playertypes";
 
 export interface IPlayerAction {
     Init(): void
@@ -15,7 +16,7 @@ export class State {
     constructor(
         protected playerCtrl: PlayerCtrl,
         protected player: Player,
-        protected gphysic: GPhysics
+        protected gphysic: IGPhysic
     ) { }
 
     DefaultCheck(): IPlayerAction | undefined {
@@ -100,7 +101,7 @@ export class MagicH2State extends State implements IPlayerAction {
     keytimeout?:NodeJS.Timeout
     next: IPlayerAction = this
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: GPhysics) {
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic) {
         super(playerPhy, player, gphysic)
     }
     Init(): void {
@@ -131,7 +132,7 @@ export class MagicH1State extends State implements IPlayerAction {
     keytimeout?:NodeJS.Timeout
     next: IPlayerAction = this
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: GPhysics) {
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic) {
         super(playerPhy, player, gphysic)
     }
     Init(): void {
@@ -160,7 +161,7 @@ export class MagicH1State extends State implements IPlayerAction {
 }
 
 export class DeadState extends State implements IPlayerAction {
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: GPhysics) {
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic) {
         super(playerPhy, player, gphysic)
         //this.Init()
     }
@@ -175,7 +176,7 @@ export class DeadState extends State implements IPlayerAction {
     }
 }
 export class IdleState extends State implements IPlayerAction {
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: GPhysics) {
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic) {
         super(playerPhy, player, gphysic)
         this.Init()
     }
@@ -199,7 +200,7 @@ export class IdleState extends State implements IPlayerAction {
 export class RunState extends State implements IPlayerAction {
     speed = 10
     previous: IPlayerAction = this.playerCtrl.IdleSt
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: GPhysics) {
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic) {
         super(playerPhy, player, gphysic)
     }
     Init(): void {
@@ -261,7 +262,7 @@ export class JumpState implements IPlayerAction {
     MX = new THREE.Matrix4()
     QT = new THREE.Quaternion()
 
-    constructor(private playerCtrl: PlayerCtrl, private player: Player, private gphysic: GPhysics) { }
+    constructor(private playerCtrl: PlayerCtrl, private player: Player, private gphysic: IGPhysic) { }
     Init(): void {
         console.log("Jump Init!!")
         this.player.ChangeAction(ActionType.Jump)

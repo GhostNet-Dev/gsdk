@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { IEffect } from "../effector";
+import { IEffect } from "../ieffector";
 import shader from "./shader/grounddef"
 
 export class AuraVfx implements IEffect {

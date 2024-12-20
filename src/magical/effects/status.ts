@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { IEffect } from "./effector";
+import { IEffect } from "./ieffector";
 
 const font =  "bold 14pt sans-serif";
 //const shadowColor =  "rgba(0,0,0,0.8)";
