@@ -1,12 +1,14 @@
 import * as THREE from "three";
 import { Zombie } from "./zombie"
 import { AttackZState, DyingZState, IdleZState, JumpZState, RunZState } from "./monstate"
-import { IMonsterCtrl, IMonsterAction, MonsterBox } from "../monsters";
+import { IMonsterCtrl, MonsterBox } from "../monsters";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
-import IEventController, { ICanvas, ILoop } from "@Glibs/interface/ievent";
+import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { MonsterProperty } from "../monstertypes";
 import { EffectType } from "@Glibs/types/effecttypes";
+import { IMonsterAction } from "../imonsters";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
 
 
@@ -34,10 +36,9 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
         private meshBlock: THREE.Mesh[],
         private gphysic: IGPhysic,
         private eventCtrl: IEventController,
-        canvas: ICanvas,
         private property: MonsterProperty
     ) {
-        canvas.RegisterLoop(this)
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         const size = zombie.Size
         const geometry = new THREE.BoxGeometry(size.x * 2, size.y, size.z)
         const material = new THREE.MeshBasicMaterial({ 

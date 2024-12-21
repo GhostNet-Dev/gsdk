@@ -1,4 +1,4 @@
-import IEventController, { ICanvas, ILoop } from "@Glibs/interface/ievent";
+import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import IInventory from "@Glibs/interface/iinven";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { EventFlag } from "@Glibs/types/eventtypes";
@@ -28,7 +28,6 @@ export class Drop implements ILoop {
     constructor(
         private inventory: IInventory,
         private player: IPhysicsObject,
-        canvas: ICanvas,
         private scene: THREE.Scene,
         private eventCtrl: IEventController,
     ) {
@@ -48,7 +47,7 @@ export class Drop implements ILoop {
             this.DirectItem(drop)
         })
 
-        canvas.RegisterLoop(this)
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         //this.points = this.CreateInstancedMesh()//this.CreatePoints()
         this.points = this.CreatePoints()
         // frustumCulled 안하면 특정 각도에서 보이지 않는다.

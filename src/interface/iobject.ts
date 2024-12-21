@@ -2,6 +2,8 @@ import { IAsset } from "@Glibs/interface/iasset";
 import * as THREE from "three";
 
 export interface IPhysicsObject {
+    get Velocity()
+    set Velocity(n: number)
     get Size() : THREE.Vector3
     get BoxPos() : THREE.Vector3
     get Box(): THREE.Box3
@@ -29,6 +31,8 @@ export class PhysicsObject implements IPhysicsObject {
 
     protected centerPos = new THREE.Vector3()
 
+    get Velocity() {return this.velocity}
+    set Velocity(n: number) { this.velocity = n }
     get CenterPos(): THREE.Vector3 { 
         this.centerPos.copy(this.meshs.position).y += this.Size.y / 2
         return this.centerPos

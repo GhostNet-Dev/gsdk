@@ -7,7 +7,7 @@ import { EffectType } from "@Glibs/types/effecttypes";
 import { AttackOption } from "@Glibs/types/playertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { DeckType } from "@Glibs/types/inventypes";
-import IEventController, { ICanvas } from "@Glibs/interface/ievent";
+import IEventController from "@Glibs/interface/ievent";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { MonsterDb } from "./monsterdb";
 
@@ -34,11 +34,6 @@ export class MonsterBox extends THREE.Mesh {
         this.name = ObjName
     }
 }
-export interface IMonsterAction {
-    Init(): void
-    Uninit(): void
-    Update(delta: number, v: THREE.Vector3, dist: number): IMonsterAction
-}
 
 export class Monsters {
     monsters = new Map<MonsterId, MonsterSet[]>()
@@ -46,7 +41,7 @@ export class Monsters {
     respawntimeout?:NodeJS.Timeout
     mode = false
     createMon = new CreateMon(this.loader, this.eventCtrl, this.player,
-        this.instanceBlock, this.meshBlock, this.gphysic, this.canvas, this.game, this.monDb)
+        this.instanceBlock, this.meshBlock, this.gphysic, this.game, this.monDb)
 
     get Enable() { return this.mode }
     set Enable(flag: boolean) { 
@@ -62,7 +57,6 @@ export class Monsters {
         private instanceBlock: (THREE.InstancedMesh | undefined)[],
         private meshBlock: THREE.Mesh[],
         private gphysic: IGPhysic,
-        private canvas: ICanvas,
         private monDb: MonsterDb
     ) {
         eventCtrl.RegisterEventListener(EventTypes.Attack + "mon", (opts: AttackOption[]) => {

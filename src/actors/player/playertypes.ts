@@ -49,6 +49,7 @@ export type AttackOption = {
     damage: number
     distance?: number
     obj?: THREE.Object3D
+    targetPoint?: THREE.Vector3
 }
 
 export type PlayerStatus = {

@@ -1,6 +1,7 @@
 import * as THREE from 'three'
-import { Canvas, IViewer } from "@Commons/canvas"
 import { ZeldaGrass} from "./zeldagrass"
+import IEventController, { ILoop } from '@Glibs/interface/ievent'
+import { EventTypes } from '@Glibs/types/globaltypes'
 
 export type GrassParam = {
     position?: THREE.Vector3,
@@ -9,15 +10,15 @@ export type GrassParam = {
     color?: THREE.Color
 }
 
-export class GrassMaker implements IViewer {
+export class GrassMaker implements ILoop {
     grassParam: GrassParam[] = []
     models: ZeldaGrass[] = []
 
     constructor(
-        canvas: Canvas,
         private scene: THREE.Scene,
+        eventCtrl: IEventController,
     ) {
-        canvas.RegisterViewer(this)
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
     }
     LoadGrass(params: GrassParam[]) {
         this.models.forEach((g) => {

@@ -5,7 +5,7 @@ import { Zombie } from "./zombie/zombie"
 import { MonsterCtrl } from "./zombie/monctrl"
 import { MonsterDb } from "./monsterdb"
 import { IPhysicsObject } from "@Glibs/interface/iobject";
-import IEventController, { ICanvas } from "@Glibs/interface/ievent";
+import IEventController from "@Glibs/interface/ievent";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { MonsterId } from "./monstertypes";
 import { Effector } from "@Glibs/magical/effects/effector";
@@ -18,7 +18,6 @@ export class CreateMon {
         private instanceBlock: (THREE.InstancedMesh | undefined)[],
         private meshBlock: THREE.Mesh[],
         private gphysic: IGPhysic,
-        private canvas: ICanvas,
         private game: THREE.Scene,
         private monDb: MonsterDb,
     ) {
@@ -31,7 +30,7 @@ export class CreateMon {
         await monster.Loader(pos, monId as string, id)
 
         const zCtrl = new MonsterCtrl(id, this.player, monster, 
-            this.instanceBlock, this.meshBlock, this.gphysic, this.eventCtrl, this.canvas, property)
+            this.instanceBlock, this.meshBlock, this.gphysic, this.eventCtrl, property)
         const monSet: MonsterSet =  { 
             monModel: monster, monCtrl: zCtrl, live: true, respawn: false, deadtime: new Date().getTime()
         }

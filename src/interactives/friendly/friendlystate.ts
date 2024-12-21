@@ -1,13 +1,12 @@
 import * as THREE from "three";
-import { GPhysics } from "../../common/physics/gphysics"
-import { ActionType } from "../player/player"
 import { Fly } from "./fly"
 import { FlyCtrl } from "./flyctrl"
-import { MonsterProperty } from "../monsters/monsterdb";
-import { PlayerCtrl } from "../player/playerctrl";
-import { IMonsterAction } from "../monsters/monsters";
-import { EventController } from "../../event/eventctrl";
-import { MonsterId } from "../monsters/monsterid";
+import { IMonsterAction } from "@Glibs/interface/imonsters";
+import { MonsterId, MonsterProperty } from "@Glibs/types/monstertypes";
+import { IGPhysic } from "@Glibs/interface/igphysics";
+import { ActionType } from "@Glibs/types/playertypes";
+import IEventController from "@Glibs/interface/ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
 
 class State {
@@ -15,7 +14,7 @@ class State {
     constructor(
         protected fCtrl: FlyCtrl,
         protected fly: Fly,
-        protected gphysic: GPhysics
+        protected gphysic: IGPhysic
     ) { }
 
     CheckRun(v: THREE.Vector3) {
@@ -40,7 +39,7 @@ export class IdleFState extends State implements IMonsterAction {
     watching = 2
     speed = 1
 
-    constructor(zCtrl: FlyCtrl, zombie: Fly, private playerCtrl: PlayerCtrl, gphysic: GPhysics) {
+    constructor(zCtrl: FlyCtrl, zombie: Fly, private targetList: THREE.Object3D[], gphysic: IGPhysic) {
         super(zCtrl, zombie, gphysic)
         this.Init()
     }
@@ -87,9 +86,9 @@ export class IdleFState extends State implements IMonsterAction {
 
     checkAttack() {
         this.fly.Meshs.getWorldDirection(this.attackDir)
-        this.raycast.set(this.fly.CannonPos, this.attackDir.normalize())
+        this.raycast.set(this.fly.Pos, this.attackDir.normalize())
     
-        const intersects = this.raycast.intersectObjects(this.playerCtrl.targets)
+        const intersects = this.raycast.intersectObjects(this.targetList)
         if (intersects.length > 0 && intersects[0].distance < this.attackDist) {
             this.fCtrl.AttackSt.InitWithTarget(intersects[0].object as THREE.Mesh)
             return this.fCtrl.AttackSt
@@ -119,9 +118,9 @@ export class AttackFState extends State implements IMonsterAction {
     constructor(
         zCtrl: FlyCtrl, 
         protected fly: Fly, 
-        gphysic: GPhysics, 
-        private playerCtrl: PlayerCtrl, 
-        private eventCtrl: EventController,
+        gphysic: IGPhysic, 
+        private targetList: THREE.Object3D[],
+        private eventCtrl: IEventController,
         private property: MonsterProperty
     ) {
         super(zCtrl, fly, gphysic)
@@ -154,7 +153,7 @@ export class AttackFState extends State implements IMonsterAction {
         }
         this.attackTime -= this.attackSpeed
         this.attackProcess = true
-        if (!this.playerCtrl.targets.find(e => e == this.target)) {
+        if (!this.targetList.find(e => e == this.target)) {
             this.fCtrl.RunSt.Init()
             return this.fCtrl.RunSt
         }
@@ -166,9 +165,9 @@ export class AttackFState extends State implements IMonsterAction {
     }
     approach(delta: number) {
         if (!this.target) return
-        this.attackDir.subVectors(this.target.position, this.fly.CannonPos)
+        this.attackDir.subVectors(this.target.position, this.fly.Pos)
         this.attackDir = this.attackDir.normalize()
-        const dist = this.target.position.distanceTo(this.fly.CannonPos)
+        const dist = this.target.position.distanceTo(this.fly.Pos)
         if(dist > this.attackDist) {
             this.fly.Meshs.position.x += this.attackDir.x * delta * this.speed
             //this.fly.Meshs.position.y += this.attackDir.y * delta * this.speed
@@ -184,12 +183,12 @@ export class AttackFState extends State implements IMonsterAction {
         this.attackProcess = false
 
         if (!this.target) return
-        this.startPos.copy(this.fly.CenterPos)
-        this.startPos.y = this.fly.Asset.Info?.calY ?? this.fly.CenterPos.y
+        this.startPos.copy(this.fly.Pos)
+        this.startPos.y = this.fly.Asset.Info?.calY ?? this.fly.Pos.y
         this.targetPos.copy(this.target.position)
         this.targetPos.y += 2
         this.attackDir = this.attackDir.subVectors(this.targetPos, this.startPos).normalize()
-        this.eventCtrl.OnProjectileEvent({
+        this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
             id: MonsterId.DefaultBall, 
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
             src: this.startPos, 
@@ -201,7 +200,7 @@ export class AttackFState extends State implements IMonsterAction {
 export class DyingFState extends State implements IMonsterAction {
     fadeMode = false
     fade = 1
-    constructor(zCtrl: FlyCtrl, zombie: Fly, gphysic: GPhysics) {
+    constructor(zCtrl: FlyCtrl, zombie: Fly, gphysic: IGPhysic) {
         super(zCtrl, zombie, gphysic)
     }
     Init(): void {
@@ -219,7 +218,7 @@ export class DyingFState extends State implements IMonsterAction {
 }
 export class RunFState extends State implements IMonsterAction {
     speed = this.property.speed
-    constructor(fCtrl: FlyCtrl, fly: Fly, gphysic: GPhysics, private property: MonsterProperty) {
+    constructor(fCtrl: FlyCtrl, fly: Fly, gphysic: IGPhysic, private property: MonsterProperty) {
         super(fCtrl, fly, gphysic)
     }
     Init(): void {

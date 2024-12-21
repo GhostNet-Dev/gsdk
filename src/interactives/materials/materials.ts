@@ -1,32 +1,25 @@
+import { IAsset } from "@Glibs/interface/iasset";
+import IEventController, { ILoop } from "@Glibs/interface/ievent";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { Loader } from "@Glibs/loader/loader";
+import { Effector } from "@Glibs/magical/effects/effector";
+import { EffectType } from "@Glibs/types/effecttypes";
+import { EventTypes, TargetBox } from "@Glibs/types/globaltypes";
+import { MonsterDb } from "@Glibs/types/monsterdb";
+import { MonsterId } from "@Glibs/types/monstertypes";
+import { AttackOption } from "@Glibs/types/playertypes";
 import * as THREE from "three";
-import { EventController, EventFlag } from "../event/eventctrl";
-import { Game } from "./game";
-import { Canvas } from "../common/canvas";
-import { Tree } from "./plants/tree";
-import { Stone } from "./models/stone";
-import { AppMode } from "../app";
-import { Loader } from "../loader/loader";
-import { math } from "../../libs/math";
-import { MonsterBox } from "./monsters/monsters";
-import { AttackOption, PlayerCtrl } from "./player/playerctrl";
-import { EffectType, Effector } from "../effects/effector";
-import { Player } from "./player/player";
-import { Drop } from "../inventory/drop";
-import { MonsterDb } from "./monsters/monsterdb";
-import { IViewer } from "./models/iviewer";
-import { MonsterId } from "./monsters/monsterid";
 
-
-export class Materials implements IViewer {
+export class Materials implements ILoop {
     // TODO 
     // loading material
     // respawning
     // drop items
     // receive damage
-    stones: Stone[] = []
-    trees: Tree[] = []
-    private stoneBoxes: MonsterBox[] = []
-    private treeBoxes: MonsterBox[] = []
+    stones: THREE.Group[] = []
+    trees: THREE.Group[] = []
+    private stoneBoxes: TargetBox[] = []
+    private treeBoxes: TargetBox[] = []
     dropPos = new THREE.Vector3()
     effector = new Effector(this.game)
 
@@ -37,28 +30,16 @@ export class Materials implements IViewer {
             color: 0xff0000,
         })
     constructor(
-        private player: Player,
-        private playerCtrl: PlayerCtrl,
+        private player: IPhysicsObject,
         private worldSize: number,
         private loader: Loader,
-        eventCtrl: EventController,
-        private game: Game,
-        private canvas: Canvas,
-        private drop: Drop,
+        private eventCtrl: IEventController,
+        private game: THREE.Scene,
         private monDb: MonsterDb,
     ) {
-        eventCtrl.RegisterAppModeEvent((mode: AppMode, e: EventFlag) => {
-            if (mode != AppMode.Play) return
-            switch (e) {
-                case EventFlag.Start:
-                    break
-                case EventFlag.End:
-                    break
-            }
-        })
-        eventCtrl.RegisterAttackEvent("stone", (opts: AttackOption[]) => {
+        eventCtrl.RegisterEventListener(EventTypes.Attack + "stone", (opts: AttackOption[]) => {
             opts.forEach((opt) => {
-                let obj = opt.obj as MonsterBox
+                let obj = opt.obj as TargetBox
                 if (obj == null) return
                 this.effector.meshs.position.copy(obj.position)
                 this.effector.StartEffector(EffectType.Damage)
@@ -66,13 +47,13 @@ export class Materials implements IViewer {
                 if (r < .7) return
                 this.dropPos.copy(obj.position)
                 this.dropPos.z += 2
-                this.drop.DropItem(this.dropPos, this.monDb.GetItem(MonsterId.Stone).drop)
+                this.eventCtrl.SendEventMessage(EventTypes.Drop, this.dropPos, this.monDb.GetItem(MonsterId.Stone).drop)
 
             })
         })
-        eventCtrl.RegisterAttackEvent("tree", (opts: AttackOption[]) => {
+        eventCtrl.RegisterEventListener(EventTypes.Attack + "tree", (opts: AttackOption[]) => {
             opts.forEach((opt) => {
-                let obj = opt.obj as MonsterBox
+                let obj = opt.obj as TargetBox
                 if (obj == null) return
                 this.effector.meshs.position.copy(obj.position)
                 this.effector.StartEffector(EffectType.Damage)
@@ -81,20 +62,15 @@ export class Materials implements IViewer {
                 this.dropPos.copy(obj.position)
                 this.dropPos.y = this.player.CenterPos.y
                 this.dropPos.z += 5
-                this.drop.DropItem(this.dropPos, this.monDb.GetItem(MonsterId.Tree).drop)
+                this.eventCtrl.SendEventMessage(EventTypes.Drop, this.dropPos, this.monDb.GetItem(MonsterId.Tree).drop)
             })
         })
         this.effector.Enable(EffectType.Damage, 0, 0, 1)
-        this.canvas.RegisterViewer(this)
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         this.game.add(this.effector.meshs)
     }
-
-    resize(): void { }
     update(delta: number): void {
         this.effector.Update(delta)
-    }
-
-    InitScene() {
     }
     async MassLoader() {
         return await Promise.all([
@@ -102,9 +78,7 @@ export class Materials implements IViewer {
             this.MassTreeLoad()
         ])
     }
-
     async StoneLoader() {
-        const meshs = await this.loader.StoneAsset.CloneModel()
         const pos = new THREE.Vector3()
         
         const radius = this.worldSize / 2
@@ -116,19 +90,18 @@ export class Materials implements IViewer {
                 2,
                 r * Math.sin(phi)
             )
-            const stone = new Stone(this.loader.StoneAsset)
-            const scale = math.rand_int(9, 15)
-            await stone.MassLoader(meshs, scale, pos)
+            const scale = THREE.MathUtils.randInt(9, 15)
+            const meshs = await this.LoadMaterials(this.loader.StoneAsset, scale, pos)
 
-            const size = this.loader.StoneAsset.GetSize(stone.Meshs)
-            const box = new MonsterBox(i, "stone", MonsterId.Stone, new THREE.BoxGeometry(), this.material)
+            const size = this.loader.StoneAsset.GetSize(meshs)
+            const box = new TargetBox(i, "stone", MonsterId.Stone, new THREE.BoxGeometry(), this.material)
             box.scale.copy(size)
             box.position.copy(pos)
             box.position.z += 2
             box.visible = false
             this.stoneBoxes.push(box)
-            this.playerCtrl.add(box)
-            this.game.add(box, stone.meshs)
+            this.eventCtrl.SendEventMessage(EventTypes.AddInteractive, box)
+            this.game.add(box, meshs)
         }
     }
 
@@ -145,20 +118,34 @@ export class Materials implements IViewer {
                 r * (-Math.abs(Math.sin(phi)))
             )
             
-            const scale = math.rand_int(15, 20)
-            const tree = new Tree(this.loader.TreeAsset)
-            tree.MassLoad(meshs, scale, pos)
-            this.trees.push(tree)
+            const scale = THREE.MathUtils.randInt(15, 20)
+            const meshs = await this.LoadMaterials(this.loader.TreeAsset, scale, pos)
+            this.trees.push(meshs)
 
-            const size = this.loader.TreeAsset.GetSize(tree.Meshs)
-            const box = new MonsterBox(i, "tree", MonsterId.Tree, new THREE.BoxGeometry(), this.material)
+            const size = this.loader.TreeAsset.GetSize(meshs)
+            const box = new TargetBox(i, "tree", MonsterId.Tree, new THREE.BoxGeometry(), this.material)
             box.scale.set(size.x / 2, size.y, size.z / 2)
             box.position.copy(pos)
             box.visible = false
             this.treeBoxes.push(box)
-            this.playerCtrl.add(box)
-            this.game.add(box, tree.meshs)
+            this.eventCtrl.SendEventMessage(EventTypes.AddInteractive, box)
+            this.game.add(box, meshs)
         }
         console.log("trea load complete")
+    }
+    async LoadMaterials(asset:IAsset, scale: number, position: THREE.Vector3) {
+        const rotate = THREE.MathUtils.randFloat(0, 1)
+        const meshs = await asset.CloneModel()
+        meshs.scale.set(scale, scale, scale)
+        meshs.position.set(position.x, position.y, position.z)
+        meshs.rotateX(rotate)
+        meshs.rotateZ(rotate)
+        meshs.castShadow = true
+        meshs.receiveShadow = true
+        meshs.traverse(child => {
+            child.castShadow = true
+            child.receiveShadow = true
+        })
+        return meshs
     }
 }

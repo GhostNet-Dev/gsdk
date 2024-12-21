@@ -4,7 +4,6 @@ import { FurnModel } from "./bed";
 import { FurnId } from "@Glibs/types/furntypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import IEventController, { IKeyCommand, ILoop } from "@Glibs/interface/ievent";
-import { Canvas } from "@Glibs/systems/event/canvas";
 import { Loader } from "@Glibs/loader/loader";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { FurnDb } from "./furndb";
@@ -35,12 +34,11 @@ export class Carpenter implements ILoop {
         private player: IPhysicsObject,
         private game: THREE.Scene,
         private gphysic: IGPhysic,
-        canvas: Canvas,
         private eventCtrl: IEventController,
         private furnDb: FurnDb,
         private inven: IInventory,
     ){
-        canvas.RegisterLoop(this)
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
 
         eventCtrl.RegisterEventListener(EventTypes.AppMode, (mode: AppMode, e: EventFlag, id: string) => {
             if(mode != AppMode.Furniture) return

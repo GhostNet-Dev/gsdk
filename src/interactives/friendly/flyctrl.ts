@@ -1,19 +1,18 @@
 import * as THREE from "three";
-import { GPhysics, IGPhysic } from "../../common/physics/gphysics";
-import { IPhysicsObject } from "../models/iobject";
-import { MonsterProperty } from "../monsters/monsterdb";
-import { Player } from "../player/player";
 import { Fly } from "./fly";
 import { IFlyCtrl } from "./friendly";
 import { AttackFState, DyingFState, IdleFState, RunFState } from "./friendlystate";
-import { IMonsterAction } from "../monsters/monsters";
-import { PlayerCtrl } from "../player/playerctrl";
-import { EventController } from "../../event/eventctrl";
+import IEventController, { ILoop } from "@Glibs/interface/ievent";
+import { IGPhysic } from "@Glibs/interface/igphysics";
+import { MonsterProperty } from "@Glibs/types/monstertypes";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { IMonsterAction } from "@Glibs/interface/imonsters";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
 
-export class FlyCtrl implements IGPhysic, IFlyCtrl {
-    IdleSt = new IdleFState(this, this.fly, this.playerCtrl, this.gphysic)
-    AttackSt = new AttackFState(this, this.fly, this.gphysic, this.playerCtrl, this.eventCtrl, this.property)
+export class FlyCtrl implements ILoop, IFlyCtrl {
+    IdleSt = new IdleFState(this, this.fly, this.targetList, this.gphysic)
+    AttackSt = new AttackFState(this, this.fly, this.gphysic, this.targetList, this.eventCtrl, this.property)
     RunSt = new RunFState(this, this.fly, this.gphysic, this.property)
     DyingSt = new DyingFState(this, this.fly, this.gphysic)
 
@@ -24,24 +23,21 @@ export class FlyCtrl implements IGPhysic, IFlyCtrl {
 
     constructor(
         private fly: Fly, 
-        private player: Player,
-        private playerCtrl: PlayerCtrl,
-        private gphysic: GPhysics,
-        private eventCtrl: EventController,
+        private player: IPhysicsObject,
+        private targetList: THREE.Object3D[],
+        private gphysic: IGPhysic,
+        private eventCtrl: IEventController,
         private property: MonsterProperty
     ) {
-        this.Init()
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+    }
+    Release(): void {
+        
     }
 
-    Init() {
-        this.gphysic.Register(this)
-    }
-    Release() {
-        this.gphysic.Deregister(this)
-    }
     update(delta: number): void {
         if (!this.fly.Visible) return
-        const dist = this.fly.CannonPos.distanceTo(this.player.CannonPos)
+        const dist = this.fly.Pos.distanceTo(this.player.Pos)
         this.dir.subVectors(this.player.CenterPos, this.fly.CenterPos)
         this.moveDirection.copy(this.dir)
 

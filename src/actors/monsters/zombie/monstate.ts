@@ -1,12 +1,12 @@
 import * as THREE from "three";
 import { Zombie } from "./zombie"
 import { MonsterCtrl } from "./monctrl";
-import { IMonsterAction } from "../monsters";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import IEventController from "@Glibs/interface/ievent";
 import { MonsterProperty } from "../monstertypes";
 import { ActionType, AttackType } from "@Glibs/types/playertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { IMonsterAction } from "../imonsters";
 
 class State {
     attackDist = 3

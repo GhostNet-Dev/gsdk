@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { ImprovedNoise } from "three/examples/jsm/math/ImprovedNoise"
-import { Canvas, IViewer } from "@Commons/canvas";
 import grassShader from "./shader/grass"
 
 export class ZeldaGrass {

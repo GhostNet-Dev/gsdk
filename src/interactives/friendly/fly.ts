@@ -1,10 +1,10 @@
 import * as THREE from "three";
-import { Ani, IAsset } from "../../loader/assetmodel";
-import { GhostModel } from "../models/ghostmodel";
-import { IPhysicsObject } from "../models/iobject";
-import { ActionType } from "../player/player";
+import { PhysicsObject } from "@Glibs/interface/iobject";
+import { IAsset } from "@Glibs/interface/iasset";
+import { Ani } from "@Glibs/types/assettypes";
+import { ActionType } from "@Glibs/types/playertypes";
 
-export class Fly extends GhostModel implements IPhysicsObject { 
+export class Fly extends PhysicsObject { 
     mixer?: THREE.AnimationMixer
     currentAni?: THREE.AnimationAction
     currentClip?: THREE.AnimationClip
@@ -13,8 +13,6 @@ export class Fly extends GhostModel implements IPhysicsObject {
     runClip?: THREE.AnimationClip
     punchingClip?: THREE.AnimationClip
     dyingClip?: THREE.AnimationClip
-
-    get BoxPos() { return this.asset.GetBoxPos(this.meshs) }
 
     constructor (
         asset: IAsset,
@@ -28,11 +26,6 @@ export class Fly extends GhostModel implements IPhysicsObject {
         this.meshs = meshs
 
         this.meshs.position.copy(position)
-
-        if (this.text != undefined) {
-            this.meshs.remove(this.text)
-        }
-
 
         this.mixer = this.asset.GetMixer(this.name)
         if (this.mixer == undefined) throw new Error("mixer is undefined");

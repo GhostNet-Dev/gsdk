@@ -1,16 +1,14 @@
 import * as THREE from "three";
 import { Loader } from "../../loader/loader";
-import { Game } from "../game";
-import { Player } from "../player/player";
 import { Fly } from "./fly";
 import { FlyCtrl } from "./flyctrl";
-import { IPhysicsObject } from "../models/iobject";
-import { GPhysics } from "../../common/physics/gphysics";
-import { MonsterDb } from "../monsters/monsterdb";
-import { MonsterId } from "../monsters/monsterid";
-import { EventController, EventFlag } from "../../event/eventctrl";
-import { PlayerCtrl } from "../player/playerctrl";
-import { AppMode } from "../../app";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { MonsterId } from "@Glibs/types/monstertypes";
+import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
+import IEventController from "@Glibs/interface/ievent";
+import { IGPhysic } from "@Glibs/interface/igphysics";
+import { MonsterDb } from "@Glibs/types/monsterdb";
+import { EventFlag } from "@Glibs/types/eventtypes";
 
 export type FriendlySet = {
     friendlyModel: IPhysicsObject,
@@ -30,14 +28,14 @@ export class Friendly {
 
     constructor(
         private loader: Loader,
-        private eventCtrl: EventController,
-        private gphysic: GPhysics,
-        private game: Game,
-        private player: Player,
-        private playerCtrl: PlayerCtrl,
+        private eventCtrl: IEventController,
+        private gphysic: IGPhysic,
+        private game: THREE.Scene,
+        private player: IPhysicsObject,
+        private targetList: THREE.Object3D[],
         private monDb: MonsterDb,
     ) { 
-        eventCtrl.RegisterAppModeEvent((mode: AppMode, e: EventFlag) => {
+        eventCtrl.RegisterEventListener(EventTypes.AppMode, (mode: AppMode, e: EventFlag) => {
             this.mode = mode
             if(mode != AppMode.Play) return
             switch (e) {
@@ -66,7 +64,7 @@ export class Friendly {
         const friendly = new Fly(asset, id as string)
         await friendly.Loader(pos)
 
-        const zCtrl = new FlyCtrl(friendly, this.player, this.playerCtrl,
+        const zCtrl = new FlyCtrl(friendly, this.player, this.targetList,
             this.gphysic, this.eventCtrl, property)
         const monSet: FriendlySet =  { 
             friendlyModel: friendly, friendlyCtrl: zCtrl, live: true, respawn: false, deadtime: new Date().getTime()

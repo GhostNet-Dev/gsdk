@@ -1,8 +1,9 @@
 import * as THREE from "three";
-import { EventController, EventFlag } from '../../event/eventctrl'
 import { Joystick } from "./joystic";
-import { KeyAction1, KeyAction2, KeyAction3, KeyDown, KeyLeft, KeyRight, KeySpace, KeyUp } from "../../event/keycommand";
-import { AppMode } from "../../app";
+import { KeyAction1, KeyAction2, KeyAction3, KeyDown, KeyLeft, KeyRight, KeySpace, KeyUp } from "../event/keycommand";
+import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
+import IEventController from "@Glibs/interface/ievent";
+import { EventFlag } from "@Glibs/types/eventtypes";
 
 export class Input {
     //dom = document.createElement("div")
@@ -43,7 +44,7 @@ export class Input {
             }
             this.realV.set(x, 0, y)
             console.log(type, x, y)
-            this.eventCtrl.OnInputEvent({ type: type }, this.realV, this.virtualV)
+            this.eventCtrl.SendEventMessage(EventTypes.Input, { type: type }, this.realV, this.virtualV)
         },
         /*
         ontouchstart: (e) => this.MultiTouchEvent(e),
@@ -51,8 +52,8 @@ export class Input {
         ontouchend: (e) => this.MultiTouchEvent(e),
         */
     })
-    constructor(private eventCtrl: EventController) {
-        this.eventCtrl.RegisterAppModeEvent((mode: AppMode, e: EventFlag) => {
+    constructor(private eventCtrl: IEventController) {
+        this.eventCtrl.RegisterEventListener(EventTypes.AppMode, (mode: AppMode, e: EventFlag) => {
             switch (mode) {
                 case AppMode.Brick:
                 case AppMode.NonLego:
@@ -84,26 +85,26 @@ export class Input {
             }
         })
 
-        this.up.ontouchstart = () => { this.eventCtrl.OnKeyDownEvent(new KeyUp); }
-        this.down.ontouchstart = () => { this.eventCtrl.OnKeyDownEvent(new KeyDown); }
-        this.left.ontouchstart = () => { this.eventCtrl.OnKeyDownEvent(new KeyLeft); }
-        this.right.ontouchstart = () => { this.eventCtrl.OnKeyDownEvent(new KeyRight); }
-        this.up.ontouchend = () => { this.eventCtrl.OnKeyUpEvent(new KeyUp); }
-        this.down.ontouchend = () => { this.eventCtrl.OnKeyUpEvent(new KeyDown); }
-        this.left.ontouchend = () => { this.eventCtrl.OnKeyUpEvent(new KeyLeft); }
-        this.right.ontouchend = () => { this.eventCtrl.OnKeyUpEvent(new KeyRight); }
+        this.up.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyUp); }
+        this.down.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyDown); }
+        this.left.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyLeft); }
+        this.right.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyRight); }
+        this.up.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyUp); }
+        this.down.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyDown); }
+        this.left.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyLeft); }
+        this.right.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyRight); }
 
-        this.jump.ontouchstart = () => { this.eventCtrl.OnKeyDownEvent(new KeySpace) }
-        this.jump.ontouchend = () => { this.eventCtrl.OnKeyUpEvent(new KeySpace) }
+        this.jump.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeySpace) }
+        this.jump.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeySpace) }
 
-        this.action1.ontouchstart = () => { this.eventCtrl.OnKeyDownEvent(new KeyAction1) }
-        this.action1.ontouchend = () => { this.eventCtrl.OnKeyUpEvent(new KeyAction1) }
+        this.action1.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyAction1) }
+        this.action1.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyAction1) }
 
-        this.action2.ontouchstart = () => { this.eventCtrl.OnKeyDownEvent(new KeyAction2) }
-        this.action2.ontouchend = () => { this.eventCtrl.OnKeyUpEvent(new KeyAction2) }
+        this.action2.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyAction2) }
+        this.action2.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyAction2) }
 
-        this.action3.ontouchstart = () => { this.eventCtrl.OnKeyDownEvent(new KeyAction3) }
-        this.action3.ontouchend = () => { this.eventCtrl.OnKeyUpEvent(new KeyAction3) }
+        this.action3.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyAction3) }
+        this.action3.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyAction3) }
     }
     LegacyButtonShow() {
         const joypad = document.getElementById("joypad") as HTMLDivElement
@@ -129,10 +130,10 @@ export class Input {
                 const btn = e.target as HTMLElement
                 console.log("start", e)
                 switch(btn.id) {
-                    case "joypad_button1": this.eventCtrl.OnKeyDownEvent(new KeySpace); break;
-                    case "joypad_button2": this.eventCtrl.OnKeyDownEvent(new KeyAction1); break;
-                    case "joypad_button3": this.eventCtrl.OnKeyDownEvent(new KeyAction2); break;
-                    case "joypad_button4": this.eventCtrl.OnKeyDownEvent(new KeyAction3); break;
+                    case "joypad_button1": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeySpace); break;
+                    case "joypad_button2": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyAction1); break;
+                    case "joypad_button3": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyAction2); break;
+                    case "joypad_button4": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyAction3); break;
                     case "zone_joystick": this.joystick.start(e.clientX, e.clientY);break;
                 }
             }
@@ -151,10 +152,10 @@ export class Input {
                 console.log("end", this.currentEvent)
                 const btn = this.currentEvent.target as HTMLElement
                 switch(btn.id) {
-                    case "joypad_button1": this.eventCtrl.OnKeyUpEvent(new KeySpace); break;
-                    case "joypad_button2": this.eventCtrl.OnKeyUpEvent(new KeyAction1); break;
-                    case "joypad_button3": this.eventCtrl.OnKeyUpEvent(new KeyAction2); break;
-                    case "joypad_button4": this.eventCtrl.OnKeyUpEvent(new KeyAction3); break;
+                    case "joypad_button1": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeySpace); break;
+                    case "joypad_button2": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyAction1); break;
+                    case "joypad_button3": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyAction2); break;
+                    case "joypad_button4": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyAction3); break;
                     case "zone_joystick": this.joystick.end();break;
                 }
             }

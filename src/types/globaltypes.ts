@@ -1,3 +1,5 @@
+import * as THREE from "three";
+
 export enum AppMode {
     Intro,
     Long,
@@ -28,6 +30,7 @@ export enum EventTypes {
     BrickInfo = "bsize",
     TerrainInfo = "tsize",
     Attack = "attack",
+    AreaOfEffect = "AOE",
     SceneClear = "clear",
     Reload = "reload",
     AppMode = "appmode",
@@ -39,4 +42,20 @@ export enum EventTypes {
     AddInteractive = "addinter",
     DelInteractive = "delinter",
     UpdateBuff = "updatebuff",
+    RegisterLoop = "regloop",
+    DeregisterLoop = "deregloop",
+    RegisterViewer = "regviewer",
+}
+export enum Config {
+    LegoFieldW = 18,
+    LegoFieldH = 24,
+}
+
+export class TargetBox extends THREE.Mesh {
+    constructor(public Id: number, public ObjName: string, public MonId: string,
+        geo: THREE.BoxGeometry, mat: THREE.MeshBasicMaterial
+    ) {
+        super(geo, mat)
+        this.name = ObjName
+    }
 }

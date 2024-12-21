@@ -21,7 +21,7 @@ export class ProjectileCtrl {
     
     constructor(
         private projectile: IProjectileModel,
-        private playerCtrl: PlayerCtrl,
+        private targetList: THREE.Object3D[],
         private eventCtrl: IEventController,
         private property: MonsterProperty,
     ){
@@ -51,7 +51,7 @@ export class ProjectileCtrl {
     attack() {
         if (!this.live) return false
         const msgs = new Map()
-        this.playerCtrl.targets.forEach(obj => {
+        this.targetList.forEach(obj => {
             const dist = obj.position.distanceTo(this.position)
             if(this.attackDist < dist) return
             const mons = msgs.get(obj.name)

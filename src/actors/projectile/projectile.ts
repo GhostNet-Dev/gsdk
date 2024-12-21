@@ -2,7 +2,7 @@ import { MonsterId } from "@Glibs/types/monstertypes";
 import { Bullet3 } from "./bullet3";
 import { DefaultBall } from "./defaultball";
 import { ProjectileCtrl } from "./projectilectrl";
-import IEventController, { ICanvas, ILoop } from "@Glibs/interface/ievent";
+import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { EventFlag } from "@Glibs/types/eventtypes";
 import { MonsterDb } from "@Glibs/types/monsterdb";
@@ -31,13 +31,12 @@ export class Projectile implements ILoop {
     processing = false
 
     constructor(
-        canvas: ICanvas,
         private eventCtrl: IEventController,
         private game: THREE.Scene,
-        private playerCtrl: PlayerCtrl,
+        private targetList: THREE.Object3D[],
         private monDb: MonsterDb,
     ) {
-        canvas.RegisterViewer(this)
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         eventCtrl.RegisterEventListener(EventTypes.PlayMode, (e: EventFlag) => {
             switch (e) {
                 case EventFlag.Start:
@@ -67,7 +66,7 @@ export class Projectile implements ILoop {
     CreateProjectile(id: MonsterId, src: THREE.Vector3, dir: THREE.Vector3, damage: number) {
         const property = this.monDb.GetItem(id)
         const ball = this.GetModel(id)
-        const ctrl = new ProjectileCtrl(ball, this.playerCtrl, this.eventCtrl, property)
+        const ctrl = new ProjectileCtrl(ball, this.targetList, this.eventCtrl, property)
         ctrl.start(src, dir, damage)
 
         const set: ProjectileSet = {

@@ -6,7 +6,6 @@ import { TreeCtrl } from "./treectrl";
 import IEventController, { IKeyCommand, ILoop } from "@Glibs/interface/ievent";
 import { Loader } from "@Glibs/loader/loader";
 import { IGPhysic } from "@Glibs/interface/igphysics";
-import { Canvas } from "@Glibs/systems/event/canvas";
 import { PlantDb } from "./plantdb";
 import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
 import { EventFlag, KeyType } from "@Glibs/types/eventtypes";
@@ -47,11 +46,10 @@ export class Farmer implements ILoop {
         private player: IPhysicsObject,
         private game: THREE.Scene,
         private gphysic: IGPhysic,
-        canvas: Canvas,
         private eventCtrl: IEventController,
         private plantDb: PlantDb,
     ){
-        canvas.RegisterLoop(this)
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
 
         eventCtrl.RegisterEventListener(EventTypes.AppMode, (mode: AppMode, e: EventFlag, id: string) => {
             if(mode != AppMode.Farmer) return

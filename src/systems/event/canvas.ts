@@ -1,27 +1,30 @@
 import * as THREE from "three";
-import { ILoop, IViewer } from "./ievent";
-import { ICanvas } from "@Glibs/interface/ievent";
+import IEventController, { ILoop, IViewer } from "./ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
 
-export class Canvas implements ICanvas {
+export class Canvas {
     canvas: HTMLCanvasElement
     width: number
     height: number
-    objs: IViewer[]
+    objs: IViewer[] = []
     loopObjs: ILoop[] = []
 
-    constructor(...objs: IViewer[]) {
+    constructor(eventCtrl: IEventController) {
         this.canvas = document.getElementById('avatar-bg') as HTMLCanvasElement
         this.width = window.innerWidth
         this.height = window.innerHeight
-        this.objs = objs
+        eventCtrl.RegisterEventListener(EventTypes.RegisterLoop, (obj: ILoop) => {
+            this.loopObjs.push(obj)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.DeregisterLoop, (obj: ILoop) => {
+            this.loopObjs.splice(this.loopObjs.indexOf(obj), 1)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.RegisterViewer, (obj: IViewer) => {
+            this.objs.push(obj)
+        })
     }
-    RegisterLoop(obj: ILoop) {
-        this.loopObjs.push(obj)
-    }
-    RegisterViewer(obj: IViewer) {
-        this.objs.push(obj)
-    }
+
     clock = new THREE.Clock
     update() {
         const time = this.clock.getDelta()
