@@ -27,10 +27,11 @@ export class Player extends PhysicsObject {
     meshs: THREE.Group
     constructor(
         private loader: Loader, 
+        asset: IAsset,
         private eventCtrl: IEventController,
         private game: THREE.Scene
     ) {
-        super(loader.MaleAsset)
+        super(asset)
         this.meshs = new THREE.Group
         this.effector.Enable(EffectType.Status)
 

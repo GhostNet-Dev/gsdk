@@ -17,6 +17,7 @@ export class GPhysics {
     landPos = new THREE.Vector3()
 
     objs: IGPhysic[] = []
+    physicalObjs: IPhysicsObject[] = []
     pboxs = new Map<string, PhysicBox[]>()
     debugBoxMat = new THREE.MeshBasicMaterial({color: 0xffffff, wireframe: true})
     /*
@@ -87,6 +88,7 @@ export class GPhysics {
         const box = new THREE.Mesh(new THREE.BoxGeometry(model.Size.x, model.Size.y, model.Size.z), this.debugBoxMat)
 
         this.player = model
+        this.physicalObjs.push(model)
         this.movingBoxs.push({ model: model, box: box })
     }
 
@@ -95,6 +97,7 @@ export class GPhysics {
             // for debugggin
             const box = new THREE.Mesh(new THREE.BoxGeometry(model.Size.x, model.Size.y, model.Size.z), this.debugBoxMat)
             this.movingBoxs.push({ model: model, box: box })
+            this.physicalObjs.push(model)
         })
     }
     addMeshBuilding(...models: IBuildingObject[]) {
@@ -254,6 +257,10 @@ export class GPhysics {
 
     clock = new THREE.Clock()
     update() {
+        const delta = this.clock.getDelta()
+        this.physicalObjs.forEach(obj => {
+            obj.Update?.(delta)
+        })
         this.movingBoxs.forEach((phy) => {
             const v = phy.model.BoxPos
             if(phy.box != undefined) {
