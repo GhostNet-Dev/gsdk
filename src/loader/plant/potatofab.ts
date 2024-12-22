@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { Loader } from "../loader";
-import { AssetModel, Char, IAsset, ModelType } from "../assetmodel";
+import { AssetModel } from "../assetmodel";
+import { IAsset } from "../iasset";
+import { Char, ModelType } from "../assettypes";
 import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 
 export class Potato0Fab extends AssetModel implements IAsset {

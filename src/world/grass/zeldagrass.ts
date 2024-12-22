@@ -1,9 +1,10 @@
 import * as THREE from "three";
 import { ImprovedNoise } from "three/examples/jsm/math/ImprovedNoise"
-import { Canvas, IViewer } from "@Commons/canvas";
 import grassShader from "./shader/grass"
+import IEventController, { ILoop } from "@Glibs/interface/ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
-export class ZeldaGrass implements IViewer {
+export class ZeldaGrass implements ILoop {
     startTime: number = 0
     grassMaterial?: THREE.ShaderMaterial
 
@@ -16,8 +17,8 @@ export class ZeldaGrass implements IViewer {
     mesh: THREE.Mesh
     noise = new ImprovedNoise()
 
-    constructor(canvas: Canvas) {
-        canvas.RegisterViewer(this)
+    constructor(eventCtrl: IEventController) {
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
 
         const grassTexture = new THREE.TextureLoader().load("assets/texture/grass.jpg")
         const cloudTexture = new THREE.TextureLoader().load("assets/texture/cloud.jpg")

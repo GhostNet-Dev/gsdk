@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { Loader } from "../loader";
-import { AssetModel, Char, ModelType } from "../assetmodel";
 import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
+import { AssetModel } from "../assetmodel";
+import { Char, ModelType } from "../assettypes";
 
 
 export class TreeFab extends AssetModel {

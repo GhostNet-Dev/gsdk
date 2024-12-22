@@ -1,10 +1,9 @@
 import * as THREE from "three";
-import { Canvas, IViewer } from "@Commons/canvas";
 import { FoliageMaterial } from "./foliagematerial";
-import { GhostModel } from "@Models/ghostmodel";
 import { Loader } from "@Loader/loader";
+import { PhysicsObject } from "@Glibs/interface/iobject";
 
-export class FluffyTree extends GhostModel {
+export class FluffyTree extends PhysicsObject {
   foliageMaterial: FoliageMaterial[] = []
 
   constructor(loader: Loader) {

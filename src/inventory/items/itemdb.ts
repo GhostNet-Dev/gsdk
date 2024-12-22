@@ -1,7 +1,7 @@
-import { Bind } from "@Loader/assetmodel"
 import { Loader } from "@Loader/loader"
 import { Deck } from "./deck"
 import { AttackItemType, ItemId, ItemProperty, ItemType, Level } from "../inventypes"
+import { Bind } from "@Glibs/types/assettypes"
 
 
 

@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js"
 import { DeadtreeFab } from "./plant/deadtreefab";
-import { Char, IAsset } from "./assetmodel";
+import { IAsset } from "./iasset";
+import { Char } from "./assettypes";
 import { MaleFab } from "./malefab";
 import { FemaleFab } from "./femalefab";
 import { MushroomFab } from "./plant/mushroomfab";

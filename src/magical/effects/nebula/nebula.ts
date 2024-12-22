@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { IEffect } from "../effector";
 import Nebula, { SpriteRenderer } from "three-nebula";
 import Json from "./json/defaultparticle.json";
+import { IEffect } from "../ieffector";
 
 export class NebulaVfx implements IEffect {
   processFlag = false

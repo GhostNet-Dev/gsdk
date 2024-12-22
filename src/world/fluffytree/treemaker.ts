@@ -1,8 +1,8 @@
 import * as THREE from 'three'
-import { Canvas, IViewer } from "@Commons/canvas"
 import { Loader } from "@Loader/loader"
-import { GhostModel } from "@Models/ghostmodel"
 import { FluffyTree } from "./fluffytree"
+import IEventController, { ILoop } from '@Glibs/interface/ievent'
+import { EventTypes } from '@Glibs/types/globaltypes'
 
 
 export enum FluffyTreeType {
@@ -28,15 +28,15 @@ export type TreeParam = {
     color?: string
 }
 
-export class TreeMaker implements IViewer {
+export class TreeMaker implements ILoop {
     treeParam: TreeParam[] = []
     models: FluffyTree[] = []
     constructor(
         private loader: Loader,
-        private canvas: Canvas,
+        private eventCtrl: IEventController,
         private scene: THREE.Scene,
     ) {
-        canvas.RegisterViewer(this)
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
     }
     async LoadTree(trees: TreeParam[]) {
         this.models.forEach((t) => {

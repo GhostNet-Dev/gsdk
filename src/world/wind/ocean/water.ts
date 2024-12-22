@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { Particle, ParticleSystem } from '../effects/water/particlesystem';
 import waterShader from './shader/ocean'
 
 export class Water {

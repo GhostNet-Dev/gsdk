@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { Loader } from "./loader";
-import { Ani, AssetModel, Bind, Char, IAsset, ModelType } from "./assetmodel";
+import { AssetModel } from "./assetmodel";
+import { IAsset } from "./iasset";
+import { Ani, Bind, Char, ModelType } from "./assettypes";
 import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 import GUI from "lil-gui";
 

@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import oceanShader from "./shader/ocean"
-import { Canvas, IViewer } from "@Commons/canvas";
+import IEventController, { ILoop } from "@Glibs/interface/ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
-export class Ocean implements IViewer {
+export class Ocean implements ILoop {
     _geometry: THREE.PlaneGeometry
     _shader: THREE.ShaderMaterial
     mesh: THREE.Mesh
@@ -10,8 +11,8 @@ export class Ocean implements IViewer {
 
     //=====// Scene //========================================//     
 
-    constructor(canvas: Canvas) {
-        canvas.RegisterViewer(this)
+    constructor(eventCtrl: IEventController) {
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         const size = 800
         this._geometry = new THREE.PlaneGeometry(size, size, size, size);
         this._geometry.rotateX(-Math.PI / 2);

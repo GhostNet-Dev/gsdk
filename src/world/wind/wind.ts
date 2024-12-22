@@ -1,16 +1,17 @@
 import * as THREE from "three";
 import windShader from "./shader/wind"
-import { Canvas, IViewer } from "@Commons/canvas";
+import IEventController, { ILoop } from "@Glibs/interface/ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
-export class Wind implements IViewer {
+export class Wind implements ILoop {
     _geometry: THREE.BufferGeometry;
     mesh: THREE.Mesh
     _shaders: THREE.ShaderMaterial[] = [];
 
 
     //=====// Scene //========================================//
-    constructor(canvas: Canvas) {
-        canvas.RegisterViewer(this)
+    constructor(eventCtrl: IEventController) {
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         const points = this.createSpiral();
 
         // Create the flat geometry
