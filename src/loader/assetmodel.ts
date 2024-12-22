@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Loader } from "./loader";
-import { Ani, AssetInfo, Bind, Char, ModelType } from "./assettypes";
+import { Ani, AssetInfo, ModelType } from "./assettypes";
 
 
 export class AssetModel {
