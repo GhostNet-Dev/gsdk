@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { FoliageMaterial } from "./foliagematerial";
-import { Loader } from "@Loader/loader";
 import { PhysicsObject } from "@Glibs/interface/iobject";
+import { Loader } from "@Glibs/loader/loader";
 
 export class FluffyTree extends PhysicsObject {
   foliageMaterial: FoliageMaterial[] = []

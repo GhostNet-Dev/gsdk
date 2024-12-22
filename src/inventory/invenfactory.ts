@@ -1,4 +1,4 @@
-import { Loader } from "@Loader/loader";
+import { Loader } from "@Glibs/loader/loader";
 import { Inventory } from "./inventory";
 import { Item } from "./items/item";
 import { ItemDb } from "./items/itemdb";

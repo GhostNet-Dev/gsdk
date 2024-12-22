@@ -41,9 +41,6 @@ module.exports = {
     alias: {
       "@Glibs": path.resolve(__dirname, "src"),
       "@Assets": path.resolve(__dirname, "assets"),
-      "@Loader": path.resolve(__dirname, "src/loader"),
-      "@Commons": path.resolve(__dirname, "src/common"),
-      "@Models": path.resolve(__dirname, "src/models"),
     }
   },
   plugins: [

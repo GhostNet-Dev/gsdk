@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { Loader } from "@Loader/loader"
 import { MonsterSet } from "./monsters"
 import { Zombie } from "./zombie/zombie"
 import { MonsterCtrl } from "./zombie/monctrl"
@@ -9,6 +8,7 @@ import IEventController from "@Glibs/interface/ievent";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { MonsterId } from "./monstertypes";
 import { Effector } from "@Glibs/magical/effects/effector";
+import { Loader } from "@Glibs/loader/loader";
 
 export class CreateMon {
     constructor(

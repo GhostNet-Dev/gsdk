@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { Loader } from "@Loader/loader"
 import { CreateMon } from "./createmon";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { MonDrop, MonsterId } from "@Glibs/types/monstertypes";
@@ -10,6 +9,7 @@ import { DeckType } from "@Glibs/types/inventypes";
 import IEventController from "@Glibs/interface/ievent";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { MonsterDb } from "./monsterdb";
+import { Loader } from "@Glibs/loader/loader";
 
 export type MonsterSet = {
     monModel: IPhysicsObject,

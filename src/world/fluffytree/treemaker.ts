@@ -1,8 +1,8 @@
 import * as THREE from 'three'
-import { Loader } from "@Loader/loader"
 import { FluffyTree } from "./fluffytree"
 import IEventController, { ILoop } from '@Glibs/interface/ievent'
 import { EventTypes } from '@Glibs/types/globaltypes'
+import { Loader } from '@Glibs/loader/loader'
 
 
 export enum FluffyTreeType {
