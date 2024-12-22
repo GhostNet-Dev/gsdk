@@ -1,6 +1,5 @@
+import { GhostObject, IPhysicsObject } from "@Glibs/interface/iobject";
 import * as THREE from "three";
-import { IObject, IPhysicsObject } from "@Models/iobject";
-import { GhostModel2 } from "@Models/ghostmodel";
 
 // 하늘 셰이더 재질
 const skyVertexShader = `
@@ -22,9 +21,9 @@ void main() {
     gl_FragColor = vec4(skyColor, 1.0);
 }
 `;
-export class SkyBox extends GhostModel2 implements IObject, IPhysicsObject {
+export class SkyBox extends GhostObject implements IPhysicsObject {
     get BoxPos() {
-        const v = this.CannonPos
+        const v = this.Pos
         return new THREE.Vector3(v.x, v.y, v.z)
     }
 

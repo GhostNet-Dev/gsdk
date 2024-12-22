@@ -1,7 +1,6 @@
 import * as THREE from "three";
-import { IObject, IPhysicsObject } from "@Models/iobject";
-import { GhostModel2 } from "@Models/ghostmodel";
-import { gui } from "../helper/helper";
+import { gui } from "@Glibs/helper/helper";
+import { GhostObject, IPhysicsObject } from "@Glibs/interface/iobject";
 
 // Vertex Shader
 const skyVertexShader = `
@@ -34,9 +33,9 @@ void main() {
 }
 `;
 
-export class SkyBoxAllTime extends GhostModel2 implements IObject, IPhysicsObject {
+export class SkyBoxAllTime extends GhostObject implements IPhysicsObject {
     get BoxPos() {
-        const v = this.CannonPos;
+        const v = this.Pos;
         return new THREE.Vector3(v.x, v.y, v.z);
     }
     skyMaterial: THREE.ShaderMaterial
