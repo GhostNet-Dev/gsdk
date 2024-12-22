@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@gltf-transform/cli": "^3.10.1",
+    "@tensorflow/tfjs": "^4.22.0",
     "@thednp/color-picker": "^2.0.0-alpha10",
     "bootstrap": "^5.3.2",
     "cannon-es": "^0.20.0",
