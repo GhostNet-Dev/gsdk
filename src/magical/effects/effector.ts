@@ -23,6 +23,7 @@ export class Effector {
     nonglow?: Function
     constructor(
         private game: THREE.Scene,
+        private rootPath: string = "https://hons.ghostwebservice.com/"
     ) {
         this.meshs.name = "effector"
     }
@@ -66,23 +67,23 @@ export class Effector {
                 ret = text
                 break;
             case EffectType.Explosion:
-                const explosion = new QuarksVfx('assets/vfx/ps.json', this.game)
+                const explosion = new QuarksVfx(this.rootPath + 'assets/vfx/ps.json', this.game)
                 explosion.initEffect(arg[0])
                 ret = explosion
                 break;
             case EffectType.CartoonLightningBall:
-                const vfx = new QuarksVfx('assets/vfx/CartoonLightningBall.json', this.game)
+                const vfx = new QuarksVfx(this.rootPath + 'assets/vfx/CartoonLightningBall.json', this.game)
                 vfx.initEffect(arg[0])
                 ret = vfx
                 break;
             case EffectType.FireExplosion: {
-                const blood = new QuarksVfx('assets/vfx/subEmitter4.json', this.game)
+                const blood = new QuarksVfx(this.rootPath + 'assets/vfx/subEmitter4.json', this.game)
                 blood.initEffect(arg[0])
                 ret = blood
                 break;
             }
             case EffectType.BloodExplosion:
-                const blood = new QuarksVfx('assets/vfx/BloodExplosion.json', this.game)
+                const blood = new QuarksVfx(this.rootPath + 'assets/vfx/BloodExplosion.json', this.game)
                 blood.initEffect(arg[0])
                 ret = blood
                 break;
@@ -95,7 +96,7 @@ export class Effector {
                 ret = trail
                 break;
             case EffectType.Damage:{
-                const vfx = new QuarksVfx('assets/vfx/CartoonEnergyExplosion.json', this.game)
+                const vfx = new QuarksVfx(this.rootPath + 'assets/vfx/CartoonEnergyExplosion.json', this.game)
                 vfx.initEffect(arg[0])
                 ret = vfx
                 break;

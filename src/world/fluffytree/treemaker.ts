@@ -33,8 +33,9 @@ export class TreeMaker implements ILoop {
     models: FluffyTree[] = []
     constructor(
         private loader: Loader,
-        private eventCtrl: IEventController,
+        eventCtrl: IEventController,
         private scene: THREE.Scene,
+        private rootPath: string = "https://hons.ghostwebservice.com/"
     ) {
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
     }
@@ -59,15 +60,15 @@ export class TreeMaker implements ILoop {
     }: TreeParam = {}
     ) {
         this.treeParam.push({type, position, rotation, scale, color})
-        let leafPath = 'assets/texture/foliage_alpha3.png'
+        let leafPath =  this.rootPath + 'assets/texture/foliage_alpha3.png'
         switch(type) {
-            case FluffyTreeType.Bigleaf: leafPath ='assets/texture/foliage_alpha3.png'
+            case FluffyTreeType.Bigleaf: leafPath = this.rootPath + 'assets/texture/foliage_alpha3.png'
                 color = "#b6652d"
                 break
-            case FluffyTreeType.FallTree: leafPath ='assets/texture/foliage/flat/sprite_0045.png'
+            case FluffyTreeType.FallTree: leafPath = this.rootPath + 'assets/texture/foliage/flat/sprite_0045.png'
                 color = "#bc8123"
                 break
-            case FluffyTreeType.Test: leafPath ='assets/texture/foliage/flat/sprite_0041.png'
+            case FluffyTreeType.Test: leafPath = this.rootPath + 'assets/texture/foliage/flat/sprite_0041.png'
                 color = "#bc8123"
                 break
                 /*
@@ -80,18 +81,18 @@ export class TreeMaker implements ILoop {
             case FluffyTreeType.Test4: leafPath ='assets/texture/foliage/flat/sprite_0045.png'
                 break
                 */
-            case FluffyTreeType.Test5: leafPath ='assets/texture/foliage/flat/sprite_0046.png'
+            case FluffyTreeType.Test5: leafPath = this.rootPath + 'assets/texture/foliage/flat/sprite_0046.png'
                 color = "#cbab37"
                 break
-            case FluffyTreeType.Test6: leafPath ='assets/texture/foliage/flat/sprite_0047.png'
+            case FluffyTreeType.Test6: leafPath = this.rootPath + 'assets/texture/foliage/flat/sprite_0047.png'
                 color = "#c4672e"
                 break
-            case FluffyTreeType.Test7: leafPath ='assets/texture/foliage/flat/sprite_0048.png'
+            case FluffyTreeType.Test7: leafPath = this.rootPath + 'assets/texture/foliage/flat/sprite_0048.png'
                 break
-            case FluffyTreeType.Sakura: leafPath ='assets/texture/foliage/flat/sprite_0049.png'
+            case FluffyTreeType.Sakura: leafPath = this.rootPath + 'assets/texture/foliage/flat/sprite_0049.png'
                 color = "#ffc0cb"
                 break
-            case FluffyTreeType.White: leafPath ='assets/texture/foliage/flat/sprite_0050.png'
+            case FluffyTreeType.White: leafPath = this.rootPath + 'assets/texture/foliage/flat/sprite_0050.png'
                 color = "#ffffff"
                 break
         }

@@ -4,16 +4,15 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 
 
 export class Canvas {
-    canvas: HTMLCanvasElement
     width: number
     height: number
     objs: IViewer[] = []
     loopObjs: ILoop[] = []
 
     constructor(eventCtrl: IEventController) {
-        this.canvas = document.getElementById('avatar-bg') as HTMLCanvasElement
         this.width = window.innerWidth
         this.height = window.innerHeight
+
         eventCtrl.RegisterEventListener(EventTypes.RegisterLoop, (obj: ILoop) => {
             this.loopObjs.push(obj)
         })
@@ -41,9 +40,6 @@ export class Canvas {
         })
     }
 
-    get Canvas(): HTMLCanvasElement {
-        return this.canvas
-    }
     get Width(): number { return this.width }
     get Height(): number { return this.height }
 }

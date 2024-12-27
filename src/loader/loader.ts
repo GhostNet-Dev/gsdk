@@ -211,7 +211,7 @@ export class Loader {
 
     assets = new Map<Char, IAsset>()
 
-    constructor() {
+    constructor(public rootPath: string = "https://hons.ghostwebservice.com/") {
         THREE.Cache.enabled = true
 
         this.assets.set(Char.Male, this.male)

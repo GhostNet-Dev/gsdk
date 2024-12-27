@@ -15,6 +15,13 @@ export class AppleFab extends AssetModel implements IAsset {
             this.gltf = gltf
             this.meshs = gltf.scene
             this.meshs.castShadow = true
+            this.meshs.traverse((child: any) => {
+                child.castShadow = true
+                child.receiveShadow = false
+                if (child.isMesh) {
+                    child.material = new THREE.MeshToonMaterial({ map: child.material.map })
+                }
+            })
             const scale = .5
             this.meshs.scale.set(scale, scale, scale)
             this.meshs.position.set(0, 0, 0)
@@ -58,6 +65,13 @@ export class CoconutFab extends AssetModel implements IAsset {
             this.gltf = gltf
             this.meshs = gltf.scene
             this.meshs.castShadow = true
+            this.meshs.traverse((child: any) => {
+                child.castShadow = true
+                child.receiveShadow = false
+                if (child.isMesh) {
+                    child.material = new THREE.MeshToonMaterial({ map: child.material.map })
+                }
+            })
             const scale = .5
             this.meshs.scale.set(scale, scale, scale)
             this.meshs.position.set(0, 0, 0)

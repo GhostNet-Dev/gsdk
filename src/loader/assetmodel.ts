@@ -58,7 +58,7 @@ export class AssetModel {
     async NewModel(): Promise<THREE.Group> {
         if (this.loaderType == ModelType.Gltf) {
             return await new Promise(async (resolve) => {
-                await this.loader.Load.load(this.path, async (gltf) => {
+                await this.loader.Load.load(this.loader.rootPath + this.path, async (gltf) => {
                     this.meshs = gltf.scene
                     await this.afterLoad(gltf)
                     resolve(gltf.scene)
@@ -70,7 +70,7 @@ export class AssetModel {
             })
         }
         return await new Promise(async (resolve) => {
-            await this.loader.FBXLoader.load(this.path, async (obj) => {
+            await this.loader.FBXLoader.load(this.loader.rootPath + this.path, async (obj) => {
                 await this.afterLoad(obj)
                 resolve(obj)
             })

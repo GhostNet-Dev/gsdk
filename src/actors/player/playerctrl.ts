@@ -63,6 +63,7 @@ export class PlayerCtrl {
     ) {
         this.worker.onmessage = (e: any) => { console.log(e) }
 
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         eventCtrl.RegisterEventListener(EventTypes.AppMode, (mode: AppMode, e: EventFlag) => {
             this.mode = mode
             if (mode == AppMode.EditPlay || mode == AppMode.Weapon) {
@@ -146,7 +147,7 @@ export class PlayerCtrl {
             })
             eventCtrl.SendEventMessage(EventTypes.PlayerStatus, this.spec.Status)
         })
-        eventCtrl.RegisterEventListener(EventTypes.AddInteractive, (obj: THREE.Object3D[]) => {
+        eventCtrl.RegisterEventListener(EventTypes.AddInteractive, (...obj: THREE.Object3D[]) => {
             this.add(...obj)
         })
         eventCtrl.RegisterEventListener(EventTypes.DelInteractive, (obj: THREE.Object3D) => {

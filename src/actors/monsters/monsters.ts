@@ -145,7 +145,7 @@ export class Monsters {
             set = await this.Resurrection(id)
         }
         console.log("Create", set, this.monsters.get(id))
-        this.Spawning(id, respawn, set, pos)
+        return this.Spawning(id, respawn, set, pos)
     }
     ReleaseMonster() {
         this.monsters.forEach((mon) => {
@@ -196,5 +196,6 @@ export class Monsters {
 
         this.eventCtrl.SendEventMessage(EventTypes.AddInteractive, monSet.monCtrl.MonsterBox)
         this.game.add(monSet.monModel.Meshs, monSet.monCtrl.MonsterBox)
+        return monSet
     }
 }

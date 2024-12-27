@@ -6,18 +6,15 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 
 export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
-    private controls: OrbitControls
 
     constructor(
         canvas: Canvas,
         eventCtrl: IEventController,
-        player: IPhysicsObject,
+        private player: IPhysicsObject,
     ) {
         super(45, canvas.Width / canvas.Height, 0.1, 400)
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         eventCtrl.SendEventMessage(EventTypes.RegisterViewer, this)
-        this.controls = new OrbitControls(this, canvas.Canvas)
-        this.controls.enabled = false
         this.position.set(7, 5, 7)
         this.lookAt(player.Pos)
     }
@@ -28,7 +25,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     }
 
     update() {
-        this.controls.update()
+        this.lookAt(this.player.Pos)
     }
 
     shakeCamera(intensity = 0.5, duration = 0.3) {
