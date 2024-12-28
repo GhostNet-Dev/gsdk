@@ -4,7 +4,7 @@ const path = require("path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 module.exports = {
-  entry: "./src/index.ts", // 번들링 시작 위치
+  entry: "./src/gsdk.ts", // 번들링 시작 위치
   output: {
     path: path.join(__dirname, "/"), // 번들 결과물 위치
     filename: "bundle.js",
@@ -45,7 +45,7 @@ module.exports = {
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: "./src/index.html", // 템플릿 위치
+      template: "./src/gsdk.html", // 템플릿 위치
     }),
   ],
   devServer: {

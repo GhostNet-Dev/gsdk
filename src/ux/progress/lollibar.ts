@@ -15,9 +15,8 @@ export default class LolliBar {
               (this.bar.firstElementChild as HTMLSpanElement).innerText = `${title} ${value.toFixed(1)}%`
             }
         })
-        this.drawHtml()
     }
-    drawHtml() { 
+    RenderHTML() { 
         const dom = document.createElement("div") as HTMLDivElement
         dom.className = "wrapper"
         dom.classList.add("p-1")
