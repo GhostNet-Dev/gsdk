@@ -52,6 +52,17 @@ export type AttackOption = {
     targetPoint?: THREE.Vector3
 }
 
+export interface PlayerStatusParam {
+    level?: number
+    maxHealth?: number
+    health?: number
+    maxMana?: number
+    mana?: number
+    maxExp?: number
+    exp?: number
+    immortal?: boolean
+}
+
 export type PlayerStatus = {
     level: number
     maxHealth: number
@@ -60,5 +71,6 @@ export type PlayerStatus = {
     mana: number
     maxExp: number
     exp: number
+    immortal: boolean
 }
 

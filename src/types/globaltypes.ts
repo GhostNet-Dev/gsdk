@@ -20,6 +20,7 @@ export enum AppMode {
 }
 
 export enum EventTypes {
+    UiInfo = "uiinfo",
     KeyDown = "keydown",
     KeyUp = "keyup",
     Input = "input",
@@ -45,6 +46,11 @@ export enum EventTypes {
     RegisterLoop = "regloop",
     DeregisterLoop = "deregloop",
     RegisterViewer = "regviewer",
+    AgentEpisode = "agentep"
+}
+export enum UiInfoType {
+    LolliBar,
+    RadialBar
 }
 export enum Config {
     LegoFieldW = 18,

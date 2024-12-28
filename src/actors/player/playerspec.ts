@@ -1,7 +1,8 @@
 import { IBuffItem } from "@Glibs/interface/ibuff"
-import { PlayerStatus } from "./playertypes"
+import { PlayerStatus, PlayerStatusParam } from "./playertypes"
 import IInventory from "@Glibs/interface/iinven"
 import { Bind } from "@Glibs/types/assettypes"
+
 
 const defaultStatus: PlayerStatus = {
     level: 1,
@@ -11,6 +12,7 @@ const defaultStatus: PlayerStatus = {
     mana: 100,
     maxExp: 100,
     exp: 0,
+    immortal: false,
 }
 
 export class PlayerSpec {
@@ -20,7 +22,7 @@ export class PlayerSpec {
 
     defence = 1
 
-    status: PlayerStatus = { ...defaultStatus }
+    status: PlayerStatus
     buff?:IBuffItem[]
 
     get AttackSpeed() {
@@ -47,7 +49,12 @@ export class PlayerSpec {
     get Status() { return this.status}
     get Health() { return this.status.health }
 
-    constructor(private inven: IInventory) { }
+    constructor(
+        private inven: IInventory,
+        param: PlayerStatusParam = {}
+    ) {
+        this.status = { ...defaultStatus, ...param}
+    }
 
     SetBuff(buff: IBuffItem[]) {
         this.buff = buff
@@ -105,7 +112,7 @@ export class PlayerSpec {
         this.status.health +=  heal
     }
     CheckDie(): boolean {
-        return (this.status.health <= 0)
+        return (this.status.immortal == false && this.status.health <= 0)
     }
     Update(delta: number) {
         this.buff?.forEach((b) => {

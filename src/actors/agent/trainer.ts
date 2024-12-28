@@ -2,6 +2,7 @@ import IEventController from '@Glibs/interface/ievent';
 import { IPhysicsObject, PhysicsObject } from '@Glibs/interface/iobject';
 import { KeyDown, KeyLeft, KeyRight, KeyUp } from '@Glibs/systems/event/keycommand';
 import { EventTypes } from '@Glibs/types/globaltypes';
+import { AttackOption, AttackType } from '@Glibs/types/playertypes';
 import * as tf from '@tensorflow/tfjs';
 import * as THREE from 'three';
 
@@ -28,6 +29,8 @@ export default class Training {
     obstacles: THREE.Mesh[] = [];
     qNetwork: tf.Sequential
     stateSize: number = 4// 에이전트 x, y 좌표 및 스킬 레벨, 적의 근접도
+    currentAction = 0
+    timeoutId?: NodeJS.Timeout
 
     constructor(
         private eventCtrl: IEventController,
@@ -35,13 +38,14 @@ export default class Training {
         private enermy: IPhysicsObject[],
         private goal: IPhysicsObject[],
         private param: TraingParam = {
-        actionSize: 4,
-        gamma: 0.99,
-        epsilon: 1.0,
-        epsilonDecay: 0.995,
-        learningRate: 0.01,
-        mapSize: 300
-    }) {
+            actionSize: 4,
+            gamma: 0.99,
+            epsilon: 1.0,
+            epsilonDecay: 0.995,
+            learningRate: 0.01,
+            mapSize: 300
+        }
+    ) {
         this.stateSize = 4 + this.enermy.length * 3 + this.goal.length * 3
         // Q-Network 정의
         this.qNetwork = tf.sequential();
@@ -51,6 +55,29 @@ export default class Training {
         this.qNetwork.compile({ optimizer: tf.train.adam(this.param.learningRate), loss: 'meanSquaredError' });
 
         this.agent.Pos.set(0, 0, 0);
+        eventCtrl.RegisterEventListener(EventTypes.Attack + "player", (opts: AttackOption[]) => {
+            opts.forEach((opt) => {
+                switch (opt.type) {
+                    case AttackType.NormalSwing:
+                    case AttackType.Magic0:
+                        this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `-5 Reward..`)
+                        this.rewardEventLoop(-5)
+                        break;
+                }
+            })
+        })
+        eventCtrl.RegisterEventListener(EventTypes.Attack + "aiagent", (opts: AttackOption[]) => {
+            opts.forEach((opt) => {
+                switch (opt.type) {
+                    case AttackType.Heal:
+                        this.agentSkillLevel += 1; // 목표 도달
+                        const r = 10 + this.agentSkillLevel * 2;
+                        this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `+ ${r} Reward!!`)
+                        this.rewardEventLoop(r, true)
+                        break;
+                }
+            })
+        })
     }
 
     isCollidingWithEnermy(pos: THREE.Vector3) {
@@ -65,9 +92,9 @@ export default class Training {
     // 상태 계산
     getState(): number[] {
         const state = [
-            this.agent.Pos.x / this.param.mapSize, 
-            this.agent.Pos.y / this.param.mapSize, 
-            this.agent.Pos.z / this.param.mapSize, 
+            this.agent.Pos.x / this.param.mapSize,
+            this.agent.Pos.y / this.param.mapSize,
+            this.agent.Pos.z / this.param.mapSize,
             this.agentSkillLevel / 10];
         this.enermy.forEach((e) => {
             state.push(e.Pos.x, e.Pos.y, e.Pos.z)
@@ -107,7 +134,8 @@ export default class Training {
                 pos.x = .5
                 break; // 오른쪽으로 이동
         }
-        this.eventCtrl.SendEventMessage(EventTypes.Input, { type: "move" }, pos); 
+        this.eventCtrl.SendEventMessage(EventTypes.Input, { type: "move" }, pos);
+        this.currentAction = action
     }
 
     // 보상 계산
@@ -115,20 +143,13 @@ export default class Training {
         let currentDistance = 10;
         const goalFlag = this.goal.some((g) => {
             const d = this.agent.Pos.distanceTo(g.Pos)
-            if ( d < 0.5) {
+            if (d < 1) {
                 return true
             }
             if (currentDistance < d) currentDistance = d
             return false
         })
 
-        if(goalFlag) {
-            this.agentSkillLevel += 1; // 목표 도달
-            return 10 + this.agentSkillLevel * 2;
-        }
-        if (this.isCollidingWithEnermy(this.agent.Pos)) {
-            return -5; // 적과 충돌 시 페널티
-        }
         return -currentDistance; // 일반 이동 페널티
     }
 
@@ -159,9 +180,36 @@ export default class Training {
     Start() {
         const action = this.selectAction(this.currentState);
         this.applyAction(action);
-        setTimeout(() => {
+        this.timeoutId = setTimeout(() => {
             this.gameLoop(action)
         }, this.interval);
+    }
+    checkTrainingDone(nextState: number[], done: boolean) {
+        this.currentState = nextState;
+        if (done) this.doneCount++;
+        if (done || this.step >= 50) {
+            const logTxt = `Episode ${this.episode} finished with total reward: ${this.totalReward}`
+            console.log(logTxt);
+            this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, logTxt)
+            this.episode++;
+            this.eventCtrl.SendEventMessage(EventTypes.AgentEpisode, this.param, this.episode)
+            this.resetGame();
+        } else {
+            this.step++;
+        }
+    }
+    rewardEventLoop(reward: number, done = false) {
+        clearTimeout(this.timeoutId)
+        this.totalReward += reward;
+        const nextState = this.getState();
+        this.trainStep(this.currentState, this.currentAction, reward, nextState, done).then(() => {
+            this.checkTrainingDone(nextState, done)
+        })
+        const nextAction = this.selectAction(this.currentState);
+        this.applyAction(nextAction);
+        this.timeoutId = setTimeout(() => {
+            this.gameLoop(nextAction)
+        }, this.interval)
     }
     gameLoop(action: number): void {
         const reward = this.getReward();
@@ -169,24 +217,16 @@ export default class Training {
 
         const nextState = this.getState();
         const done = this.goal.some((g) => {
-            if (g.Pos.distanceTo(this.agent.Pos) < 0.5) return true;
+            if (g.Pos.distanceTo(this.agent.Pos) < 1.5) return true;
             return false;
         })
 
         this.trainStep(this.currentState, action, reward, nextState, done).then(() => {
-            this.currentState = nextState;
-            if (done) this.doneCount++;
-            if (done || this.step >= 50) {
-                console.log(`Episode ${this.episode} finished with total reward: ${this.totalReward}`);
-                this.episode++;
-                this.resetGame();
-            } else {
-                this.step++;
-            }
+            this.checkTrainingDone(nextState, done)
         });
         const nextAction = this.selectAction(this.currentState);
         this.applyAction(nextAction);
-        setTimeout(() => {
+        this.timeoutId = setTimeout(() => {
             this.gameLoop(nextAction)
         }, this.interval)
     }

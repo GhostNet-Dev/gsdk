@@ -7,13 +7,13 @@ import { BuildingState, DeleteState, PickFruitState, PickFruitTreeState, PlantAP
 import { DeckState } from "./deckstate";
 import { IBuffItem } from "@Glibs/interface/ibuff";
 import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
-import IEventController, { IKeyCommand } from "@Glibs/interface/ievent";
+import IEventController, { IKeyCommand, ILoop } from "@Glibs/interface/ievent";
 import { EventFlag, KeyType } from "@Glibs/types/eventtypes";
-import { AttackOption, AttackType } from "./playertypes";
+import { AttackOption, AttackType, PlayerStatusParam } from "./playertypes";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import IInventory from "@Glibs/interface/iinven";
 
-export class PlayerCtrl {
+export class PlayerCtrl implements ILoop {
     mode: AppMode = AppMode.Play
     keyDownQueue: IKeyCommand[] = []
     keyUpQueue: IKeyCommand[] = []
@@ -25,10 +25,10 @@ export class PlayerCtrl {
     moveDirection = new THREE.Vector3()
     playEnable = false
 
-    spec: PlayerSpec = new PlayerSpec(this.inventory)
+    spec: PlayerSpec
     keyType: KeyType = KeyType.None
 
-    AttackSt = new AttackState(this, this.player, this.gphysic, this.eventCtrl, this.spec)
+    AttackSt: AttackState
     MagicH1St = new MagicH1State(this, this.player, this.gphysic)
     MagicH2St = new MagicH2State(this, this.player, this.gphysic)
     AttackIdleSt = new AttackIdleState(this, this.player, this.gphysic)
@@ -59,8 +59,12 @@ export class PlayerCtrl {
         private player: Player,
         public inventory: IInventory,
         private gphysic: IGPhysic,
-        private eventCtrl: IEventController
+        private eventCtrl: IEventController,
+        param: PlayerStatusParam = {}
     ) {
+        this.spec = new PlayerSpec(this.inventory, param)
+        this.AttackSt = new AttackState(this, this.player, this.gphysic, this.eventCtrl, this.spec)
+
         this.worker.onmessage = (e: any) => { console.log(e) }
 
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)

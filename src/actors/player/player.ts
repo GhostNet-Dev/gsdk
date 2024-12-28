@@ -185,7 +185,7 @@ export class Player extends PhysicsObject {
         return clip?.duration
     }
     DamageEffect(damage: number) {
-        this.effector.StartEffector(EffectType.BloodExplosion)
+        this.effector.StartEffector(EffectType.BloodExplosion, this.CenterPos)
         this.effector.StartEffector(EffectType.Status, damage.toString(), "#fff")
     }
     HealEffect(heal: number) {
