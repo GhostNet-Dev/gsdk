@@ -3,24 +3,34 @@ import { EventTypes, UiInfoType } from "@Glibs/types/globaltypes";
 
 
 export default class LolliBar {
-    value: number = 90
-    ratio: number = 90
-    bar?: HTMLDivElement
-    color = ""
-    constructor(eventCtrl: IEventController, {title = "", color = "#FF9a1a"} = {}) {
-        this.color = color
-        eventCtrl.RegisterEventListener(EventTypes.UiInfo, (type: UiInfoType, value: number, max: number) => {
-            if(type == UiInfoType.LolliBar && this.bar && this.bar.firstElementChild) {
-              this.bar.style.width = `${Math.floor(value / max * 100)}%`;
-              (this.bar.firstElementChild as HTMLSpanElement).innerText = `${title} ${value.toFixed(1)}%`
-            }
-        })
-    }
-    RenderHTML() { 
-        const dom = document.createElement("div") as HTMLDivElement
-        dom.className = "wrapper"
-        dom.classList.add("p-1")
-        dom.innerHTML = `
+  value: number = 90
+  ratio: number = 90
+  top: number = 0
+  left: number = 0
+  width: string
+  bar?: HTMLDivElement
+  color = ""
+  constructor(
+    eventCtrl: IEventController, {
+      title = "", color = "#FF9a1a", initValue = 90, max = 100,
+      top = 0, left = 0, width = "30%"
+    } = {}
+  ) {
+    this.top = top, this.left = left, this.color = color, this.value = initValue
+    this.width = width
+    this.ratio = Math.floor(this.value / max * 100)
+    eventCtrl.RegisterEventListener(EventTypes.UiInfo, (type: UiInfoType, value: number, max: number) => {
+      if (type == UiInfoType.LolliBar && this.bar && this.bar.firstElementChild) {
+        this.bar.style.width = `${Math.floor(value / max * 100)}%`;
+        (this.bar.firstElementChild as HTMLSpanElement).innerText = `${title} ${value.toFixed(1)}%`
+      }
+    })
+  }
+  RenderHTML() {
+    const dom = document.createElement("div") as HTMLDivElement
+    dom.className = "wrapper"
+    dom.classList.add("p-1")
+    dom.innerHTML = `
             <div class="progress-bar">
                 <div class="bar" data-size="100">
                 <span class="perc"></span>
@@ -28,12 +38,12 @@ export default class LolliBar {
             </div>
         `
 
-        this.addDynamicStyle(`
+    this.addDynamicStyle(`
 .wrapper {
     position: absolute;
-    top: 0px;
-    left: 0px;
-  width: 30%;
+    top: ${this.top}px;
+    left: ${this.left}px;
+  width: ${this.width};
   max-width: 100%;
 }
 
@@ -93,15 +103,15 @@ export default class LolliBar {
   font-weight: bold;
 }
         `);
-        document.body.appendChild(dom)
-        this.bar = document.querySelector(".bar") as HTMLDivElement
-        this.bar.style.width = `${this.ratio}%`
-        if (this.bar.firstElementChild) (this.bar.firstElementChild as HTMLSpanElement).innerText = `${this.value}`
-    }
-    addDynamicStyle(css: string): void {
-        const style = document.createElement('style');
-        style.type = 'text/css';
-        style.textContent = css;
-        document.head.appendChild(style);
-    }
+    document.body.appendChild(dom)
+    this.bar = document.querySelector(".bar") as HTMLDivElement
+    this.bar.style.width = `${this.ratio}%`
+    if (this.bar.firstElementChild) (this.bar.firstElementChild as HTMLSpanElement).innerText = `${this.value}`
+  }
+  addDynamicStyle(css: string): void {
+    const style = document.createElement('style');
+    style.type = 'text/css';
+    style.textContent = css;
+    document.head.appendChild(style);
+  }
 }

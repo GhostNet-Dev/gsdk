@@ -46,7 +46,8 @@ export enum EventTypes {
     RegisterLoop = "regloop",
     DeregisterLoop = "deregloop",
     RegisterViewer = "regviewer",
-    AgentEpisode = "agentep"
+    AgentEpisode = "agentep",
+    LoadingProgress = "loading",
 }
 export enum UiInfoType {
     LolliBar,

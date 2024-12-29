@@ -1,22 +1,12 @@
 import IEventController from '@Glibs/interface/ievent';
-import { IPhysicsObject, PhysicsObject } from '@Glibs/interface/iobject';
-import { KeyDown, KeyLeft, KeyRight, KeyUp } from '@Glibs/systems/event/keycommand';
+import { IPhysicsObject } from '@Glibs/interface/iobject';
 import { EventTypes } from '@Glibs/types/globaltypes';
+import { TrainingParam } from '@Glibs/types/agenttypes';
 import { AttackOption, AttackType } from '@Glibs/types/playertypes';
 import * as tf from '@tensorflow/tfjs';
 import * as THREE from 'three';
 
-// 타입 선언
-type Position = { x: number; y: number };
 
-export type TraingParam = {
-    actionSize: number // 상, 하, 좌, 우
-    gamma: number // 할인율
-    epsilon: number // 탐험 비율
-    epsilonDecay: number
-    learningRate: number
-    mapSize: number
-}
 export default class Training {
     currentState = this.getState();
     totalReward = 0;
@@ -37,7 +27,7 @@ export default class Training {
         private agent: IPhysicsObject,
         private enermy: IPhysicsObject[],
         private goal: IPhysicsObject[],
-        private param: TraingParam = {
+        private param: TrainingParam = {
             actionSize: 4,
             gamma: 0.99,
             epsilon: 1.0,
@@ -188,7 +178,7 @@ export default class Training {
         this.currentState = nextState;
         if (done) this.doneCount++;
         if (done || this.step >= 50) {
-            const logTxt = `Episode ${this.episode} finished with total reward: ${this.totalReward}`
+            const logTxt = `Episode ${this.episode} finished\nReward: ${this.totalReward.toFixed(2)}`
             console.log(logTxt);
             this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, logTxt)
             this.episode++;
