@@ -6,6 +6,7 @@ type ModelMeta = {
     date: number
 }
 const db = new IndexedDBService<ModelMeta>("ModelMgr", "modelList")
+db.init()
 
 export default class ModelStore {
     async GetModelListElement() {
