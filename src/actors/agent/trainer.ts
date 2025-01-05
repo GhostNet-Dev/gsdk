@@ -5,6 +5,7 @@ import { TrainingParam } from '@Glibs/types/agenttypes';
 import { AttackOption, AttackType } from '@Glibs/types/playertypes';
 import * as tf from '@tensorflow/tfjs';
 import * as THREE from 'three';
+import ModelStore from './modelstore';
 
 
 export default class Training {
@@ -24,6 +25,7 @@ export default class Training {
 
     constructor(
         private eventCtrl: IEventController,
+        private modelStore: ModelStore,
         private agent: IPhysicsObject,
         private enermy: IPhysicsObject[],
         private goal: IPhysicsObject[],
@@ -67,6 +69,10 @@ export default class Training {
                         break;
                 }
             })
+        })
+        eventCtrl.RegisterEventListener(EventTypes.AgentSave, async (title: string, download:boolean) => {
+            await this.modelStore.trainAndSaveModel(this.qNetwork, { title, download })
+            eventCtrl.SendEventMessage(EventTypes.Toast, "Save Model", title + " - Complete!")
         })
     }
 

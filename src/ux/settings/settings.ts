@@ -30,11 +30,26 @@ export default class Setting {
             }
         })
     }
-    GetElement() {
+    GetElements() {
         return this.dom
     }
+    GetOptionValue(uniqId: string) {
+        const opt = this.opts.find((e) => e.uniqId == uniqId)
+        if (!opt) return
+
+        const dom = document.getElementById(uniqId) as HTMLInputElement
+        switch(opt.type) {
+            case OptType.Switches:
+            case OptType.Checks:
+            case OptType.Radios:
+                return dom.checked
+            default:
+                return dom.value
+        }
+    }
     addOption(title: string, value: boolean | number, getValue: Function,
-        { type = OptType.Switches, info = "", onchange = (opt: Options) => { }
+        { type = OptType.Switches, info = "", onchange = (opt: Options) => { }, 
+        onclick = (opt: Options) => { }
         } = {}) {
         const uniqId = "options_" + (this.uniqId++).toString()
 
@@ -85,9 +100,14 @@ export default class Setting {
                 formInput.placeholder = "model's name"
                 formInput.setAttribute("aria-describedby", uniqId)
                 formDiv.appendChild(formInput)
-                formDiv.insertAdjacentHTML("beforeend", `<button class="btn btn-outline-secondary" type="button" id="${uniqId}">${title}</button>`)
+                const btn = document.createElement("button")
+                btn.classList.add("btn", "btn-outline-secondary")
+                btn.innerText = title
+                btn.onclick = () => { onclick(opt) }
+                formDiv.appendChild(btn)
                 break
         }
         this.dom.appendChild(formDiv)
+        return uniqId
     }
 }

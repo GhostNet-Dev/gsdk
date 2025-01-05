@@ -46,6 +46,7 @@ export enum EventTypes {
 
     AlarmWarning = "alarmwarning",
     AlarmNormal = "alarmnormal",
+    Toast = "toast",
 
     AddInteractive = "addinter",
     DelInteractive = "delinter",
