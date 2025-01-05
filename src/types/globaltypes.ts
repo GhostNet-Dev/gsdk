@@ -25,28 +25,38 @@ export enum EventTypes {
     KeyUp = "keyup",
     Input = "input",
     CtrlObj = "ctrlObj",
+
     Equipment = "Equip",
     Drop = "drop",
     DirectDrop = "directdrop",
+
     BrickInfo = "bsize",
     TerrainInfo = "tsize",
+
     Attack = "attack",
     AreaOfEffect = "AOE",
+    UpdateBuff = "updatebuff",
+
     SceneClear = "clear",
     Reload = "reload",
     AppMode = "appmode",
     PlayMode = "playmode",
     PlayerStatus = "playerstatus",
     Projectile = "Projectile",
+
     AlarmWarning = "alarmwarning",
     AlarmNormal = "alarmnormal",
+
     AddInteractive = "addinter",
     DelInteractive = "delinter",
-    UpdateBuff = "updatebuff",
+
     RegisterLoop = "regloop",
     DeregisterLoop = "deregloop",
     RegisterViewer = "regviewer",
+
     AgentEpisode = "agentep",
+    AgentSave = "agentsv",
+
     LoadingProgress = "loading",
 }
 export enum UiInfoType {

@@ -188,6 +188,7 @@ export default class Training {
             this.step++;
         }
     }
+    // training loop외 event에 의해 발생한 reward
     rewardEventLoop(reward: number, done = false) {
         clearTimeout(this.timeoutId)
         this.totalReward += reward;

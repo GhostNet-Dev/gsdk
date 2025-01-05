@@ -26,8 +26,9 @@ export default class BootModal implements IDialog {
         const bodyDom = document.getElementById("modalBody") as HTMLDivElement
         if (typeof content == "string")
             bodyDom.innerHTML = content
-        else
-            bodyDom.appendChild(content)
+        else {
+            bodyDom.replaceChildren(content)
+        }
 
         const btn = document.getElementById("confirmBtn")
         if(btn) {
@@ -46,7 +47,7 @@ export default class BootModal implements IDialog {
 const html = `
 <!-- Modal -->
 <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" 
-    aria-labelledby="staticBackdropLabel" <!--aria-hidden="true"--> inert style="display:none;">
+    aria-labelledby="staticBackdropLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">

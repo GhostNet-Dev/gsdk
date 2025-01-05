@@ -3,6 +3,7 @@ export enum OptType {
     Checks,
     Radios,
     Inputs,
+    Buttons,
 }
 export type Options = {
     uniqId: string
@@ -36,9 +37,6 @@ export default class Setting {
         { type = OptType.Switches, info = "", onchange = (opt: Options) => { }
         } = {}) {
         const uniqId = "options_" + (this.uniqId++).toString()
-        let html = ""
-        const defaultValue = (typeof value == "boolean") ?
-            (value) ? "checked" : "" : value.toString()
 
         const opt: Options = { uniqId, type, title, info, value, getValue }
         this.opts.push(opt)
@@ -80,6 +78,14 @@ export default class Setting {
                 formInput.type = "text"
                 formDiv.appendChild(formInput)
                 formDiv.insertAdjacentHTML("beforeend", `<span class="input-group-text">${title}</span>`)
+                break
+            case OptType.Buttons:
+                formDiv.classList.add("input-group", "mb-3")
+                formInput.classList.add("form-control")
+                formInput.placeholder = "model's name"
+                formInput.setAttribute("aria-describedby", uniqId)
+                formDiv.appendChild(formInput)
+                formDiv.insertAdjacentHTML("beforeend", `<button class="btn btn-outline-secondary" type="button" id="${uniqId}">${title}</button>`)
                 break
         }
         this.dom.appendChild(formDiv)
