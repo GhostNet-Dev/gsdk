@@ -47,9 +47,15 @@ export default class Setting {
                 return dom.value
         }
     }
-    addOption(title: string, value: boolean | number, getValue: Function,
-        { type = OptType.Switches, info = "", onchange = (opt: Options) => { }, 
-        onclick = (opt: Options) => { }
+    addLine() {
+        const lineDom = document.createElement("hr");
+        lineDom.classList.add("border", "border-primary", "border-1", "opacity-50")
+        this.dom.appendChild(lineDom)
+    }
+    addOption(title: string,
+        { type = OptType.Switches, info = "", name = "", checked = false, value = 1,
+            onchange = (opt: Options) => { }, onclick = (opt: Options) => { },
+            getValue = (): boolean | number => { return false }
         } = {}) {
         const uniqId = "options_" + (this.uniqId++).toString()
 
@@ -65,7 +71,8 @@ export default class Setting {
                 formDiv.classList.add("form-check", "form-switch", "mb-3")
                 formInput.classList.add("form-check-input")
                 formInput.type = "checkbox"
-                formInput.checked = value as boolean
+                formInput.checked = checked
+                formInput.value = value.toString()
                 formDiv.appendChild(formInput)
                 formDiv.insertAdjacentHTML("afterbegin", `<label class="form-check-label" for="${uniqId}">${title}</label>`)
                 break
@@ -73,7 +80,8 @@ export default class Setting {
                 formDiv.classList.add("form-check", "mb-3")
                 formInput.classList.add("form-check-input")
                 formInput.type = "checkbox"
-                formInput.checked = value as boolean
+                formInput.checked = checked
+                formInput.value = value.toString()
                 formDiv.appendChild(formInput)
                 formDiv.insertAdjacentHTML("afterbegin", `<label class="form-check-label" for="${uniqId}">${title}</label>`)
                 break
@@ -81,7 +89,9 @@ export default class Setting {
                 formDiv.classList.add("form-check", "mb-3")
                 formInput.classList.add("form-check-input")
                 formInput.type = "radio"
-                formInput.checked = value as boolean
+                formInput.checked = checked
+                formInput.value = value.toString()
+                if (name.length > 0) formInput.name = name
                 formDiv.appendChild(formInput)
                 formDiv.insertAdjacentHTML("afterbegin", `<label class="form-check-label" for="${uniqId}">${title}</label>`)
                 break

@@ -18,7 +18,7 @@ export default class IndexedDBService<T> {
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
         if (!db.objectStoreNames.contains(this.storeName)) {
-          db.createObjectStore(this.storeName, { keyPath: "id", autoIncrement: true });
+          db.createObjectStore(this.storeName, { keyPath: "id", autoIncrement: false });
         }
       };
 

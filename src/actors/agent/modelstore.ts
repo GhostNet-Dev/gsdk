@@ -1,34 +1,64 @@
 import * as tf from '@tensorflow/tfjs';
+import { EventTypes } from "@Glibs/types/globaltypes";
 import IndexedDBService from '@Glibs/systems/db/indexdb'
+import IEventController from '@Glibs/interface/ievent';
 
 type ModelMeta = {
-    title: string
+    id: string
+    data: string
     date: number
 }
 const db = new IndexedDBService<ModelMeta>("ModelMgr", "modelList")
 db.init()
 
 export default class ModelStore {
+    constructor(private eventCtrl: IEventController) {}
+
     async GetModelListElement() {
         const list = await db.getAll()
-        let html = `
-            <ol class="list-group list-group-numbered">`
+        const ol = document.createElement("ol")
+        ol.classList.add("list-group", "list-group-numbered")
         list.forEach((model) => {
-            html += `
-            <li class="list-group-item d-flex justify-content-between align-items-start">
-                <div class="ms-2 me-auto">
-                <div class="fw-bold">${model.title}</div>
-                    ${model.date}
-                </div>
-                <span class="badge bg-primary rounded-pill">0</span>
-            </li>`
+            const li = document.createElement("li")
+            li.classList.add("list-group-item", "d-flex", "justify-content-between", "align-items-start")
+            const div1 = document.createElement("div")
+            div1.classList.add("ms-2", "me-auto")
+            const div2 = document.createElement("div")
+            div2.classList.add("fw-bold")
+            div2.innerText = model.id
+            div1.appendChild(div2)
+            div1.insertAdjacentText("afterbegin", model.date.toString())
+            const span = document.createElement("span")
+            span.classList.add("badge", "bg-primary", "rounded-pill")
+            li.appendChild(div1)
+            li.appendChild(span)
+            li.onclick = async () => {
+                const m = await this.loadModelFromIndexedDB(model.id)
+                this.eventCtrl.SendEventMessage(EventTypes.AgentLoad, m, model.data)
+                this.eventCtrl.SendEventMessage(EventTypes.Toast, "Load Model", "Complete")
+            }
+            ol.appendChild(li)
         })
-        html += `
-            </ol>
-            `
-        if (list.length == 0) html = "Empty Models"
-        const dom = document.createElement('div')
-        dom.innerHTML = html
+         const dom = document.createElement('div')
+         dom.appendChild(ol)
+        // let html = `
+        //     <ol class="list-group list-group-numbered">`
+        // list.forEach((model) => {
+        //     html += `
+        //     <li class="list-group-item d-flex justify-content-between align-items-start">
+        //         <div class="ms-2 me-auto">
+        //         <div class="fw-bold">${model.title}</div>
+        //             ${model.date}
+        //         </div>
+        //         <span class="badge bg-primary rounded-pill">0</span>
+        //     </li>`
+        // })
+        // html += `
+        //     </ol>
+        //     `
+        // if (list.length == 0) html = "Empty Models"
+        // const dom = document.createElement('div')
+        // dom.innerHTML = html
         return dom
     }
     GetUploadElement() {
@@ -47,12 +77,12 @@ export default class ModelStore {
         dom.appendChild(fileInput)
         return dom
     }
-    async trainAndSaveModel(model: tf.Sequential, { download = false, title = "myModel" } = {}) {
+    async trainAndSaveModel(model: tf.Sequential, { download = false, title = "myModel", data = "" } = {}) {
         // 모델 다운로드 저장
         if (download) {
             await model.save(`downloads://${title}`);
         }
-        await this.saveModelToIndexedDB(model, title);
+        await this.saveModelToIndexedDB(model, title, data);
     }
 
     async uploadAndLoadModel(fileInput: HTMLInputElement) {
@@ -72,11 +102,11 @@ export default class ModelStore {
     }
 
 
-    async saveModelToIndexedDB(model: tf.LayersModel, title: string) {
+    async saveModelToIndexedDB(model: tf.LayersModel, title: string, data: string = "") {
         const modelPath = 'indexeddb://' + title;
         await model.save(modelPath);
         console.log(`모델이 IndexedDB에 저장되었습니다: ${modelPath}`);
-        db.add({ title, date: Date.now() })
+        return db.add({ id: title, data, date: Date.now() })
     }
 
     async loadModelFromIndexedDB(title = "myModel") {

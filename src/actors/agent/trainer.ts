@@ -71,9 +71,15 @@ export default class Training {
                 }
             })
         })
-        eventCtrl.RegisterEventListener(EventTypes.AgentSave, async (title: string, download:boolean) => {
-            await this.modelStore.trainAndSaveModel(this.qNetwork, { title, download })
+        eventCtrl.RegisterEventListener(EventTypes.AgentSave, async (title: string, download: boolean) => {
+            await this.modelStore.trainAndSaveModel(this.qNetwork, {
+                title, download, data: JSON.stringify(this.param)
+            })
             eventCtrl.SendEventMessage(EventTypes.Toast, "Save Model", title + " - Complete!")
+        })
+        eventCtrl.RegisterEventListener(EventTypes.AgentLoad, (model: tf.Sequential, data: string) => {
+            this.qNetwork = model
+            this.param = JSON.parse(data) as TrainingParam
         })
         eventCtrl.RegisterEventListener(EventTypes.TimeCtrl, (scale: number) => {
             clearTimeout(this.timeoutId)
@@ -162,6 +168,7 @@ export default class Training {
         return -currentDistance; // 일반 이동 페널티
     }
 
+    trainingQueue: Promise<tf.History>[] = []
     // 학습 루프
     async trainStep(
         state: number[],
@@ -182,8 +189,18 @@ export default class Training {
             return tf.tensor2d([qUpdate]);
         });
 
-        await this.qNetwork.fit(tf.tensor2d([state]), targetQ, { epochs: 1 });
-        targetQ.dispose();
+        if (this.trainingQueue.length > 0) {
+            await this.trainingQueue[this.trainingQueue.length - 1]
+        }
+
+        const trainingTask = this.qNetwork.fit(tf.tensor2d([state]), targetQ, { epochs: 1 });
+        this.trainingQueue.push(trainingTask)
+        try {
+            await trainingTask
+        } finally {
+            this.trainingQueue.shift()
+            targetQ.dispose();
+        }
     }
     interval = 500
     Start() {

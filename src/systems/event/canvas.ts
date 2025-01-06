@@ -30,9 +30,9 @@ export class Canvas {
 
     clock = new THREE.Clock
     update() {
-        const time = this.clock.getDelta()
+        const time = this.clock.getDelta() * this.timeScale
         this.loopObjs.forEach((obj) => {
-            obj.update(time * this.timeScale)
+            obj.update(time)
         })
     }
 

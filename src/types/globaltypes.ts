@@ -58,6 +58,7 @@ export enum EventTypes {
 
     AgentEpisode = "agentep",
     AgentSave = "agentsv",
+    AgentLoad = "agentld",
 
     LoadingProgress = "loading",
 }
