@@ -12,10 +12,6 @@ export default class Training {
     currentState = this.getState();
     totalReward = 0;
     step = 0;
-    episode = 0;
-    doneCount = 0;
-    // 상태 및 레벨 데이터
-    agentSkillLevel = 1; // 에이전트 초기 스킬 레벨
 
     obstacles: THREE.Mesh[] = [];
     qNetwork: tf.Sequential
@@ -23,6 +19,7 @@ export default class Training {
     currentAction = 0
     timeoutId?: NodeJS.Timeout
     timeScale = 1
+    interval = 300
 
     constructor(
         private eventCtrl: IEventController,
@@ -36,17 +33,26 @@ export default class Training {
             epsilon: 1.0,
             epsilonDecay: 0.995,
             learningRate: 0.01,
-            mapSize: 300
+            mapSize: 300,
+            episode: 0,
+            doneCount: 0,
+            agentSkillLevel: 1 // 에이전트 초기 스킬 레벨
         }
     ) {
-        this.stateSize = 4 + this.enermy.length * 3 + this.goal.length * 3
-        // Q-Network 정의
-        this.qNetwork = tf.sequential();
-        this.qNetwork.add(tf.layers.dense({ units: 128, activation: 'relu', inputShape: [this.stateSize] }));
-        this.qNetwork.add(tf.layers.dense({ units: 128, activation: 'relu' }));
-        this.qNetwork.add(tf.layers.dense({ units: this.param.actionSize }));
-        this.qNetwork.compile({ optimizer: tf.train.adam(this.param.learningRate), loss: 'meanSquaredError' });
-
+        if(this.modelStore.loadedFlag) {
+            [this.qNetwork, this.param] = this.modelStore.GetTraningData()
+            if (!this.qNetwork.optimizer) {
+                this.qNetwork.compile({ optimizer: tf.train.adam(this.param.learningRate), loss: 'meanSquaredError' });
+            }
+        } else {
+            this.stateSize = 4 + this.enermy.length * 3 + this.goal.length * 3
+            // Q-Network 정의
+            this.qNetwork = tf.sequential();
+            this.qNetwork.add(tf.layers.dense({ units: 128, activation: 'relu', inputShape: [this.stateSize] }));
+            this.qNetwork.add(tf.layers.dense({ units: 128, activation: 'relu' }));
+            this.qNetwork.add(tf.layers.dense({ units: this.param.actionSize }));
+            this.qNetwork.compile({ optimizer: tf.train.adam(this.param.learningRate), loss: 'meanSquaredError' });
+        }
         this.agent.Pos.set(0, 0, 0);
         eventCtrl.RegisterEventListener(EventTypes.Attack + "player", (opts: AttackOption[]) => {
             opts.forEach((opt) => {
@@ -63,8 +69,8 @@ export default class Training {
             opts.forEach((opt) => {
                 switch (opt.type) {
                     case AttackType.Heal:
-                        this.agentSkillLevel += 1; // 목표 도달
-                        const r = 10 + this.agentSkillLevel * 2;
+                        this.param.agentSkillLevel += 1; // 목표 도달
+                        const r = 10 + this.param.agentSkillLevel * 2;
                         this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `+ ${r} Reward!!`)
                         this.rewardEventLoop(r, true)
                         break;
@@ -72,20 +78,28 @@ export default class Training {
             })
         })
         eventCtrl.RegisterEventListener(EventTypes.AgentSave, async (title: string, download: boolean) => {
-            await this.modelStore.trainAndSaveModel(this.qNetwork, {
-                title, download, data: JSON.stringify(this.param)
-            })
-            eventCtrl.SendEventMessage(EventTypes.Toast, "Save Model", title + " - Complete!")
+            try {
+                await this.modelStore.trainAndSaveModel(this.qNetwork, {
+                    title, download, data: JSON.stringify(this.param)
+                })
+            } catch (e) {
+                eventCtrl.SendEventMessage(EventTypes.Toast, "Save Model", title + " - failed!: " + e)
+            } finally {
+                eventCtrl.SendEventMessage(EventTypes.Toast, "Save Model", title + " - Complete!")
+            }
         })
         eventCtrl.RegisterEventListener(EventTypes.AgentLoad, (model: tf.Sequential, data: string) => {
             this.qNetwork = model
             this.param = JSON.parse(data) as TrainingParam
+            if (!this.qNetwork.optimizer) {
+                this.qNetwork.compile({ optimizer: tf.train.adam(this.param.learningRate), loss: 'meanSquaredError' });
+            }
         })
         eventCtrl.RegisterEventListener(EventTypes.TimeCtrl, (scale: number) => {
             clearTimeout(this.timeoutId)
             if(scale == 0) return
 
-            this.timeScale = scale
+            this.timeScale = (scale * scale)
             const nextAction = this.selectAction(this.currentState);
             this.applyAction(nextAction);
             this.timeoutId = setTimeout(() => {
@@ -109,7 +123,7 @@ export default class Training {
             this.agent.Pos.x / this.param.mapSize,
             this.agent.Pos.y / this.param.mapSize,
             this.agent.Pos.z / this.param.mapSize,
-            this.agentSkillLevel / 10];
+            this.param.agentSkillLevel / 10];
         this.enermy.forEach((e) => {
             state.push(e.Pos.x, e.Pos.y, e.Pos.z)
         })
@@ -134,7 +148,7 @@ export default class Training {
     // 행동 적용
     applyAction(action: number): void {
         const pos = new THREE.Vector3()
-        const moveDistance = .5 / this.timeScale
+        const moveDistance = .5
         switch (action) {
             case 0:
                 pos.z = -moveDistance
@@ -202,23 +216,23 @@ export default class Training {
             targetQ.dispose();
         }
     }
-    interval = 500
     Start() {
+        this.eventCtrl.SendEventMessage(EventTypes.AgentEpisode, this.param)
         const action = this.selectAction(this.currentState);
         this.applyAction(action);
         this.timeoutId = setTimeout(() => {
             this.gameLoop(action)
-        }, this.interval);
+        }, this.interval / this.timeScale);
     }
     checkTrainingDone(nextState: number[], done: boolean) {
         this.currentState = nextState;
-        if (done) this.doneCount++;
+        if (done) this.param.doneCount++;
         if (done || this.step >= 50) {
-            const logTxt = `Episode ${this.episode} finished\nReward: ${this.totalReward.toFixed(2)}`
+            const logTxt = `Episode ${this.param.episode} finished\nReward: ${this.totalReward.toFixed(2)}`
             console.log(logTxt);
             this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, logTxt)
-            this.episode++;
-            this.eventCtrl.SendEventMessage(EventTypes.AgentEpisode, this.param, this.episode)
+            this.param.episode++;
+            this.eventCtrl.SendEventMessage(EventTypes.AgentEpisode, this.param)
             this.resetGame();
         } else {
             this.step++;
@@ -260,7 +274,7 @@ export default class Training {
 
     resetGame(): void {
         this.agent.Pos.set(0, 0, 0);
-        this.agentSkillLevel = 1;
+        this.param.agentSkillLevel = 1;
         this.currentState = this.getState();
         this.totalReward = 0;
         this.step = 0;

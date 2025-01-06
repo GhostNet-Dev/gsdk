@@ -2,6 +2,7 @@ import * as tf from '@tensorflow/tfjs';
 import { EventTypes } from "@Glibs/types/globaltypes";
 import IndexedDBService from '@Glibs/systems/db/indexdb'
 import IEventController from '@Glibs/interface/ievent';
+import { TrainingParam } from '@Glibs/types/agenttypes';
 
 type ModelMeta = {
     id: string
@@ -12,7 +13,16 @@ const db = new IndexedDBService<ModelMeta>("ModelMgr", "modelList")
 db.init()
 
 export default class ModelStore {
+    loadedFlag = false
+    model?: tf.Sequential
+    param?: TrainingParam
+
     constructor(private eventCtrl: IEventController) {}
+
+    GetTraningData(): [tf.Sequential, TrainingParam] {
+        if(!this.model || !this.param) throw new Error("undefined loadded save data");
+        return [this.model, this.param]
+    }
 
     async GetModelListElement() {
         const list = await db.getAll()
@@ -36,29 +46,14 @@ export default class ModelStore {
                 const m = await this.loadModelFromIndexedDB(model.id)
                 this.eventCtrl.SendEventMessage(EventTypes.AgentLoad, m, model.data)
                 this.eventCtrl.SendEventMessage(EventTypes.Toast, "Load Model", "Complete")
+                this.loadedFlag = true
+                this.param = JSON.parse(model.data)
+                this.model = m as tf.Sequential
             }
             ol.appendChild(li)
         })
          const dom = document.createElement('div')
          dom.appendChild(ol)
-        // let html = `
-        //     <ol class="list-group list-group-numbered">`
-        // list.forEach((model) => {
-        //     html += `
-        //     <li class="list-group-item d-flex justify-content-between align-items-start">
-        //         <div class="ms-2 me-auto">
-        //         <div class="fw-bold">${model.title}</div>
-        //             ${model.date}
-        //         </div>
-        //         <span class="badge bg-primary rounded-pill">0</span>
-        //     </li>`
-        // })
-        // html += `
-        //     </ol>
-        //     `
-        // if (list.length == 0) html = "Empty Models"
-        // const dom = document.createElement('div')
-        // dom.innerHTML = html
         return dom
     }
     GetUploadElement() {

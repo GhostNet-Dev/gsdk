@@ -193,7 +193,7 @@ export class PlayerCtrl implements ILoop {
         if (!this.player.meshs.visible) return
 
         this.currentState = this.currentState.Update(delta, this.moveDirection)
-        this.player.Update()
+        this.player.Update(delta)
         this.spec.Update(delta)
         this.actionReset()
     }

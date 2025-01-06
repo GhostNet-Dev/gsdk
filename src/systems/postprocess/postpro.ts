@@ -77,12 +77,15 @@ export class Postpro implements IPostPro {
       "baseTexture"
     );
     finalPass.needsSwap = true;
-    const target2 = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-      type: THREE.HalfFloatType,
-      format: THREE.RGBAFormat,
-      colorSpace: THREE.NoColorSpace,
-      samples: 4
-    })
+    const target2 = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, 
+      {
+        minFilter: THREE.LinearFilter,
+        magFilter: THREE.LinearFilter,
+        type: THREE.HalfFloatType,
+        format: THREE.RGBAFormat,
+        colorSpace: THREE.NoColorSpace,
+        samples: 4
+      })
     this.finalComposer = new EffectComposer(renderer, target2);
     this.finalComposer.addPass(this.renderScene);
     this.finalComposer.addPass(finalPass);

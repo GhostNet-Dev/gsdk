@@ -6,4 +6,7 @@ export type TrainingParam = {
     epsilonDecay: number
     learningRate: number
     mapSize: number
+    episode:number
+    doneCount: number
+    agentSkillLevel: number
 }

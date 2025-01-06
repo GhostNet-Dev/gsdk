@@ -191,8 +191,7 @@ export class Player extends PhysicsObject {
     HealEffect(heal: number) {
         this.effector.StartEffector(EffectType.Status, "+" + heal, "#fff")
     }
-    Update() {
-        const delta = this.clock.getDelta()
+    Update(delta: number) {
         this.effector.Update(delta)
         this.mixer?.update(delta)
     }

@@ -28,7 +28,7 @@ export default class TitleScreen {
         this.dom = document.createElement("div") as HTMLDivElement
         this.dom.className = "titleFont"
         this.dom.classList.add("gametext", "text-center", "titleLayout")
-        this.dom.innerText = this.title
+        this.dom.innerHTML = this.rainbowText(this.title)
         this.addDynamicStyle(`
 .titleLayout {
     position: absolute;
@@ -57,6 +57,29 @@ export default class TitleScreen {
         })
         this.dom.appendChild(container)
         document.body.appendChild(this.dom)
+    }
+    rainbowText(input: string): string {
+        // 무지개 색 배열 (red, orange, yellow, green, blue, indigo, violet)
+        const rainbowColors: string[] = [
+            "#FF0000", // 빨강
+            "#FF7F00", // 주황
+            "#FFFF00", // 노랑
+            "#00FF00", // 초록
+            "#0000FF", // 파랑
+            "#4B0082", // 남색
+            "#8B00FF"  // 보라
+        ];
+
+        // 글자마다 색상 적용
+        const coloredCharacters = input
+            .split("") // 문자열을 문자 배열로 변환
+            .map((char, index) => {
+                const color = rainbowColors[index % rainbowColors.length]; // 색상 반복
+                return `<span style="color: ${color}">${char}</span>`;
+            });
+
+        // HTML 문자열 반환
+        return coloredCharacters.join("");
     }
     addDynamicStyle(css: string): void {
         const style = document.createElement('style');

@@ -152,8 +152,7 @@ export class Zombie extends PhysicsObject {
         this.effector.StartEffector(EffectType.Status, damage.toString(), "#fff")
     }
 
-    update() {
-        const delta = this.clock.getDelta()
+    update(delta: number) {
         this.effector.Update(delta)
         this.mixer?.update(delta)
     }

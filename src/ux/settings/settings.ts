@@ -4,13 +4,15 @@ export enum OptType {
     Radios,
     Inputs,
     Buttons,
+    Selects,
 }
 export type Options = {
     uniqId: string
     type: OptType
     title: string
     info: string
-    value: boolean | number
+    checked: boolean
+    value:  number[]
     getValue: Function
 }
 
@@ -53,13 +55,13 @@ export default class Setting {
         this.dom.appendChild(lineDom)
     }
     addOption(title: string,
-        { type = OptType.Switches, info = "", name = "", checked = false, value = 1,
+        { type = OptType.Switches, info = "", name = "", checked = false, value = [1],
             onchange = (opt: Options) => { }, onclick = (opt: Options) => { },
             getValue = (): boolean | number => { return false }
         } = {}) {
         const uniqId = "options_" + (this.uniqId++).toString()
 
-        const opt: Options = { uniqId, type, title, info, value, getValue }
+        const opt: Options = { uniqId, type, title, info, checked, value, getValue }
         this.opts.push(opt)
 
         const formDiv = document.createElement("div")
@@ -72,7 +74,7 @@ export default class Setting {
                 formInput.classList.add("form-check-input")
                 formInput.type = "checkbox"
                 formInput.checked = checked
-                formInput.value = value.toString()
+                formInput.value = value[0].toString()
                 formDiv.appendChild(formInput)
                 formDiv.insertAdjacentHTML("afterbegin", `<label class="form-check-label" for="${uniqId}">${title}</label>`)
                 break
@@ -81,7 +83,7 @@ export default class Setting {
                 formInput.classList.add("form-check-input")
                 formInput.type = "checkbox"
                 formInput.checked = checked
-                formInput.value = value.toString()
+                formInput.value = value[0].toString()
                 formDiv.appendChild(formInput)
                 formDiv.insertAdjacentHTML("afterbegin", `<label class="form-check-label" for="${uniqId}">${title}</label>`)
                 break
@@ -90,7 +92,7 @@ export default class Setting {
                 formInput.classList.add("form-check-input")
                 formInput.type = "radio"
                 formInput.checked = checked
-                formInput.value = value.toString()
+                formInput.value = value[0].toString()
                 if (name.length > 0) formInput.name = name
                 formDiv.appendChild(formInput)
                 formDiv.insertAdjacentHTML("afterbegin", `<label class="form-check-label" for="${uniqId}">${title}</label>`)
@@ -99,7 +101,7 @@ export default class Setting {
                 formDiv.classList.add("input-group", "mb-3")
                 formInput.classList.add("form-control")
                 formInput.setAttribute("aria-describedby", uniqId)
-                formInput.value = value.toString()
+                formInput.value = value[0].toString()
                 formInput.type = "text"
                 formDiv.appendChild(formInput)
                 formDiv.insertAdjacentHTML("beforeend", `<span class="input-group-text">${title}</span>`)
@@ -116,8 +118,33 @@ export default class Setting {
                 btn.onclick = () => { onclick(opt) }
                 formDiv.appendChild(btn)
                 break
+            case OptType.Selects:
+                formInput.remove()
+                formDiv.classList.add("input-group", "mb-3")
+                formDiv.insertAdjacentHTML("afterbegin", `<label class="input-group-text" for="${uniqId}">${title}</label>`)
+                const sel = document.createElement("select")
+                sel.classList.add("form-select")
+                sel.onchange = () => { onchange(opt) }
+                sel.id = uniqId
+                value.forEach((v) => {
+                    const opt = document.createElement("option")
+                    opt.value = v.toString()
+                    opt.text = v.toString()
+                    sel.appendChild(opt)
+                })
+                formDiv.appendChild(sel)
+                break
         }
         this.dom.appendChild(formDiv)
         return uniqId
     }
 }
+/*
+Radios 예제 
+const checkSpeed = () => {
+    const dom = document.querySelector('input[name="speed"]:checked') as HTMLInputElement;
+    eventCtrl.SendEventMessage(EventTypes.TimeCtrl, Number(dom.value))
+}
+this.settings.addOption("fast", { type: OptType.Radios, name: "speed", value: [3], onchange: checkSpeed })
+this.settings.addOption("normal", { type: OptType.Radios, name: "speed", value: [1], onchange: checkSpeed, checked: true })
+*/

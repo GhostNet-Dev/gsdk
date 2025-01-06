@@ -93,7 +93,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
         }
 
         this.currentState = this.currentState.Update(delta, this.moveDirection, dist)
-        this.zombie.update()
+        this.zombie.update(delta)
 
         this.phybox.position.copy(this.zombie.Pos)
         this.phybox.rotation.copy(this.zombie.Meshs.rotation)
