@@ -3,12 +3,16 @@ import IDialog from './idialog'
 
 export default class BootModal implements IDialog {
     modal: bootstrap.Modal
+    removeEvent = () => { }
 
     constructor() {
         const dom = document.createElement("div")
         dom.innerHTML = html
         document.body.appendChild(dom)
         const backdrop = document.getElementById("staticBackdrop") as HTMLDivElement
+        backdrop.addEventListener('hidden.bs.modal', () => {
+            this.removeEvent()
+        })
         this.modal = new bootstrap.Modal(backdrop)
     }
     GetContentElement() {
@@ -34,10 +38,10 @@ export default class BootModal implements IDialog {
         if(btn) {
             btn.innerText = btnText
             btn.onclick = () => {
-                event()
                 this.modal.hide()
             }
         }
+        this.removeEvent = event
     }
     show() {
         this.modal.show()

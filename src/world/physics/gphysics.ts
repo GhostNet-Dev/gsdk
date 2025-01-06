@@ -32,9 +32,14 @@ export class GPhysics {
     debugBox: THREE.Mesh[] = []
     get LandY() { return this.landPos.y }
 
+    timeScale = 1
+
     constructor(private scene: THREE.Scene, eventCtrl: IEventController) {
         eventCtrl.RegisterEventListener(EventTypes.SceneClear, () => {
             this.PBoxDispose()
+        })
+        eventCtrl.RegisterEventListener(EventTypes.TimeCtrl, (scale: number) => {
+            this.timeScale = scale
         })
     }
 
@@ -259,7 +264,7 @@ export class GPhysics {
     update() {
         const delta = this.clock.getDelta()
         this.physicalObjs.forEach(obj => {
-            obj.Update?.(delta)
+            obj.Update?.(delta * this.timeScale)
         })
         this.movingBoxs.forEach((phy) => {
             const v = phy.model.BoxPos

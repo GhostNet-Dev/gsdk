@@ -20,6 +20,7 @@ export enum AppMode {
 }
 
 export enum EventTypes {
+    TimeCtrl = "time",
     UiInfo = "uiinfo",
     KeyDown = "keydown",
     KeyUp = "keyup",

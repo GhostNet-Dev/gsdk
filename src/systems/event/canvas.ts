@@ -8,6 +8,7 @@ export class Canvas {
     height: number
     objs: IViewer[] = []
     loopObjs: ILoop[] = []
+    timeScale = 1
 
     constructor(eventCtrl: IEventController) {
         this.width = window.innerWidth
@@ -22,13 +23,16 @@ export class Canvas {
         eventCtrl.RegisterEventListener(EventTypes.RegisterViewer, (obj: IViewer) => {
             this.objs.push(obj)
         })
+        eventCtrl.RegisterEventListener(EventTypes.TimeCtrl, (scale: number) => {
+            this.timeScale = scale
+        })
     }
 
     clock = new THREE.Clock
     update() {
         const time = this.clock.getDelta()
         this.loopObjs.forEach((obj) => {
-            obj.update(time)
+            obj.update(time * this.timeScale)
         })
     }
 

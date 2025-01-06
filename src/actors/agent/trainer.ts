@@ -22,6 +22,7 @@ export default class Training {
     stateSize: number = 4// 에이전트 x, y 좌표 및 스킬 레벨, 적의 근접도
     currentAction = 0
     timeoutId?: NodeJS.Timeout
+    timeScale = 1
 
     constructor(
         private eventCtrl: IEventController,
@@ -74,6 +75,17 @@ export default class Training {
             await this.modelStore.trainAndSaveModel(this.qNetwork, { title, download })
             eventCtrl.SendEventMessage(EventTypes.Toast, "Save Model", title + " - Complete!")
         })
+        eventCtrl.RegisterEventListener(EventTypes.TimeCtrl, (scale: number) => {
+            clearTimeout(this.timeoutId)
+            if(scale == 0) return
+
+            this.timeScale = scale
+            const nextAction = this.selectAction(this.currentState);
+            this.applyAction(nextAction);
+            this.timeoutId = setTimeout(() => {
+                this.gameLoop(nextAction)
+            }, this.interval / this.timeScale)
+        })
     }
 
     isCollidingWithEnermy(pos: THREE.Vector3) {
@@ -116,18 +128,19 @@ export default class Training {
     // 행동 적용
     applyAction(action: number): void {
         const pos = new THREE.Vector3()
+        const moveDistance = .5 / this.timeScale
         switch (action) {
             case 0:
-                pos.z = -.5
+                pos.z = -moveDistance
                 break; // 위로 이동
             case 1:
-                pos.z = .5
+                pos.z = moveDistance
                 break; // 아래로 이동
             case 2:
-                pos.x = -.5
+                pos.x = -moveDistance
                 break; // 왼쪽으로 이동
             case 3:
-                pos.x = .5
+                pos.x = moveDistance
                 break; // 오른쪽으로 이동
         }
         this.eventCtrl.SendEventMessage(EventTypes.Input, { type: "move" }, pos);
@@ -206,7 +219,7 @@ export default class Training {
         this.applyAction(nextAction);
         this.timeoutId = setTimeout(() => {
             this.gameLoop(nextAction)
-        }, this.interval)
+        }, this.interval / this.timeScale)
     }
     gameLoop(action: number): void {
         const reward = this.getReward();
@@ -225,7 +238,7 @@ export default class Training {
         this.applyAction(nextAction);
         this.timeoutId = setTimeout(() => {
             this.gameLoop(nextAction)
-        }, this.interval)
+        }, this.interval / this.timeScale)
     }
 
     resetGame(): void {
