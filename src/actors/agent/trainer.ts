@@ -19,7 +19,8 @@ export default class Training {
     currentAction = 0
     timeoutId?: NodeJS.Timeout
     timeScale = 1
-    interval = 300
+    interval = 500
+    clock = new THREE.Clock
 
     constructor(
         private eventCtrl: IEventController,
@@ -99,7 +100,7 @@ export default class Training {
             clearTimeout(this.timeoutId)
             if(scale == 0) return
 
-            this.timeScale = (scale * scale)
+            this.timeScale = scale
             const nextAction = this.selectAction(this.currentState);
             this.applyAction(nextAction);
             this.timeoutId = setTimeout(() => {
@@ -132,11 +133,15 @@ export default class Training {
         })
         return state
     }
-
+    getRandomInt(max: number): number {
+        const array = new Uint32Array(1);
+        window.crypto.getRandomValues(array);
+        return array[0] % max;
+    }
     // 행동 선택
     selectAction(state: number[]): number {
         if (Math.random() < this.param.epsilon) {
-            return Math.floor(Math.random() * this.param.actionSize); // 랜덤 행동
+            return this.getRandomInt(this.param.actionSize); // 랜덤 행동
         } else {
             return tf.tidy(() => {
                 const qValues = this.qNetwork.predict(tf.tensor2d([state])) as tf.Tensor;
@@ -148,7 +153,8 @@ export default class Training {
     // 행동 적용
     applyAction(action: number): void {
         const pos = new THREE.Vector3()
-        const moveDistance = .5
+        const delta = this.clock.getDelta() * 1000
+        const moveDistance = .5 * (delta / (this.interval / this.timeScale))
         switch (action) {
             case 0:
                 pos.z = -moveDistance

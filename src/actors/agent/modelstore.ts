@@ -3,6 +3,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import IndexedDBService from '@Glibs/systems/db/indexdb'
 import IEventController from '@Glibs/interface/ievent';
 import { TrainingParam } from '@Glibs/types/agenttypes';
+import { formatTimeDifference } from '@Glibs/helper/utils'
 
 type ModelMeta = {
     id: string
@@ -37,7 +38,7 @@ export default class ModelStore {
             div2.classList.add("fw-bold")
             div2.innerText = model.id
             div1.appendChild(div2)
-            div1.insertAdjacentText("afterbegin", model.date.toString())
+            div1.insertAdjacentText("afterbegin", formatTimeDifference(model.date))
             const span = document.createElement("span")
             span.classList.add("badge", "bg-primary", "rounded-pill")
             li.appendChild(div1)
