@@ -48,6 +48,7 @@ export default class Training implements ILoop {
         this.currentState = this.getState()
         if(this.modelStore.loadedFlag) {
             [this.qNetwork, this.param] = this.modelStore.GetTraningData()
+            this.param.timeScale = timeScale
             if (!this.qNetwork.optimizer) {
                 this.qNetwork.compile({ optimizer: tf.train.adam(this.param.learningRate), loss: 'meanSquaredError' });
             }
@@ -98,7 +99,10 @@ export default class Training implements ILoop {
         })
         eventCtrl.RegisterEventListener(EventTypes.AgentLoad, (model: tf.Sequential, data: string) => {
             this.qNetwork = model
+            // timescale를 복구하려면 timectrl 메시지를 뿌려야한다.
+            const backup = this.param.timeScale
             this.param = JSON.parse(data) as TrainingParam
+            this.param.timeScale = backup
             if (!this.qNetwork.optimizer) {
                 this.qNetwork.compile({ optimizer: tf.train.adam(this.param.learningRate), loss: 'meanSquaredError' });
             }
