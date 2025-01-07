@@ -9,4 +9,5 @@ export type TrainingParam = {
     episode:number
     doneCount: number
     agentSkillLevel: number
+    timeScale: number
 }

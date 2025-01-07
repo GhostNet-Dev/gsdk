@@ -1,4 +1,4 @@
-import IEventController from '@Glibs/interface/ievent';
+import IEventController, { ILoop } from '@Glibs/interface/ievent';
 import { IPhysicsObject } from '@Glibs/interface/iobject';
 import { EventTypes } from '@Glibs/types/globaltypes';
 import { TrainingParam } from '@Glibs/types/agenttypes';
@@ -8,8 +8,8 @@ import * as THREE from 'three';
 import ModelStore from './modelstore';
 
 
-export default class Training {
-    currentState = this.getState();
+export default class Training implements ILoop {
+    currentState: number[]
     totalReward = 0;
     step = 0;
 
@@ -18,9 +18,9 @@ export default class Training {
     stateSize: number = 4// 에이전트 x, y 좌표 및 스킬 레벨, 적의 근접도
     currentAction = 0
     timeoutId?: NodeJS.Timeout
-    timeScale = 1
     interval = 500
     clock = new THREE.Clock
+    param: TrainingParam
 
     constructor(
         private eventCtrl: IEventController,
@@ -28,18 +28,24 @@ export default class Training {
         private agent: IPhysicsObject,
         private enermy: IPhysicsObject[],
         private goal: IPhysicsObject[],
-        private param: TrainingParam = {
-            actionSize: 4,
-            gamma: 0.99,
-            epsilon: 1.0,
-            epsilonDecay: 0.995,
-            learningRate: 0.01,
-            mapSize: 300,
-            episode: 0,
-            doneCount: 0,
-            agentSkillLevel: 1 // 에이전트 초기 스킬 레벨
-        }
+        {
+            actionSize= 4,
+             gamma= 0.99,
+             epsilon= 1.0,
+             epsilonDecay= 0.995,
+             learningRate= 0.01,
+             mapSize= 300,
+             episode= 0,
+             doneCount= 0,
+             agentSkillLevel= 1, // 에이전트 초기 스킬 레벨
+             timeScale= 1
+        } = {}
     ) {
+        this.param = {
+            actionSize, gamma, epsilon, epsilonDecay, learningRate, mapSize, 
+            episode, doneCount, agentSkillLevel, timeScale
+        }
+        this.currentState = this.getState()
         if(this.modelStore.loadedFlag) {
             [this.qNetwork, this.param] = this.modelStore.GetTraningData()
             if (!this.qNetwork.optimizer) {
@@ -55,6 +61,7 @@ export default class Training {
             this.qNetwork.compile({ optimizer: tf.train.adam(this.param.learningRate), loss: 'meanSquaredError' });
         }
         this.agent.Pos.set(0, 0, 0);
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         eventCtrl.RegisterEventListener(EventTypes.Attack + "player", (opts: AttackOption[]) => {
             opts.forEach((opt) => {
                 switch (opt.type) {
@@ -100,12 +107,12 @@ export default class Training {
             clearTimeout(this.timeoutId)
             if(scale == 0) return
 
-            this.timeScale = scale
+            this.param.timeScale = scale
             const nextAction = this.selectAction(this.currentState);
             this.applyAction(nextAction);
             this.timeoutId = setTimeout(() => {
                 this.gameLoop(nextAction)
-            }, this.interval / this.timeScale)
+            }, this.getInterval())
         })
     }
 
@@ -153,21 +160,12 @@ export default class Training {
     // 행동 적용
     applyAction(action: number): void {
         const pos = new THREE.Vector3()
-        const delta = this.clock.getDelta() * 1000
-        const moveDistance = .5 * (delta / (this.interval / this.timeScale))
+        const moveDistance = .5 
         switch (action) {
-            case 0:
-                pos.z = -moveDistance
-                break; // 위로 이동
-            case 1:
-                pos.z = moveDistance
-                break; // 아래로 이동
-            case 2:
-                pos.x = -moveDistance
-                break; // 왼쪽으로 이동
-            case 3:
-                pos.x = moveDistance
-                break; // 오른쪽으로 이동
+            case 0: pos.z = -moveDistance; break; // 위로 이동
+            case 1: pos.z = moveDistance; break; // 아래로 이동
+            case 2: pos.x = -moveDistance; break; // 왼쪽으로 이동
+            case 3: pos.x = moveDistance; break; // 오른쪽으로 이동
         }
         this.eventCtrl.SendEventMessage(EventTypes.Input, { type: "move" }, pos);
         this.currentAction = action
@@ -178,13 +176,11 @@ export default class Training {
         let currentDistance = 10;
         const goalFlag = this.goal.some((g) => {
             const d = this.agent.Pos.distanceTo(g.Pos)
-            if (d < 1) {
-                return true
-            }
+            if (d < 1) return true
+
             if (currentDistance < d) currentDistance = d
             return false
         })
-
         return -currentDistance; // 일반 이동 페널티
     }
 
@@ -222,13 +218,17 @@ export default class Training {
             targetQ.dispose();
         }
     }
+    getInterval() {
+        const time = this.interval / this.param.timeScale
+        return time
+    }
     Start() {
         this.eventCtrl.SendEventMessage(EventTypes.AgentEpisode, this.param)
         const action = this.selectAction(this.currentState);
         this.applyAction(action);
         this.timeoutId = setTimeout(() => {
             this.gameLoop(action)
-        }, this.interval / this.timeScale);
+        }, this.getInterval())
     }
     checkTrainingDone(nextState: number[], done: boolean) {
         this.currentState = nextState;
@@ -256,7 +256,7 @@ export default class Training {
         this.applyAction(nextAction);
         this.timeoutId = setTimeout(() => {
             this.gameLoop(nextAction)
-        }, this.interval / this.timeScale)
+        }, this.getInterval())
     }
     gameLoop(action: number): void {
         const reward = this.getReward();
@@ -275,7 +275,7 @@ export default class Training {
         this.applyAction(nextAction);
         this.timeoutId = setTimeout(() => {
             this.gameLoop(nextAction)
-        }, this.interval / this.timeScale)
+        }, this.getInterval())
     }
 
     resetGame(): void {
@@ -286,6 +286,9 @@ export default class Training {
         this.step = 0;
 
         this.param.epsilon = Math.max(0.1, this.param.epsilon * this.param.epsilonDecay);
+    }
+    update(delta: number): void {
+        
     }
 
 }

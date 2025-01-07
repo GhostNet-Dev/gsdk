@@ -20,7 +20,9 @@ export enum AppMode {
 }
 
 export enum EventTypes {
+    // play를 제어한다. 0 정지, n: n배속
     TimeCtrl = "time",
+    // ui에 전달할 정보들이다. health, coin등등이 있다. 
     UiInfo = "uiinfo",
     KeyDown = "keydown",
     KeyUp = "keyup",
