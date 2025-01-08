@@ -47,6 +47,7 @@ export class PlayerCtrl implements ILoop {
 
     worker = new Worker(new URL('./player.worker.ts', import.meta.url))
 
+    set Immortal(enable: boolean) { this.spec.status.immortal = enable }
     get Health() { return this.spec.Health }
     set Enable(mode: boolean) { 
         this.playEnable = mode 

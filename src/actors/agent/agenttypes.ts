@@ -10,4 +10,5 @@ export type TrainingParam = {
     doneCount: number
     agentSkillLevel: number
     timeScale: number
+    loss: string
 }

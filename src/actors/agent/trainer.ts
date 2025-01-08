@@ -1,10 +1,10 @@
+import * as tf from '@tensorflow/tfjs';
+import * as THREE from 'three';
 import IEventController, { ILoop } from '@Glibs/interface/ievent';
 import { IPhysicsObject } from '@Glibs/interface/iobject';
 import { EventTypes } from '@Glibs/types/globaltypes';
 import { TrainingParam } from '@Glibs/types/agenttypes';
 import { AttackOption, AttackType } from '@Glibs/types/playertypes';
-import * as tf from '@tensorflow/tfjs';
-import * as THREE from 'three';
 import ModelStore from './modelstore';
 
 
@@ -21,6 +21,7 @@ export default class Training implements ILoop {
     interval = 500
     clock = new THREE.Clock
     param: TrainingParam
+    enable = false
 
     constructor(
         private eventCtrl: IEventController,
@@ -29,28 +30,29 @@ export default class Training implements ILoop {
         private enermy: IPhysicsObject[],
         private goal: IPhysicsObject[],
         {
-            actionSize= 4,
-             gamma= 0.99,
-             epsilon= 1.0,
-             epsilonDecay= 0.995,
-             learningRate= 0.01,
-             mapSize= 300,
-             episode= 0,
-             doneCount= 0,
-             agentSkillLevel= 1, // 에이전트 초기 스킬 레벨
-             timeScale= 1
+            actionSize = 4,
+            gamma = 0.99,
+            epsilon = 1.0,
+            epsilonDecay = 0.995,
+            learningRate = 0.01,
+            mapSize = 300,
+            episode = 0,
+            doneCount = 0,
+            agentSkillLevel = 1, // 에이전트 초기 스킬 레벨
+            timeScale = 1,
+            loss = 'meanSquaredError' 
         } = {}
     ) {
         this.param = {
             actionSize, gamma, epsilon, epsilonDecay, learningRate, mapSize, 
-            episode, doneCount, agentSkillLevel, timeScale
+            episode, doneCount, agentSkillLevel, timeScale, loss
         }
         this.currentState = this.getState()
         if(this.modelStore.loadedFlag) {
             [this.qNetwork, this.param] = this.modelStore.GetTraningData()
             this.param.timeScale = timeScale
             if (!this.qNetwork.optimizer) {
-                this.qNetwork.compile({ optimizer: tf.train.adam(this.param.learningRate), loss: 'meanSquaredError' });
+                this.qNetwork.compile({ optimizer: tf.train.adam(this.param.learningRate), loss });
             }
         } else {
             this.stateSize = 4 + this.enermy.length * 3 + this.goal.length * 3
@@ -59,7 +61,7 @@ export default class Training implements ILoop {
             this.qNetwork.add(tf.layers.dense({ units: 128, activation: 'relu', inputShape: [this.stateSize] }));
             this.qNetwork.add(tf.layers.dense({ units: 128, activation: 'relu' }));
             this.qNetwork.add(tf.layers.dense({ units: this.param.actionSize }));
-            this.qNetwork.compile({ optimizer: tf.train.adam(this.param.learningRate), loss: 'meanSquaredError' });
+            this.qNetwork.compile({ optimizer: tf.train.adam(this.param.learningRate), loss });
         }
         this.agent.Pos.set(0, 0, 0);
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
@@ -109,7 +111,11 @@ export default class Training implements ILoop {
         })
         eventCtrl.RegisterEventListener(EventTypes.TimeCtrl, (scale: number) => {
             clearTimeout(this.timeoutId)
-            if(scale == 0) return
+            if(scale == 0) {
+                this.enable = false
+                return
+            }
+            this.enable = true
 
             this.param.timeScale = scale
             const nextAction = this.selectAction(this.currentState);
@@ -227,6 +233,7 @@ export default class Training implements ILoop {
         return time
     }
     Start() {
+        this.enable = true
         this.eventCtrl.SendEventMessage(EventTypes.AgentEpisode, this.param)
         const action = this.selectAction(this.currentState);
         this.applyAction(action);
@@ -251,6 +258,8 @@ export default class Training implements ILoop {
     // training loop외 event에 의해 발생한 reward
     rewardEventLoop(reward: number, done = false) {
         clearTimeout(this.timeoutId)
+        if (!this.enable) return
+
         this.totalReward += reward;
         const nextState = this.getState();
         this.trainStep(this.currentState, this.currentAction, reward, nextState, done).then(() => {
@@ -263,6 +272,8 @@ export default class Training implements ILoop {
         }, this.getInterval())
     }
     gameLoop(action: number): void {
+        if (!this.enable) return
+
         const reward = this.getReward();
         this.totalReward += reward;
 
