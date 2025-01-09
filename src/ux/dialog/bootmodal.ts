@@ -22,7 +22,7 @@ export default class BootModal implements IDialog {
     RenderHtml(title: string, content: string | HTMLElement,
         {
             btnText = "Confirm",
-            event = () => { }
+            close = () => { }
         } = {}
     ) {
         const titleDom = document.getElementById("staticBackdropLabel")
@@ -41,7 +41,7 @@ export default class BootModal implements IDialog {
                 this.modal.hide()
             }
         }
-        this.removeEvent = event
+        this.removeEvent = close
     }
     show() {
         this.modal.show()

@@ -5,5 +5,6 @@ interface IEnvironment {
     step(action: number): Promise<[number[], number, boolean]>
     eventStep(action: number): Promise<[number[], number, boolean]>
     actionSpace: number; // 가능한 행동의 개수
+    enable: boolean
 }
 

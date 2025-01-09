@@ -36,7 +36,6 @@ export class PositionState implements IState {
                 g.Pos.z / this.mapSize
             )
         })
-        console.log(state)
         return state
     }
     resetState(): number[] {
@@ -65,7 +64,6 @@ export class DistanceState implements IState {
         this.goal.forEach((g) => {
             state.push(this.agent.Pos.distanceTo(g.Pos) / this.mapSize)
         })
-        console.log(state)
         return state
     }
     resetState(): number[] {
