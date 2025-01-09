@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import IEventController from "@Glibs/interface/ievent";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { EventTypes } from '@Glibs/types/globaltypes';
+import IState, { DistanceState } from './state';
 
 export default class Agent {
     mapSize: number
@@ -11,6 +12,7 @@ export default class Agent {
     currentAction = 0
     timeoutId?: NodeJS.Timeout
     interval = 500
+    state: IState
 
     constructor(
         private eventCtrl: IEventController,
@@ -25,12 +27,13 @@ export default class Agent {
             loss = 'meanSquaredError'
         } = {}
     ) {
+        this.state = new DistanceState(this.agent, this.enermy, this.goal, mapSize)
         this.mapSize = mapSize
         this.agentSkillLevel = agentSkillLevel
         if (!this.qNetwork.optimizer) {
             this.qNetwork.compile({ optimizer: tf.train.adam(learningRate), loss });
         }
-        this.currentState = this.getState()
+        this.currentState = this.state.getState()
 
     }
     getInterval() {
@@ -45,27 +48,15 @@ export default class Agent {
         }, this.getInterval())
     }
     gameLoop() {
-        this.currentState = this.getState()
+        this.currentState = this.state.getState()
         const action = this.selectAction(this.currentState);
         this.applyAction(action);
+        console.log(action)
         this.timeoutId = setTimeout(() => {
             this.gameLoop()
         }, this.getInterval())
     }
-    getState(): number[] {
-        const state = [
-            this.agent.Pos.x / this.mapSize,
-            this.agent.Pos.y / this.mapSize,
-            this.agent.Pos.z / this.mapSize,
-            this.agentSkillLevel / 10];
-        this.enermy.forEach((e) => {
-            state.push(e.Pos.x, e.Pos.y, e.Pos.z)
-        })
-        this.goal.forEach((g) => {
-            state.push(g.Pos.x, g.Pos.y, g.Pos.z)
-        })
-        return state
-    }
+    
     selectAction(state: number[]): number {
         return tf.tidy(() => {
             const qValues = this.qNetwork.predict(tf.tensor2d([state])) as tf.Tensor;

@@ -50,6 +50,7 @@ export type AttackOption = {
     distance?: number
     obj?: THREE.Object3D
     targetPoint?: THREE.Vector3
+    callback?: Function
 }
 
 export interface PlayerStatusParam {

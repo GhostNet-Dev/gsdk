@@ -34,19 +34,19 @@ export default class IndexedDBService<T> {
   }
 
   // Add data
-  async add(data: T): Promise<number> {
+  async put(data: T): Promise<number> {
     if (!this.db) throw new Error("Database not initialized");
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(this.storeName, "readwrite");
       const store = transaction.objectStore(this.storeName);
-      const request = store.add(data);
+      const request = store.put(data);
 
       request.onsuccess = () => {
         resolve(request.result as number);
       };
 
       request.onerror = (event) => {
-        reject(`Failed to add data: ${(event.target as IDBRequest).error}`);
+        reject(`Failed to put data: ${(event.target as IDBRequest).error}`);
       };
     });
   }

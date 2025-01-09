@@ -51,7 +51,7 @@ export class Fly extends PhysicsObject {
             currentAction.clampWhenFinished = true
             currentAction.setLoop(THREE.LoopOnce, 1)
         } else {
-            currentAction.setLoop(THREE.LoopRepeat, 10000)
+            currentAction.setLoop(THREE.LoopRepeat, Infinity)
         }
         currentAction.reset().fadeIn(fadeTime).play()
 

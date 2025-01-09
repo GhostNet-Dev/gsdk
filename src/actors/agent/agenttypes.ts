@@ -11,4 +11,7 @@ export type TrainingParam = {
     agentSkillLevel: number
     timeScale: number
     loss: string
+    goalReward: number
+    enermyReward: number
+    stepReward: number
 }

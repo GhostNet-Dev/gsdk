@@ -78,7 +78,7 @@ export default class ModelStore {
         if (download) {
             await model.save(`downloads://${title}`);
         }
-        await this.saveModelToIndexedDB(model, title, data);
+        return await this.saveModelToIndexedDB(model, title, data);
     }
 
     async uploadAndLoadModel(fileInput: HTMLInputElement) {
@@ -102,7 +102,16 @@ export default class ModelStore {
         const modelPath = 'indexeddb://' + title;
         await model.save(modelPath);
         console.log(`모델이 IndexedDB에 저장되었습니다: ${modelPath}`);
-        return db.add({ id: title, data, date: Date.now() })
+        model.getWeights().forEach((weight, index) => {
+            console.log(`Weight ${index}:`, weight.arraySync());
+            const w = weight.arraySync();
+            console.log(`Weight ${index}: Mean=${tf.mean(w).dataSync()}, Std=${tf.moments(w).variance.sqrt().dataSync()}`);
+        });
+        try {
+            return db.put({ id: title, data, date: Date.now() })
+        } catch(e) {
+            return -1
+        }
     }
 
     async loadModelFromIndexedDB(title = "myModel") {
@@ -111,6 +120,11 @@ export default class ModelStore {
             const model = await tf.loadLayersModel(modelPath);
             console.log('IndexedDB에서 모델을 성공적으로 로드했습니다.');
             model.summary(); // 모델 구조 출력
+            model.getWeights().forEach((weight, index) => {
+                console.log(`Weight ${index}:`, weight.arraySync());
+                const w = weight.arraySync();
+                console.log(`Weight ${index}: Mean=${tf.mean(w).dataSync()}, Std=${tf.moments(w).variance.sqrt().dataSync()}`);
+            });
             return model;
         } catch (error) {
             console.error('IndexedDB에서 모델을 로드할 수 없습니다:', error);

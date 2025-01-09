@@ -6,9 +6,10 @@ import { EventTypes } from '@Glibs/types/globaltypes';
 import { TrainingParam } from '@Glibs/types/agenttypes';
 import { AttackOption, AttackType } from '@Glibs/types/playertypes';
 import ModelStore from './modelstore';
+import IState, { DistanceState } from './state';
 
 
-export default class Training implements ILoop {
+export default class Trainer implements ILoop {
     currentState: number[]
     totalReward = 0;
     step = 0;
@@ -22,6 +23,7 @@ export default class Training implements ILoop {
     clock = new THREE.Clock
     param: TrainingParam
     enable = false
+    state: IState
 
     constructor(
         private eventCtrl: IEventController,
@@ -40,14 +42,19 @@ export default class Training implements ILoop {
             doneCount = 0,
             agentSkillLevel = 1, // 에이전트 초기 스킬 레벨
             timeScale = 1,
-            loss = 'meanSquaredError' 
+            loss = 'meanSquaredError',
+            goalReward = 500,
+            enermyReward = -100,
+            stepReward = -20
         } = {}
     ) {
         this.param = {
             actionSize, gamma, epsilon, epsilonDecay, learningRate, mapSize, 
-            episode, doneCount, agentSkillLevel, timeScale, loss
+            episode, doneCount, agentSkillLevel, timeScale, loss, goalReward, 
+            enermyReward, stepReward
         }
-        this.currentState = this.getState()
+        this.state = new DistanceState(this.agent, this.enermy, this.goal, mapSize)
+        this.currentState = this.state.getState()
         if(this.modelStore.loadedFlag) {
             [this.qNetwork, this.param] = this.modelStore.GetTraningData()
             this.param.timeScale = timeScale
@@ -55,7 +62,7 @@ export default class Training implements ILoop {
                 this.qNetwork.compile({ optimizer: tf.train.adam(this.param.learningRate), loss });
             }
         } else {
-            this.stateSize = 4 + this.enermy.length * 3 + this.goal.length * 3
+            this.stateSize = this.state.getStateSize()
             // Q-Network 정의
             this.qNetwork = tf.sequential();
             this.qNetwork.add(tf.layers.dense({ units: 128, activation: 'relu', inputShape: [this.stateSize] }));
@@ -70,8 +77,8 @@ export default class Training implements ILoop {
                 switch (opt.type) {
                     case AttackType.NormalSwing:
                     case AttackType.Magic0:
-                        this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `-5 Reward..`)
-                        this.rewardEventLoop(-5)
+                        this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `${this.param.enermyReward} Reward..`)
+                        this.rewardEventLoop(this.param.enermyReward)
                         break;
                 }
             })
@@ -81,9 +88,10 @@ export default class Training implements ILoop {
                 switch (opt.type) {
                     case AttackType.Heal:
                         this.param.agentSkillLevel += 1; // 목표 도달
-                        const r = 10 + this.param.agentSkillLevel * 2;
+                        const r = this.param.goalReward + this.param.agentSkillLevel * 2;
                         this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `+ ${r} Reward!!`)
                         this.rewardEventLoop(r, true)
+                        if (opt.callback) opt.callback()
                         break;
                 }
             })
@@ -134,22 +142,7 @@ export default class Training implements ILoop {
             return false
         })
     }
-
-    // 상태 계산
-    getState(): number[] {
-        const state = [
-            this.agent.Pos.x / this.param.mapSize,
-            this.agent.Pos.y / this.param.mapSize,
-            this.agent.Pos.z / this.param.mapSize,
-            this.param.agentSkillLevel / 10];
-        this.enermy.forEach((e) => {
-            state.push(e.Pos.x, e.Pos.y, e.Pos.z)
-        })
-        this.goal.forEach((g) => {
-            state.push(g.Pos.x, g.Pos.y, g.Pos.z)
-        })
-        return state
-    }
+    
     getRandomInt(max: number): number {
         const array = new Uint32Array(1);
         window.crypto.getRandomValues(array);
@@ -162,7 +155,9 @@ export default class Training implements ILoop {
         } else {
             return tf.tidy(() => {
                 const qValues = this.qNetwork.predict(tf.tensor2d([state])) as tf.Tensor;
-                return qValues.argMax(1).dataSync()[0];
+                const ret = qValues.argMax(1).dataSync()[0];
+                console.log(ret)
+                return ret
             });
         }
     }
@@ -181,14 +176,14 @@ export default class Training implements ILoop {
         this.currentAction = action
     }
 
-    // 보상 계산
+    // 추가 보상 계산
     getReward(): number {
         let currentDistance = 10;
         const goalFlag = this.goal.some((g) => {
             const d = this.agent.Pos.distanceTo(g.Pos)
             if (d < 1) return true
 
-            if (currentDistance < d) currentDistance = d
+            if (currentDistance > d) currentDistance = d
             return false
         })
         return -currentDistance; // 일반 이동 페널티
@@ -261,7 +256,7 @@ export default class Training implements ILoop {
         if (!this.enable) return
 
         this.totalReward += reward;
-        const nextState = this.getState();
+        const nextState = this.state.getState();
         this.trainStep(this.currentState, this.currentAction, reward, nextState, done).then(() => {
             this.checkTrainingDone(nextState, done)
         })
@@ -271,17 +266,14 @@ export default class Training implements ILoop {
             this.gameLoop(nextAction)
         }, this.getInterval())
     }
-    gameLoop(action: number): void {
+    gameLoop(action: number, done = false): void {
         if (!this.enable) return
 
         const reward = this.getReward();
-        this.totalReward += reward;
+        this.totalReward += reward + this.param.stepReward;
+        
 
-        const nextState = this.getState();
-        const done = this.goal.some((g) => {
-            if (g.Pos.distanceTo(this.agent.Pos) < 1.5) return true;
-            return false;
-        })
+        const nextState = this.state.getState();
 
         this.trainStep(this.currentState, action, reward, nextState, done).then(() => {
             this.checkTrainingDone(nextState, done)
@@ -296,7 +288,7 @@ export default class Training implements ILoop {
     resetGame(): void {
         this.agent.Pos.set(0, 0, 0);
         this.param.agentSkillLevel = 1;
-        this.currentState = this.getState();
+        this.currentState = this.state.getState();
         this.totalReward = 0;
         this.step = 0;
 

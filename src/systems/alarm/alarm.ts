@@ -32,7 +32,8 @@ export class Alarm {
             case AlarmType.Normal:
                 this.dom.style.display = "block"
                 this.dom.insertAdjacentHTML("beforeend", text + "<br>")
-                gsap.fromTo('.playalarm', 2, { opacity: 1 }, {
+                gsap.killTweensOf('.playalarm')
+                gsap.fromTo('.playalarm', 3, { opacity: 1 }, {
                     opacity: 0, ease: "power1.inOut", onComplete: () => {
                         this.dom.style.display = "none"
                         this.dom.innerText = ''
