@@ -8,6 +8,7 @@ import ModelStore from './modelstore';
 import IState, { DistanceState } from './state';
 import DQNAgent from './dqn';
 import SimpleEnv from './simpleenv'
+import { Visualization } from './vis';
 
 export default class TrainerX {
     currentState: number[]
@@ -25,6 +26,7 @@ export default class TrainerX {
     env: IEnvironment
     network: DQNAgent
     eventTarget = new EventTarget()
+    vis = new Visualization()
 
     constructor(
         private eventCtrl: IEventController,
@@ -46,13 +48,14 @@ export default class TrainerX {
             loss = 'meanSquaredError',
             goalReward = 500,
             enermyReward = -100,
-            stepReward = -20
+            stepReward = -20,
+            step = 100,
         } = {}
     ) {
         this.param = {
             actionSize, gamma, epsilon, epsilonDecay, learningRate, mapSize, 
             episode, doneCount, agentSkillLevel, timeScale, loss, goalReward, 
-            enermyReward, stepReward
+            enermyReward, stepReward, step
         }
         this.state = new DistanceState(this.agent, this.enermy, this.goal, mapSize)
         this.env = new SimpleEnv(this.state, eventCtrl, modelStore, agent, enermy, goal, this.param)
@@ -106,9 +109,11 @@ export default class TrainerX {
     async gameLoop() {
         let state = this.env.reset();
         let totalReward = 0;
+        let lossSum = 0;
         this.resetGame()
 
-        for (let t = 0; t < 1000; t++) {
+        let stepCount = 0
+        for (stepCount = 0; stepCount < this.param.step; stepCount++) {
             if (!this.env.enable) {
                 await this.eventPause()
             }
@@ -121,8 +126,9 @@ export default class TrainerX {
             this.network.storeExperience(state, action, reward, nextState, done);
             state = nextState;
             totalReward += reward;
-
+            
             await this.network.train();
+            lossSum += this.network['model'].history?.history.loss?.[0] as number || 0;
 
             if (done) break;
         }
@@ -131,6 +137,14 @@ export default class TrainerX {
         this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, logTxt)
         this.param.episode ++
         this.eventCtrl.SendEventMessage(EventTypes.AgentEpisode, this.param)
+
+        const avgLoss = stepCount > 0 ? lossSum / stepCount : 0;
+
+        // Update visualization
+        this.vis.updateReward(this.param.episode + 1, totalReward);
+        this.vis.updateLoss(this.param.episode + 1, avgLoss);
+        this.vis.updateEpsilon(this.param.episode + 1, this.network['epsilon']);
+
         this.timeoutId = setTimeout(() => {
             this.gameLoop()
         }, 0)

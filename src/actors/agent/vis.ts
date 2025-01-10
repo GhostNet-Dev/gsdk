@@ -10,11 +10,26 @@ export class Visualization {
   private epsilonData: { x: number; y: number }[] = [];
 
   constructor() {
+    this.addDynamicStyle(`
+.vis {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+}
+        `)
     const dom = document.createElement("div")
     dom.id = "visualization-container"
-    this.rewardContainer = document.getElementById('reward-chart')!;
-    this.lossContainer = document.getElementById('loss-chart')!;
-    this.epsilonContainer = document.getElementById('epsilon-chart')!;
+    dom.classList.add("vis")
+    this.rewardContainer = document.createElement("div");
+    this.rewardContainer.id = 'reward-chart';
+    this.lossContainer = document.createElement('div')
+    this.lossContainer.id = 'loss-chart';
+    this.epsilonContainer = document.createElement('div')
+    this.epsilonContainer.id = 'epsilon-chart';
+    dom.appendChild(this.rewardContainer)
+    dom.appendChild(this.lossContainer)
+    dom.appendChild(this.epsilonContainer)
+    document.body.appendChild(dom)
   }
 
   // 에피소드의 보상 업데이트 및 시각화
@@ -60,6 +75,12 @@ export class Visualization {
         height: 300,
       }
     );
+  }
+  addDynamicStyle(css: string): void {
+    const style = document.createElement('style');
+    style.type = 'text/css';
+    style.textContent = css;
+    document.head.appendChild(style);
   }
 }
 

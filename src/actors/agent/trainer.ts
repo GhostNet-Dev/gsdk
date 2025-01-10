@@ -45,13 +45,14 @@ export default class Trainer implements ILoop {
             loss = 'meanSquaredError',
             goalReward = 500,
             enermyReward = -100,
-            stepReward = -20
+            stepReward = -20,
+            step = 100,
         } = {}
     ) {
         this.param = {
             actionSize, gamma, epsilon, epsilonDecay, learningRate, mapSize, 
             episode, doneCount, agentSkillLevel, timeScale, loss, goalReward, 
-            enermyReward, stepReward
+            enermyReward, stepReward, step
         }
         this.state = new DistanceState(this.agent, this.enermy, this.goal, mapSize)
         this.currentState = this.state.getState()
@@ -239,7 +240,7 @@ export default class Trainer implements ILoop {
     checkTrainingDone(nextState: number[], done: boolean) {
         this.currentState = nextState;
         if (done) this.param.doneCount++;
-        if (done || this.step >= 50) {
+        if (done || this.step >= this.param.step) {
             const logTxt = `Episode ${this.param.episode} finished\nReward: ${this.totalReward.toFixed(2)}`
             console.log(logTxt);
             this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, logTxt)

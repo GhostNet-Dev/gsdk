@@ -14,4 +14,5 @@ export type TrainingParam = {
     goalReward: number
     enermyReward: number
     stepReward: number
+    step: number
 }
