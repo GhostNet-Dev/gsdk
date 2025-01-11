@@ -10,7 +10,7 @@ export class Helper {
     debugMode = false
     axesHelper: THREE.AxesHelper = new THREE.AxesHelper(300)
     gridHelper: THREE.GridHelper = new THREE.GridHelper(100, 100)
-    stats = new Stats()
+    //stats = new Stats()
     //arrowHelper: THREE.ArrowHelper
     //arrowAttackHelper: THREE.ArrowHelper
 
@@ -32,7 +32,7 @@ export class Helper {
     CheckStateBegin() {
     }
     CheckStateEnd() {
-        this.stats.update()
+        //this.stats.update()
     }
 
     CreateVectorGui(f: GUI, v: THREE.Vector3 | THREE.Euler, name: string) {
