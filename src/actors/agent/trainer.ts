@@ -36,6 +36,8 @@ export default class Trainer implements ILoop {
             gamma = 0.99,
             epsilon = 1.0,
             epsilonDecay = 0.995,
+            epsilonStart = 1.0,
+            epsilonEnd = 0.1,
             learningRate = 0.01,
             mapSize = 300,
             episode = 0,
@@ -50,9 +52,9 @@ export default class Trainer implements ILoop {
         } = {}
     ) {
         this.param = {
-            actionSize, gamma, epsilon, epsilonDecay, learningRate, mapSize, 
-            episode, doneCount, agentSkillLevel, timeScale, loss, goalReward, 
-            enermyReward, stepReward, step
+            actionSize, gamma, epsilon, epsilonDecay, epsilonStart, epsilonEnd, 
+            learningRate, mapSize, episode, doneCount, agentSkillLevel, timeScale, 
+            loss, goalReward, enermyReward, stepReward, step
         }
         this.state = new DistanceState(this.agent, this.enermy, this.goal, mapSize)
         this.currentState = this.state.getState()

@@ -38,7 +38,9 @@ export default class TrainerX {
             actionSize = 4,
             gamma = 0.99,
             epsilon = 1.0,
-            epsilonDecay = 0.995,
+            epsilonDecay = 0.997,
+            epsilonStart = 1.0,
+            epsilonEnd = 0.1,
             learningRate = 0.001,
             mapSize = 100,
             episode = 0,
@@ -53,13 +55,13 @@ export default class TrainerX {
         } = {}
     ) {
         this.param = {
-            actionSize, gamma, epsilon, epsilonDecay, learningRate, mapSize, 
-            episode, doneCount, agentSkillLevel, timeScale, loss, goalReward, 
-            enermyReward, stepReward, step
+            actionSize, gamma, epsilon, epsilonDecay, epsilonStart, epsilonEnd, 
+            learningRate, mapSize, episode, doneCount, agentSkillLevel, timeScale, 
+            loss, goalReward, enermyReward, stepReward, step
         }
         this.state = new DistanceState(this.agent, this.enermy, this.goal, mapSize)
         this.env = new SimpleEnv(this.state, eventCtrl, modelStore, agent, enermy, goal, this.param)
-        this.network = new DQNAgent(this.state.getStateSize(), this.env.actionSpace)
+        this.network = new DQNAgent(this.state.getStateSize(), this.param)
 
         this.currentState = this.state.getState()
         this.agent.Pos.set(0, 0, 0);
@@ -127,11 +129,12 @@ export default class TrainerX {
             state = nextState;
             totalReward += reward;
             
-            await this.network.train();
-            lossSum += this.network['model'].history?.history.loss?.[0] as number || 0;
+            const history = await this.network.train();
+            if (history) lossSum += history.history.loss?.[0] as number || 0;
 
             if (done) break;
         }
+        this.network.updateEpsilon()
         const logTxt = `Episode ${this.param.episode + 1}: Total Reward = ${totalReward}`;
         console.log(logTxt)
         this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, logTxt)
@@ -139,6 +142,7 @@ export default class TrainerX {
         this.eventCtrl.SendEventMessage(EventTypes.AgentEpisode, this.param)
 
         const avgLoss = stepCount > 0 ? lossSum / stepCount : 0;
+        console.log(`avgLost: ${avgLoss}, stepCount: ${stepCount}, lossSum: ${lossSum}`)
 
         // Update visualization
         this.vis.updateReward(this.param.episode + 1, totalReward);

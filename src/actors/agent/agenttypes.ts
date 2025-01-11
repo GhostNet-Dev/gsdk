@@ -4,6 +4,9 @@ export type TrainingParam = {
     gamma: number // 할인율
     epsilon: number // 탐험 비율
     epsilonDecay: number
+    epsilonStart: number
+    epsilonEnd: number
+
     learningRate: number
     mapSize: number
     episode:number

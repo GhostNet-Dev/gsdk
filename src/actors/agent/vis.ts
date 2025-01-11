@@ -65,6 +65,7 @@ export class Visualization {
 
   // 에피소드의 탐험 비율(Epsilon) 업데이트 및 시각화
   public updateEpsilon(episode: number, epsilon: number): void {
+    console.log(`update Epsilon: [${episode}], ${epsilon}`)
     this.epsilonData.push({ x: episode, y: epsilon });
     tfvis.render.linechart(
       this.epsilonContainer,

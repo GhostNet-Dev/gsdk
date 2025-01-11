@@ -1,16 +1,12 @@
+import { TrainingParam } from '@Glibs/types/agenttypes';
 import * as tf from '@tensorflow/tfjs';
 
 // 하이퍼파라미터
-const learningRate = 0.001;
-const gamma = 0.99;
-const epsilonStart = 1.0;
-const epsilonEnd = 0.1;
-const epsilonDecay = 1000;
 const batchSize = 32;
 const replayBufferSize = 10000;
 
 // 신경망 생성 함수
-function createModel(stateSize: number, actionSize: number): tf.Sequential {
+function createModel(learningRate: number, stateSize: number, actionSize: number): tf.Sequential {
   const model = tf.sequential();
   model.add(tf.layers.dense({ inputShape: [stateSize], units: 24, activation: 'relu' }));
   model.add(tf.layers.dense({ units: 24, activation: 'relu' }));
@@ -27,11 +23,11 @@ export default class DQNAgent {
   private epsilon: number;
   private steps: number;
 
-  constructor(private stateSize: number, private actionSize: number) {
-    this.model = createModel(stateSize, actionSize);
-    this.targetModel = createModel(stateSize, actionSize);
+  constructor(private stateSize: number, private param: TrainingParam) {
+    this.model = createModel(param.learningRate, stateSize, param.actionSize);
+    this.targetModel = createModel(param.learningRate, stateSize, param.actionSize);
     this.replayBuffer = [];
-    this.epsilon = epsilonStart;
+    this.epsilon = param.epsilonStart;
     this.steps = 0;
   }
   getRandomInt(max: number): number {
@@ -42,7 +38,7 @@ export default class DQNAgent {
   selectAction(state: number[]): number {
     if (Math.random() < this.epsilon) {
       // 탐험
-      return this.getRandomInt(this.actionSize);
+      return this.getRandomInt(this.param.actionSize);
     } else {
       // 최적 행동 선택
       return tf.tidy(() => {
@@ -59,7 +55,7 @@ export default class DQNAgent {
     this.replayBuffer.push({ state, action, reward, nextState, done });
   }
 
-  async train(): Promise<void> {
+  async train(): Promise<tf.History | undefined> {
     if (this.replayBuffer.length < batchSize) return;
 
     const batch = this.sampleBatch(batchSize);
@@ -77,23 +73,24 @@ export default class DQNAgent {
     const maxQValuesNext: number[] = qValuesNext.max(1).arraySync() as number[]; // number[]로 타입 지정
 
     const targets = stateTensor.arraySync().map((_, i) => {
-      const target = rewards[i] + (dones[i] ? 0 : gamma * maxQValuesNext[i]);
+      const target = rewards[i] + (dones[i] ? 0 : this.param.gamma * maxQValuesNext[i]);
       return target;
     });
 
-    const actionMasks = tf.oneHot(tf.tensor1d(actions, 'int32'), this.actionSize).arraySync() as number[][];
+    const actionMasks = tf.oneHot(tf.tensor1d(actions, 'int32'), this.param.actionSize).arraySync() as number[][];
     const targetQValues = targets.map((t, i) =>
       actionMasks[i].map((mask: number, j: number) => (mask === 1 ? t : 0))
     );
 
-    const targetTensor = tf.tensor2d(targetQValues, [batchSize, this.actionSize]);
-    await this.model.fit(stateTensor, targetTensor, { epochs: 1, verbose: 0 });
+    const targetTensor = tf.tensor2d(targetQValues, [batchSize, this.param.actionSize]);
+    const history = await this.model.fit(stateTensor, targetTensor, { epochs: 1, verbose: 0 });
 
     this.steps++;
-    this.updateEpsilon();
+    //this.updateEpsilon();
     if (this.steps % 10 === 0) {
       this.updateTargetModel();
     }
+    return history
   }
 
   private sampleBatch(batchSize: number): any[] {
@@ -101,8 +98,11 @@ export default class DQNAgent {
     return indices.map((i) => this.replayBuffer[i]);
   }
 
-  private updateEpsilon(): void {
-    this.epsilon = Math.max(epsilonEnd, epsilonStart - (this.steps / epsilonDecay) * (epsilonStart - epsilonEnd));
+  updateEpsilon(): void {
+    this.epsilon = Math.max(this.param.epsilonEnd, this.epsilon * this.param.epsilonDecay)
+    // this.epsilon = Math.max(this.param.epsilonEnd,
+    //   this.param.epsilonStart - (this.steps / this.param.epsilonDecay) *
+    //   (this.param.epsilonStart - this.param.epsilonEnd));
   }
 
   private updateTargetModel(): void {

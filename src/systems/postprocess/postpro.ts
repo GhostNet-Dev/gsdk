@@ -53,6 +53,7 @@ export class Postpro implements IPostPro {
 
     this.bloomComposer = new EffectComposer(this.renderer, this.rendertarget1)
     this.bloomComposer.renderToScreen = false
+    this.bloomComposer.setPixelRatio(this.renderer.getPixelRatio())
     this.bloomComposer.addPass(this.renderScene)
     this.bloomComposer.addPass(this.bloomPass)
     //this.bloomComposer.addPass(new ShaderPass(FXAAShader))
@@ -79,7 +80,7 @@ export class Postpro implements IPostPro {
     finalPass.needsSwap = true;
     const target2 = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, 
       {
-        minFilter: THREE.LinearFilter,
+        minFilter: THREE.NearestFilter,
         magFilter: THREE.LinearFilter,
         type: THREE.HalfFloatType,
         format: THREE.RGBAFormat,
@@ -87,6 +88,7 @@ export class Postpro implements IPostPro {
         samples: 4
       })
     this.finalComposer = new EffectComposer(renderer, target2);
+    this.finalComposer.setPixelRatio(this.renderer.getPixelRatio())
     this.finalComposer.addPass(this.renderScene);
     this.finalComposer.addPass(finalPass);
     this.finalComposer.addPass(colorCorrectionPass)
