@@ -1,31 +1,23 @@
+import { FontType } from "./fonttypes"
 
-/*
-font
-https://fonts.googleapis.com/css2?family=Wendy+One&display=swap
-https://fonts.googleapis.com/css2?family=Boogaloo&display=swap
-https://fonts.googleapis.com/css2?family=Galindo&display=swap
-https://fonts.googleapis.com/css2?family=Coiny&display=swap
-
-stylized font
-https://fonts.googleapis.com/css2?family=Galindo&family=Honk:MORF@17&display=swap
-.galindo-regular {
-  font-family: "Galindo", serif;
-  font-weight: 400;
-  font-style: normal;
-}
-// <uniquifier>: Use a unique and descriptive class name
-
-.honk-<uniquifier> {
-  font-family: "Honk", serif;
-  font-optical-sizing: auto;
-  font-weight: 400;
-  font-style: normal;
-  font-variation-settings:
-    "MORF" 17,
-    "SHLN" 50;
-}
-*/
 export default class FontLoader {
+  fontCss(type: FontType) {
+    switch(type) {
+      case FontType.Wendy:
+        this.loadCSS("https://fonts.googleapis.com/css2?family=Wendy+One&display=swap");
+        break;
+      case FontType.Boogaloo:
+        this.loadCSS("https://fonts.googleapis.com/css2?family=Boogaloo&display=swap");
+        break;
+      case FontType.Galindo:
+        this.loadCSS("https://fonts.googleapis.com/css2?family=Galindo&display=swap");
+        break;
+      case FontType.Coiny:
+        this.loadCSS("https://fonts.googleapis.com/css2?family=Coiny&display=swap");
+        break;
+
+    }
+  }
   loadCSS(filename: string) {
     return new Promise((resolve, reject) => {
       const link = document.createElement('link');
