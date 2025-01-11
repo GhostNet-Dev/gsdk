@@ -50,7 +50,9 @@ export enum EventTypes {
     AlarmWarning = "alarmwarning",
     AlarmNormal = "alarmnormal",
     Toast = "toast",
+    Spinner = "spin",
 
+    // player와 상호작용하는 객체 로
     AddInteractive = "addinter",
     DelInteractive = "delinter",
 

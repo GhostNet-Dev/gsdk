@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { GUI } from "lil-gui"
-import Stats from "stats.js";
 
 export const gui = new GUI()
+gui.hide()
 
 
 export class Helper {
@@ -27,9 +27,6 @@ export class Helper {
         folder.add(this.axesHelper, "visible").name("axes")
         folder.close()
         gui.close()
-    }
-    resize(width: number, height: number): void { }
-    update(): void {
     }
 
     CheckStateBegin() {

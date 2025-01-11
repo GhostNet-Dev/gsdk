@@ -41,7 +41,10 @@ export class SkyBoxAllTime extends GhostObject implements IPhysicsObject {
     skyMaterial: THREE.ShaderMaterial
     time = .5
 
-    constructor(private directionalLight: THREE.DirectionalLight) {
+    constructor(
+        private directionalLight: THREE.DirectionalLight,
+        { debug = false } = {}
+    ) {
         const skyMaterial = new THREE.ShaderMaterial({
             vertexShader: skyVertexShader,
             fragmentShader: skyFragmentShader,
@@ -58,10 +61,13 @@ export class SkyBoxAllTime extends GhostObject implements IPhysicsObject {
         const daytime = .5
         this.setTimeOfDay(daytime)
         this.updateLighting(daytime)
-        gui.add(this, "time", 0, 1, 0.1).onChange((v: number) => {
-            this.setTimeOfDay(v)
-            this.updateLighting(v)
-        })
+
+        if (debug) {
+            gui.add(this, "time", 0, 1, 0.1).onChange((v: number) => {
+                this.setTimeOfDay(v)
+                this.updateLighting(v)
+            })
+        }
     }
 
     // 시간 업데이트 함수

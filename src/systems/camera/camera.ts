@@ -12,7 +12,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         eventCtrl: IEventController,
         private player: IPhysicsObject,
     ) {
-        super(45, canvas.Width / canvas.Height, 0.1, 400)
+        super(45, canvas.Width / canvas.Height, 0.1, 1000)
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         eventCtrl.SendEventMessage(EventTypes.RegisterViewer, this)
         this.position.set(7, 5, 7)

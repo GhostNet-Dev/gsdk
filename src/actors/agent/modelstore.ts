@@ -44,8 +44,10 @@ export default class ModelStore {
             li.appendChild(div1)
             li.appendChild(span)
             li.onclick = async () => {
+                this.eventCtrl.SendEventMessage(EventTypes.Spinner, true)
                 const m = await this.loadModelFromIndexedDB(model.id)
                 this.eventCtrl.SendEventMessage(EventTypes.AgentLoad, m, model.data)
+                this.eventCtrl.SendEventMessage(EventTypes.Spinner, false)
                 this.eventCtrl.SendEventMessage(EventTypes.Toast, "Load Model", "Complete")
                 this.loadedFlag = true
                 this.param = JSON.parse(model.data)

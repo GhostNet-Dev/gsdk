@@ -14,7 +14,8 @@ export class Visualization {
 .vis {
     position: absolute;
     bottom: 0;
-    left: 50%;
+    left: 0;
+    opacity: 0.5;
 }
         `)
     const dom = document.createElement("div")
@@ -41,8 +42,8 @@ export class Visualization {
       {
         xLabel: 'Episode',
         yLabel: 'Total Reward',
-        width: 400,
-        height: 300,
+        width: window.innerWidth,
+        height: 100,
       }
     );
   }
@@ -56,8 +57,8 @@ export class Visualization {
       {
         xLabel: 'Episode',
         yLabel: 'Loss',
-        width: 400,
-        height: 300,
+        width: window.innerWidth,
+        height: 100,
       }
     );
   }
@@ -71,8 +72,8 @@ export class Visualization {
       {
         xLabel: 'Episode',
         yLabel: 'Epsilon',
-        width: 400,
-        height: 300,
+        width: window.innerWidth,
+        height: 100,
       }
     );
   }

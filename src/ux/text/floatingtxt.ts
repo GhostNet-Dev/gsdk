@@ -16,7 +16,7 @@ export class FloatingName extends THREE.Sprite {
       context2d.canvas.width = 256;
       context2d.canvas.height = 128;
       context2d.fillStyle = '#FFF';
-      context2d.font = "18pt Helvetica";
+      context2d.font = "24pt Helvetica";
       context2d.shadowOffsetX = 3;
       context2d.shadowOffsetY = 3;
       context2d.shadowColor = "rgba(0,255,0,0.3)";

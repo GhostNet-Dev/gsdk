@@ -39,7 +39,7 @@ export default class TrainerX {
             gamma = 0.99,
             epsilon = 1.0,
             epsilonDecay = 0.995,
-            learningRate = 0.01,
+            learningRate = 0.001,
             mapSize = 100,
             episode = 0,
             doneCount = 0,

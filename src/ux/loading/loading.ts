@@ -21,7 +21,19 @@ export default class WheelLoader {
       this.load(value)
     })
   }
+  loadCSS(filename: string) {
+    return new Promise((resolve, reject) => {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = filename;
+      link.type = 'text/css';
 
+      link.onload = () => resolve(`${filename} loaded successfully`);
+      link.onerror = () => reject(new Error(`Failed to load ${filename}`));
+
+      document.head.appendChild(link);
+    });
+  }
   private load(value: number) {
       if (this.progressElement) {
         this.progressElement.value = value;
