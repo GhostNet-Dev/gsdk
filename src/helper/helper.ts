@@ -17,6 +17,7 @@ export class Helper {
     constructor(
         private scene: THREE.Scene,
         private nonglowfn?: Function,
+        { enable = false } = {}
     ) {
         this.nonglowfn?.(this.axesHelper)
         this.nonglowfn?.(this.gridHelper)
@@ -27,6 +28,9 @@ export class Helper {
         folder.add(this.axesHelper, "visible").name("axes")
         folder.close()
         gui.close()
+        if (enable) {
+            gui.show()
+        }
     }
 
     CheckStateBegin() {

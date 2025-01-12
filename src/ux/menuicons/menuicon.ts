@@ -1,58 +1,65 @@
+import { Icons, IconsColor } from "./icontypes";
+import { GetIconColorDb, GetIconDb } from "./preicons"
 
-// const exBtn = 'https://hons.ghostwebservice.com/assets/ui/ButtonsText/SVG/ButtonText_Small_Blue_Square.svg'
-const iconPath = 'https://hons.ghostwebservice.com/assets/ui/Icons/Icon_Small_Diamond.png'
 /*
 yellow: startColor = "#FFC107", endColor = "#FFF176"
 blue:  startColor = "#0D47A1", endColor = "#2196F3"
 */
 
 export default class MenuIcon {
-    constructor(parent: HTMLElement, {
-      text = "300", icon = iconPath, 
-      iconEnable = true, iconWidth = "80%",
-      boxEnable = false, circleEnable = false, width = "50px", height = "50px", rounded = "10px",
-      startColor = "#0D47A1", endColor = "#2196F3"
-    } = {}) {
-      const dom = document.createElement("div");
-      dom.style.position = "absolute"
-      dom.style.width = width
-      dom.style.height = height
-      dom.style.top = "0"
-      dom.onclick = () => {
-        console.log("test")
-      }
-      let boxHtml = ""
-      let iconHtml = ""
-      if (boxEnable) {
-        boxHtml = `<div class="rounded-gradient-box"></div>`
-        this.applyDynamicStyle("menuIcon", getCSS(width, height, rounded, startColor, endColor))
-      } else if (circleEnable) {
-        boxHtml = `<div class="circle-icon"></div>`
-        this.applyDynamicStyle("menuIcon", getCSS(width, height, rounded, startColor, endColor))
-      }
-      if (iconEnable) {
-        iconHtml = `<img src="${icon}" style="width:${iconWidth}">`
-      }
-      dom.innerHTML = `
+  icons = GetIconDb()
+  colors = GetIconColorDb()
+
+  constructor(parent: HTMLElement, {
+    text = "300", icon = Icons.Save,
+    iconEnable = true, iconWidth = "70%",
+    boxEnable = false, circleEnable = false, width = "50px", height = "50px", rounded = "10px",
+    color = IconsColor.Blue
+  } = {}) {
+    const c = this.colors.get(color)
+    const startColor = c ? c[0] : "";
+    const endColor = c ? c[1] : "";
+
+    const dom = document.createElement("div");
+    dom.style.cursor = "pointer"
+    dom.style.position = "relative"
+    dom.style.width = width
+    dom.style.height = height
+    dom.onclick = () => {
+      console.log("test")
+    }
+    let boxHtml = ""
+    let iconHtml = ""
+    if (boxEnable) {
+      boxHtml = `<div class="rounded-gradient-box"></div>`
+      this.applyDynamicStyle("menuIcon", getCSS(width, height, rounded, startColor, endColor))
+    } else if (circleEnable) {
+      boxHtml = `<div class="circle-icon"></div>`
+      this.applyDynamicStyle("menuIcon", getCSS(width, height, rounded, startColor, endColor))
+    }
+    if (iconEnable) {
+      iconHtml = `<img src="${this.icons.get(icon)}" style="width:${iconWidth}"><br>`
+    }
+    dom.innerHTML = `
       ${boxHtml}
       <!-- 텍스트를 SVG 위에 오버레이 -->
-      <div class="icon-font gametext text-center">
+      <div class="icon-font gametext text-center mt-1">
         ${iconHtml}
         ${text}
       </div>`
-      parent.appendChild(dom)
-      
+    parent.appendChild(dom)
+
+  }
+  applyDynamicStyle(styleId: string, css: string) {
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = css;
+      document.head.appendChild(style); // <head>에 스타일 추가
+    } else {
+      console.log("Style already applied.");
     }
-    applyDynamicStyle(styleId: string, css: string) {
-      if (!document.getElementById(styleId)) {
-        const style = document.createElement("style");
-        style.id = styleId;
-        style.textContent = css;
-        document.head.appendChild(style); // <head>에 스타일 추가
-      } else {
-        console.log("Style already applied.");
-      }
-    }
+  }
 }
 
 function getCSS(width: string, height: string, rounded: string, startColor: string, endColor: string) {
