@@ -6,18 +6,20 @@ export default class MenuGroup {
     row?: HTMLDivElement
     vertical = false
     center = false
+    interpadding = "p-1"
     constructor(parent: HTMLElement, {
         top = "", left = "", right = "", bottom = "", margin = "m-1",
-        vertical = false, center = false, opacity = ""
+        vertical = false, center = false, opacity = "", interpadding = "p-1"
     } = {}) {
         this.vertical = vertical
         this.center = center
+        this.interpadding = interpadding
         this.dom.classList.add("container", "w-auto", "rounded", "rounded-translucent-box", "p-1", margin)
         this.applyDynamicStyle("menugroup", getCSS(top, left, right, bottom, opacity))
         parent.appendChild(this.dom)
         if (!vertical) {
             this.row = document.createElement("div")
-            this.row.classList.add("row", "p-1")
+            this.row.classList.add("row", this.interpadding)
             this.dom.appendChild(this.row)
         }
     }
@@ -30,7 +32,7 @@ export default class MenuGroup {
             return
         }
         const row = document.createElement("div")
-        row.classList.add("row", "p-1")
+        row.classList.add("row", this.interpadding)
         row.appendChild(col)
         this.dom.appendChild(row)
     }
@@ -54,10 +56,8 @@ function getCSS(top:string, left:string, right:string, bottom: string, opacity: 
         ${left.length > 0 ? "left:" + left +";": ""}
         ${right.length > 0 ? "right:" + right +";": ""}
         ${bottom.length > 0 ? "bottom:" + bottom +";": ""}
-  background-color: rgba(0, 0, 0, ${opacity.length > 0 ? opacity: ""}); /* 반투명 검정색 */
-  align-items: center;       /* 수직 가운데 정렬 */
-  justify-content: center;   /* 수평 가운데 정렬 */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* 살짝 입체감 */
+        background-color: rgba(0, 0, 0, ${opacity.length > 0 ? opacity: ""}); /* 반투명 검정색 */
+        box-shadow: 0 4px 8px rgba(0, 0, 0, ${opacity.length > 0 ? opacity: ""}); /* 살짝 입체감 */
 }
     `
 }
