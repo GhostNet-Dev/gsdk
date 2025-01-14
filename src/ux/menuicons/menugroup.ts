@@ -58,6 +58,7 @@ function getCSS(top:string, left:string, right:string, bottom: string, opacity: 
         ${bottom.length > 0 ? "bottom:" + bottom +";": ""}
         background-color: rgba(0, 0, 0, ${opacity.length > 0 ? opacity: ""}); /* 반투명 검정색 */
         box-shadow: 0 4px 8px rgba(0, 0, 0, ${opacity.length > 0 ? opacity: ""}); /* 살짝 입체감 */
+        overflow: hidden;
 }
     `
 }

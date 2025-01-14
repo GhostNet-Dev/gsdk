@@ -31,11 +31,13 @@ export default class MenuIcon {
     let boxHtml = ""
     let iconHtml = ""
     let lolliHtml = ""
+
     if (lolli) {
       lolliHtml = ` lolli"`
     } else {
       lolliHtml = `" style="background: linear-gradient(to bottom, ${startColor}, ${endColor});"`
     }
+
     if (boxEnable) {
       boxHtml = `<div class="rounded-gradient-box${lolliHtml}></div>`
       this.applyDynamicStyle("menuIcon", getCSS(width, height, rounded, startColor))
