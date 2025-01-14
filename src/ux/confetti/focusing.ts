@@ -2,12 +2,18 @@
 export default class Focusing {
   dom: HTMLElement
 
-  constructor(parent: HTMLElement, { color = "#000000", start = "20%", end = "100%", index = 0 } = {}) {
+  constructor(private parent: HTMLElement, { color = "#000000", start = "20%", end = "100%", index = 0 } = {}) {
     this.applyDynamicStyle("focusing-gradient", getCSS(color, start, end, index))
     this.dom = document.createElement("div");
     this.dom.classList.add("gradient-overlay");
     
     parent.appendChild(this.dom)
+  }
+  dispose() {
+    this.parent.removeChild(this.dom)
+  }
+  show() {
+    this.parent.appendChild(this.dom)
   }
   applyDynamicStyle(styleId: string, css: string) {
         if (!document.getElementById(styleId)) {

@@ -8,18 +8,23 @@ export default class Confetti {
     confettiAnimations = ['slow', 'medium', 'fast'];
     confettiInterval?: NodeJS.Timeout
 
-    constructor({ index = 0 } = {}) {
+    constructor(private parent: HTMLElement, { index = 0 } = {}) {
         this.applyDynamicStyle("confetti", getCSS(index))
 
         this.el = document.createElement("div");
         this.el.classList.add("js-container", "_container")
-        document.body.appendChild(this.el)
+        parent.appendChild(this.el)
 
         this._setupElements();
         this._renderConfetti();
     }
-    despose() {
+    dispose() {
         clearInterval(this.confettiInterval)
+        this.parent.removeChild(this.el)
+    }
+    show() {
+        this.parent.appendChild(this.el)
+        this._renderConfetti();
     }
 
     _setupElements() {

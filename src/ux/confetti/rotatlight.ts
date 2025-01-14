@@ -2,7 +2,7 @@
 export default class RotateLight {
     dom: HTMLElement
 
-    constructor(parent: HTMLElement, { color1 = "#00ff00", color2 = "#ffffff", speed = "4s", index = 0} = {}) {
+    constructor(private parent: HTMLElement, { color1 = "#00ff00", color2 = "#ffffff", speed = "4s", index = 0 } = {}) {
         this.applyDynamicStyle("rotating-light", getCSS(color1, color2, speed, index))
 
         this.dom = document.createElement("div");
@@ -12,6 +12,12 @@ export default class RotateLight {
         this.dom.appendChild(lightDom)
 
         parent.appendChild(this.dom)
+    }
+    dispose() {
+        this.parent.removeChild(this.dom)
+    }
+    show() {
+        this.parent.appendChild(this.dom)
     }
 
     applyDynamicStyle(styleId: string, css: string) {
@@ -26,7 +32,7 @@ export default class RotateLight {
     }
 }
 
-function getCSS(color1: string, color2: string, speed: string, index: number){
+function getCSS(color1: string, color2: string, speed: string, index: number) {
     return `
 /* 전체 배경 */
 .rotating-background {
