@@ -9,32 +9,39 @@ export default class WoodModal implements IDialog {
         this.dom.classList.add("woodmodal")
         this.dom.style.width = width
         this.dom.style.height = height
+        this.dom.style.opacity = "0"
         this.titleDom.classList.add("woodmodal_title")
         this.dom.appendChild(this.titleDom)
     }
     GetContentElement() {
         return this.dom
     }
-    RenderHtml(title: string, content: string | HTMLElement, options?: {
-        btnText?: string | undefined;
-        close?: (() => void) | undefined
-    } | undefined): void {
+    addChild(dom: HTMLElement) {
+        dom.addEventListener("click", (e) => { e.stopPropagation() })
+        this.dom.appendChild(dom)
+    }
+    RenderHtml(title: string, content: string | HTMLElement, {
+        visible = false, btnText = "OK", close = () => { } } = {}): void {
         this.titleDom.innerText = title
         if (typeof content == "string") {
             this.dom.innerHTML += content
         } else {
             this.dom.appendChild(content)
         }
-        this.show()
+        this.parent.appendChild(this.dom)
+        if (visible) this.show()
     }
     show(): void {
-        this.parent.appendChild(this.dom)
+        gsap.fromTo(this.dom, { scale: 0, opacity: 0 }, 
+            { scale: 1, opacity: 1, duration: 0.8, ease: "bounce.out" })
     }
-    hide() {
-        gsap.to(this.dom, { scale: 0, opacity: 0, duration: 0.6, ease: "power2.in", 
-            onComplete: () => { this.parent.removeChild(this.dom) }
+    async hide() {
+        return await new Promise((resolve) => {
+            gsap.to(this.dom, {
+                scale: 0, opacity: 0, duration: 0.6, ease: "power2.in",
+                onComplete: resolve
+            })
         })
-        
     }
     applyDynamicStyle(styleId: string, css: string) {
         if (!document.getElementById(styleId)) {
@@ -115,7 +122,6 @@ https://dribbble.com/shots/3456012-game-button
         border-radius: 15px;
         padding: 8px 15px 10px;
         box-shadow: 0 6px 0 #266b91, 0 8px 1px 1px rgba(0,0,0,.3), 0 10px 0 5px #12517d, 0 12px 0 5px #1a6b9a, 0 15px 0 5px #0c405e, 0 15px 1px 6px rgba(0,0,0,.3);
-        animation: pop 0.6s ease-out; /* 팡 튀어나오는 애니메이션 */
     }
         .woodmodal::before {
             content: '';
@@ -136,20 +142,6 @@ https://dribbble.com/shots/3456012-game-button
             right: 5%;
             top: 0%;
             border-radius: 99px;
-        }
-        /* 애니메이션 */
-            @keyframes pop {
-            0% {
-                transform: translate(-55%, -55%) scale(0);
-                opacity: 0;
-            }
-            60% {
-                transform: translate(-55%, -55%) scale(1.2);
-                opacity: 1;
-            }
-            100% {
-                transform: translate(-55%, -55%) scale(1);
-            }
         }
         `
 }

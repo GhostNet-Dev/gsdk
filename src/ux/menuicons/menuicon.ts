@@ -15,7 +15,7 @@ export default class MenuIcon {
     text = "300", icon = Icons.Save,
     iconEnable = true, iconWidth = "60%",
     boxEnable = false, circleEnable = false, width = "50px", height = "50px", rounded = "10px",
-    color = IconsColor.Blue, lolli = false
+    color = IconsColor.Blue, lolli = false, click = () => {}
   } = {}) {
     const c = this.colors.get(color)
     const startColor = c ? c[0] : "";
@@ -26,7 +26,7 @@ export default class MenuIcon {
     this.dom.style.width = width
     this.dom.style.height = height
     this.dom.onclick = () => {
-      console.log("test")
+      click()
     }
     let boxHtml = ""
     let iconHtml = ""
