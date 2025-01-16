@@ -8,7 +8,7 @@ export default class TapButton {
 
     constructor(
         private parent: HTMLElement, 
-        { opacity = "0.5", content = "Tap", open = () => {}, close = () => {}, click = () => {} } = {}
+        { opacity = "0.5", content = "Tap to continue", open = () => {}, close = () => {}, click = () => {} } = {}
     ) {
         this.open = open
         this.close = close

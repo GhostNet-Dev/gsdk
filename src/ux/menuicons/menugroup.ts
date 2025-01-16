@@ -1,5 +1,9 @@
 import MenuIcon from "./menuicon";
 
+export interface IMenuItem {
+    dom: HTMLElement
+}
+
 
 export default class MenuGroup {
     dom = document.createElement("div")
@@ -8,24 +12,36 @@ export default class MenuGroup {
     center = false
     interpadding = "p-1"
     constructor(parent: HTMLElement, {
-        top = "", left = "", right = "", bottom = "", margin = "m-1",
-        vertical = false, center = false, opacity = "", interpadding = "p-1"
+        top = "", left = "", right = "", bottom = "", margin = "m-0",
+        vertical = false, center = false, opacity = "", interpadding = "p-1",
+        height = ""
     } = {}) {
         this.vertical = vertical
         this.center = center
         this.interpadding = interpadding
-        this.dom.classList.add("container", "w-auto", "rounded", "rounded-translucent-box", "p-1", margin)
-        this.applyDynamicStyle("menugroup", getCSS(top, left, right, bottom, opacity))
+        this.dom.classList.add("container", "w-auto", "rounded", "p-1", margin)
+
+        this.dom.style.backgroundColor = `rgba(0, 0, 0, ${opacity.length > 0 ? opacity: ""})`
+        this.dom.style.boxShadow = `0 4px 8px rgba(0, 0, 0, ${opacity.length > 0 ? opacity: ""})`
+        this.dom.style.overflow = "hidden"
+        this.dom.style.position = "absolute"
+        if (height.length > 0) this.dom.style.height = height
+
+        if (top.length > 0) this.dom.style.top = top
+        if (left.length > 0) this.dom.style.left = left
+        if (right.length > 0) this.dom.style.right = right
+        if (bottom.length > 0) this.dom.style.bottom = bottom
+
         parent.appendChild(this.dom)
         if (!vertical) {
             this.row = document.createElement("div")
-            this.row.classList.add("row", this.interpadding)
+            this.row.classList.add("row", this.interpadding, "h-100")
             this.dom.appendChild(this.row)
         }
     }
-    addMenu(menu: MenuIcon) {
+    addMenu(menu: IMenuItem) {
         const col = document.createElement("div")
-        col.classList.add("col")
+        col.classList.add("col", "p-0", "ps-1", "pe-1", "h-100")
         col.appendChild(menu.dom)
         if(!this.vertical && this.row) {
             this.row.appendChild(col)
@@ -47,20 +63,4 @@ export default class MenuGroup {
         }
     }
 }
-
-function getCSS(top:string, left:string, right:string, bottom: string, opacity: string) {
-    return `
-    .rounded-translucent-box {
-        position:absolute;
-        ${top.length > 0 ? "top:" + top +";": ""}
-        ${left.length > 0 ? "left:" + left +";": ""}
-        ${right.length > 0 ? "right:" + right +";": ""}
-        ${bottom.length > 0 ? "bottom:" + bottom +";": ""}
-        background-color: rgba(0, 0, 0, ${opacity.length > 0 ? opacity: ""}); /* 반투명 검정색 */
-        box-shadow: 0 4px 8px rgba(0, 0, 0, ${opacity.length > 0 ? opacity: ""}); /* 살짝 입체감 */
-        overflow: hidden;
-}
-    `
-}
-
   //border-radius: 20px;       /* 모서리 둥글게 */
