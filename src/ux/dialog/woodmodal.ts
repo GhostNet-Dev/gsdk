@@ -3,8 +3,9 @@ import IDialog from "./idialog"
 
 export default class WoodModal implements IDialog {
     dom = document.createElement("div")
+    container = document.createElement("div")
     titleDom = document.createElement("div");
-    constructor(private parent: HTMLElement, { width = "70%", height = "fit-content" } = {}) {
+    constructor({ width = "90%", height = "fit-content" } = {}) {
         this.applyDynamicStyle("woodmodal", getCSS())
         this.dom.classList.add("woodmodal")
         this.dom.style.width = width
@@ -12,23 +13,32 @@ export default class WoodModal implements IDialog {
         this.dom.style.opacity = "0"
         this.titleDom.classList.add("woodmodal_title")
         this.dom.appendChild(this.titleDom)
+        this.container.classList.add("container", "p-0")
+        this.dom.appendChild(this.container)
     }
     GetContentElement() {
         return this.dom
     }
     addChild(dom: HTMLElement) {
+        const row = document.createElement("div")
+        row.classList.add("row")
+        const col = document.createElement("div")
+        col.classList.add("col")
         dom.addEventListener("click", (e) => { e.stopPropagation() })
-        this.dom.appendChild(dom)
+        col.appendChild(dom)
+        row.appendChild(col)
+        this.container.appendChild(row)
     }
     RenderHtml(title: string, content: string | HTMLElement, {
-        visible = false, btnText = "OK", close = () => { } } = {}): void {
+        visible = false, close = () => { } } = {}): void {
         this.titleDom.innerText = title
         if (typeof content == "string") {
-            this.dom.innerHTML += content
+            const textDom = document.createElement("span")
+            textDom.innerHTML = content
+            this.addChild(textDom)
         } else {
-            this.dom.appendChild(content)
+            this.addChild(content)
         }
-        this.parent.appendChild(this.dom)
         if (visible) this.show()
     }
     show(): void {
@@ -100,10 +110,6 @@ https://dribbble.com/shots/3456012-game-button
         border-radius: 99px;
     }
     .woodmodal {
-        position: absolute;
-        top: 50%;
-        left:50%;
-        transform: translate(-55%, -55%);
 
         cursor: pointer;
         text-decoration: none !important;

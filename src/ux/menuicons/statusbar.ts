@@ -6,30 +6,40 @@ export default class StatusBar {
     icons = GetIconDb()
     colors = GetIconColorDb()
     textDom = document.createElement('span') as HTMLSpanElement
+    max = 0
 
-    constructor({ text = "", min = 0, max = 100, value = 100, bgOpacity = "0.5",
+    constructor({ text = "", min = 0, max = 0, value = 100, bgOpacity = "0.5",
         icon = Icons.Save, plusIcon = false, iconSize = "", height = "100%",
         click = () => { }
     } = {}) {
+        this.max = max
         this.dom.style.backgroundColor = `rgba(0, 0, 0, ${bgOpacity})`
         this.dom.style.borderRadius = "30px"
         this.dom.onclick = () => { click() }
-        this.dom.classList.add("h-100", "ms-2", "me-2")
+        this.dom.classList.add("h-100")
         
+        // Icon set
         const iconDom = document.createElement('img') as HTMLImageElement
         iconDom.src = this.icons.get(icon)!
         iconDom.classList.add("h-100")
         if (iconSize.length > 0) iconDom.style.width = iconSize
-        this.textDom.innerText = value.toString()
+
+        // value set
+        let vText = value.toString()
+        if (this.max > 0) vText += "/" + this.max
+        this.textDom.innerText = vText
         this.textDom.classList.add("gametext", "pe-2")
 
         const content = [iconDom, this.textDom]
+        // Plus Set
         if (plusIcon) {
             const plusDom = document.createElement('img') as HTMLImageElement
             plusDom.src = this.icons.get(Icons.Plus)!
             plusDom.classList.add("h-100")
             content.push(plusDom)
         }
+
+        // Make Container
         const container = document.createElement('div')
         container.classList.add("container")
         container.style.height = height
@@ -46,7 +56,9 @@ export default class StatusBar {
 
         this.dom.appendChild(container)
     }
-    UpdateStatus(value: string) {
-        this.textDom.innerText = value
+    UpdateStatus(value: number) {
+        let text = value.toString()
+        if (this.max > 0) text += "/" + this.max
+        this.textDom.innerText = text
     }
 }

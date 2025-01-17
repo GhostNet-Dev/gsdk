@@ -10,14 +10,16 @@ export default class MenuGroup {
     row?: HTMLDivElement
     vertical = false
     center = false
-    interpadding = "p-1"
+    interpadding = 1
+    nowrap: boolean
     constructor(parent: HTMLElement, {
-        top = "", left = "", right = "", bottom = "", margin = "m-0",
-        vertical = false, center = false, opacity = "", interpadding = "p-1",
-        height = ""
+        top = "", left = "", right = "", bottom = "", margin = "m-1",
+        vertical = false, center = false, opacity = "", interpadding = 1,
+        height = "", nowrap = false
     } = {}) {
         this.vertical = vertical
         this.center = center
+        this.nowrap = nowrap
         this.interpadding = interpadding
         this.dom.classList.add("container", "w-auto", "rounded", "p-1", margin)
 
@@ -35,20 +37,22 @@ export default class MenuGroup {
         parent.appendChild(this.dom)
         if (!vertical) {
             this.row = document.createElement("div")
-            this.row.classList.add("row", this.interpadding, "h-100")
+            this.row.classList.add("row", "p-" + this.interpadding, "h-100")
+            if (nowrap) this.row.classList.add("flex-nowrap")
             this.dom.appendChild(this.row)
         }
     }
     addMenu(menu: IMenuItem) {
         const col = document.createElement("div")
-        col.classList.add("col", "p-0", "ps-1", "pe-1", "h-100")
+        col.classList.add("col", "p-0", "ps-" + this.interpadding, "pe-" + this.interpadding, "h-100")
         col.appendChild(menu.dom)
         if(!this.vertical && this.row) {
             this.row.appendChild(col)
             return
         }
         const row = document.createElement("div")
-        row.classList.add("row", this.interpadding)
+        row.classList.add("row", "p-" + this.interpadding)
+        if (this.nowrap) row.classList.add("flex-nowrap")
         row.appendChild(col)
         this.dom.appendChild(row)
     }

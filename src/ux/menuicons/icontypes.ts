@@ -30,6 +30,9 @@ export enum Icons {
     Friend,
     Multi,
 
+    // food
+    Wheat,
+
 }
 
 export enum IconsColor {

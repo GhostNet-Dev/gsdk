@@ -3,6 +3,7 @@ import { gsap } from "gsap"
 export default class TapButton {
     dom = document.createElement("div")
     textDom = document.createElement("div")
+    contentCol = document.createElement("div")
     open: Function
     close: Function
 
@@ -32,11 +33,26 @@ export default class TapButton {
         this.textDom.innerText = content
         this.textDom.classList.add("gametext")
 
-        this.dom.appendChild(this.textDom)
+        const container = document.createElement("div")
+        container.classList.add("container", "p-0")
+        const row1 = document.createElement("div")
+        row1.classList.add("row")
+        this.contentCol.classList.add("col")
+        row1.appendChild(this.contentCol)
+        const row2 = document.createElement("div")
+        row2.classList.add("row")
+        const col = document.createElement("div")
+        col.classList.add("col")
+        col.appendChild(this.textDom)
+        row2.appendChild(col)
+        container.appendChild(row1)
+        container.appendChild(row2)
+
+        this.dom.appendChild(container)
     }
     addChild(dom: HTMLElement) {
         dom.addEventListener("click", (e) => { e.stopPropagation() })
-        this.dom.insertAdjacentElement("beforeend", dom)
+        this.contentCol.appendChild(dom)
     }
     ani?: gsap.core.Tween
     show() {
