@@ -1,7 +1,7 @@
 
 export class GameButton {
     dom = document.createElement("div")
-    constructor(private parent?: HTMLElement, options?: { color: "orange" | "green" | "red" }) {
+    constructor(options?: { color: "orange" | "green" | "red" }) {
         this.applyDynamicStyle("gamebutton", getCSS())
         this.dom.classList.add("game-button", (options) ? options.color : "green")
     }
@@ -11,7 +11,6 @@ export class GameButton {
     RenderHtml({ title = "OK", click = () => { } } = {}): void {
         this.dom.innerHTML = title
         this.dom.onclick = () => { click() }
-        this.parent?.appendChild(this.dom)
     }
     applyDynamicStyle(styleId: string, css: string) {
         if (!document.getElementById(styleId)) {

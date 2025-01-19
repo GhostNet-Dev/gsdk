@@ -33,6 +33,8 @@ export enum Icons {
     // food
     Wheat,
 
+    Earth,
+    Pencil,
 }
 
 export enum IconsColor {

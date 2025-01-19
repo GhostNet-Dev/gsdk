@@ -34,14 +34,14 @@ export default class WoodModal implements IDialog {
         row.appendChild(col)
         this.container.appendChild(row)
     }
-    RenderHtml(title: string, content: string | HTMLElement, {
+    RenderHtml(title: string, content?: string | HTMLElement, {
         visible = false, close = () => { } } = {}): void {
         this.titleDom.innerText = title
         if (typeof content == "string") {
             const textDom = document.createElement("span")
             textDom.innerHTML = content
             this.addChild(textDom)
-        } else {
+        } else if (content) {
             this.addChild(content)
         }
         if (visible) this.show()

@@ -12,7 +12,7 @@ export default class MenuIcon {
   dom = document.createElement("div");
 
   constructor({
-    text = "300", icon = Icons.Save,
+    text = "", icon = Icons.Save,
     iconEnable = true, iconWidth = "60%",
     boxEnable = false, circleEnable = false, width = "50px", height = "50px", rounded = "10px",
     color = IconsColor.Blue, lolli = false, click = () => {}
@@ -31,6 +31,7 @@ export default class MenuIcon {
     let boxHtml = ""
     let iconHtml = ""
     let lolliHtml = ""
+    let textHtml = ""
 
     if (lolli) {
       lolliHtml = ` lolli"`
@@ -49,17 +50,24 @@ export default class MenuIcon {
     let textPosition = ""
     if (iconEnable) {
       iconHtml = `<div class="icon-img">
-          <img src="${this.icons.get(icon)}" style="width:${iconWidth}">
+          <img src="${this.icons.get(icon)}" style="position:relative;left:50%;width:${iconWidth};${(!text.length)?
+            "top:50%;transform: translate(-50%, -50%);":"transform: translate(-50%, 0%);"}">
           </div>`
       textPosition = `style="bottom:0px"`
+    }
+    if (text.length > 0) {
+      textHtml = `
+      <!-- 텍스트를 SVG 위에 오버레이 -->
+      <div class="icon-font gametext text-center" ${textPosition}>
+        ${text}
+      </div>
+      `
     }
     this.dom.innerHTML = `
       ${boxHtml}
       ${iconHtml}
-      <!-- 텍스트를 SVG 위에 오버레이 -->
-      <div class="icon-font gametext text-center" ${textPosition}>
-        ${text}
-      </div>`
+      ${textHtml}
+      `
   }
   applyDynamicStyle(styleId: string, css: string) {
     if (!document.getElementById(styleId)) {
@@ -81,7 +89,6 @@ function getCSS(width: string, height: string, rounded: string, lolliColor: stri
       height: ${height};
       top:0px;
       left:50%;
-      text-align: center;
       transform: translate(-50%, 0%);
   }
   .icon-font {
