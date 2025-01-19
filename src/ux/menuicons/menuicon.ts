@@ -14,7 +14,8 @@ export default class MenuIcon {
   constructor({
     text = "", icon = Icons.Save,
     iconEnable = true, iconWidth = "60%",
-    boxEnable = false, circleEnable = false, width = "50px", height = "50px", rounded = "10px",
+    boxEnable = false, circleEnable = false, boxWidth = "50px", boxheight = "50px",
+    width = "50px", height = "50px", rounded = "10px",
     color = IconsColor.Blue, lolli = false, click = () => {}
   } = {}) {
     const c = this.colors.get(color)
@@ -23,29 +24,29 @@ export default class MenuIcon {
 
     this.dom.style.cursor = "pointer"
     this.dom.style.position = "relative"
-    this.dom.style.width = width
-    this.dom.style.height = height
+    this.dom.style.width = boxWidth
+    this.dom.style.height = boxheight
     this.dom.onclick = () => {
       click()
     }
+    this.dom.addEventListener("click", (e) => { e.stopPropagation() })
     let boxHtml = ""
     let iconHtml = ""
     let lolliHtml = ""
     let textHtml = ""
 
     if (lolli) {
-      lolliHtml = ` lolli"`
+      lolliHtml = ` lolli" style="width:${boxWidth};height:${boxheight};"`
     } else {
-      lolliHtml = `" style="background: linear-gradient(to bottom, ${startColor}, ${endColor});"`
+      lolliHtml = `" style="background: linear-gradient(to bottom, ${startColor}, ${endColor});width:${boxWidth};height:${boxheight};"`
     }
 
     if (boxEnable) {
       boxHtml = `<div class="rounded-gradient-box${lolliHtml}></div>`
-      this.applyDynamicStyle("menuIcon", getCSS(width, height, rounded, startColor))
     } else if (circleEnable) {
       boxHtml = `<div class="circle-icon${lolliHtml}></div>`
-      this.applyDynamicStyle("menuIcon", getCSS(width, height, rounded, startColor))
     } 
+    this.applyDynamicStyle("menuIcon", getCSS(width, height, rounded, startColor))
     
     let textPosition = ""
     if (iconEnable) {
@@ -99,8 +100,6 @@ function getCSS(width: string, height: string, rounded: string, lolliColor: stri
       font-family: coiny;
   }
   .circle-icon {
-      width: ${width};
-      height: ${height};
       border-radius: 50%;
       box-shadow:
           0 4px 8px rgba(0, 0, 0, 0.2),
@@ -120,8 +119,6 @@ function getCSS(width: string, height: string, rounded: string, lolliColor: stri
   }
 
   .rounded-gradient-box {
-      width: ${width}; /* 너비 */
-          height: ${height}; /* 높이 */
           border-radius: ${rounded}; /* 모서리 둥글기 */
           box-shadow:
           0 4px 8px rgba(0, 0, 0, 0.2), /* 외곽 그림자 */

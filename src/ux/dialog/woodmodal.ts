@@ -48,7 +48,7 @@ export default class WoodModal implements IDialog {
     }
     show(): void {
         gsap.fromTo(this.dom, { scale: 0, opacity: 0 }, 
-            { scale: 1, opacity: 1, duration: 0.8, ease: "bounce.out",
+            { scale: 1, opacity: 1, duration: 0.4, ease: "bounce.out",
                 onComplete: () => { 
                     this.child.forEach((e) => e.render(this.dom.getBoundingClientRect().width)) 
                 }

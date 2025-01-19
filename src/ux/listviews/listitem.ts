@@ -7,7 +7,7 @@ export default class ListItem implements IUiItem {
     icons = GetIconDb()
 
     constructor({ 
-        icon = Icons.Star, fontSize = "16px", 
+        icon = Icons.Star, customIcon = "", fontSize = "16px", 
         text = "list test", height = "40px", click = () => { }
     } = {}, btnDom?: HTMLButtonElement) {
         this.dom.classList.add("container", "rounded")
@@ -21,7 +21,7 @@ export default class ListItem implements IUiItem {
 
         // Icon set
         const iconDom = document.createElement('img') as HTMLImageElement
-        iconDom.src = this.icons.get(icon)!
+        iconDom.src = (customIcon.length > 0) ? customIcon : this.icons.get(icon)!
         iconDom.classList.add("h-100", "p-2")
 
         // value set

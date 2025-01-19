@@ -10,10 +10,6 @@ export enum FluffyTreeType {
     Bigleaf,
     FallTree,
     Test,
-    Test1,
-    Test2,
-    Test3,
-    Test4,
     Test5,
     Test6,
     Test7,
@@ -31,6 +27,7 @@ export type TreeParam = {
 export class TreeMaker implements ILoop {
     treeParam: TreeParam[] = []
     models: FluffyTree[] = []
+    treeStyle = new Map<FluffyTreeType, string[]>()
     constructor(
         private loader: Loader,
         eventCtrl: IEventController,
@@ -38,6 +35,15 @@ export class TreeMaker implements ILoop {
         private rootPath: string = "https://hons.ghostwebservice.com/"
     ) {
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+        this.treeStyle.set(FluffyTreeType.Default, [this.rootPath + 'assets/texture/foliage_alpha3.png', "#3f6d21"])
+        this.treeStyle.set(FluffyTreeType.Bigleaf, [this.rootPath + 'assets/texture/foliage_alpha3.png', "#b6652d"])
+        this.treeStyle.set(FluffyTreeType.FallTree, [this.rootPath + 'assets/texture/foliage/flat/sprite_0045.png', "#bc8123"])
+        this.treeStyle.set(FluffyTreeType.Test, [this.rootPath + 'assets/texture/foliage/flat/sprite_0041.png', "#bc8123"])
+        this.treeStyle.set(FluffyTreeType.Test5, [this.rootPath + 'assets/texture/foliage/flat/sprite_0046.png', "#cbab37"])
+        this.treeStyle.set(FluffyTreeType.Test6, [this.rootPath + 'assets/texture/foliage/flat/sprite_0047.png', "#c4672e"])
+        this.treeStyle.set(FluffyTreeType.Test7, [this.rootPath + 'assets/texture/foliage/flat/sprite_0048.png', "#3f6d21"])
+        this.treeStyle.set(FluffyTreeType.Sakura, [this.rootPath + 'assets/texture/foliage/flat/sprite_0049.png', "#ffc0cb"])
+        this.treeStyle.set(FluffyTreeType.White, [this.rootPath + 'assets/texture/foliage/flat/sprite_0050.png', "#ffffff"])
     }
     async LoadTree(trees: TreeParam[]) {
         this.models.forEach((t) => {
@@ -51,6 +57,9 @@ export class TreeMaker implements ILoop {
             this.scene.add(model.Meshs)
         })
     }
+    GetTreeInfo(type: FluffyTreeType) {
+        return this.treeStyle.get(type)!
+    }
     async Create({
         type = FluffyTreeType.Default,
         position = new THREE.Vector3(),
@@ -60,42 +69,10 @@ export class TreeMaker implements ILoop {
     }: TreeParam = {}
     ) {
         this.treeParam.push({type, position, rotation, scale, color})
-        let leafPath =  this.rootPath + 'assets/texture/foliage_alpha3.png'
-        switch(type) {
-            case FluffyTreeType.Bigleaf: leafPath = this.rootPath + 'assets/texture/foliage_alpha3.png'
-                color = "#b6652d"
-                break
-            case FluffyTreeType.FallTree: leafPath = this.rootPath + 'assets/texture/foliage/flat/sprite_0045.png'
-                color = "#bc8123"
-                break
-            case FluffyTreeType.Test: leafPath = this.rootPath + 'assets/texture/foliage/flat/sprite_0041.png'
-                color = "#bc8123"
-                break
-                /*
-            case FluffyTreeType.Test1: leafPath ='assets/texture/foliage/flat/sprite_0042.png'
-                break
-            case FluffyTreeType.Test2: leafPath ='assets/texture/foliage/flat/sprite_0043.png'
-                break
-            case FluffyTreeType.Test3: leafPath ='assets/texture/foliage/flat/sprite_0044.png'
-                break
-            case FluffyTreeType.Test4: leafPath ='assets/texture/foliage/flat/sprite_0045.png'
-                break
-                */
-            case FluffyTreeType.Test5: leafPath = this.rootPath + 'assets/texture/foliage/flat/sprite_0046.png'
-                color = "#cbab37"
-                break
-            case FluffyTreeType.Test6: leafPath = this.rootPath + 'assets/texture/foliage/flat/sprite_0047.png'
-                color = "#c4672e"
-                break
-            case FluffyTreeType.Test7: leafPath = this.rootPath + 'assets/texture/foliage/flat/sprite_0048.png'
-                break
-            case FluffyTreeType.Sakura: leafPath = this.rootPath + 'assets/texture/foliage/flat/sprite_0049.png'
-                color = "#ffc0cb"
-                break
-            case FluffyTreeType.White: leafPath = this.rootPath + 'assets/texture/foliage/flat/sprite_0050.png'
-                color = "#ffffff"
-                break
-        }
+        const treeInfo = this.treeStyle.get(type)!
+        const leafPath = treeInfo[0]
+        color = treeInfo[1]
+
         const tree = new FluffyTree(this.loader)
         await tree.createTree(rotation, position, scale, color, leafPath)
         this.models.push(tree)

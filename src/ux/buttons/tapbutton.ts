@@ -24,6 +24,7 @@ export default class TapButton {
         //     this.dom.style.zIndex = ((index > 0) ? index - 1 : 0).toString()
         // }
         this.dom.onclick = () => { click(); this.hide()}
+        this.dom.addEventListener("click", (e) => { e.stopPropagation() })
 
         this.textDom.style.position = "relative"
         this.textDom.style.left = "50%"

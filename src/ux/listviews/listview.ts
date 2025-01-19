@@ -7,11 +7,11 @@ export default class ListView implements IUiItem {
     padding = ""
     child: IUiItem[] = []
 
-    constructor({ bgColor = "#141827", padding = "p-0" } = {}) {
+    constructor({ height = "300px", bgColor = "#141827", padding = "p-0" } = {}) {
         this.padding = padding
         this.dom.classList.add("container", "rounded", "overflow-auto")
         this.dom.style.backgroundColor = bgColor
-        this.dom.style.height = "300px"
+        this.dom.style.height = height
         this.row.classList.add("row")
         this.dom.appendChild(this.row)
 
