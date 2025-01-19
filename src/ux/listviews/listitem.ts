@@ -1,7 +1,8 @@
+import { IUiItem } from "@Glibs/interface/idialog";
 import { Icons } from "../menuicons/icontypes";
 import { GetIconDb } from "../menuicons/preicons";
 
-export default class ListItem {
+export default class ListItem implements IUiItem {
     dom = document.createElement("div")
     icons = GetIconDb()
 
@@ -11,10 +12,10 @@ export default class ListItem {
     } = {}, btnDom?: HTMLButtonElement) {
         this.dom.classList.add("container", "rounded")
         this.dom.style.cursor = "pointer"
-        this.dom.style.background = "linear-gradient(145deg, rgba(255, 224, 102, 0.9), rgba(255, 200, 0, 0.9))"
+        this.dom.style.background = "linear-gradient(to bottom, #4caf50, #388e3c)"
         this.dom.style.fontSize = fontSize
-        //this.dom.style.borderRadius = "10px"
-        this.dom.style.boxShadow = "inset -4px -4px 10px rgba(255, 190, 0, 1), inset 4px 4px 10px rgba(255, 190, 0, 1), 4px 4px 10px rgba(0, 0, 0, 0.2)"
+        //this.dom.style.borderRadius = "8px"
+        this.dom.style.boxShadow = "0 4px #2e7d32, 0 1px 4px rgba(0, 0, 0, 0.2)"
         this.dom.style.height = height
         this.dom.onclick = () => { click() }
 
@@ -43,6 +44,9 @@ export default class ListItem {
             col.appendChild(item)
             row.appendChild(col)
         })
+    }
+    render(width: number): void {
+        
     }
 }
 `

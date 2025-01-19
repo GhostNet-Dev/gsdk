@@ -6,3 +6,8 @@ export default interface IDialog {
     }): void
     show(): void
 }
+
+export interface IUiItem {
+    dom: HTMLElement
+    render(width: number): void
+}

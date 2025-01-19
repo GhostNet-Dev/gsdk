@@ -1,10 +1,11 @@
 import { gsap } from "gsap";
-import IDialog from "./idialog"
+import IDialog, { IUiItem } from "./idialog"
 
 export default class WoodModal implements IDialog {
     dom = document.createElement("div")
     container = document.createElement("div")
     titleDom = document.createElement("div");
+    child: IUiItem[] = []
     constructor({ width = "90%", height = "fit-content" } = {}) {
         this.applyDynamicStyle("woodmodal", getCSS())
         this.dom.classList.add("woodmodal")
@@ -19,9 +20,13 @@ export default class WoodModal implements IDialog {
     GetContentElement() {
         return this.dom
     }
+    addChildUi(ui: IUiItem) {
+        this.addChild(ui.dom)
+        this.child.push(ui)
+    }
     addChild(dom: HTMLElement) {
         const row = document.createElement("div")
-        row.classList.add("row")
+        row.classList.add("row", "pb-1")
         const col = document.createElement("div")
         col.classList.add("col")
         dom.addEventListener("click", (e) => { e.stopPropagation() })
@@ -43,12 +48,16 @@ export default class WoodModal implements IDialog {
     }
     show(): void {
         gsap.fromTo(this.dom, { scale: 0, opacity: 0 }, 
-            { scale: 1, opacity: 1, duration: 0.8, ease: "bounce.out" })
+            { scale: 1, opacity: 1, duration: 0.8, ease: "bounce.out",
+                onComplete: () => { 
+                    this.child.forEach((e) => e.render(this.dom.getBoundingClientRect().width)) 
+                }
+            })
     }
     async hide() {
         return await new Promise((resolve) => {
             gsap.to(this.dom, {
-                scale: 0, opacity: 0, duration: 0.6, ease: "power2.in",
+                scale: 0, opacity: 0, duration: 0.3, ease: "power2.in",
                 onComplete: resolve
             })
         })
@@ -127,7 +136,7 @@ https://dribbble.com/shots/3456012-game-button
         color: #fff !important;
         border-radius: 15px;
         padding: 8px 15px 10px;
-        box-shadow: 0 6px 0 #266b91, 0 8px 1px 1px rgba(0,0,0,.3), 0 10px 0 5px #12517d, 0 12px 0 5px #1a6b9a, 0 15px 0 5px #0c405e, 0 15px 1px 6px rgba(0,0,0,.3);
+        box-shadow: 0 6px 0 #266b91, 0 8px 1px 1px rgba(0,0,0,.3), 0 0 0 0 #12517d, 0 0 0 0 #1a6b9a, 0 0 0 0 #0c405e, 0 15px 1px 6px rgba(0,0,0,.3);
     }
         .woodmodal::before {
             content: '';

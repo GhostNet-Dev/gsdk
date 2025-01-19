@@ -26,7 +26,6 @@ export default class TapButton {
         this.dom.onclick = () => { click(); this.hide()}
 
         this.textDom.style.position = "relative"
-        this.textDom.style.top = "75%"
         this.textDom.style.left = "50%"
         this.textDom.style.width = "fit-content"
         this.textDom.style.transform = "translate(-50%, -50%)"
@@ -34,15 +33,19 @@ export default class TapButton {
         this.textDom.classList.add("gametext")
 
         const container = document.createElement("div")
-        container.classList.add("container", "p-0")
+        container.classList.add("container", "p-2")
+        container.style.height = "100%"
         const row1 = document.createElement("div")
-        row1.classList.add("row")
-        this.contentCol.classList.add("col")
+        row1.classList.add("row", "m-0")
+        row1.style.height ="80%"
+        this.contentCol.classList.add("col", "d-flex", "align-items-center")
         row1.appendChild(this.contentCol)
+
         const row2 = document.createElement("div")
-        row2.classList.add("row")
+        row2.classList.add("row", "m-0")
+        row2.style.height = "20%"
         const col = document.createElement("div")
-        col.classList.add("col")
+        col.classList.add("col", "d-flex", "align-items-center")
         col.appendChild(this.textDom)
         row2.appendChild(col)
         container.appendChild(row1)

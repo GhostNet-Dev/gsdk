@@ -1,14 +1,15 @@
-import { Icons } from "../menuicons/icontypes"
+import { IUiItem } from "@Glibs/interface/idialog"
 import { GetIconDb } from "../menuicons/preicons"
+import { Icons } from "@Glibs/types/icontypes"
 
 
-export default class Slot {
+export default class Slot implements IUiItem {
     icons = GetIconDb()
 
     dom = document.createElement("div")
-    constructor({ width = "80px", height = "80px", icon = Icons.Star } = {}) {
+    constructor({ width = "50px", icon = Icons.Star } = {}) {
         this.dom.style.width = width
-        this.dom.style.height = height
+        this.dom.style.height = width
         this.dom.style.borderRadius = "8px"
         this.dom.style.justifyContent = "center"
         this.dom.style.alignItems = "center"
@@ -16,11 +17,28 @@ export default class Slot {
 
         this.dom.style.background = "linear-gradient(145deg, #0b3d91, #1e90ff)"
         this.dom.style.border = "3px solid rgba(135, 206, 250, 0.8)"
+        this.dom.classList.add("m-1", "mb-0")
 
         // Icon set
         const iconDom = document.createElement('img') as HTMLImageElement
         iconDom.src = this.icons.get(icon)!
         iconDom.classList.add("h-100")
+    }
+    render(width: number): void {
+        const maxPerRow = Math.floor((width * 0.8) / 40)
+        const size = Math.max(40, Math.min(60, (width / maxPerRow) * 0.85))
+        console.log(width, maxPerRow, size, this.dom.offsetLeft, this.dom.offsetTop)
+        if(this.dom.offsetLeft >= width - size) {
+            this.dom.classList.remove("me-0")
+            this.dom.classList.add("me-1")
+            console.log("me-1", width - size, this.dom.offsetLeft)
+        } else {
+            this.dom.classList.remove("me-1")
+            this.dom.classList.add("me-0")
+            console.log("me-0", width - size, this.dom.offsetLeft)
+        }
+        this.dom.style.width = size + "px"
+        this.dom.style.height = size + "px"
     }
 }
 
