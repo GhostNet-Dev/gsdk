@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { ZeldaGrass} from "./zeldagrass"
 import IEventController, { ILoop } from '@Glibs/interface/ievent'
 import { EventTypes } from '@Glibs/types/globaltypes'
+import grass from './shader/grass'
 
 export type GrassParam = {
     position?: THREE.Vector3,
@@ -29,6 +30,11 @@ export class GrassMaker implements ILoop {
             this.Create(g)
         })
     }
+    Delete(obj: ZeldaGrass) {
+        this.models.splice(this.models.indexOf(obj), 1)
+        this.scene.remove(obj.mesh)
+        obj.Dispose()
+    }
     Create({
             position = new THREE.Vector3(),
             rotation = new THREE.Euler(),
@@ -42,14 +48,15 @@ export class GrassMaker implements ILoop {
         this.grassParam.push({ position, rotation, scale, color })
 
         const grass = new ZeldaGrass(color)
+        grass.mesh.userData.isRoot = true
+        grass.mesh.userData.grass = grass
         grass.mesh.position.copy(position)
         grass.mesh.rotation.copy(rotation)
         grass.mesh.scale.set(scale, scale, scale)
 
         this.models.push(grass)
         this.scene.add(grass.mesh)
-        //await tree.createTree(rotation, position, scale, color, leafPath)
-        //return tree
+        return grass
     }
     update(): void {
         this.models.forEach((m)=> {

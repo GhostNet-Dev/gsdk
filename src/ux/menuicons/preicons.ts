@@ -39,6 +39,8 @@ icons.set(Icons.Multi, rootPath + pack1Path + 'People/Add Player/64px/Add Player
 icons.set(Icons.Wheat, rootPath + pack1Path + 'Nature/Wheat/64px/Wheat 1st Outline 64px.png')
 icons.set(Icons.Earth, rootPath + pack1Path + 'Nature/Planet/64px/Green Planet 2nd Outline 64px.png')
 icons.set(Icons.Pencil, rootPath + pack1Path + 'Items/Pencil/64px/Yellow Pencil 1st Outline 64px.png')
+icons.set(Icons.Shovel, rootPath + pack1Path + 'Items/Shovel/64px/Shovel 1st Outline 64px.png')
+icons.set(Icons.Garbage, rootPath + pack2Path + 'garbage.png')
 
 const GetIconDb = () => { return icons }
 

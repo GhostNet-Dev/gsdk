@@ -52,13 +52,16 @@ export class TreeMaker implements ILoop {
         })
 
         trees.map(async (t) => {
-            const model = await this.Create(t)
-            this.models.push(model)
-            this.scene.add(model.Meshs)
+            await this.Create(t)
         })
     }
     GetTreeInfo(type: FluffyTreeType) {
         return this.treeStyle.get(type)!
+    }
+    Delete(obj: FluffyTree) {
+        this.models.splice(this.models.indexOf(obj), 1)
+        this.scene.remove(obj.Meshs)
+        obj.Dispose()
     }
     async Create({
         type = FluffyTreeType.Default,
@@ -75,6 +78,8 @@ export class TreeMaker implements ILoop {
 
         const tree = new FluffyTree(this.loader)
         await tree.createTree(rotation, position, scale, color, leafPath)
+        tree.Meshs.userData.isRoot = true
+        tree.Meshs.userData.tree = tree
         this.models.push(tree)
         this.scene.add(tree.Meshs)
         return tree

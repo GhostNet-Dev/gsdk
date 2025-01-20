@@ -35,6 +35,8 @@ export enum Icons {
 
     Earth,
     Pencil,
+    Shovel,
+    Garbage,
 }
 
 export enum IconsColor {
