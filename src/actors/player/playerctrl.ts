@@ -53,7 +53,7 @@ export class PlayerCtrl implements ILoop {
         this.playEnable = mode 
         this.currentState.Uninit()
         this.currentState = this.IdleSt
-        this.currentState.Init()
+        if (mode) this.currentState.Init()
     }
 
     constructor(

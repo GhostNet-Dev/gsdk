@@ -65,6 +65,8 @@ export enum EventTypes {
     AgentLoad = "agentld",
 
     LoadingProgress = "loading",
+
+    GameCenter = "gcenter",
 }
 export enum UiInfoType {
     LolliBar,

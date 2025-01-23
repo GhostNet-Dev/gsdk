@@ -104,7 +104,7 @@ export default class SimpleEnv implements IEnvironment {
                 let reward = this.param.stepReward;
                 const nextState = this.state.getState();
                 const mapOut =  this.checkMapout()
-                if(mapOut) reward += this.param.enermyReward
+                if(mapOut) reward += this.param.enermyReward * 10
                 resolve([nextState, reward, mapOut])
             }, this.getInterval())
         })

@@ -3,18 +3,20 @@ import MenuItem from "./menuitem"
 export default class TitleScreen {
     color: string
     fontFamiliy: string
+    selfAdd: boolean
     dom?: HTMLDivElement
     constructor(
         private title:string,
         private menuItem: MenuItem[] = [],
         {
             color = "#fff",
-            fontFamiliy = "Modak"
+            fontFamiliy = "Modak",
+            selfAdd = true
         } = {}
     ) { 
         this.color = color
         this.fontFamiliy = fontFamiliy
-
+        this.selfAdd = selfAdd
     }
     Dispose() {
         if (this.dom) {
@@ -43,7 +45,7 @@ export default class TitleScreen {
         this.dom.className = "titleFont"
         this.dom.classList.add("gametext", "text-center", "titleLayout")
         this.dom.innerHTML = this.rainbowText(this.title)
-        this.addDynamicStyle(`
+        this.applyDynamicStyle("titleLayout", `
 .titleLayout {
     position: absolute;
     font-size: xxx-large;
@@ -75,7 +77,7 @@ export default class TitleScreen {
             container.appendChild(row)
         })
         this.dom.appendChild(container)
-        document.body.appendChild(this.dom)
+        if (this.selfAdd) document.body.appendChild(this.dom)
     }
     rainbowText(input: string): string {
         const rainbowColors: string[] = [
@@ -109,10 +111,14 @@ export default class TitleScreen {
 
         return output;
     }
-    addDynamicStyle(css: string): void {
-        const style = document.createElement('style');
-        style.type = 'text/css';
-        style.textContent = css;
-        document.head.appendChild(style);
+    applyDynamicStyle(styleId: string, css: string) {
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement("style");
+            style.id = styleId;
+            style.textContent = css;
+            document.head.appendChild(style); // <head>에 스타일 추가
+        } else {
+            console.log("Style already applied.");
+        }
     }
 }

@@ -99,6 +99,9 @@ export default class TrainerX {
             this.gameLoop()
         }, 0)
     }
+    Stop() {
+        clearTimeout(this.timeoutId)
+    }
     async eventPause(): Promise<void> {
         return new Promise((resolve) => {
             const handler = () => {

@@ -47,6 +47,9 @@ export default class Agent {
             this.gameLoop()
         }, this.getInterval())
     }
+    Stop() {
+        clearTimeout(this.timeoutId)
+    }
     gameLoop() {
         this.currentState = this.state.getState()
         const action = this.selectAction(this.currentState);
