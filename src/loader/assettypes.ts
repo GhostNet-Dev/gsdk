@@ -73,6 +73,7 @@ export enum Char{
 
     Bilby,
     Dog,
+    Cat,
     Bee,
     PetSnake,
 

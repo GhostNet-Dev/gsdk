@@ -41,6 +41,17 @@ icons.set(Icons.Earth, rootPath + pack1Path + 'Nature/Planet/64px/Green Planet 2
 icons.set(Icons.Pencil, rootPath + pack1Path + 'Items/Pencil/64px/Yellow Pencil 1st Outline 64px.png')
 icons.set(Icons.Shovel, rootPath + pack1Path + 'Items/Shovel/64px/Shovel 1st Outline 64px.png')
 icons.set(Icons.Garbage, rootPath + pack2Path + 'garbage.png')
+icons.set(Icons.Dog, rootPath + pack1Path + 'Animals/Dog/64px/Dog 1st Outline 64px.png')
+icons.set(Icons.Cat, rootPath + pack1Path + 'Animals/Cat/64px/Cat 1st Outline 64px.png')
+icons.set(Icons.Bunny, rootPath + pack1Path + 'Animals/Bunny/64px/Bunny 1st Outline 64px.png')
+icons.set(Icons.LuckyBlock, rootPath + pack1Path + 'Items/Lucky Block/64px/Lucky Block 1st Outline 64px.png')
+icons.set(Icons.Dice, rootPath + pack1Path + 'Items/Dice/64px/Dice 1st Outline 64px.png')
+icons.set(Icons.GoldenScroll, rootPath + pack1Path + 'Items/Scroll/64px/Golden Scroll 1st Outline 64px.png')
+icons.set(Icons.BlueBook, rootPath + pack1Path + 'Items/Book/64px/Blue Book 1st Outline 64px.png')
+icons.set(Icons.Apple, rootPath + pack1Path + 'Nature/Apple/64px/Apple 1st Outline 64px.png')
+icons.set(Icons.Stats, rootPath + pack1Path + 'Main/Stats/64px/Stats 1st Outline 64px.png')
+
+icons.set(Icons.Pause, rootPath + uiPath + 'Icon_Small_WhiteOutline_Pause.png')
 
 const GetIconDb = () => { return icons }
 

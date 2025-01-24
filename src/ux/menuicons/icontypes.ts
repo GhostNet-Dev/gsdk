@@ -37,6 +37,18 @@ export enum Icons {
     Pencil,
     Shovel,
     Garbage,
+
+    Dog,
+    Cat,
+    Bunny,
+    LuckyBlock,
+    Dice,
+    GoldenScroll,
+    BlueBook,
+
+    Stats,
+    Apple,
+    Pause,
 }
 
 export enum IconsColor {

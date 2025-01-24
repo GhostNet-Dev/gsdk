@@ -264,7 +264,7 @@ export class GPhysics {
     update() {
         const delta = this.clock.getDelta() * this.timeScale
         this.physicalObjs.forEach(obj => {
-            obj.Update?.(delta)
+            obj.update?.(delta)
         })
         this.movingBoxs.forEach((phy) => {
             const v = phy.model.BoxPos

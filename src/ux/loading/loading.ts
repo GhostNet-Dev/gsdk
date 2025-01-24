@@ -11,7 +11,7 @@ export default class WheelLoader {
     this.wrapper = document.createElement("div") as HTMLDivElement
     this.wrapper.className = "loading"
     this.wrapper.innerHTML = html
-    this.addDynamicStyle(css)
+    this.applyDynamicStyle("wheelloader", css)
     document.body.appendChild(this.wrapper)
     this.element =  document.querySelector(".wheelLoader") as HTMLElement
     this.progressElement = this.element.querySelector("progress") as HTMLProgressElement;
@@ -74,11 +74,15 @@ export default class WheelLoader {
       }, 500);
     }
   }
-  addDynamicStyle(css: string): void {
-    const style = document.createElement('style');
-    style.type = 'text/css';
-    style.textContent = css;
-    document.head.appendChild(style);
+  applyDynamicStyle(styleId: string, css: string) {
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = css;
+      document.head.appendChild(style); // <head>에 스타일 추가
+    } else {
+      console.log("Style already applied.");
+    }
   }
 }
 

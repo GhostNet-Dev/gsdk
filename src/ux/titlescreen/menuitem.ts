@@ -19,7 +19,7 @@ export default class MenuItem {
         dom.classList.add("gametext", "text-center", "cursor", "menuFont")
         dom.innerText = this.title
         dom.onclick = () => { this.clickEvent() }
-        this.addDynamicStyle(`
+        this.applyDynamicStyle("menuitem", `
 .menuFont {
     font-family: "${this.fontFamiliy}", serif;
     font-weight: 400;
@@ -29,10 +29,14 @@ export default class MenuItem {
         `)
         parent.appendChild(dom)
     }
-    addDynamicStyle(css: string): void {
-        const style = document.createElement('style');
-        style.type = 'text/css';
-        style.textContent = css;
-        document.head.appendChild(style);
+  applyDynamicStyle(styleId: string, css: string) {
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = css;
+      document.head.appendChild(style); // <head>에 스타일 추가
+    } else {
+      console.log("Style already applied.");
     }
+  }
 }

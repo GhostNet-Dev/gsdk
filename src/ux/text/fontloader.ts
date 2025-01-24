@@ -31,10 +31,14 @@ export default class FontLoader {
       document.head.appendChild(link);
     });
   }
-  addDynamicStyle(css: string): void {
-    const style = document.createElement('style');
-    style.type = 'text/css';
-    style.textContent = css;
-    document.head.appendChild(style);
+  applyDynamicStyle(styleId: string, css: string) {
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = css;
+      document.head.appendChild(style); // <head>에 스타일 추가
+    } else {
+      console.log("Style already applied.");
+    }
   }
 }

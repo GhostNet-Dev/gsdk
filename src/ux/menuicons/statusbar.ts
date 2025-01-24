@@ -1,3 +1,4 @@
+import LolliBar from "../progress/lollibar"
 import { Icons } from "./icontypes"
 import { GetIconColorDb, GetIconDb } from "./preicons"
 
@@ -7,9 +8,11 @@ export default class StatusBar {
     colors = GetIconColorDb()
     textDom = document.createElement('span') as HTMLSpanElement
     max = 0
+    lbar?: LolliBar
 
     constructor({ text = "", min = 0, max = 0, value = 100, bgOpacity = "0.5",
         icon = Icons.Save, plusIcon = false, iconSize = "", height = "100%",
+        lolliBar = false,
         click = () => { }
     } = {}) {
         this.max = max
@@ -23,14 +26,21 @@ export default class StatusBar {
         iconDom.src = this.icons.get(icon)!
         iconDom.classList.add("h-100")
         if (iconSize.length > 0) iconDom.style.width = iconSize
+        const content: HTMLElement[] = [iconDom]
 
         // value set
-        let vText = value.toString()
-        if (this.max > 0) vText += "/" + this.max
-        this.textDom.innerText = vText
-        this.textDom.classList.add("gametext", "pe-2")
+        if (lolliBar) {
+            this.lbar = new LolliBar(undefined, { width: "50px", initValue: 0.0 })
+            this.lbar.RenderHTML()
+            content.push(this.lbar.dom!)
+        } else {
+            let vText = value.toString()
+            if (this.max > 0) vText += "/" + this.max
+            this.textDom.innerText = vText
+            this.textDom.classList.add("gametext", "pe-2")
+            content.push(this.textDom)
+        }
 
-        const content = [iconDom, this.textDom]
         // Plus Set
         if (plusIcon) {
             const plusDom = document.createElement('img') as HTMLImageElement

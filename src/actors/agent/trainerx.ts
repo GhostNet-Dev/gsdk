@@ -14,6 +14,7 @@ export default class TrainerX {
     currentState: number[]
     totalReward = 0;
     step = 0;
+    enable = false
 
     obstacles: THREE.Mesh[] = [];
     stateSize: number = 4// 에이전트 x, y 좌표 및 스킬 레벨, 적의 근접도
@@ -93,6 +94,7 @@ export default class TrainerX {
         this.param.epsilon = Math.max(0.1, this.param.epsilon * this.param.epsilonDecay);
     }
     Start() {
+        this.enable = true
         this.env.enable = true
         this.eventCtrl.SendEventMessage(EventTypes.AgentEpisode, this.param)
         this.timeoutId = setTimeout(() => {
@@ -100,6 +102,7 @@ export default class TrainerX {
         }, 0)
     }
     Stop() {
+        this.enable = false
         clearTimeout(this.timeoutId)
     }
     async eventPause(): Promise<void> {
@@ -152,9 +155,11 @@ export default class TrainerX {
         this.vis.updateLoss(this.param.episode + 1, avgLoss);
         this.vis.updateEpsilon(this.param.episode + 1, this.network['epsilon']);
 
-        this.timeoutId = setTimeout(() => {
-            this.gameLoop()
-        }, 0)
+        if (this.enable) {
+            this.timeoutId = setTimeout(() => {
+                this.gameLoop()
+            }, 0)
+        }
     }
 }
 

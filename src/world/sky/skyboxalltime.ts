@@ -43,7 +43,7 @@ export class SkyBoxAllTime extends GhostObject implements IPhysicsObject {
 
     constructor(
         private directionalLight: THREE.DirectionalLight,
-        { debug = false } = {}
+        { debug = false, daytime = 1 } = {}
     ) {
         const skyMaterial = new THREE.ShaderMaterial({
             vertexShader: skyVertexShader,
@@ -58,7 +58,6 @@ export class SkyBoxAllTime extends GhostObject implements IPhysicsObject {
         const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
         super(skyGeometry, skyMaterial);
         this.skyMaterial = skyMaterial
-        const daytime = .5
         this.setTimeOfDay(daytime)
         this.updateLighting(daytime)
 

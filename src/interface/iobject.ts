@@ -1,4 +1,5 @@
 import { IAsset } from "@Glibs/interface/iasset";
+import IEventController from "@Glibs/systems/event/ievent";
 import * as THREE from "three";
 
 export interface IPhysicsObject {
@@ -12,7 +13,7 @@ export interface IPhysicsObject {
     set Visible(flag: boolean)
     get Meshs(): THREE.Group | THREE.Mesh
     get UUID(): string
-    Update?(delta?: number):void
+    update?(delta?: number):void
 }
 export interface IBuildingObject {
     get Size() : THREE.Vector3

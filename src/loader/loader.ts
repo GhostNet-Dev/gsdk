@@ -49,6 +49,7 @@ import { TwoBFab } from "./twobfab";
 import { ArrowFab } from "./arrowfab";
 import { GrassFab } from "./plant/grassfab";
 import { FluffyTreeFab } from "./plant/fluffytree";
+import { CatFab } from "./pet/catfab";
 
 export class Loader {
     private fbxLoader = new FBXLoader()
@@ -90,6 +91,7 @@ export class Loader {
     // Pet //
     private bilby = new BilbyFab(this)
     private dog = new DogFab(this)
+    private cat = new CatFab(this)
     private bee = new BeeFab(this)
     private petSnake = new PetSnakeFab(this)
 
@@ -161,6 +163,7 @@ export class Loader {
 
     get BilbyAsset(): IAsset { return this.bilby }
     get DogAsset(): IAsset { return this.dog }
+    get CatAsset(): IAsset { return this.cat }
     get BeeAsset(): IAsset { return this.bee }
     get PetSnakeAsset(): IAsset { return this.petSnake }
 
@@ -247,6 +250,7 @@ export class Loader {
 
         this.assets.set(Char.Bilby, this.bilby)
         this.assets.set(Char.Dog, this.dog)
+        this.assets.set(Char.Cat, this.cat)
         this.assets.set(Char.Bee, this.bee)
         this.assets.set(Char.PetSnake, this.petSnake)
 

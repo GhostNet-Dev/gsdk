@@ -12,7 +12,7 @@ export default class MenuGroup {
     center = false
     interpadding = 1
     nowrap: boolean
-    constructor(parent: HTMLElement, {
+    constructor(private parent: HTMLElement, {
         top = "", left = "", right = "", bottom = "", margin = "m-1",
         vertical = false, center = false, opacity = "", interpadding = 1,
         height = "", nowrap = false
@@ -34,7 +34,6 @@ export default class MenuGroup {
         if (right.length > 0) this.dom.style.right = right
         if (bottom.length > 0) this.dom.style.bottom = bottom
 
-        parent.appendChild(this.dom)
         if (!vertical) {
             this.row = document.createElement("div")
             this.row.classList.add("row", "p-" + this.interpadding, "h-100")
@@ -42,19 +41,26 @@ export default class MenuGroup {
             this.dom.appendChild(this.row)
         }
     }
+    Show() {
+        this.parent.appendChild(this.dom)
+    }
+    Hide() {
+        this.parent.removeChild(this.dom)
+    }
     addMenu(menu: IMenuItem) {
         const col = document.createElement("div")
         col.classList.add("col", "p-0", "ps-" + this.interpadding, "pe-" + this.interpadding, "h-100")
         col.appendChild(menu.dom)
         if(!this.vertical && this.row) {
             this.row.appendChild(col)
-            return
+            return menu
         }
         const row = document.createElement("div")
         row.classList.add("row", "p-" + this.interpadding)
         if (this.nowrap) row.classList.add("flex-nowrap")
         row.appendChild(col)
         this.dom.appendChild(row)
+        return menu
     }
     applyDynamicStyle(styleId: string, css: string) {
         if (!document.getElementById(styleId)) {

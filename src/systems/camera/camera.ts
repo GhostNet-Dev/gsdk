@@ -30,8 +30,10 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     }
 
     update() {
-        this.controls.update()
-        if (this.lookTarget) this.lookAt(this.player.Pos)
+        if (this.lookTarget) {
+            this.controls.update()
+            this.lookAt(this.player.Pos)
+        }
     }
 
     shakeCamera(intensity = 0.5, duration = 0.3) {

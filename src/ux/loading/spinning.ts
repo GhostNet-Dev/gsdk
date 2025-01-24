@@ -5,7 +5,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 
 export default class Spinning {
     constructor(eventCtrl: IEventController) {
-        this.addDynamicStyle(css)
+        this.applyDynamicStyle("spinngin", css)
         const dom = document.createElement('div')
         dom.classList.add("spinning_gsdk", "justify-content-center")
         dom.innerHTML = html
@@ -14,11 +14,15 @@ export default class Spinning {
             dom.style.display = (enable) ? "block" : "none"
         })
     }
-    addDynamicStyle(css: string): void {
-        const style = document.createElement('style');
-        style.type = 'text/css';
-        style.textContent = css;
-        document.head.appendChild(style);
+    applyDynamicStyle(styleId: string, css: string) {
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement("style");
+            style.id = styleId;
+            style.textContent = css;
+            document.head.appendChild(style); // <head>에 스타일 추가
+        } else {
+            console.log("Style already applied.");
+        }
     }
 }
 const html = `

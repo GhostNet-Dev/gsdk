@@ -15,6 +15,10 @@ export class Canvas {
         this.height = window.innerHeight
 
         eventCtrl.RegisterEventListener(EventTypes.RegisterLoop, (obj: ILoop) => {
+            if (this.loopObjs.indexOf(obj) > -1) {
+                console.warn("already register " + obj.constructor.name);
+                return
+            }
             this.loopObjs.push(obj)
         })
         eventCtrl.RegisterEventListener(EventTypes.DeregisterLoop, (obj: ILoop) => {

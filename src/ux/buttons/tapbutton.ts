@@ -67,6 +67,6 @@ export default class TapButton {
     async hide() {
         await this.close()
         this.ani?.kill()
-        this.parent.removeChild(this.dom)
+        if (this.parent.contains(this.dom)) this.parent.removeChild(this.dom)
     }
 }

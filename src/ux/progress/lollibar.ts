@@ -1,6 +1,3 @@
-import IEventController from "@Glibs/interface/ievent";
-import { EventTypes, UiInfoType } from "@Glibs/types/globaltypes";
-
 
 export default class LolliBar {
   value: number = 90
@@ -9,9 +6,10 @@ export default class LolliBar {
   left: number = 0
   width: string
   bar?: HTMLDivElement
+  dom?: HTMLDivElement
   color = ""
-  constructor(
-    eventCtrl: IEventController, {
+  constructor(private parent?: HTMLElement,
+    {
       title = "", color = "#FF9a1a", initValue = 90, max = 100,
       top = 0, left = 0, width = "30%"
     } = {}
@@ -19,18 +17,23 @@ export default class LolliBar {
     this.top = top, this.left = left, this.color = color, this.value = initValue
     this.width = width
     this.ratio = Math.floor(this.value / max * 100)
-    eventCtrl.RegisterEventListener(EventTypes.UiInfo, (type: UiInfoType, value: number, max: number) => {
-      if (type == UiInfoType.LolliBar && this.bar && this.bar.firstElementChild) {
-        this.bar.style.width = `${Math.floor(value / max * 100)}%`;
-        (this.bar.firstElementChild as HTMLSpanElement).innerText = `${title} ${value.toFixed(1)}%`
-      }
-    })
+    // eventCtrl.RegisterEventListener(EventTypes.UiInfo, (type: UiInfoType, value: number, max: number) => {
+    //   if (type == UiInfoType.LolliBar && this.bar && this.bar.firstElementChild) {
+    //     this.bar.style.width = `${Math.floor(value / max * 100)}%`;
+    //     (this.bar.firstElementChild as HTMLSpanElement).innerText = `${title} ${value.toFixed(1)}%`
+    //   }
+    // })
+  }
+  updateValue(value: number, max: number) {
+    if (!this.bar || !this.bar.firstElementChild) return
+    this.bar.style.width = `${Math.floor(value / max * 100)}%`;
+    (this.bar.firstElementChild as HTMLSpanElement).innerText = `${this.bar.title} ${value.toFixed(1)}%`
   }
   RenderHTML() {
-    const dom = document.createElement("div") as HTMLDivElement
-    dom.className = "wrapper"
-    dom.classList.add("p-1")
-    dom.innerHTML = `
+    this.dom = document.createElement("div") as HTMLDivElement
+    this.dom.className = "wrapper"
+    this.dom.classList.add("p-1")
+    this.dom.innerHTML = `
             <div class="progress-bar">
                 <div class="bar" data-size="100">
                 <span class="perc"></span>
@@ -38,9 +41,9 @@ export default class LolliBar {
             </div>
         `
 
-    this.addDynamicStyle(`
+    this.applyDynamicStyle("lollibar", `
 .wrapper {
-    position: absolute;
+    position: relative;
     top: ${this.top}px;
     left: ${this.left}px;
   width: ${this.width};
@@ -103,15 +106,26 @@ export default class LolliBar {
   font-weight: bold;
 }
         `);
-    document.body.appendChild(dom)
+  }
+  Show() {
+    if(!this.dom) throw new Error("undefined element!");
+    
+    if (this.parent) this.parent.appendChild(this.dom)
     this.bar = document.querySelector(".bar") as HTMLDivElement
     this.bar.style.width = `${this.ratio}%`
     if (this.bar.firstElementChild) (this.bar.firstElementChild as HTMLSpanElement).innerText = `${this.value}`
   }
-  addDynamicStyle(css: string): void {
-    const style = document.createElement('style');
-    style.type = 'text/css';
-    style.textContent = css;
-    document.head.appendChild(style);
+  Hide() {
+    if (this.dom) document.body.removeChild(this.dom)
+  }
+  applyDynamicStyle(styleId: string, css: string) {
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = css;
+      document.head.appendChild(style); // <head>에 스타일 추가
+    } else {
+      console.log("Style already applied.");
+    }
   }
 }
