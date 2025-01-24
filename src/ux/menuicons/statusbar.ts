@@ -12,7 +12,7 @@ export default class StatusBar {
 
     constructor({ text = "", min = 0, max = 0, value = 100, bgOpacity = "0.5",
         icon = Icons.Save, plusIcon = false, iconSize = "", height = "100%",
-        lolliBar = false,
+        lolliBar = false, fontFamily = "coiny",
         click = () => { }
     } = {}) {
         this.max = max
@@ -38,6 +38,7 @@ export default class StatusBar {
             if (this.max > 0) vText += "/" + this.max
             this.textDom.innerText = vText
             this.textDom.classList.add("gametext", "pe-2")
+            this.textDom.style.fontFamily = fontFamily
             content.push(this.textDom)
         }
 

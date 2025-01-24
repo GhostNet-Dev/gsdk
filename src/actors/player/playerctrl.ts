@@ -182,6 +182,9 @@ export class PlayerCtrl implements ILoop {
         this.moveDirection.x = 0
         this.moveDirection.z = 0
         this.inputVQueue.length = 0
+        this.currentState.Uninit()
+        this.currentState = this.IdleSt
+        this.IdleSt.Init()
     }
     checkPlayerMode() {
 

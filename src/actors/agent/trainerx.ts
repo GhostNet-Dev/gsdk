@@ -104,6 +104,7 @@ export default class TrainerX {
     Stop() {
         this.enable = false
         clearTimeout(this.timeoutId)
+        this.vis.Dispose()
     }
     async eventPause(): Promise<void> {
         return new Promise((resolve) => {

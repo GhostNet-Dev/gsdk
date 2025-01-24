@@ -8,9 +8,10 @@ export class Visualization {
   private rewardData: { x: number; y: number }[] = [];
   private lossData: { x: number; y: number }[] = [];
   private epsilonData: { x: number; y: number }[] = [];
+  dom = document.createElement("div")
 
   constructor() {
-    this.addDynamicStyle(`
+    this.applyDynamicStyle("visTensor", `
 .vis {
     position: absolute;
     bottom: 0;
@@ -18,19 +19,22 @@ export class Visualization {
     opacity: 0.5;
 }
         `)
-    const dom = document.createElement("div")
-    dom.id = "visualization-container"
-    dom.classList.add("vis")
+    this.dom.id = "visualization-container"
+    this.dom.classList.add("vis")
     this.rewardContainer = document.createElement("div");
     this.rewardContainer.id = 'reward-chart';
     this.lossContainer = document.createElement('div')
     this.lossContainer.id = 'loss-chart';
     this.epsilonContainer = document.createElement('div')
     this.epsilonContainer.id = 'epsilon-chart';
-    dom.appendChild(this.rewardContainer)
-    dom.appendChild(this.lossContainer)
-    dom.appendChild(this.epsilonContainer)
-    document.body.appendChild(dom)
+    this.dom.appendChild(this.rewardContainer)
+    this.dom.appendChild(this.lossContainer)
+    this.dom.appendChild(this.epsilonContainer)
+    document.body.appendChild(this.dom)
+  }
+  Dispose() {
+    document.body.removeChild(this.dom)
+    this.dom.remove()
   }
 
   // 에피소드의 보상 업데이트 및 시각화
@@ -78,11 +82,15 @@ export class Visualization {
       }
     );
   }
-  addDynamicStyle(css: string): void {
-    const style = document.createElement('style');
-    style.type = 'text/css';
-    style.textContent = css;
-    document.head.appendChild(style);
+  applyDynamicStyle(styleId: string, css: string) {
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = css;
+      document.head.appendChild(style); // <head>에 스타일 추가
+    } else {
+      console.log("Style already applied.");
+    }
   }
 }
 
