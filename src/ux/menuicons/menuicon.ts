@@ -150,7 +150,10 @@ function getCSS(width: string, height: string, rounded: string) {
 
       background-size: 30px 30px;
       animation: move 2s linear infinite;
-      box-shadow: 2px 0 10px inset rgba(0,0,0,0.2);
+      box-shadow:
+          0 6px 12px rgba(0, 0, 0, 0.3),
+      inset 0 3px 6px rgba(255, 255, 255, 0.6),
+      inset 0 -3px 8px rgba(0, 0, 0, 0.3);
       transition: width 2s ease-out;
   }
   .lolli-blue {
