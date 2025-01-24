@@ -17,11 +17,12 @@ export class Helper {
     constructor(
         private scene: THREE.Scene,
         private nonglowfn?: Function,
-        { enable = false } = {}
+        { enable = false, axesEnable = false, gridEnable = false } = {}
     ) {
         this.nonglowfn?.(this.axesHelper)
         this.nonglowfn?.(this.gridHelper)
-        this.gridHelper.visible = false
+        this.gridHelper.visible = gridEnable
+        this.axesHelper.visible = axesEnable
         this.scene.add(this.axesHelper, this.gridHelper)
         const folder = gui.addFolder("helper")
         folder.add(this.gridHelper, "visible").name("grid")
