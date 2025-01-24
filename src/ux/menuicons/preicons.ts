@@ -52,6 +52,7 @@ icons.set(Icons.Apple, rootPath + pack1Path + 'Nature/Apple/64px/Apple 1st Outli
 icons.set(Icons.Stats, rootPath + pack1Path + 'Main/Stats/64px/Stats 1st Outline 64px.png')
 
 icons.set(Icons.Pause, rootPath + uiPath + 'Icon_Small_WhiteOutline_Pause.png')
+icons.set(Icons.ShoppingBag, rootPath + pack1Path + 'Main/Shopping Bag/64px/Golden Shopping Bag 1st Outline 64px.png')
 
 const GetIconDb = () => { return icons }
 

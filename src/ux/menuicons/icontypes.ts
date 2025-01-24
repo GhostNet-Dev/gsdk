@@ -49,6 +49,7 @@ export enum Icons {
     Stats,
     Apple,
     Pause,
+    ShoppingBag,
 }
 
 export enum IconsColor {
