@@ -58,10 +58,10 @@ const GetIconDb = () => { return icons }
 
 const iconColor = new Map<IconsColor, string[]>()
 
-iconColor.set(IconsColor.Blue, ["#0D47A1", "#2196F3"])
-iconColor.set(IconsColor.Yellow, ["#FFC107", "#FFF176"])
-iconColor.set(IconsColor.Red, ["", ""])
-iconColor.set(IconsColor.Transperant, ["", ""])
+iconColor.set(IconsColor.Blue, ["#0D47A1", "#2196F3", "blue"])
+iconColor.set(IconsColor.Yellow, ["#FFC107", "#FFF176", "yellow"])
+iconColor.set(IconsColor.Red, ["", "", ""])
+iconColor.set(IconsColor.Transperant, ["", "", ""])
 
 const GetIconColorDb = () => { return iconColor }
 

@@ -4,16 +4,19 @@ export default class TitleScreen {
     color: string
     fontFamiliy: string
     selfAdd: boolean
+    rainbow = true
     dom?: HTMLDivElement
     constructor(
         private title:string,
         private menuItem: MenuItem[] = [],
         {
+            rainbow = true,
             color = "#fff",
             fontFamiliy = "Modak",
             selfAdd = true
         } = {}
     ) { 
+        this.rainbow = rainbow
         this.color = color
         this.fontFamiliy = fontFamiliy
         this.selfAdd = selfAdd
@@ -44,7 +47,7 @@ export default class TitleScreen {
         this.dom = document.createElement("div") as HTMLDivElement
         this.dom.className = "titleFont"
         this.dom.classList.add("gametext", "text-center", "titleLayout")
-        this.dom.innerHTML = this.rainbowText(this.title)
+        this.dom.innerHTML = (this.rainbow) ? this.rainbowText(this.title) : this.title
         this.applyDynamicStyle("titleLayout", `
 .titleLayout {
     position: absolute;

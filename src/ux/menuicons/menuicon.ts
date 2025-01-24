@@ -21,6 +21,7 @@ export default class MenuIcon {
     const c = this.colors.get(color)
     const startColor = c ? c[0] : "";
     const endColor = c ? c[1] : "";
+    const lolliColor = c ? c[2] : "";
 
     this.dom.style.cursor = "pointer"
     this.dom.style.position = "relative"
@@ -36,7 +37,7 @@ export default class MenuIcon {
     let textHtml = ""
 
     if (lolli) {
-      lolliHtml = ` lolli" style="width:${boxWidth};height:${boxheight};"`
+      lolliHtml = ` lolli lolli-${lolliColor}" style="width:${boxWidth};height:${boxheight};"`
     } else {
       lolliHtml = `" style="background: linear-gradient(to bottom, ${startColor}, ${endColor});width:${boxWidth};height:${boxheight};"`
     }
@@ -46,7 +47,7 @@ export default class MenuIcon {
     } else if (circleEnable) {
       boxHtml = `<div class="circle-icon${lolliHtml}></div>`
     } 
-    this.applyDynamicStyle("menuIcon", getCSS(width, height, rounded, startColor))
+    this.applyDynamicStyle("menuIcon", getCSS(width, height, rounded))
     
     let textPosition = ""
     if (iconEnable) {
@@ -82,7 +83,7 @@ export default class MenuIcon {
   }
 }
 
-function getCSS(width: string, height: string, rounded: string, lolliColor: string) {
+function getCSS(width: string, height: string, rounded: string) {
   return `
   .icon-img {
       position: absolute;
@@ -135,7 +136,6 @@ function getCSS(width: string, height: string, rounded: string, lolliColor: stri
           transition: all 0.3s ease; /* 부드러운 애니메이션 */
   }
   .lolli {
-      background-color: ${lolliColor};
       /*Lollipop background gradient*/
       background-image: linear-gradient(
           -45deg,
@@ -152,6 +152,12 @@ function getCSS(width: string, height: string, rounded: string, lolliColor: stri
       animation: move 2s linear infinite;
       box-shadow: 2px 0 10px inset rgba(0,0,0,0.2);
       transition: width 2s ease-out;
+  }
+  .lolli-blue {
+    background-color: #0D47A1;
+  }
+  .lolli-yellow {
+    background-color: #FFC107;
   }
 
   /*Lollipop background gradient animation*/
