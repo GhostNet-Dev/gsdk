@@ -11,14 +11,17 @@ export class Ocean implements ILoop {
 
     //=====// Scene //========================================//     
 
-    constructor(eventCtrl: IEventController) {
+    constructor(
+        eventCtrl: IEventController,
+        path = "https://hons.ghostwebservice.com/",
+    ) {
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         const size = 800
         this._geometry = new THREE.PlaneGeometry(size, size, size, size);
         this._geometry.rotateX(-Math.PI / 2);
         
 
-        const texture = new THREE.TextureLoader().load('assets/texture/water.png')
+        const texture = new THREE.TextureLoader().load(path + 'assets/texture/water.png')
         texture.wrapS = texture.wrapT = THREE.RepeatWrapping
 
         const uniforms = {
@@ -37,6 +40,7 @@ export class Ocean implements ILoop {
 
         this.mesh = new THREE.Mesh(this._geometry, this._shader);
         this.mesh.position.y = -2
+        this.mesh.scale.multiplyScalar(.1)
         this.startTime = Date.now()
     }
 

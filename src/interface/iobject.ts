@@ -1,11 +1,11 @@
 import { IAsset } from "@Glibs/interface/iasset";
-import IEventController from "@Glibs/systems/event/ievent";
 import * as THREE from "three";
 
 export interface IPhysicsObject {
     get Velocity()
     set Velocity(n: number)
     get Size() : THREE.Vector3
+    get CBox(): THREE.Mesh
     get BoxPos() : THREE.Vector3
     get Box(): THREE.Box3
     get CenterPos(): THREE.Vector3
@@ -21,6 +21,7 @@ export interface IBuildingObject {
     get Key(): string[]
     set Key(k: string[])
 }
+const boxMat = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true, lightMapIntensity: 0 })
 
 export class PhysicsObject implements IPhysicsObject {
     meshs = new THREE.Group
@@ -29,6 +30,7 @@ export class PhysicsObject implements IPhysicsObject {
 
     size?: THREE.Vector3
     helper?: THREE.BoxHelper
+    collisionBox?: THREE.Mesh
 
     protected centerPos = new THREE.Vector3()
 
@@ -70,6 +72,16 @@ export class PhysicsObject implements IPhysicsObject {
     get BoxPos() {
         return this.asset.GetBoxPos(this.meshs)
     }
+    get CBox() {
+        if(!this.collisionBox) {
+            const s = this.Size
+            this.collisionBox = new THREE.Mesh(new THREE.BoxGeometry(s.x, s.y, s.z), boxMat)
+        }
+        return this.collisionBox
+    }
+    CBoxUpdate() {
+        this.collisionBox?.position.copy(this.Pos)
+    }
     constructor(protected asset: IAsset) {}
 }
 
@@ -77,6 +89,7 @@ export class GhostObject extends THREE.Mesh {
     protected size?: THREE.Vector3
     protected velocity = 0
     protected centerPos = new THREE.Vector3()
+    protected collisionBox?: THREE.Mesh
 
     get Velocity() {return this.velocity}
     set Velocity(n: number) { this.velocity = n }
@@ -105,5 +118,12 @@ export class GhostObject extends THREE.Mesh {
     get BoxPos() {
         const v = this.position
         return new THREE.Vector3(v.x, v.y, v.z)
+    }
+    get CBox() {
+        if(!this.collisionBox) {
+            const s = this.Size
+            this.collisionBox = new THREE.Mesh(new THREE.BoxGeometry(s.x, s.y, s.z), boxMat)
+        }
+        return this.collisionBox
     }
 }

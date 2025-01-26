@@ -83,5 +83,6 @@ export class Fly extends PhysicsObject {
     }
     update(delta: number): void {
         this.mixer?.update(delta)
+        this.CBoxUpdate()
     }
 }

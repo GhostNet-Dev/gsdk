@@ -11,10 +11,11 @@ type MovingBox = {
     box: THREE.Mesh | undefined
 }
 
-export class GPhysics {
+export class GPhysics implements IGPhysic {
     movingBoxs: MovingBox[] = []
     player?: IPhysicsObject
     landPos = new THREE.Vector3()
+    land?: IPhysicsObject
 
     objs: IGPhysic[] = []
     physicalObjs: IPhysicsObject[] = []
@@ -137,6 +138,7 @@ export class GPhysics {
         })
     }
     addLand(obj: IPhysicsObject) {
+        this.land = obj
         this.landPos.y = 0
         console.log("Land: " , this.landPos, obj)
     }
@@ -174,7 +176,8 @@ export class GPhysics {
     }
     Check(obj: IPhysicsObject): boolean {
         const pos = obj.BoxPos
-        if (pos.y - obj.Size.y / 2 < this.landPos.y) return true
+        // if (pos.y - obj.Size.y / 2 < this.landPos.y) return true
+        if (this.checkDown(obj)) return true
 
         const keys = this.makeHash(pos, obj.Size)
         const ret = keys.some((key) => {
@@ -246,19 +249,34 @@ export class GPhysics {
         })
         return [retObj, retKey]
     }
-    checkGravity(delta: number) {
-        if (this.player == undefined) return
-        if (this.player.Velocity != 0) {
-            const movY = this.player.Velocity * delta
-            this.player.Meshs.position.y -= movY
-            if(this.Check(this.player)) {
-                this.player.Meshs.position.y += movY
-                this.player.Velocity = 0
-            }
-            this.player.Velocity -= 9.8 * 2 * delta
-            console.log(this.player.Velocity)
+    center = new THREE.Vector3()
+    downDir = new THREE.Vector3(0, -1, 0)
+    downcast = new THREE.Raycaster()
+    checkDown(obj: IPhysicsObject) {
+        obj.Box.getCenter(this.center)
+        this.center.y -= obj.Size.y / 2
+        this.downcast.set(this.center, this.downDir)
+        const landTouch = this.downcast.intersectObject(this.land!.Meshs)
+        if(landTouch.length > 0) {
+            return false
         }
+        return true
+
     }
+    // checkGravity(delta: number) {
+    //     if (this.player == undefined) return
+    //     if (this.player.Velocity != 0) {
+    //         // const movY = this.player.Velocity * delta
+    //         // this.player.Meshs.position.y -= movY
+    //         if (this.Check(this.player) || this.checkDown()) {
+    //             // this.player.Meshs.position.y += movY
+    //             // this.player.Velocity = 0
+    //             return true
+    //         }
+    //         this.player.Velocity -= 9.8 * 2 * delta
+    //         console.log(this.player.Velocity)
+    //     }
+    // }
 
     clock = new THREE.Clock()
     update() {
