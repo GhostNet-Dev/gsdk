@@ -50,6 +50,10 @@ import { ArrowFab } from "./arrowfab";
 import { GrassFab } from "./plant/grassfab";
 import { FluffyTreeFab } from "./plant/fluffytree";
 import { CatFab } from "./pet/catfab";
+import { KayKitSkeletonAXeFab, KayKitSkeletonArrowBrokenFab, KayKitSkeletonArrowBrokenHalfFab, KayKitSkeletonArrowFab, KayKitSkeletonArrowHalfFab, KayKitSkeletonBladeFab, KayKitSkeletonCrossbowFab, KayKitSkeletonQuiverFab, KayKitSkeletonShieldLargeAFab, KayKitSkeletonShieldLargeBFab, KayKitSkeletonShieldSmallAFab, KayKitSkeletonShieldSmallBFab, KayKitSkeletonStaffFab } from "./kaykit/items/skeletonsitems";
+import { KayKitSkeletonMageFab, KayKitSkeletonMinionFab, KayKitSkeletonRogueFab, KayKitSkeletonWarriorFab } from "./kaykit/skeletons/skeletons";
+import { KayKitAdvBarbarianFab, KayKitAdvKnightFab, KayKitAdvMageFab, KayKitAdvRogueFab, KayKitAdvRogueHoodedFab } from "./kaykit/adventuerers/adventurers";
+import { KayKitArrowBundleFab, KayKitArrowFab, KayKitAxe1HandedFab, KayKitAxe2HandedFab, KayKitCrossbow1HandedFab, KayKitCrossbow2HandedFab, KayKitDaggerFab, KayKitMugEmptyFab, KayKitMugFullFab, KayKitQuiverFab, KayKitShieldBadgeColorFab, KayKitShieldBadgeFab, KayKitShieldRoundBarbarianFab, KayKitShieldRoundColorFab, KayKitShieldRoundFab, KayKitShieldSpikesColorFab, KayKitShieldSpikesFab, KayKitShieldSquareColorFab, KayKitShieldSquareFab, KayKitSmokeBombFab, KayKitSpellbookClosedFab, KayKitSpellbookOpenFab, KayKitStaffFab, KayKitSword1HandedFab, KayKitSword2HandedColorFab, KayKitSword2HandedFab, KayKitWandFab } from "./kaykit/items/advitems";
 
 export class Loader {
     private fbxLoader = new FBXLoader()
@@ -87,6 +91,60 @@ export class Loader {
     private toadmage = new ToadMageFab(this)
     private kittenmonk = new KittenMonkFab(this)
     private skeleton = new SkeletonFab(this)
+
+    //KayKit
+    private kskeletonMage = new KayKitSkeletonMageFab(this)
+    private kskeletonWarrior = new KayKitSkeletonWarriorFab(this)
+    private kskeletonRogue = new KayKitSkeletonRogueFab(this)
+    private kskeletonMinion = new KayKitSkeletonMinionFab(this)
+
+    private kskeletonArrow = new KayKitSkeletonArrowFab(this)
+    private kskeletonArrowBroken = new KayKitSkeletonArrowBrokenFab(this)
+    private kskeletonArrowBrokenHalf = new KayKitSkeletonArrowBrokenHalfFab(this)
+    private kskeletonArrowHalf = new KayKitSkeletonArrowHalfFab(this)
+    private kskeletonAxe = new KayKitSkeletonAXeFab(this)
+    private kskeletonBlade = new KayKitSkeletonBladeFab(this)
+    private kskeletonCrossbow = new KayKitSkeletonCrossbowFab(this)
+    private kskeletonQuiver = new KayKitSkeletonQuiverFab(this)
+    private kskeletonShieldL_A = new KayKitSkeletonShieldLargeAFab(this)
+    private kskeletonShieldL_B = new KayKitSkeletonShieldLargeBFab(this)
+    private kskeletonShieldS_A = new KayKitSkeletonShieldSmallAFab(this)
+    private kskeletonShieldS_B = new KayKitSkeletonShieldSmallBFab(this)
+    private kskeletonStaff = new KayKitSkeletonStaffFab(this)
+
+    private kadvBarbarian = new KayKitAdvBarbarianFab(this)
+    private kadvKnight = new KayKitAdvKnightFab(this)
+    private kadvMage = new KayKitAdvMageFab(this)
+    private kadvRogue = new KayKitAdvRogueFab(this)
+    private kadvRogueHooded = new KayKitAdvRogueHoodedFab(this)
+
+    private kadvArrow = new KayKitArrowFab(this)
+    private kadvArrowBundle = new KayKitArrowBundleFab(this)
+    private kadvAxe1Handed = new KayKitAxe1HandedFab(this)
+    private kadvAxe2Handed = new KayKitAxe2HandedFab(this)
+    private kadvCrossbow1Handed = new KayKitCrossbow1HandedFab(this)
+    private kadvCrossbow2Handed = new KayKitCrossbow2HandedFab(this)
+    private kadvDagger = new KayKitDaggerFab(this)
+    private kadvMugEmpty = new KayKitMugEmptyFab(this)
+    private kadvMugFull = new KayKitMugFullFab(this)
+    private kadvQuiver = new KayKitQuiverFab(this)
+    private kadvShieldBadge = new KayKitShieldBadgeFab(this)
+    private kadvShieldBadgeColor = new KayKitShieldBadgeColorFab(this)
+    private kadvShieldRound = new KayKitShieldRoundFab(this)
+    private kadvShieldRoundBarbarian = new KayKitShieldRoundBarbarianFab(this)
+    private kadvShieldRoundColor = new KayKitShieldRoundColorFab(this)
+    private kadvShieldSpikes = new KayKitShieldSpikesFab(this)
+    private kadvShieldSpikesColor = new KayKitShieldSpikesColorFab(this)
+    private kadvShieldSquare = new KayKitShieldSquareFab(this)
+    private kadvShieldSquareColor = new KayKitShieldSquareColorFab(this)
+    private kadvSmokeBomb = new KayKitSmokeBombFab(this)
+    private kadvSpellbookClosed = new KayKitSpellbookClosedFab(this)
+    private kadvSpellbookOpen = new KayKitSpellbookOpenFab(this)
+    private kadvStaff = new KayKitStaffFab(this)
+    private kadvSword1Handed = new KayKitSword1HandedFab(this)
+    private kadvSword2Handed = new KayKitSword2HandedFab(this)
+    private kadvSword2HColor = new KayKitSword2HandedColorFab(this)
+    private kadvWand = new KayKitWandFab(this)
 
     // Pet //
     private bilby = new BilbyFab(this)
@@ -166,6 +224,57 @@ export class Loader {
     get CatAsset(): IAsset { return this.cat }
     get BeeAsset(): IAsset { return this.bee }
     get PetSnakeAsset(): IAsset { return this.petSnake }
+
+    get KayKitSkeletonMageAsset(): IAsset { return this.kskeletonMage }
+    get KayKitSkeletonWarriorAsset(): IAsset { return this.kskeletonWarrior }
+    get KayKitSkeletonRogueAsset(): IAsset { return this.kskeletonRogue }
+    get KayKitSkeletonMinionAsset(): IAsset { return this.kskeletonMinion }
+    get KayKitSkeletonArrowAsset(): IAsset { return this.kskeletonArrow }
+    get KayKitSkeletonArrowBrokenAsset(): IAsset { return this.kskeletonArrowBroken }
+    get KayKitSkeletonArrowBrokenHalfAsset(): IAsset { return this.kskeletonArrowBrokenHalf }
+    get KayKitSkeletonArrowHalfAsset(): IAsset { return this.kskeletonArrowHalf }
+    get KayKitSkeletonAxeAsset(): IAsset { return this.kskeletonAxe }
+    get KayKitSkeletonBladeAsset(): IAsset { return this.kskeletonBlade }
+    get KayKitSkeletonCrossbowAsset(): IAsset { return this.kskeletonCrossbow }
+    get KayKitSkeletonQuiverAsset(): IAsset { return this.kskeletonQuiver }
+    get KayKitSkeletonShieldLargeAAsset(): IAsset { return this.kskeletonShieldL_A }
+    get KayKitSkeletonShieldLargeBAsset(): IAsset { return this.kskeletonShieldL_B }
+    get KayKitSkeletonShieldSmallAAsset(): IAsset { return this.kskeletonShieldS_A }
+    get KayKitSkeletonShieldSmallBAsset(): IAsset { return this.kskeletonShieldS_B }
+    get KayKitSkeletonStaffAsset(): IAsset { return this.kskeletonStaff }
+
+    get KayKitAdvBarbarianAsset(): IAsset { return this.kadvBarbarian }
+    get KayKitAdvMageAsset(): IAsset { return this.kadvMage }
+    get KayKitAdvKnightAsset(): IAsset { return this.kadvKnight }
+    get KayKitAdvRogueAsset(): IAsset { return this.kadvRogue }
+    get KayKitAdvRogueHoodedAsset(): IAsset { return this.kadvRogueHooded }
+
+    get KayKitAdvArrowAsset(): IAsset { return this.kadvArrow }
+    get KayKitAdvArrowBundleAsset(): IAsset { return this.kadvArrowBundle }
+    get KayKitAdvAxe1HandedAsset(): IAsset { return this.kadvAxe1Handed }
+    get KayKitAdvAxe2HandedAsset(): IAsset { return this.kadvAxe2Handed }
+    get KayKitAdvCrossbow1HandedAsset(): IAsset { return this.kadvCrossbow1Handed }
+    get KayKitAdvCrossbow2HandedAsset(): IAsset { return this.kadvCrossbow2Handed }
+    get KayKitAdvDaggerAsset(): IAsset { return this.kadvDagger }
+    get KayKitAdvMugEmptyAsset(): IAsset { return this.kadvMugEmpty }
+    get KayKitAdvMugFullAsset(): IAsset { return this.kadvMugFull }
+    get KayKitAdvQuiverAsset(): IAsset { return this.kadvQuiver }
+    get KayKitAdvShieldBadgeAsset(): IAsset { return this.kadvShieldBadge }
+    get KayKitAdvShieldBadgeColorAsset(): IAsset { return this.kadvShieldBadgeColor }
+    get KayKitAdvShieldRoundAsset(): IAsset { return this.kadvShieldRound }
+    get KayKitAdvShieldRoundBarbarianAsset(): IAsset { return this.kadvShieldRoundBarbarian }
+    get KayKitAdvShieldRoundColorAsset(): IAsset { return this.kadvShieldRoundColor }
+    get KayKitAdvShieldSpikesAsset(): IAsset { return this.kadvShieldSpikes }
+    get KayKitAdvShieldSpikesColorAsset(): IAsset { return this.kadvShieldSpikesColor }
+    get KayKitAdvShieldSquareAsset(): IAsset { return this.kadvShieldSquare }
+    get KayKitAdvShieldSquareColorAsset(): IAsset { return this.kadvShieldSquareColor }
+    get KayKitAdvSmokeBombAsset(): IAsset { return this.kadvSmokeBomb }
+    get KayKitAdvSpellbookClosedAsset(): IAsset { return this.kadvSpellbookClosed }
+    get KayKitAdvSpellbookOpenAsset(): IAsset { return this.kadvSpellbookOpen }
+    get KayKitAdvSword1HandedAsset(): IAsset { return this.kadvSword1Handed }
+    get KayKitAdvSword2HandedAsset(): IAsset { return this.kadvSword2Handed }
+    get KayKitAdvSword2HandedColorAsset(): IAsset { return this.kadvSword2HColor }
+    get KayKitAdvWandAsset(): IAsset { return this.kadvWand }
 
     get GunAsset(): IAsset { return this.gun }
     get BatAsset(): IAsset { return this.bat }
@@ -247,6 +356,57 @@ export class Loader {
         this.assets.set(Char.ToadMage, this.toadmage)
         this.assets.set(Char.KittenMonk, this.kittenmonk)
         this.assets.set(Char.Skeleton, this.skeleton)
+
+        this.assets.set(Char.KayKitSkeletonMage, this.kskeletonMage)
+        this.assets.set(Char.KayKitSkeletonWarrior, this.kskeletonWarrior)
+        this.assets.set(Char.KayKitSkeletonMinion, this.kskeletonMinion)
+        this.assets.set(Char.KayKitSkeletonRogue, this.kskeletonRogue)
+        this.assets.set(Char.KayKitSkeletonArrow, this.kskeletonArrow)
+        this.assets.set(Char.KayKitSkeletonArrowBroken, this.kskeletonArrow)
+        this.assets.set(Char.KayKitSkeletonArrowBrokenHalf, this.kskeletonArrow)
+        this.assets.set(Char.KayKitSkeletonArrowHalf, this.kskeletonArrow)
+        this.assets.set(Char.KayKitSkeletonBlade, this.kskeletonBlade)
+        this.assets.set(Char.KayKitSkeletonCrossbow, this.kskeletonCrossbow)
+        this.assets.set(Char.KayKitSkeletonQuiver, this.kskeletonQuiver)
+        this.assets.set(Char.KayKitSkeletonShieldLarge_A, this.kskeletonShieldL_A)
+        this.assets.set(Char.KayKitSkeletonShieldLarge_B, this.kskeletonShieldL_B)
+        this.assets.set(Char.KayKitSkeletonShieldSmall_A, this.kskeletonShieldS_A)
+        this.assets.set(Char.KayKitSkeletonShieldSmall_B, this.kskeletonShieldS_B)
+        this.assets.set(Char.KayKitSkeletonStaff, this.kskeletonStaff)
+
+        this.assets.set(Char.KayKitAdvBarbarian, this.kadvBarbarian)
+        this.assets.set(Char.KayKitAdvMage, this.kadvMage)
+        this.assets.set(Char.KayKitAdvKnight, this.kadvKnight)
+        this.assets.set(Char.KayKitAdvRogue, this.kadvRogue)
+        this.assets.set(Char.KayKitAdvRogueHooded, this.kadvRogueHooded)
+
+        this.assets.set(Char.KayKitAdvArrow, this.kadvArrow)
+        this.assets.set(Char.KayKitAdvArrowBundle, this.kadvArrowBundle)
+        this.assets.set(Char.KayKitAdvAxe1Handed, this.kadvAxe1Handed)
+        this.assets.set(Char.KayKitAdvAxe2Handed, this.kadvAxe2Handed)
+        this.assets.set(Char.KayKitAdvCrossbow1Handed, this.kadvCrossbow1Handed)
+        this.assets.set(Char.KayKitAdvCrossbow2Handed, this.kadvCrossbow2Handed)
+        this.assets.set(Char.KayKitAdvDagge, this.kadvDagger)
+        this.assets.set(Char.KayKitAdvMugEmpty, this.kadvMugEmpty)
+        this.assets.set(Char.KayKitAdvMugFull, this.kadvMugFull)
+        this.assets.set(Char.KayKitAdvQuiver, this.kadvQuiver)
+        this.assets.set(Char.KayKitAdvShieldBadge, this.kadvShieldBadge)
+        this.assets.set(Char.KayKitAdvShieldBadgeColor, this.kadvShieldBadgeColor)
+        this.assets.set(Char.KayKitAdvShieldRound, this.kadvShieldRound)
+        this.assets.set(Char.KayKitAdvShieldRoundBarbarian, this.kadvShieldBadge)
+        this.assets.set(Char.KayKitAdvShieldRoundColor, this.kadvShieldRoundColor)
+        this.assets.set(Char.KayKitAdvShieldSpikes, this.kadvShieldSpikes)
+        this.assets.set(Char.KayKitAdvShieldSpikesColor, this.kadvShieldSpikesColor)
+        this.assets.set(Char.KayKitAdvShieldSquare, this.kadvShieldSquare)
+        this.assets.set(Char.KayKitAdvShieldSquareColor, this.kadvShieldSquareColor)
+        this.assets.set(Char.KayKitAdvSmokeBomb, this.kadvSmokeBomb)
+        this.assets.set(Char.KayKitAdvSpellbookClosed, this.kadvSpellbookClosed)
+        this.assets.set(Char.KayKitAdvSpellbookOpen, this.kadvSpellbookOpen)
+        this.assets.set(Char.KayKitAdvStaff, this.kadvStaff)
+        this.assets.set(Char.KayKitAdvSword1Handed, this.kadvSword1Handed)
+        this.assets.set(Char.KayKitAdvSword2Handed, this.kadvSword2Handed)
+        this.assets.set(Char.KayKitAdvSword2HandedColor, this.kadvSword2HColor)
+        this.assets.set(Char.KayKitAdvWand, this.kadvWand)
 
         this.assets.set(Char.Bilby, this.bilby)
         this.assets.set(Char.Dog, this.dog)
