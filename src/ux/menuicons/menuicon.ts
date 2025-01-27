@@ -120,12 +120,13 @@ function getCSS(width: string, height: string, rounded: string) {
   }
 
   .rounded-gradient-box {
-          border-radius: ${rounded}; /* 모서리 둥글기 */
-          box-shadow:
-          0 4px 8px rgba(0, 0, 0, 0.2), /* 외곽 그림자 */
-          inset 0 2px 4px rgba(255, 255, 255, 0.5), /* 내부 밝은 음영 */
-          inset 0 -2px 6px rgba(0, 0, 0, 0.2); /* 내부 어두운 음영 */
-          border: 1px solid rgba(0, 0, 0, 0.1); /* 외곽선 */
+    caret-color: transparent;
+      border-radius: ${rounded}; /* 모서리 둥글기 */
+      box-shadow:
+      0 4px 8px rgba(0, 0, 0, 0.2), /* 외곽 그림자 */
+      inset 0 2px 4px rgba(255, 255, 255, 0.5), /* 내부 밝은 음영 */
+      inset 0 -2px 6px rgba(0, 0, 0, 0.2); /* 내부 어두운 음영 */
+      border: 1px solid rgba(0, 0, 0, 0.1); /* 외곽선 */
   }
   .rounded-gradient-box:hover {
       box-shadow:

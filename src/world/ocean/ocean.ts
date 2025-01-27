@@ -16,7 +16,7 @@ export class Ocean implements ILoop {
         path = "https://hons.ghostwebservice.com/",
     ) {
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
-        const size = 800
+        const size = 1200
         this._geometry = new THREE.PlaneGeometry(size, size, size, size);
         this._geometry.rotateX(-Math.PI / 2);
         

@@ -1,4 +1,3 @@
-import * as tf from '@tensorflow/tfjs';
 import * as THREE from 'three';
 import IEventController from '@Glibs/interface/ievent';
 import { IPhysicsObject } from '@Glibs/interface/iobject';
