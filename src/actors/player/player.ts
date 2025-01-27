@@ -194,5 +194,6 @@ export class Player extends PhysicsObject {
     Update(delta: number) {
         this.effector.Update(delta)
         this.mixer?.update(delta)
+        this.CBoxUpdate()
     }
 }

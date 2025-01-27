@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import waterShader from './shader/ocean'
+import IEventController, { ILoop } from '@Glibs/interface/ievent';
+import { EventTypes } from '@Glibs/types/globaltypes';
 
-export class Water {
+export class Water implements ILoop {
     pixelRatio = this.renderer.getPixelRatio()
     renderTarget = new THREE.WebGLRenderTarget(
         window.innerWidth * this.pixelRatio,
@@ -11,11 +13,13 @@ export class Water {
     water: THREE.Mesh
     waterMaterial: THREE.ShaderMaterial
     constructor (
-        private camera: THREE.PerspectiveCamera,
+        eventCtrl: IEventController,
+        camera: THREE.PerspectiveCamera,
         private renderer: THREE.WebGLRenderer,
         private scene: THREE.Scene,
-        private nonglowfn?: Function
+        path = "https://hons.ghostwebservice.com/",
     ) {
+
         const supportsDepthTextureExtension = !!this.renderer.extensions.get('WEBGL_depth_texture')
         this.renderTarget.texture.minFilter = THREE.NearestFilter;
         this.renderTarget.texture.magFilter = THREE.NearestFilter;
@@ -33,8 +37,8 @@ export class Water {
         this.depthMaterial.blending = THREE.NoBlending;
         const loader = new THREE.TextureLoader();
 
-        const noiseMap = loader.load('assets/texture/gPz7iPX.jpeg');
-        const dudvMap = loader.load('assets/texture/hOIsXiZ.png');
+        const noiseMap = loader.load(path + 'assets/texture/gPz7iPX.jpeg');
+        const dudvMap = loader.load(path + 'assets/texture/hOIsXiZ.png');
 
         noiseMap.wrapS = noiseMap.wrapT = THREE.RepeatWrapping;
         noiseMap.minFilter = THREE.NearestFilter;
@@ -94,11 +98,10 @@ export class Water {
         this.water = new THREE.Mesh(waterGeometry, this.waterMaterial);
         this.water.rotation.x = -Math.PI * 0.5;
         this.water.position.y = -1
-        this.nonglowfn?.(this.water)
-        this.scene.add(this.water)
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
     }
     time = 0
-    Update(delta: number) {
+    update(delta: number) {
         this.time += delta
         this.waterMaterial.uniforms.time.value = this.time;
     }

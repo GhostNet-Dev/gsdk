@@ -155,8 +155,6 @@ export class Zombie extends PhysicsObject {
     update(delta: number) {
         this.effector.Update(delta)
         this.mixer?.update(delta)
-    }
-    UpdatePhysics(): void {
-
+        this.CBoxUpdate()
     }
 }
