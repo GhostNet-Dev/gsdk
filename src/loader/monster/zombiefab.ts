@@ -6,13 +6,13 @@ import { Ani, Char, ModelType } from "../assettypes";
 import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 
 export class ZombieFab extends AssetModel implements IAsset {
-    Gltf?:GLTF
+    gltf?:GLTF
 
     get Id() {return Char.Zombie}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Gltf, "assets/monster/zombie.gltf", async (gltf: GLTF) => {
-            this.Gltf = gltf
+            this.gltf = gltf
             this.meshs = gltf.scene
             this.meshs.name = "zombie"
             this.meshs.castShadow = true

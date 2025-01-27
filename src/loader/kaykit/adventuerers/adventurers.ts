@@ -6,10 +6,10 @@ import { Ani, Char, ModelType } from "../../assettypes";
 import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 
 class KayKitAdv extends AssetModel {
-    Gltf?:GLTF
+    gltf?:GLTF
     constructor(loader: Loader, path: string) { 
         super(loader, ModelType.Gltf, path, async (gltf: GLTF) => {
-            this.Gltf = gltf
+            this.gltf = gltf
             this.meshs = gltf.scene
             this.meshs.castShadow = true
             this.meshs.receiveShadow = true

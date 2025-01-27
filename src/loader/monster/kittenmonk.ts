@@ -9,7 +9,7 @@ import { KHRONOS_EXTENSIONS } from '@gltf-transform/extensions';
 import { metalRough } from '@gltf-transform/functions';
 
 export class KittenMonkFab extends AssetModel implements IAsset {
-    Gltf?:GLTF
+    gltf?:GLTF
 
     get Id() {return Char.Viking}
 
@@ -25,7 +25,7 @@ export class KittenMonkFab extends AssetModel implements IAsset {
             // Write back to GLB.
             const glb = await io.writeBinary(document);
             loader.Load.parse(glb.buffer, '', (gltf) => {
-                this.Gltf = gltf
+                this.gltf = gltf
                 this.meshs = gltf.scene
                 this.meshs.castShadow = true
                 this.meshs.receiveShadow = true
