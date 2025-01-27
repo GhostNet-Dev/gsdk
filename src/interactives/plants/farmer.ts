@@ -12,6 +12,7 @@ import { EventFlag, KeyType } from "@Glibs/types/eventtypes";
 import { AttackOption, AttackType } from "@Glibs/types/playertypes";
 import { AppleTree } from "./appletree";
 import { PlantBox, PlantState } from "./planttypes";
+import { Char } from "@Glibs/loader/assettypes";
 
 
 export type PlantEntry = {
@@ -261,19 +262,19 @@ export class Farmer implements ILoop {
         switch(id) {
             default:
             case PlantId.AppleTree:
-                plant = new AppleTree(this.loader.AppleTreeAsset, this.loader.AppleAsset, this.loader.DeadTree2Asset, "appletree")
+                plant = new AppleTree(this.loader.GetAssets(Char.AppleTree), this.loader.GetAssets(Char.Apple), this.loader.GetAssets(Char.DeadTree2), "appletree")
                 break
             case PlantId.CoconutTree:
-                plant = new AppleTree(this.loader.CoconutTreeAsset, this.loader.CoconutAsset, this.loader.DeadTree2Asset, "coconuttree")
+                plant = new AppleTree(this.loader.GetAssets(Char.CoconutTree), this.loader.GetAssets(Char.Coconut), this.loader.GetAssets(Char.DeadTree2), "coconuttree")
                 break
             case PlantId.Tomato:
-                plant = new Tomato([this.loader.Tomato0Asset, this.loader.Tomato1Asset, this.loader.Tomato2Asset], "tomato")
+                plant = new Tomato([this.loader.GetAssets(Char.Tomato0), this.loader.GetAssets(Char.Tomato1), this.loader.GetAssets(Char.Tomato2)], "tomato")
                 break
             case PlantId.Potato:
-                plant = new Tomato([this.loader.Potato0Asset, this.loader.Potato1Asset, this.loader.Potato2Asset], "potato")
+                plant = new Tomato([this.loader.GetAssets(Char.Potato0), this.loader.GetAssets(Char.Potato1), this.loader.GetAssets(Char.Potato2)], "potato")
                 break
             case PlantId.Carrot:
-                plant = new Tomato([this.loader.Carrot0Asset, this.loader.Carrot1Asset, this.loader.Carrot2Asset], "carrot")
+                plant = new Tomato([this.loader.GetAssets(Char.Carrot0), this.loader.GetAssets(Char.Carrot1), this.loader.GetAssets(Char.Carrot2)], "carrot")
                 break
         }
         if(plantEntry) {

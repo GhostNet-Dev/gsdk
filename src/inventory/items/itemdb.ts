@@ -2,6 +2,7 @@ import { Deck } from "./deck"
 import { AttackItemType, ItemId, ItemProperty, ItemType, Level } from "../inventypes"
 import { Bind } from "@Glibs/types/assettypes"
 import { Loader } from "@Glibs/loader/loader"
+import { Char } from "@Glibs/loader/assettypes"
 
 
 
@@ -14,7 +15,7 @@ export class ItemDb {
             type: ItemType.Attack,
             weapon: AttackItemType.Blunt,
             bind: Bind.Hands_R,
-            asset: this.loader.BatAsset,
+            asset: this.loader.GetAssets(Char.Bat),
             level: Level.Common,
             name: "Hanhwa's Bat",
             icon: "WeaponTool/TopazStaff.png",
@@ -26,7 +27,7 @@ export class ItemDb {
             type: ItemType.Attack,
             weapon: AttackItemType.Gun,
             bind: Bind.Hands_R,
-            asset: this.loader.GunAsset,
+            asset: this.loader.GetAssets(Char.Gun),
             level: Level.Common,
             name: "Legacy Gun",
             icon: "WeaponTool/Bow.png",
@@ -37,7 +38,7 @@ export class ItemDb {
             id: ItemId.WarterCan,
             type: ItemType.Farm,
             bind: Bind.Hands_R,
-            asset: this.loader.WarteringCanAsset,
+            asset: this.loader.GetAssets(Char.WateringCan),
             level: Level.Common,
             name: "Wartering Can",
             icon: "Misc/Lantern.png",
@@ -48,7 +49,7 @@ export class ItemDb {
             id: ItemId.Hammer,
             type: ItemType.Attack,
             bind: Bind.Hands_R,
-            asset: this.loader.HammerAsset,
+            asset: this.loader.GetAssets(Char.Hammer),
             level: Level.Common,
             name: "Hammer H3",
             icon: "WeaponTool/Hammer.png",

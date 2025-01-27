@@ -103,7 +103,7 @@ export enum Char{
     KayKitAdvAxe2Handed,
     KayKitAdvCrossbow1Handed,
     KayKitAdvCrossbow2Handed,
-    KayKitAdvDagge,
+    KayKitAdvDagger,
     KayKitAdvMugEmpty,
     KayKitAdvMugFull,
     KayKitAdvQuiver,
@@ -135,7 +135,7 @@ export enum Char{
 
     Bat,
     Gun,
-    WarteringCan,
+    WateringCan,
     Hammer,
     Grass,
     FluffyTree,

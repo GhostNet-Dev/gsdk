@@ -1,6 +1,7 @@
 import { IAsset } from "@Glibs/interface/iasset";
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { Char } from "@Glibs/loader/assettypes";
 import { Loader } from "@Glibs/loader/loader";
 import { Effector } from "@Glibs/magical/effects/effector";
 import { EffectType } from "@Glibs/types/effecttypes";
@@ -91,9 +92,9 @@ export class Materials implements ILoop {
                 r * Math.sin(phi)
             )
             const scale = THREE.MathUtils.randInt(9, 15)
-            const meshs = await this.LoadMaterials(this.loader.StoneAsset, scale, pos)
+            const meshs = await this.LoadMaterials(this.loader.GetAssets(Char.Stone), scale, pos)
 
-            const size = this.loader.StoneAsset.GetSize(meshs)
+            const size = this.loader.GetAssets(Char.Stone).GetSize(meshs)
             const box = new TargetBox(i, "stone", MonsterId.Stone, new THREE.BoxGeometry(), this.material)
             box.scale.copy(size)
             box.position.copy(pos)
@@ -106,7 +107,7 @@ export class Materials implements ILoop {
     }
 
     async MassTreeLoad() {
-        const meshs = await this.loader.TreeAsset.CloneModel()
+        const meshs = await this.loader.GetAssets(Char.Tree).CloneModel()
         const pos = new THREE.Vector3()
         const radius = this.worldSize / 2
         for (let i = 0; i < 300; i++) {
@@ -119,10 +120,10 @@ export class Materials implements ILoop {
             )
             
             const scale = THREE.MathUtils.randInt(15, 20)
-            const meshs = await this.LoadMaterials(this.loader.TreeAsset, scale, pos)
+            const meshs = await this.LoadMaterials(this.loader.GetAssets(Char.Tree), scale, pos)
             this.trees.push(meshs)
 
-            const size = this.loader.TreeAsset.GetSize(meshs)
+            const size = this.loader.GetAssets(Char.Tree).GetSize(meshs)
             const box = new TargetBox(i, "tree", MonsterId.Tree, new THREE.BoxGeometry(), this.material)
             box.scale.set(size.x / 2, size.y, size.z / 2)
             box.position.copy(pos)

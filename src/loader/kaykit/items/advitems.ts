@@ -103,7 +103,7 @@ export class KayKitCrossbow2HandedFab extends KayKitItems implements IAsset {
     constructor(loader: Loader) { super(loader, "assets/kaykit/items/crossbow_2handed.fbx") }
 }
 export class KayKitDaggerFab extends KayKitItems implements IAsset {
-    get Id() {return Char.KayKitAdvDagge}
+    get Id() {return Char.KayKitAdvDagger}
     constructor(loader: Loader) { super(loader, "assets/kaykit/items/dagger.fbx") }
 }
 export class KayKitMugEmptyFab extends KayKitItems implements IAsset {

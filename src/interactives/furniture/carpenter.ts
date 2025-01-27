@@ -13,6 +13,7 @@ import { EventFlag, KeyType } from "@Glibs/types/eventtypes";
 import { FurnBox, FurnEntry, FurnProperty, FurnState } from "./furntypes";
 import { InventorySlot } from "@Glibs/types/inventypes";
 import { AttackOption, AttackType } from "@Glibs/types/playertypes";
+import { Char } from "@Glibs/types/assettypes";
 
 export type FurnSet = {
     id: FurnId
@@ -277,43 +278,43 @@ export class Carpenter implements ILoop {
         switch (id) {
             default:
             case FurnId.DefaultBed:
-                furn = new FurnModel(this.loader.BedAsset, "bed")
+                furn = new FurnModel(this.loader.GetAssets(Char.Bed), "bed")
                 break;
             case FurnId.DefaultBath:
-                furn = new FurnModel(this.loader.BathAsset, "bath")
+                furn = new FurnModel(this.loader.GetAssets(Char.Bath), "bath")
                 break;
             case FurnId.DefaultBookShelf:
-                furn = new FurnModel(this.loader.BookShelfAsset, "bookshelf")
+                furn = new FurnModel(this.loader.GetAssets(Char.Bookshelf), "bookshelf")
                 break;
             case FurnId.DefaultCloset:
-                furn = new FurnModel(this.loader.ClosetAsset, "closet")
+                furn = new FurnModel(this.loader.GetAssets(Char.Closet), "closet")
                 break;
             case FurnId.DefaultDesk:
-                furn = new FurnModel(this.loader.DeskAsset, "desk")
+                furn = new FurnModel(this.loader.GetAssets(Char.Desk), "desk")
                 break;
             case FurnId.DefaultKitchen:
-                furn = new FurnModel(this.loader.KitchenAsset, "kitchen")
+                furn = new FurnModel(this.loader.GetAssets(Char.Kitchen), "kitchen")
                 break;
             case FurnId.DefaultKitTable:
-                furn = new FurnModel(this.loader.KitTableAsset, "kittable")
+                furn = new FurnModel(this.loader.GetAssets(Char.KitTable), "kittable")
                 break;
             case FurnId.DefaultOven:
-                furn = new FurnModel(this.loader.OvenAsset, "oven")
+                furn = new FurnModel(this.loader.GetAssets(Char.Oven), "oven")
                 break;
             case FurnId.DefaultRefrigerator:
-                furn = new FurnModel(this.loader.RefrigeratorAsset, "refrigerator")
+                furn = new FurnModel(this.loader.GetAssets(Char.Refrigerator), "refrigerator")
                 break;
             case FurnId.DefaultSink:
-                furn = new FurnModel(this.loader.SinkAsset, "sink")
+                furn = new FurnModel(this.loader.GetAssets(Char.Sink), "sink")
                 break;
             case FurnId.DefaultTable:
-                furn = new FurnModel(this.loader.TableAsset, "table")
+                furn = new FurnModel(this.loader.GetAssets(Char.Table), "table")
                 break;
             case FurnId.DefaultToilet:
-                furn = new FurnModel(this.loader.ToiletAsset, "toilet")
+                furn = new FurnModel(this.loader.GetAssets(Char.Toilet), "toilet")
                 break;
             case FurnId.DefaultTv:
-                furn = new FurnModel(this.loader.TableAsset, "tv")
+                furn = new FurnModel(this.loader.GetAssets(Char.Table), "tv")
                 break;
         }
         return furn
