@@ -6,7 +6,6 @@ import {
 } from 'three.quarks';
 import { IEffect } from "./ieffector";
 
-
 export class QuarksVfx implements IEffect {
     totalTime = 0;
     refreshIndex = 0;
@@ -44,6 +43,9 @@ export class QuarksVfx implements IEffect {
     Start(pos: THREE.Vector3, callback: Function): void {
         if (this.processFlag || !this.loaded) return
         this.endCallback = callback
+        this.groups[this.refreshIndex].position.copy(pos)
+        this.groups[this.refreshIndex].updateMatrixWorld(true)
+        console.log(pos, this.groups[this.refreshIndex].position, this.obj.position, this.batchRenderer.position)
         try {
             this.groups[this.refreshIndex].traverse((object) => {
                 if (object instanceof ParticleEmitter) {
@@ -53,27 +55,23 @@ export class QuarksVfx implements IEffect {
         } catch (e) {
             console.log(e, this.groups)
         }
-        this.groups[this.refreshIndex].position.copy(pos)
-        console.log(pos)
-
         this.processFlag = true
     }
     Complete(): void {
         this.totalTime = 0;
         this.processFlag = false
-        //this.game.remove(this.obj)
         this.endCallback?.()
     }
 
     Update(delta: number): void {
         if(!this.processFlag) return
-        this.groups.forEach((group) =>
+        this.groups.forEach((group) => {
             group.traverse((object) => {
                 if (object.userData && object.userData.func) {
                     object.userData.func.call(object, delta);
                 }
             })
-        );
+        });
         this.totalTime += delta;
         if (this.totalTime > this.refreshTime) {
             this.Complete()
