@@ -7,9 +7,9 @@ import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 
 class KayKitItems extends AssetModel {
     gltf?:GLTF
-    constructor(loader: Loader, path: string) { 
+    constructor(loader: Loader, path: string) {
         super(loader, ModelType.Fbx, path, async (meshs: THREE.Group) => {
-        this.meshs = meshs
+            this.meshs = meshs
             this.InitMesh(meshs)
         })
     }
