@@ -64,6 +64,7 @@ import { UltimateLvAndMaArrowFab, UltimateLvAndMaArrowSideFab, UltimateLvAndMaAr
 import { UltimateModPlatform2DCubeDirt1x1CenterFab, UltimateModPlatform2DCubeDirt1x1EndFab, UltimateModPlatform2DCubeGrass1x1CenterFab, UltimateModPlatform2DCubeGrass1x1EndFab, UltimateModPlatform3DCubeDirtCenterTallFab, UltimateModPlatform3DCubeDirtCornerTallFab, UltimateModPlatform3DCubeDirtSideTallFab, UltimateModPlatform3DCubeGrassBottomTallFab, UltimateModPlatform3DCubeGrassCornerBottomTallFab, UltimateModPlatform3DCubeGrassCornerCenterTallFab, UltimateModPlatform3DCubeGrassCornerTallFab, UltimateModPlatform3DCubeGrassSideBottomTallFab, UltimateModPlatform3DCubeGrassSideCenterTallFab, UltimateModPlatform3DCubeGrassSideTallFab, UltimateModPlatformSingleCubeDirtFab, UltimateModPlatformSingleCubeGrassFab, UltimateModPlatformSingleHeightDirtCenterFab, UltimateModPlatformSingleHeightDirtCornerFab, UltimateModPlatformSingleHeightDirtSideFab, UltimateModPlatformSingleHeightGrassCenterFab, UltimateModPlatformSingleHeightGrassCornerFab, UltimateModPlatformSingleHeightGrassSideFab } from "./ultimatepack/modplatformfab";
 import { UltimateNatureBushFab, UltimateNatureBushFruitFab, UltimateNatureCloud1Fab, UltimateNatureCloud2Fab, UltimateNatureCloud3Fab, UltimateNatureFruitFab, UltimateNatureGrass1Fab, UltimateNatureGrass2Fab, UltimateNatureGrass3Fab, UltimateNatureRock1Fab, UltimateNatureRock2Fab, UltimateNatureRockPlatformTallFab, UltimateNatureRockPlatforms1Fab, UltimateNatureRockPlatforms2Fab, UltimateNatureRockPlatforms3Fab, UltimateNatureRockPlatformsLargeFab, UltimateNatureRockPlatformsMediumFab, UltimateNatureTreeFab, UltimateNatureTreeFruitFab } from "./ultimatepack/naturefab";
 import { UltimatePAPCoinFab, UltimatePAPGemBlueFab, UltimatePAPGemGreenFab, UltimatePAPGemPinkFab, UltimatePAPHeartFab, UltimatePAPHeartHalfFab, UltimatePAPHeartOutlineFab, UltimatePAPKeyFab, UltimatePAPStarFab, UltimatePAPStarOutlineFab, UltimatePAPThunderFab } from "./ultimatepack/powerpickupfab";
+import { FarmPetCowFab, FarmPetHorseFab, FarmPetLlamaFab, FarmPetPigFab, FarmPetPugFab, FarmPetSheepFab, FarmPetZebraFab } from "./pet/farmanimalfab";
 
 
 // Fab 클래스 타입
@@ -314,6 +315,15 @@ export class Loader {
         this.fabClasses.set(Char.Cat, CatFab);
         this.fabClasses.set(Char.Bee, BeeFab);
         this.fabClasses.set(Char.PetSnake, PetSnakeFab);
+
+        // Farm Pet
+        this.fabClasses.set(Char.FarmPetCow, FarmPetCowFab);
+        this.fabClasses.set(Char.FarmPetHorse, FarmPetHorseFab);
+        this.fabClasses.set(Char.FarmPetLlama, FarmPetLlamaFab);
+        this.fabClasses.set(Char.FarmPetPig, FarmPetPigFab);
+        this.fabClasses.set(Char.FarmPetPug, FarmPetPugFab);
+        this.fabClasses.set(Char.FarmPetSheep, FarmPetSheepFab);
+        this.fabClasses.set(Char.FarmPetZebra, FarmPetZebraFab);
 
         // Stup
         this.fabClasses.set(Char.Bat, BatFab);

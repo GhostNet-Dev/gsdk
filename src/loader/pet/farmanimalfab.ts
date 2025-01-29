@@ -44,7 +44,31 @@ class FarmAnimalPack extends AssetModel {
         return this.size 
     }
 }
-export class OceanDolphinFab extends FarmAnimalPack implements IAsset {
-    get Id() {return Char.OceanDolphin}
-    constructor(loader: Loader) { super(loader, "assets/oceans/animalpack/Dolphin.fbx") }
+export class FarmPetCowFab extends FarmAnimalPack implements IAsset {
+    get Id() {return Char.FarmPetCow}
+    constructor(loader: Loader) { super(loader, "assets/farmanimals/Cow.fbx") }
+}
+export class FarmPetHorseFab extends FarmAnimalPack implements IAsset {
+    get Id() {return Char.FarmPetHorse}
+    constructor(loader: Loader) { super(loader, "assets/farmanimals/Horse.fbx") }
+}
+export class FarmPetLlamaFab extends FarmAnimalPack implements IAsset {
+    get Id() {return Char.FarmPetLlama}
+    constructor(loader: Loader) { super(loader, "assets/farmanimals/Llama.fbx") }
+}
+export class FarmPetPigFab extends FarmAnimalPack implements IAsset {
+    get Id() {return Char.FarmPetPig}
+    constructor(loader: Loader) { super(loader, "assets/farmanimals/Pig.fbx") }
+}
+export class FarmPetPugFab extends FarmAnimalPack implements IAsset {
+    get Id() {return Char.FarmPetPug}
+    constructor(loader: Loader) { super(loader, "assets/farmanimals/Pug.fbx") }
+}
+export class FarmPetSheepFab extends FarmAnimalPack implements IAsset {
+    get Id() {return Char.FarmPetSheep}
+    constructor(loader: Loader) { super(loader, "assets/farmanimals/Sheep.fbx") }
+}
+export class FarmPetZebraFab extends FarmAnimalPack implements IAsset {
+    get Id() {return Char.FarmPetZebra}
+    constructor(loader: Loader) { super(loader, "assets/farmanimals/Zebra.fbx") }
 }

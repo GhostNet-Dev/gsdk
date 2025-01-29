@@ -145,6 +145,14 @@ export enum Char{
     OceanShark,
     OceanWhale,
 
+    FarmPetCow,
+    FarmPetHorse,
+    FarmPetLlama,
+    FarmPetPig,
+    FarmPetPug,
+    FarmPetSheep,
+    FarmPetZebra,
+
     EasypackFrog,
     EasypackRat,
     EasypackSnake,
