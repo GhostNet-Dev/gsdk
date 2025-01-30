@@ -65,6 +65,9 @@ import { UltimateModPlatform2DCubeDirt1x1CenterFab, UltimateModPlatform2DCubeDir
 import { UltimateNatureBushFab, UltimateNatureBushFruitFab, UltimateNatureCloud1Fab, UltimateNatureCloud2Fab, UltimateNatureCloud3Fab, UltimateNatureFruitFab, UltimateNatureGrass1Fab, UltimateNatureGrass2Fab, UltimateNatureGrass3Fab, UltimateNatureRock1Fab, UltimateNatureRock2Fab, UltimateNatureRockPlatformTallFab, UltimateNatureRockPlatforms1Fab, UltimateNatureRockPlatforms2Fab, UltimateNatureRockPlatforms3Fab, UltimateNatureRockPlatformsLargeFab, UltimateNatureRockPlatformsMediumFab, UltimateNatureTreeFab, UltimateNatureTreeFruitFab } from "./ultimatepack/naturefab";
 import { UltimatePAPCoinFab, UltimatePAPGemBlueFab, UltimatePAPGemGreenFab, UltimatePAPGemPinkFab, UltimatePAPHeartFab, UltimatePAPHeartHalfFab, UltimatePAPHeartOutlineFab, UltimatePAPKeyFab, UltimatePAPStarFab, UltimatePAPStarOutlineFab, UltimatePAPThunderFab } from "./ultimatepack/powerpickupfab";
 import { FarmPetCowFab, FarmPetHorseFab, FarmPetLlamaFab, FarmPetPigFab, FarmPetPugFab, FarmPetSheepFab, FarmPetZebraFab } from "./pet/farmanimalfab";
+import { FoxishFab } from "./monster/foxishfab";
+import { PantherBlackWhiteFab, PantherBlueFab, PantherRedFab } from "./monster/pantherfab";
+import { KenneyCriminalMaleFab, KenneyCyborgFemaleFab, KenneyHumanFemaleFab, KenneyHumanMaleFab, KenneySkaterFemaleFab, KenneySkaterMaleFab, KenneySurvivorFemaleFab, KenneySurvivorMaleFab, KenneyZombieAFab, KenneyZombieBFab, KenneyZombieFemaleAFab, KenneyZombieFemaleBFab } from "./kenney/charactersfab";
 
 
 // Fab 클래스 타입
@@ -102,6 +105,20 @@ export class Loader {
         this.fabClasses.set(Char.Portal, PortalFab);
         this.fabClasses.set(Char.Test, TestFab);
 
+        // Kenney
+        this.fabClasses.set(Char.KenneyCriminalMale, KenneyCriminalMaleFab);
+        this.fabClasses.set(Char.KenneyCyborgFemale, KenneyCyborgFemaleFab);
+        this.fabClasses.set(Char.KenneyHumanFemale, KenneyHumanFemaleFab);
+        this.fabClasses.set(Char.KenneyHumanMale, KenneyHumanMaleFab);
+        this.fabClasses.set(Char.KenneySkaterFemale, KenneySkaterFemaleFab);
+        this.fabClasses.set(Char.KenneySkaterMale, KenneySkaterMaleFab);
+        this.fabClasses.set(Char.KenneySurvivorFemale, KenneySurvivorFemaleFab);
+        this.fabClasses.set(Char.KenneySurvivorMale, KenneySurvivorMaleFab);
+        this.fabClasses.set(Char.KenneyZombieA, KenneyZombieAFab);
+        this.fabClasses.set(Char.KenneyZombieB, KenneyZombieBFab);
+        this.fabClasses.set(Char.KenneyZombieFemaleA, KenneyZombieFemaleAFab);
+        this.fabClasses.set(Char.KenneyZombieFemaleB, KenneyZombieFemaleBFab);
+
         // Monster
         this.fabClasses.set(Char.Zombie, ZombieFab);
         this.fabClasses.set(Char.Minataur, MinataurFab);
@@ -117,6 +134,10 @@ export class Loader {
         this.fabClasses.set(Char.ToadMage, ToadMageFab);
         this.fabClasses.set(Char.KittenMonk, KittenMonkFab);
         this.fabClasses.set(Char.Skeleton, SkeletonFab);
+        this.fabClasses.set(Char.Foxish, FoxishFab);
+        this.fabClasses.set(Char.PantherBlackWhite, PantherBlackWhiteFab);
+        this.fabClasses.set(Char.PantherBlue, PantherBlueFab);
+        this.fabClasses.set(Char.PantherRed, PantherRedFab);
 
         // KayKit
         this.fabClasses.set(Char.KayKitSkeletonMage, KayKitSkeletonMageFab);
