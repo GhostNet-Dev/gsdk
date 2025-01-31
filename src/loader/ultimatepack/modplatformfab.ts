@@ -18,7 +18,7 @@ class UltimatePack extends AssetModel {
                 child.castShadow = true
                 child.receiveShadow = false
             })
-            console.log(this.meshs)
+            this.meshs.children[0].position.y += 1
             // const scale = 1
             // const size = this.GetSize(this.meshs)
             
