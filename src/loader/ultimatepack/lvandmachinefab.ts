@@ -19,7 +19,7 @@ class UltimatePack extends AssetModel {
                 child.receiveShadow = false
             })
             const scale = 1
-            this.meshs.children[0].scale.set(scale, scale, scale)
+            // this.meshs.children[0].scale.set(scale, scale, scale)
         })
     }
     
