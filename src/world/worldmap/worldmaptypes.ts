@@ -1,17 +1,34 @@
-import { Char } from "@Glibs/types/assettypes"
-import { TreeParam } from "@Glibs/world/fluffytree/treemaker"
-import { GrassParam } from "@Glibs/world/grassmin/grassmaker"
 
 export type MapDefaultEntry = {
-    type: Char
-    pos: THREE.Vector3
-    rotat: THREE.Euler
+    type: number
+    position: { x: number, y: number, z: number }
+    rotation: { x: number, y: number, z: number }
     scale: number
+}
+export interface GroundData {
+    textureData: number[];
+    textureWidth: number;
+    textureHeight: number;
+    verticesData: number[];
+    mapSize: number;
+}
+export interface TreeData {
+    type: number
+    position: { x: number, y: number, z: number }
+    rotation: { x: number, y: number, z: number }
+    scale: number
+    color: string
+}
+export interface GrassData {
+    position: { x: number, y: number, z: number }
+    rotation: { x: number, y: number, z: number }
+    scale: number
+    color: number
 }
 
 export type MapEntry = {
     type: MapEntryType
-    data: MapDefaultEntry | GrassParam[] | TreeParam[]
+    data: MapDefaultEntry | GrassData[] | TreeData[] | GroundData
 }
 
 export enum MapEntryType {
@@ -20,6 +37,7 @@ export enum MapEntryType {
     Nature = "nature",
     Grass = "grass",
     Tree = "Tree",
+    CustomGround = "cg"
 }
 
 export enum MapType {

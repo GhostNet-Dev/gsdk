@@ -43,8 +43,9 @@ class UltimatePack extends AssetModel {
         if (this.meshs == undefined) this.meshs = mesh
         if (this.size) return this.size
 
-        const bbox = new THREE.Box3().setFromObject(this.meshs)
-        this.size = bbox.getSize(new THREE.Vector3)
+        // const bbox = new THREE.Box3().setFromObject(this.meshs)
+        // this.size = bbox.getSize(new THREE.Vector3)
+        this.size = new THREE.Vector3(2, 2, 2)
         return this.size 
     }
 }

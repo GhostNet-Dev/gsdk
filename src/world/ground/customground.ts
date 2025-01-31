@@ -16,9 +16,9 @@ export default class CustomGround {
     radius = 30 / this.scale
     geometry: THREE.PlaneGeometry
     setNonGlow: Function
-    constructor({
+    constructor(setNonGlow: Function, {
         color = new THREE.Color(0xA6C954),
-        width = 1024 * 3, height = 1024 * 3, planeSize = 256, setNonGlow = () => {}
+        width = 1024 * 3, height = 1024 * 3, planeSize = 256, 
     } = {}) {
         this.width = width
         this.height = height
