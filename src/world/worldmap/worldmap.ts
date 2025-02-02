@@ -14,6 +14,7 @@ import Ground from "../ground/ground";
 import UltimateModular from "./ultimatemodular";
 import { downDataTextureAndGeometry, loadDataTextureAndGeometry, saveDataTextureAndGeometry } from "./mapstore";
 import { SimpleWater } from '../ocean/simplewater';
+import Grid from './grid';
 
 
 export default class WorldMap {
@@ -23,6 +24,7 @@ export default class WorldMap {
     customGround?: CustomGround
     ground?: Ground
     gridLine? :THREE.LineSegments
+    grid = new Grid()
 
     constructor(
         private loader: Loader,
@@ -52,13 +54,13 @@ export default class WorldMap {
             }
             case MapType.Rect:
                 if (grid){
-                    this.gridLine = createGrid(gridSize, width)
+                    this.gridLine = this.grid.createGrid(gridSize, width)
                     map.push(this.gridLine)
                 } 
                 break
             case MapType.Hex:
                 if (grid) {
-                    this.gridLine = createOptimizedHexGrid(width, height, gridSize)
+                    this.gridLine = this.grid.createOptimizedHexGrid(width, height, gridSize)
                     map.push(this.gridLine)
                 }
                 break
