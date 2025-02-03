@@ -44,5 +44,7 @@ export enum MapType {
     Custom,
     Free,
     Rect,
-    Hex
+    RectMesh,
+    Hex,
+    HexMesh,
 }

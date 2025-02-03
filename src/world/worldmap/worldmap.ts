@@ -15,6 +15,7 @@ import UltimateModular from "./ultimatemodular";
 import { downDataTextureAndGeometry, loadDataTextureAndGeometry, saveDataTextureAndGeometry } from "./mapstore";
 import { SimpleWater } from '../ocean/simplewater';
 import Grid from './grid';
+import { gui } from '@Glibs/helper/helper';
 
 
 export default class WorldMap {
@@ -24,6 +25,7 @@ export default class WorldMap {
     customGround?: CustomGround
     ground?: Ground
     gridLine? :THREE.LineSegments
+    gridMesh? :THREE.Group
     grid = new Grid()
 
     constructor(
@@ -35,8 +37,9 @@ export default class WorldMap {
 
     }
     MakeGround({
-        mapType = MapType.Free, grid = false, gridSize = 10,
-        width = 1024 * 3, height = 1024 * 3, size = 256,
+        mapType = MapType.Free, grid = false, gridSize = 1, gridDivision = 100,
+        width = 1024 * 3, height = 1024 * 3, size = 256, rows = 10, cols = 10,
+        color = 0xA6C954,
     } ={}) {
         const map: THREE.Object3D[] = []
         switch(mapType) {
@@ -54,14 +57,28 @@ export default class WorldMap {
             }
             case MapType.Rect:
                 if (grid){
-                    this.gridLine = this.grid.createGrid(gridSize, width)
+                    this.gridLine = this.grid.createGrid(width, gridDivision)
                     map.push(this.gridLine)
+                } 
+                break
+            case MapType.RectMesh:
+                if (grid){
+                    this.gridMesh = this.grid.createGridMesh(width, gridDivision, color)
+                    map.push(this.gridMesh)
                 } 
                 break
             case MapType.Hex:
                 if (grid) {
-                    this.gridLine = this.grid.createOptimizedHexGrid(width, height, gridSize)
+                    this.gridLine = this.grid.createOptimizedHexGrid(rows, cols, gridSize)
+                    console.log(this.gridLine.position)
                     map.push(this.gridLine)
+                }
+                break
+            case MapType.HexMesh:
+                if (grid) {
+                    this.gridMesh = this.grid.createOptimizedHexGridMesh(rows, cols, gridSize, color)
+                    console.log(this.gridMesh.position)
+                    map.push(this.gridMesh)
                 }
                 break
         }
