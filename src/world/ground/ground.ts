@@ -9,6 +9,7 @@ export default class Ground {
     blendMapData: Uint8Array
     blendMap: THREE.DataTexture
     geometry: THREE.PlaneGeometry
+    shaderMaterial: THREE.MeshStandardMaterial
     constructor(private setNonGlow: Function, {
         color = new THREE.Color(0xA6C954),
         width = 1024 * 3, height = 1024 * 3, planeSize = 256,
@@ -29,19 +30,21 @@ export default class Ground {
         this.blendMap.needsUpdate = true;
 
         this.geometry = new THREE.PlaneGeometry(this.planSize, this.planSize, this.planSize, this.planSize);
-        const shaderMaterial = new THREE.MeshStandardMaterial({
+        this.shaderMaterial = new THREE.MeshStandardMaterial({
             map: this.blendMap,
             side: THREE.DoubleSide,
             transparent: true,
         });
 
         // Mesh 생성 및 추가
-        const ground = new THREE.Mesh(this.geometry, shaderMaterial);
+        const ground = new THREE.Mesh(this.geometry, this.shaderMaterial);
 
         ground.rotation.x = -Math.PI / 2; // 땅에 평행하게 회전
         ground.position.setY(-.01)
         ground.receiveShadow = true
         this.setNonGlow(ground)
+        ground.userData.isRoot = true
+        ground.userData.ground = ground
         this.obj = ground
     }
 
@@ -54,18 +57,22 @@ export default class Ground {
         this.geometry = geometry
         this.blendMap.needsUpdate = true;
 
-        const shaderMaterial = new THREE.MeshStandardMaterial({
+        this.shaderMaterial = new THREE.MeshStandardMaterial({
             map: this.blendMap,
             side: THREE.DoubleSide,
             transparent: true,
         });
 
         // Mesh 생성 및 추가
-        const ground = new THREE.Mesh(this.geometry, shaderMaterial);
+        const ground = new THREE.Mesh(this.geometry, this.shaderMaterial);
         ground.rotation.x = -Math.PI / 2; // 땅에 평행하게 회전
         ground.position.setY(-.01)
         ground.receiveShadow = true
         this.setNonGlow(ground)
         this.obj = ground
+    }
+    Dispose() {
+        this.shaderMaterial.dispose()
+        this.geometry.dispose()
     }
 }

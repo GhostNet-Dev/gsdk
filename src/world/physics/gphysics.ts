@@ -15,7 +15,7 @@ export class GPhysics implements IGPhysic {
     movingBoxs: MovingBox[] = []
     player?: IPhysicsObject
     landPos = new THREE.Vector3()
-    land?: IPhysicsObject
+    lands: THREE.Object3D[] = []
 
     objs: IGPhysic[] = []
     physicalObjs: IPhysicsObject[] = []
@@ -138,7 +138,7 @@ export class GPhysics implements IGPhysic {
         })
     }
     addLand(obj: IPhysicsObject) {
-        this.land = obj
+        this.lands.push(obj.Meshs)
         this.landPos.y = 0
         console.log("Land: " , this.landPos, obj)
     }
@@ -256,7 +256,7 @@ export class GPhysics implements IGPhysic {
         obj.Box.getCenter(this.center)
         this.center.y -= obj.Size.y / 2
         this.downcast.set(this.center, this.downDir)
-        const landTouch = this.downcast.intersectObject(this.land!.Meshs)
+        const landTouch = this.downcast.intersectObjects(this.lands)
         if(landTouch.length > 0) {
             return false
         }

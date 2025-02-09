@@ -7,6 +7,7 @@ export class Ocean implements ILoop {
     _geometry: THREE.PlaneGeometry
     _shader: THREE.ShaderMaterial
     mesh: THREE.Mesh
+    meshs = new THREE.Group()
     startTime: number = 0
 
     //=====// Scene //========================================//     
@@ -41,6 +42,7 @@ export class Ocean implements ILoop {
         this.mesh = new THREE.Mesh(this._geometry, this._shader);
         this.mesh.position.y = -2
         this.mesh.scale.multiplyScalar(.1)
+        this.meshs.add(this.mesh)
         this.startTime = Date.now()
     }
 

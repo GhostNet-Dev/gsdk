@@ -66,8 +66,10 @@ export default class Grid {
         const grp = new THREE.Group()
         grp.add(rectMesh, ...lines)
         grp.rotation.x = -Math.PI / 2; // 땅에 평행하게 회전
-        grp.position.x -= size * rectWidth / 2
-        grp.position.z -= size * rectWidth / 2
+        grp.position.x -= size / 2
+        grp.position.z -= size / 2
+        grp.userData.isRoot = true
+        grp.userData.gridMesh = grp
         return grp
     }
 
@@ -175,6 +177,8 @@ export default class Grid {
         grp.rotation.x = -Math.PI / 2; // 땅에 평행하게 회전
         grp.position.x -= size * cols
         grp.position.z -= size * rows
+        grp.userData.isRoot = true
+        grp.userData.gridHexMesh = grp
         return grp
     }
 

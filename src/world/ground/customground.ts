@@ -4,6 +4,7 @@ import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise'; // Three.
 export default class CustomGround {
     obj: THREE.Mesh
     blendMap: THREE.DataTexture
+    shaderMaterial: THREE.MeshStandardMaterial
     planSize = 256
     width = 1024 * 3;
     height = 1024 * 3;
@@ -38,19 +39,21 @@ export default class CustomGround {
         this.blendMap.needsUpdate = true;
 
         this.geometry = new THREE.PlaneGeometry(this.planSize, this.planSize, this.planSize, this.planSize);
-        const shaderMaterial = new THREE.MeshStandardMaterial({
+        this.shaderMaterial = new THREE.MeshStandardMaterial({
             map: this.blendMap,
             side: THREE.DoubleSide,
             transparent: true,
         });
 
         // Mesh 생성 및 추가
-        const ground = new THREE.Mesh(this.geometry, shaderMaterial);
+        const ground = new THREE.Mesh(this.geometry, this.shaderMaterial);
 
         ground.rotation.x = -Math.PI / 2; // 땅에 평행하게 회전
         ground.position.setY(-.01)
         ground.receiveShadow = true
         ground.scale.set(this.scale, this.scale, this.scale)
+        ground.userData.isRoot = true
+        ground.userData.customground = ground
         this.setNonGlow(ground)
         this.obj = ground
     }
@@ -63,14 +66,14 @@ export default class CustomGround {
         this.geometry = geometry
         this.blendMap.needsUpdate = true;
 
-        const shaderMaterial = new THREE.MeshStandardMaterial({
+        this.shaderMaterial = new THREE.MeshStandardMaterial({
             map: this.blendMap,
             side: THREE.DoubleSide,
             transparent: true,
         });
 
         // Mesh 생성 및 추가
-        const ground = new THREE.Mesh(this.geometry, shaderMaterial);
+        const ground = new THREE.Mesh(this.geometry, this.shaderMaterial);
         ground.rotation.x = -Math.PI / 2; // 땅에 평행하게 회전
         ground.position.setY(-.01)
         ground.receiveShadow = true
@@ -242,6 +245,10 @@ export default class CustomGround {
 
         // 텍스처가 변경되었음을 알림
         this.blendMap.needsUpdate = true;
+    }
+    Dispose() {
+        this.shaderMaterial.dispose()
+        this.geometry.dispose()
     }
 }
 

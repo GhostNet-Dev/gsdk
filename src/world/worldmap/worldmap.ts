@@ -16,12 +16,12 @@ import { downDataTextureAndGeometry, loadDataTextureAndGeometry, saveDataTexture
 import { SimpleWater } from '../ocean/simplewater';
 import Grid from './grid';
 import { gui } from '@Glibs/helper/helper';
+import { Char } from '@Glibs/types/assettypes';
 
 
 export default class WorldMap {
     tree = new TreeMaker(this.loader, this.eventCtrl, this.scene)
     grass = new GrassMaker(this.scene, this.eventCtrl)
-    modular = new UltimateModular(this.loader)
     customGround?: CustomGround
     ground?: Ground
     gridLine? :THREE.LineSegments
@@ -32,6 +32,7 @@ export default class WorldMap {
         private loader: Loader,
         private scene: THREE.Scene,
         private eventCtrl: IEventController,
+        private modular: UltimateModular,
         private setNonGlow: Function,
     ) {
 
@@ -57,18 +58,21 @@ export default class WorldMap {
             }
             case MapType.Rect:
                 if (grid){
+                    if (this.gridLine) this.scene.remove(this.gridLine)
                     this.gridLine = this.grid.createGrid(width, gridDivision)
                     map.push(this.gridLine)
                 } 
                 break
             case MapType.RectMesh:
                 if (grid){
+                    if (this.gridMesh) this.scene.remove(this.gridMesh)
                     this.gridMesh = this.grid.createGridMesh(width, gridDivision, color)
                     map.push(this.gridMesh)
                 } 
                 break
             case MapType.Hex:
                 if (grid) {
+                    if (this.gridLine) this.scene.remove(this.gridLine)
                     this.gridLine = this.grid.createOptimizedHexGrid(rows, cols, gridSize)
                     console.log(this.gridLine.position)
                     map.push(this.gridLine)
@@ -76,6 +80,7 @@ export default class WorldMap {
                 break
             case MapType.HexMesh:
                 if (grid) {
+                    if (this.gridMesh) this.scene.remove(this.gridMesh)
                     this.gridMesh = this.grid.createOptimizedHexGridMesh(rows, cols, gridSize, color)
                     console.log(this.gridMesh.position)
                     map.push(this.gridMesh)
@@ -89,7 +94,10 @@ export default class WorldMap {
         return new SkyBoxAllTime(light)
     }
     MakeOcean() {
-        return new Ocean(this.eventCtrl)
+        const obj =  new Ocean(this.eventCtrl)
+        this.setNonGlow(obj.mesh)
+        this.scene.add(obj.mesh)
+        return obj
     }
     MakeMirrorWater() {
         return new SimpleWater(this.scene, this.setNonGlow)
@@ -106,11 +114,72 @@ export default class WorldMap {
     GetTreeInfo(type: FluffyTreeType) {
         return this.tree.GetTreeInfo(type)
     }
+    async MakeModular(pos: THREE.Vector3) {
+        pos.y = 0
+        return this.modular.Create(pos)
+    }
+    async MakeModel(id: Char, pos: THREE.Vector3) {
+        const asset = this.loader.GetAssets(id)
+        const mesh = await asset.CloneModel()
+        mesh.position.copy(pos)
+        console.log(pos)
+        this.scene.add(mesh)
+        return mesh
+    }
     DelGrass(obj: ZeldaGrass) {
         this.grass.Delete(obj)
     }
     DelTree(obj:FluffyTree) {
         this.tree.Delete(obj)
+    }
+    DelMirrorWater(obj: SimpleWater) {
+        obj.Dispose()
+    }
+    DelGround(obj: Ground) {
+        this.scene.remove(obj.obj)
+        obj.Dispose()
+    }
+    DelCustomGround(obj: CustomGround) {
+        this.scene.remove(obj.obj)
+        obj.Dispose()
+    }
+    DelGrid(obj: THREE.Group) {
+        this.scene.remove(obj)
+    }
+    DeleteObj(obj: THREE.Object3D) {
+        let cur = obj
+        while(cur.parent) {
+            if (cur.userData.isRoot == true) {
+                if("grass" in cur.userData) {
+                    this.DelGrass(cur.userData.grass)
+                } else if ("tree" in cur.userData) {
+                    this.DelTree(cur.userData.tree)
+                } else if ("simpleWater" in cur.userData) {
+                    this.DelMirrorWater(cur.userData.simpleWater)
+                } else if ("ground" in cur.userData) {
+                    this.DelGround(cur.userData.ground)
+                } else if ("customground" in cur.userData) {
+                    this.DelCustomGround(cur.userData.customground)
+                } else if ("gridMesh" in cur.userData) {
+                    this.DelGrid(cur.userData.gridMesh)
+                } else if ("gridHexMesh" in cur.userData) {
+                    this.DelGrid(cur.userData.gridHexMesh)
+                }
+            }
+            cur = cur.parent
+        }
+    }
+    getPosition(id: number) {
+        const dummy = new THREE.Object3D()
+        const matrix = new THREE.Matrix4()
+        const instance = this.gridMesh!.children[0] as THREE.InstancedMesh
+        instance.getMatrixAt(id, matrix)
+        dummy.applyMatrix4(matrix)
+        instance.localToWorld(dummy.position)
+        return dummy.position.clone()
+    }
+    CheckPoint(id: number) {
+        return this.getPosition(id)
     }
     async onLoad() {
         const mapData = await loadDataTextureAndGeometry()
