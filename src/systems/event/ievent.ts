@@ -12,6 +12,7 @@ export interface IKeyCommand {
 }
 
 export interface ILoop {
+    LoopId: number
     update(delta: number): void
 }
 

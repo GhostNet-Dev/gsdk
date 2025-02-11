@@ -11,7 +11,7 @@ import { ZeldaGrass } from "../grassmin/zeldagrass";
 import { GrassData, GroundData, MapEntry, MapEntryType, MapType, TreeData } from "./worldmaptypes";
 import CustomGround from "../ground/customground";
 import Ground from "../ground/ground";
-import UltimateModular from "./ultimatemodular";
+import UltimateModular, { ModularType } from "./ultimatemodular";
 import { downDataTextureAndGeometry, loadDataTextureAndGeometry, saveDataTextureAndGeometry } from "./mapstore";
 import { SimpleWater } from '../ocean/simplewater';
 import Grid from './grid';
@@ -32,6 +32,7 @@ export default class WorldMap {
         private loader: Loader,
         private scene: THREE.Scene,
         private eventCtrl: IEventController,
+        private light: THREE.DirectionalLight,
         private modular: UltimateModular,
         private setNonGlow: Function,
     ) {
@@ -94,7 +95,7 @@ export default class WorldMap {
         return new SkyBoxAllTime(light)
     }
     MakeOcean() {
-        const obj =  new Ocean(this.eventCtrl)
+        const obj =  new Ocean(this.eventCtrl, this.light)
         this.setNonGlow(obj.mesh)
         this.scene.add(obj.mesh)
         return obj
@@ -114,9 +115,9 @@ export default class WorldMap {
     GetTreeInfo(type: FluffyTreeType) {
         return this.tree.GetTreeInfo(type)
     }
-    async MakeModular(pos: THREE.Vector3) {
-        pos.y = 0
-        return this.modular.Create(pos)
+    async MakeModular(pos: THREE.Vector3, modType = ModularType.Dirty) {
+        if (pos.y < 0) pos.y = 0
+        return this.modular.Create(pos, modType)
     }
     async MakeModel(id: Char, pos: THREE.Vector3) {
         const asset = this.loader.GetAssets(id)

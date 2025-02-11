@@ -5,6 +5,7 @@ import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 
 export class ZeldaGrass implements ILoop {
+    LoopId = 0
     startTime: number = 0
     grassMaterial?: THREE.ShaderMaterial
 

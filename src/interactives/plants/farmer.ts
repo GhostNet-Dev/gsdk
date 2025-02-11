@@ -34,6 +34,7 @@ export type PlantSet = {
 
 
 export class Farmer implements ILoop {
+    LoopId = 0
     controllable = false
     target?: IPhysicsObject
     targetId?: string

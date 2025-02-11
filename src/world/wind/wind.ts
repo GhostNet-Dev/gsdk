@@ -4,6 +4,7 @@ import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 
 export class Wind implements ILoop {
+    LoopId = 0
     _geometry: THREE.BufferGeometry;
     mesh: THREE.Mesh
     _shaders: THREE.ShaderMaterial[] = [];

@@ -6,6 +6,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 
 export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
+    LoopId = 0
     controls: OrbitControls
     lookTarget = true
     constructor(

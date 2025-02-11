@@ -5,6 +5,7 @@ import { ILoop } from '../event/ievent';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 export default class MiniRenderer implements IViewer, ILoop {
+  LoopId = 0
   private renderer: THREE.WebGLRenderer;
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;

@@ -14,6 +14,7 @@ import { IGPhysic } from "@Glibs/interface/igphysics";
 import IInventory from "@Glibs/interface/iinven";
 
 export class PlayerCtrl implements ILoop {
+    LoopId = 0
     mode: AppMode = AppMode.Play
     keyDownQueue: IKeyCommand[] = []
     keyUpQueue: IKeyCommand[] = []

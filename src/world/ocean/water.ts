@@ -4,6 +4,7 @@ import IEventController, { ILoop } from '@Glibs/interface/ievent';
 import { EventTypes } from '@Glibs/types/globaltypes';
 
 export class Water implements ILoop {
+    LoopId = 0
     pixelRatio = this.renderer.getPixelRatio()
     renderTarget = new THREE.WebGLRenderTarget(
         window.innerWidth * this.pixelRatio,

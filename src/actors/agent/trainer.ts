@@ -10,6 +10,7 @@ import IState, { DistanceState } from './state';
 
 
 export default class Trainer implements ILoop {
+    LoopId = 0
     currentState: number[]
     totalReward = 0;
     step = 0;

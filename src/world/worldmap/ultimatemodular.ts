@@ -3,13 +3,14 @@ import { Loader } from "@Glibs/loader/loader";
 import { Char } from '@Glibs/types/assettypes';
 import { IAsset } from '@Glibs/interface/iasset';
 
-enum ModularType {
+export enum ModularType {
     Dirty,
     Grass
 }
 type CubeEntry = {
     history: number
     type: Char
+    modType: ModularType
     mesh: THREE.Group
 }
 
@@ -17,13 +18,20 @@ export default class UltimateModular {
     assets = new Map<Char, IAsset>()
     platforms: { name: string, value: Char }[] = []
     map = new Map<string, CubeEntry>()
-    lineCenter = Char.UltimateModPlatform2DCubeDirt1x1Center
-    Center =  Char.UltimateModPlatform3DCubeDirtCenterTall
-    topCorner =  Char.UltimateModPlatform3DCubeDirtCornerTall
-    topSide =  Char.UltimateModPlatform3DCubeDirtSideTall
-    side = Char.UltimateModPlatform3DCubeGrassSideCenterTall
-    lineEnd = Char.UltimateModPlatform2DCubeDirt1x1End
-    single = Char.UltimateModPlatformSingleCubeDirt
+    lineCenter = [Char.UltimateModPlatform2DCubeDirt1x1Center,
+        Char.UltimateModPlatform2DCubeGrass1x1Center]
+    Center =  [Char.UltimateModPlatform3DCubeDirtCenterTall, 
+        Char.UltimateModPlatformSingleHeightGrassCenter]
+    topCorner =  [Char.UltimateModPlatform3DCubeDirtCornerTall,
+        Char.UltimateModPlatform3DCubeGrassCornerTall]
+    topSide =  [Char.UltimateModPlatform3DCubeDirtSideTall, 
+        Char.UltimateModPlatform3DCubeGrassSideTall]
+    side = [Char.UltimateModPlatform3DCubeGrassSideCenterTall, 
+        Char.UltimateModPlatform3DCubeGrassSideCenterTall]
+    lineEnd = [Char.UltimateModPlatform2DCubeDirt1x1End, 
+        Char.UltimateModPlatform2DCubeGrass1x1End]
+    single = [Char.UltimateModPlatformSingleCubeDirt,
+        Char.UltimateModPlatformSingleCubeGrass]
     count = 0
 
     constructor(
@@ -48,23 +56,23 @@ export default class UltimateModular {
         })
         return list
     }
-    async Create(pos = new THREE.Vector3()) {
+    async Create(pos = new THREE.Vector3(), modType = ModularType.Dirty) {
         const size = 2
         const key = pos.x + "," + pos.y + "," + pos.z
         const old = this.map.get(key)
         if(old) this.scene.remove(old.mesh)
-        const cub = await this.Build(pos, size)
+        const cub = await this.Build(pos, size, modType)
         cub.history = this.count++
         this.map.set(key, cub)
 
         this.map.forEach(async (v) => {
-            const nCub = await this.Build(v.mesh.position, size, v.mesh, v.type, v.history)
+            const nCub = await this.Build(v.mesh.position, size, v.modType, v.mesh, v.type, v.history)
             v.mesh = nCub.mesh
             v.type = nCub.type
         })
         return cub.mesh
     }
-    async Build(pos: THREE.Vector3, size: number, curMesh?: THREE.Group, curType?: Char, history?: number) {
+    async Build(pos: THREE.Vector3, size: number, modType: ModularType, curMesh?: THREE.Group, curType?: Char, history?: number) {
         const key = pos.x + "," + pos.y + "," + pos.z
         const northKey = pos.x + "," + pos.y + "," + (pos.z + size)
         const southKey = pos.x + "," + pos.y + "," + (pos.z - size)
@@ -80,54 +88,54 @@ export default class UltimateModular {
         const topCub = this.map.get(topKey)
         console.log(`t:${topCub?.type}, s:${southCub?.type}, n:${northCub?.type}, e:${eastCub?.type}, w:${westCub?.type}`)
         const rot = new THREE.Euler()
-        let id: Char = this.single
+        let id: Char = this.single[modType]
         // single일 경우
         if (!northCub && !southCub && !eastCub && !westCub) {
-            id = this.single
+            id = this.single[modType]
         } else if (northCub && !southCub && !eastCub && !westCub) {
-            id = this.lineEnd
+            id = this.lineEnd[modType]
             rot.y = -Math.PI / 2
         } else if (!northCub && southCub && !eastCub && !westCub) {
-            id = this.lineEnd
+            id = this.lineEnd[modType]
             rot.y = Math.PI / 2
         } else if (!northCub && !southCub && eastCub && !westCub) {
-            id = this.lineEnd
+            id = this.lineEnd[modType]
             rot.y = Math.PI
         } else if (!northCub && !southCub && !eastCub && westCub) {
-            id = this.lineEnd
+            id = this.lineEnd[modType]
             // 두개 이상일 경우 -> line
         } else if (northCub && southCub && !eastCub && !westCub) {
-            id = this.lineCenter
+            id = this.lineCenter[modType]
             rot.y = Math.PI / 2
         } else if (!northCub && !southCub && eastCub && westCub) {
-            id = this.lineCenter
+            id = this.lineCenter[modType]
             // 두개 corner
         } else if (northCub && !southCub && eastCub && !westCub) {
-            id = this.topCorner
+            id = this.topCorner[modType]
             rot.y = -Math.PI
         } else if (northCub && !southCub && !eastCub && westCub) {
-            id = this.topCorner
+            id = this.topCorner[modType]
             rot.y = -Math.PI / 2
         } else if (!northCub && southCub && !eastCub && westCub) {
-            id = this.topCorner
+            id = this.topCorner[modType]
         } else if (!northCub && southCub && eastCub && !westCub) {
-            id = this.topCorner
+            id = this.topCorner[modType]
             rot.y = Math.PI / 2
             // 3개 이상일 경우 
         } else if (!northCub && southCub && eastCub && westCub) {
-            id = this.topSide
+            id = this.topSide[modType]
         } else if (northCub && !southCub && eastCub && westCub) {
-            id = this.topSide
+            id = this.topSide[modType]
             rot.y = Math.PI
         } else if (northCub && southCub && !eastCub && westCub) {
-            id = this.topSide
+            id = this.topSide[modType]
             rot.y = -Math.PI / 2
         } else if (northCub && southCub && eastCub && !westCub) {
-            id = this.topSide
+            id = this.topSide[modType]
             rot.y = Math.PI / 2
             // 4개 경우 
         } else if (northCub && southCub && eastCub && westCub) {
-            id = this.Center
+            id = this.Center[modType]
         }
         if (!curMesh || curType != id) {
             if (curType != id && curMesh) this.scene.remove(curMesh)
@@ -137,6 +145,6 @@ export default class UltimateModular {
         curMesh.position.copy(pos)
         curMesh.rotation.copy(rot)
         this.scene.add(curMesh)
-        return { type: id, mesh: curMesh, history: 0}
+        return { type: id, mesh: curMesh, history: 0, modType: modType}
     }
 }

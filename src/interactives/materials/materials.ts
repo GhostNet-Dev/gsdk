@@ -12,6 +12,7 @@ import { AttackOption } from "@Glibs/types/playertypes";
 import * as THREE from "three";
 
 export class Materials implements ILoop {
+    LoopId = 0
     // TODO 
     // loading material
     // respawning

@@ -13,6 +13,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 
 
 export class MonsterCtrl implements ILoop, IMonsterCtrl {
+    LoopId = 0
     IdleSt = new IdleZState(this, this.zombie, this.gphysic)
     AttackSt = new AttackZState(this, this.zombie, this.gphysic, this.eventCtrl, this.property)
     RunSt = new RunZState(this, this.zombie, this.gphysic, this.property)

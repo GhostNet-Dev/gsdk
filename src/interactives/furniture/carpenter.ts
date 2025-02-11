@@ -23,6 +23,7 @@ export type FurnSet = {
 }
 
 export class Carpenter implements ILoop {
+    LoopId = 0
     controllable = false
     target?: IPhysicsObject
     targetId?: string
