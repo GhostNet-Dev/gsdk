@@ -8,7 +8,7 @@ import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 
 class UltimatePack extends AssetModel {
     gltf?:GLTF
-    constructor(loader: Loader, path: string) { 
+    constructor(loader: Loader, path: string, customFn = () => { }) { 
         super(loader, ModelType.Gltf, path, async (gltf: GLTF) => {
             this.gltf = gltf
             this.meshs = gltf.scene
@@ -18,7 +18,8 @@ class UltimatePack extends AssetModel {
                 child.castShadow = true
                 child.receiveShadow = false
             })
-            const scale = 1
+            customFn?.()
+            // const scale = 1
             // this.meshs.children[0].scale.set(scale, scale, scale)
         })
     }
@@ -82,7 +83,7 @@ export class UltimateLvAndMaCannonFab extends UltimatePack implements IAsset {
 }
 export class UltimateLvAndMaCannonBallFab extends UltimatePack implements IAsset {
     get Id() { return Char.UltimateLvAndMaCannonBall }
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Cannonball.gltf") }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Cannonball.gltf", () => { if (this.meshs) this.meshs.children[0].position.y += .5 }) }
 }
 export class UltimateLvAndMaChestFab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaChest}
@@ -166,19 +167,19 @@ export class UltimateLvAndMaNumber9Fab extends UltimatePack implements IAsset {
 }
 export class UltimateLvAndMaPipe90Fab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaPipe90}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Pipe_90.gltf") }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Pipe_90.gltf", () => { if (this.meshs) this.meshs.children[0].position.y += 1 })}
 }
 export class UltimateLvAndMaPipeEndFab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaPipeEnd}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Pipe_End.gltf") }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Pipe_End.gltf", () => { if (this.meshs) this.meshs.children[0].position.y += 1 }) }
 }
 export class UltimateLvAndMaPipeStraightFab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaPipeStraight}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Pipe_Straight.gltf") }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Pipe_Straight.gltf", () => { if (this.meshs) this.meshs.children[0].position.y += 1 }) }
 }
 export class UltimateLvAndMaPipeTFab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaPipeT}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Pipe_T.gltf") }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Pipe_T.gltf", () => { if (this.meshs) this.meshs.children[0].position.y += 1 }) }
 }
 export class UltimateLvAndMaPlantLargeFab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaPlantLarge}

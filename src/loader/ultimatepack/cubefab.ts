@@ -18,8 +18,7 @@ class UltimatePack extends AssetModel {
                 child.castShadow = true
                 child.receiveShadow = false
             })
-            const scale = 1
-            this.meshs.children[0].scale.set(scale, scale, scale)
+            this.meshs.children[0].position.y += 1
         })
     }
     
@@ -39,8 +38,7 @@ class UltimatePack extends AssetModel {
         if (this.meshs == undefined) this.meshs = mesh
         if (this.size) return this.size
 
-        const bbox = new THREE.Box3().setFromObject(this.meshs.children[0])
-        this.size = bbox.getSize(new THREE.Vector3)
+        this.size = new THREE.Vector3(2, 2, 2)
         return this.size 
     }
 }
