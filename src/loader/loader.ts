@@ -89,13 +89,13 @@ export class Loader {
 
     private registerFabs() {
         // 모든 Fab 클래스 등록 (생략 없이)
-        this.fabClasses.set(Char.Male, MaleFab);
-        this.fabClasses.set(Char.Female, FemaleFab);
-        this.fabClasses.set(Char.Hellboy, HellBoyFab);
-        this.fabClasses.set(Char.CuteGirl, CuteGirlFab);
-        this.fabClasses.set(Char.OfficeGirl, OfficeGirlFab);
-        this.fabClasses.set(Char.Wizard, WizardFab);
-        this.fabClasses.set(Char.TwoB, TwoBFab);
+        this.fabClasses.set(Char.CharHumanMale, MaleFab);
+        this.fabClasses.set(Char.CharHumanFemale, FemaleFab);
+        this.fabClasses.set(Char.CharMonHellboy, HellBoyFab);
+        this.fabClasses.set(Char.CharHumanCuteGirl, CuteGirlFab);
+        this.fabClasses.set(Char.CharHumanOfficeGirl, OfficeGirlFab);
+        this.fabClasses.set(Char.CharHumanWizard, WizardFab);
+        this.fabClasses.set(Char.CharHumanTwoB, TwoBFab);
         this.fabClasses.set(Char.Arrow, ArrowFab);
 
         this.fabClasses.set(Char.Mushroom1, MushroomFab);
@@ -106,44 +106,44 @@ export class Loader {
         this.fabClasses.set(Char.Test, TestFab);
 
         // Kenney
-        this.fabClasses.set(Char.KenneyCriminalMale, KenneyCriminalMaleFab);
-        this.fabClasses.set(Char.KenneyCyborgFemale, KenneyCyborgFemaleFab);
-        this.fabClasses.set(Char.KenneyHumanFemale, KenneyHumanFemaleFab);
-        this.fabClasses.set(Char.KenneyHumanMale, KenneyHumanMaleFab);
-        this.fabClasses.set(Char.KenneySkaterFemale, KenneySkaterFemaleFab);
-        this.fabClasses.set(Char.KenneySkaterMale, KenneySkaterMaleFab);
-        this.fabClasses.set(Char.KenneySurvivorFemale, KenneySurvivorFemaleFab);
-        this.fabClasses.set(Char.KenneySurvivorMale, KenneySurvivorMaleFab);
-        this.fabClasses.set(Char.KenneyZombieA, KenneyZombieAFab);
-        this.fabClasses.set(Char.KenneyZombieB, KenneyZombieBFab);
-        this.fabClasses.set(Char.KenneyZombieFemaleA, KenneyZombieFemaleAFab);
-        this.fabClasses.set(Char.KenneyZombieFemaleB, KenneyZombieFemaleBFab);
+        this.fabClasses.set(Char.CharHumanKenneyCriminalMale, KenneyCriminalMaleFab);
+        this.fabClasses.set(Char.CharHumanKenneyCyborgFemale, KenneyCyborgFemaleFab);
+        this.fabClasses.set(Char.CharHumanKenneyHumanFemale, KenneyHumanFemaleFab);
+        this.fabClasses.set(Char.CharHumanKenneyHumanMale, KenneyHumanMaleFab);
+        this.fabClasses.set(Char.CharHumanKenneySkaterFemale, KenneySkaterFemaleFab);
+        this.fabClasses.set(Char.CharHumanKenneySkaterMale, KenneySkaterMaleFab);
+        this.fabClasses.set(Char.CharHumanKenneySurvivorFemale, KenneySurvivorFemaleFab);
+        this.fabClasses.set(Char.CharHumanKenneySurvivorMale, KenneySurvivorMaleFab);
+        this.fabClasses.set(Char.CharMonKenneyZombieA, KenneyZombieAFab);
+        this.fabClasses.set(Char.CharMonKenneyZombieB, KenneyZombieBFab);
+        this.fabClasses.set(Char.CharMonKenneyZombieFemaleA, KenneyZombieFemaleAFab);
+        this.fabClasses.set(Char.CharMonKenneyZombieFemaleB, KenneyZombieFemaleBFab);
 
         // Monster
-        this.fabClasses.set(Char.Zombie, ZombieFab);
-        this.fabClasses.set(Char.Minataur, MinataurFab);
-        this.fabClasses.set(Char.CrabMon, CrabFab);
-        this.fabClasses.set(Char.BatPig, BatPigFab);
-        this.fabClasses.set(Char.BirdMon, BirdMonFab);
-        this.fabClasses.set(Char.WereWolf, WereWolfFab);
-        this.fabClasses.set(Char.Golem, GolemFab);
-        this.fabClasses.set(Char.BigGolem, BigGolemFab);
-        this.fabClasses.set(Char.Snake, SnakeFab);
-        this.fabClasses.set(Char.Viking, VikingFab);
-        this.fabClasses.set(Char.Builder, BuilderFab);
-        this.fabClasses.set(Char.ToadMage, ToadMageFab);
-        this.fabClasses.set(Char.KittenMonk, KittenMonkFab);
-        this.fabClasses.set(Char.Skeleton, SkeletonFab);
-        this.fabClasses.set(Char.Foxish, FoxishFab);
-        this.fabClasses.set(Char.PantherBlackWhite, PantherBlackWhiteFab);
-        this.fabClasses.set(Char.PantherBlue, PantherBlueFab);
-        this.fabClasses.set(Char.PantherRed, PantherRedFab);
+        this.fabClasses.set(Char.CharMonZombie, ZombieFab);
+        this.fabClasses.set(Char.CharMonMinataur, MinataurFab);
+        this.fabClasses.set(Char.CharMonCrab, CrabFab);
+        this.fabClasses.set(Char.CharMonBatPig, BatPigFab);
+        this.fabClasses.set(Char.CharMonBird, BirdMonFab);
+        this.fabClasses.set(Char.CharMonWereWolf, WereWolfFab);
+        this.fabClasses.set(Char.CharMonGolem, GolemFab);
+        this.fabClasses.set(Char.CharMonBigGolem, BigGolemFab);
+        this.fabClasses.set(Char.CharMonSnake, SnakeFab);
+        this.fabClasses.set(Char.CharHumanViking, VikingFab);
+        this.fabClasses.set(Char.CharHumanBuilder, BuilderFab);
+        this.fabClasses.set(Char.CharMonToadMage, ToadMageFab);
+        this.fabClasses.set(Char.CharMonKittenMonk, KittenMonkFab);
+        this.fabClasses.set(Char.CharMonSkeleton, SkeletonFab);
+        this.fabClasses.set(Char.CharAniFoxish, FoxishFab);
+        this.fabClasses.set(Char.CharMonPantherBlackWhite, PantherBlackWhiteFab);
+        this.fabClasses.set(Char.CharMonPantherBlue, PantherBlueFab);
+        this.fabClasses.set(Char.CharAniPantherRed, PantherRedFab);
 
         // KayKit
-        this.fabClasses.set(Char.KayKitSkeletonMage, KayKitSkeletonMageFab);
-        this.fabClasses.set(Char.KayKitSkeletonWarrior, KayKitSkeletonWarriorFab);
-        this.fabClasses.set(Char.KayKitSkeletonRogue, KayKitSkeletonRogueFab);
-        this.fabClasses.set(Char.KayKitSkeletonMinion, KayKitSkeletonMinionFab);
+        this.fabClasses.set(Char.CharMonKayKitSkeletonMage, KayKitSkeletonMageFab);
+        this.fabClasses.set(Char.CharMonKayKitSkeletonWarrior, KayKitSkeletonWarriorFab);
+        this.fabClasses.set(Char.CharMonKayKitSkeletonRogue, KayKitSkeletonRogueFab);
+        this.fabClasses.set(Char.CharMonKayKitSkeletonMinion, KayKitSkeletonMinionFab);
 
         this.fabClasses.set(Char.KayKitSkeletonArrow, KayKitSkeletonArrowFab);
         this.fabClasses.set(Char.KayKitSkeletonArrowBroken, KayKitSkeletonArrowBrokenFab);
@@ -159,11 +159,11 @@ export class Loader {
         this.fabClasses.set(Char.KayKitSkeletonShieldSmall_B, KayKitSkeletonShieldSmallBFab);
         this.fabClasses.set(Char.KayKitSkeletonStaff, KayKitSkeletonStaffFab);
 
-        this.fabClasses.set(Char.KayKitAdvBarbarian, KayKitAdvBarbarianFab);
-        this.fabClasses.set(Char.KayKitAdvKnight, KayKitAdvKnightFab);
-        this.fabClasses.set(Char.KayKitAdvMage, KayKitAdvMageFab);
-        this.fabClasses.set(Char.KayKitAdvRogue, KayKitAdvRogueFab);
-        this.fabClasses.set(Char.KayKitAdvRogueHooded, KayKitAdvRogueHoodedFab);
+        this.fabClasses.set(Char.CharHumanKayKitAdvBarbarian, KayKitAdvBarbarianFab);
+        this.fabClasses.set(Char.CharHumanKayKitAdvKnight, KayKitAdvKnightFab);
+        this.fabClasses.set(Char.CharHumanKayKitAdvMage, KayKitAdvMageFab);
+        this.fabClasses.set(Char.CharHumanKayKitAdvRogue, KayKitAdvRogueFab);
+        this.fabClasses.set(Char.CharHumanKayKitAdvRogueHooded, KayKitAdvRogueHoodedFab);
 
         this.fabClasses.set(Char.KayKitAdvArrow, KayKitArrowFab);
         this.fabClasses.set(Char.KayKitAdvArrowBundle, KayKitArrowBundleFab);
@@ -203,25 +203,25 @@ export class Loader {
         this.fabClasses.set(Char.OceanStarterChest, OceanStarterChestFab);
         this.fabClasses.set(Char.OceanStarterAnemonie, OceanStarterAnemonieFab);
 
-        this.fabClasses.set(Char.OceanDolphin, OceanDolphinFab);
-        this.fabClasses.set(Char.OceanFish1, OceanFish1Fab);
-        this.fabClasses.set(Char.OceanFish2, OceanFish2Fab);
-        this.fabClasses.set(Char.OceanFish3, OceanFish3Fab);
-        this.fabClasses.set(Char.OceanMantaRay, OceanMantaRayFab);
-        this.fabClasses.set(Char.OceanShark, OceanSharkFab);
-        this.fabClasses.set(Char.OceanWhale, OceanWhaleFab);
+        this.fabClasses.set(Char.CharAniOceanDolphin, OceanDolphinFab);
+        this.fabClasses.set(Char.CharAniOceanFish1, OceanFish1Fab);
+        this.fabClasses.set(Char.CharAniOceanFish2, OceanFish2Fab);
+        this.fabClasses.set(Char.CharAniOceanFish3, OceanFish3Fab);
+        this.fabClasses.set(Char.CharAniOceanMantaRay, OceanMantaRayFab);
+        this.fabClasses.set(Char.CharAniOceanShark, OceanSharkFab);
+        this.fabClasses.set(Char.CharAniOceanWhale, OceanWhaleFab);
 
-        this.fabClasses.set(Char.EasypackFrog, EasypackFrogFab);
-        this.fabClasses.set(Char.EasypackRat, EasypackRatFab);
-        this.fabClasses.set(Char.EasypackSnake, EasypackSnakeFab);
-        this.fabClasses.set(Char.EasypackSnakeAngry, EasypackSnakeAngryFab);
-        this.fabClasses.set(Char.EasypackSpider, EasypackSpiderFab);
-        this.fabClasses.set(Char.EasypackWasp, EasypackWaspFab);
-        this.fabClasses.set(Char.EasypackSlime, EasypackSlimeFab);
+        this.fabClasses.set(Char.CharAniEasypackFrog, EasypackFrogFab);
+        this.fabClasses.set(Char.CharAniEasypackRat, EasypackRatFab);
+        this.fabClasses.set(Char.CharAniEasypackSnake, EasypackSnakeFab);
+        this.fabClasses.set(Char.CharAniEasypackSnakeAngry, EasypackSnakeAngryFab);
+        this.fabClasses.set(Char.CharAniEasypackSpider, EasypackSpiderFab);
+        this.fabClasses.set(Char.CharAniEasypackWasp, EasypackWaspFab);
+        this.fabClasses.set(Char.CharMonEasypackSlime, EasypackSlimeFab);
 
 
-        this.fabClasses.set(Char.UltimateChar, UltimateCharFab);
-        this.fabClasses.set(Char.UltimateCharGun, UltimateCharGunFab);
+        this.fabClasses.set(Char.CharHumanUltimate, UltimateCharFab);
+        this.fabClasses.set(Char.CharHumanUltimateGun, UltimateCharGunFab);
         this.fabClasses.set(Char.UltimateCubeBricks, UltimateCubeBricksFab);
         this.fabClasses.set(Char.UltimateCubeCrate, UltimateCubeCrateFab);
         this.fabClasses.set(Char.UltimateCubeDefault, UltimateCubeDefaultFab);
@@ -229,10 +229,10 @@ export class Loader {
         this.fabClasses.set(Char.UltimateCubeExclamation, UltimateCubeExclamationFab);
         this.fabClasses.set(Char.UltimateCubeGrassSingle, UltimateCubeGrassSingleFab);
         this.fabClasses.set(Char.UltimateCubeQuestion, UltimateCubeQuestionFab);
-        this.fabClasses.set(Char.UltimateEnermyBee, UltimateEnermyBeeFab);
-        this.fabClasses.set(Char.UltimateEnermyCrab, UltimateEnermyCrabFab);
-        this.fabClasses.set(Char.UltimateEnermy, UltimateEnermyFab);
-        this.fabClasses.set(Char.UltimateEnermySkull, UltimateEnermySkullFab);
+        this.fabClasses.set(Char.CharMonUltimateEnermyBee, UltimateEnermyBeeFab);
+        this.fabClasses.set(Char.CharMonUltimateEnermyCrab, UltimateEnermyCrabFab);
+        this.fabClasses.set(Char.CharMonUltimateEnermy, UltimateEnermyFab);
+        this.fabClasses.set(Char.CharMonUltimateEnermySkull, UltimateEnermySkullFab);
         this.fabClasses.set(Char.UltimateLvAndMaArrow, UltimateLvAndMaArrowFab);
         this.fabClasses.set(Char.UltimateLvAndMaArrowSide, UltimateLvAndMaArrowSideFab);
         this.fabClasses.set(Char.UltimateLvAndMaArrowUp, UltimateLvAndMaArrowUpFab);
@@ -331,20 +331,20 @@ export class Loader {
         this.fabClasses.set(Char.UltimatePAPThunder, UltimatePAPThunderFab);
 
         // Pet
-        this.fabClasses.set(Char.Bilby, BilbyFab);
-        this.fabClasses.set(Char.Dog, DogFab);
-        this.fabClasses.set(Char.Cat, CatFab);
-        this.fabClasses.set(Char.Bee, BeeFab);
-        this.fabClasses.set(Char.PetSnake, PetSnakeFab);
+        this.fabClasses.set(Char.CharAniBilby, BilbyFab);
+        this.fabClasses.set(Char.CharAniDog, DogFab);
+        this.fabClasses.set(Char.CharAniCat, CatFab);
+        this.fabClasses.set(Char.CharAniBee, BeeFab);
+        this.fabClasses.set(Char.CharAniPetSnake, PetSnakeFab);
 
         // Farm Pet
-        this.fabClasses.set(Char.FarmPetCow, FarmPetCowFab);
-        this.fabClasses.set(Char.FarmPetHorse, FarmPetHorseFab);
-        this.fabClasses.set(Char.FarmPetLlama, FarmPetLlamaFab);
-        this.fabClasses.set(Char.FarmPetPig, FarmPetPigFab);
-        this.fabClasses.set(Char.FarmPetPug, FarmPetPugFab);
-        this.fabClasses.set(Char.FarmPetSheep, FarmPetSheepFab);
-        this.fabClasses.set(Char.FarmPetZebra, FarmPetZebraFab);
+        this.fabClasses.set(Char.CharAniFarmPetCow, FarmPetCowFab);
+        this.fabClasses.set(Char.CharAniFarmPetHorse, FarmPetHorseFab);
+        this.fabClasses.set(Char.CharAniFarmPetLlama, FarmPetLlamaFab);
+        this.fabClasses.set(Char.CharAniFarmPetPig, FarmPetPigFab);
+        this.fabClasses.set(Char.CharAniFarmPetPug, FarmPetPugFab);
+        this.fabClasses.set(Char.CharAniFarmPetSheep, FarmPetSheepFab);
+        this.fabClasses.set(Char.CharAniFarmPetZebra, FarmPetZebraFab);
 
         // Stup
         this.fabClasses.set(Char.Bat, BatFab);
@@ -396,7 +396,7 @@ export class Loader {
             const FabClass = this.fabClasses.get(id);
             if (!FabClass) {
                 console.warn(`Fab class for ${id} not found. Using default MaleFab.`);
-                return this.GetAssets(Char.Male);
+                return this.GetAssets(Char.CharHumanMale);
             }
             const instance = new FabClass(this);
             this.fabInstances.set(id, instance);

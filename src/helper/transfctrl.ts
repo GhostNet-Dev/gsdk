@@ -62,8 +62,9 @@ export default class TransformCtrl {
             this.dom.innerText = this.StatusToString()
         })
         this.transformControls.addEventListener("objectChange", () => {
-            if (this.selectedObject && this.mode == TransCtrlMode.Rotate) {
-                const r = this.selectedObject.rotation
+            if (this.selectedObject) {
+                const r = (this.mode == TransCtrlMode.Rotate) ? this.selectedObject.rotation :
+                    (this.mode == TransCtrlMode.Scale) ? this.selectedObject.scale : { x: 0, y: 0, z: 0 }
                 r.x = (r.x < 0) ? 0.001 : r.x
                 r.y = (r.y < 0) ? 0.001 : r.y
                 r.z = (r.z < 0) ? 0.001 : r.z

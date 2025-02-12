@@ -10,7 +10,7 @@ import GUI from "lil-gui";
 export class MaleFab extends AssetModel implements IAsset {
     gltf?:GLTF
 
-    get Id() {return Char.Male}
+    get Id() {return Char.CharHumanMale}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Gltf, "assets/male/male.gltf", async (gltf: GLTF) => {

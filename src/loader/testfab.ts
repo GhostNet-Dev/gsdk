@@ -6,7 +6,7 @@ import { Ani, Bind, Char, ModelType } from "./assettypes";
 
 
 export class TestFab extends AssetModel implements IAsset {
-    get Id() {return Char.Female}
+    get Id() {return Char.CharHumanFemale}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Fbx, "assets/test/Animated.fbx", async (meshs: THREE.Group) => {

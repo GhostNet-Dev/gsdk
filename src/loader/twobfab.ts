@@ -6,7 +6,7 @@ import { Ani, Bind, Char, ModelType } from "./assettypes";
 
 
 export class TwoBFab extends AssetModel implements IAsset {
-    get Id() {return Char.TwoB}
+    get Id() {return Char.CharHumanTwoB}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Fbx, "assets/2b/2b01.fbx", async (meshs: THREE.Group) => {

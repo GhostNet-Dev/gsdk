@@ -45,19 +45,19 @@ class UltimatePack extends AssetModel {
     }
 }
 export class UltimateEnermyFab extends UltimatePack implements IAsset {
-    get Id() {return Char.UltimateEnermy}
+    get Id() {return Char.CharMonUltimateEnermy}
     constructor(loader: Loader) { super(loader, "assets/ultimatepack/Enermies/Enermy.gltf") }
 }
 
 export class UltimateEnermyBeeFab extends UltimatePack implements IAsset {
-    get Id() {return Char.UltimateEnermyBee}
+    get Id() {return Char.CharMonUltimateEnermyBee}
     constructor(loader: Loader) { super(loader, "assets/ultimatepack/Enermies/Bee.gltf") }
 }
 export class UltimateEnermyCrabFab extends UltimatePack implements IAsset {
-    get Id() {return Char.UltimateEnermyCrab}
+    get Id() {return Char.CharMonUltimateEnermyCrab}
     constructor(loader: Loader) { super(loader, "assets/ultimatepack/Enermies/Crab.gltf") }
 }
 export class UltimateEnermySkullFab extends UltimatePack implements IAsset {
-    get Id() {return Char.UltimateEnermySkull}
+    get Id() {return Char.CharMonUltimateEnermySkull}
     constructor(loader: Loader) { super(loader, "assets/ultimatepack/Enermies/Skull.gltf") }
 }

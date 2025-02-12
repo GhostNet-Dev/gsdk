@@ -8,7 +8,7 @@ import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 export class FoxishFab extends AssetModel implements IAsset {
     gltf?:GLTF
 
-    get Id() {return Char.Foxish}
+    get Id() {return Char.CharAniFoxish}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Gltf, "assets/monster/fox-ish_arctic_animated.glb", async (gltf: GLTF) => {

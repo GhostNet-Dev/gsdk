@@ -45,30 +45,30 @@ class FarmAnimalPack extends AssetModel {
     }
 }
 export class FarmPetCowFab extends FarmAnimalPack implements IAsset {
-    get Id() {return Char.FarmPetCow}
+    get Id() {return Char.CharAniFarmPetCow}
     constructor(loader: Loader) { super(loader, "assets/farmanimals/Cow.fbx") }
 }
 export class FarmPetHorseFab extends FarmAnimalPack implements IAsset {
-    get Id() {return Char.FarmPetHorse}
+    get Id() {return Char.CharAniFarmPetHorse}
     constructor(loader: Loader) { super(loader, "assets/farmanimals/Horse.fbx") }
 }
 export class FarmPetLlamaFab extends FarmAnimalPack implements IAsset {
-    get Id() {return Char.FarmPetLlama}
+    get Id() {return Char.CharAniFarmPetLlama}
     constructor(loader: Loader) { super(loader, "assets/farmanimals/Llama.fbx") }
 }
 export class FarmPetPigFab extends FarmAnimalPack implements IAsset {
-    get Id() {return Char.FarmPetPig}
+    get Id() {return Char.CharAniFarmPetPig}
     constructor(loader: Loader) { super(loader, "assets/farmanimals/Pig.fbx") }
 }
 export class FarmPetPugFab extends FarmAnimalPack implements IAsset {
-    get Id() {return Char.FarmPetPug}
+    get Id() {return Char.CharAniFarmPetPug}
     constructor(loader: Loader) { super(loader, "assets/farmanimals/Pug.fbx") }
 }
 export class FarmPetSheepFab extends FarmAnimalPack implements IAsset {
-    get Id() {return Char.FarmPetSheep}
+    get Id() {return Char.CharAniFarmPetSheep}
     constructor(loader: Loader) { super(loader, "assets/farmanimals/Sheep.fbx") }
 }
 export class FarmPetZebraFab extends FarmAnimalPack implements IAsset {
-    get Id() {return Char.FarmPetZebra}
+    get Id() {return Char.CharAniFarmPetZebra}
     constructor(loader: Loader) { super(loader, "assets/farmanimals/Zebra.fbx") }
 }

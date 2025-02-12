@@ -11,7 +11,7 @@ import { metalRough } from '@gltf-transform/functions';
 export class KittenMonkFab extends AssetModel implements IAsset {
     gltf?:GLTF
 
-    get Id() {return Char.Viking}
+    get Id() {return Char.CharHumanViking}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.GltfParser, "", async (resolve: (value: THREE.Group<THREE.Object3DEventMap> | PromiseLike<THREE.Group<THREE.Object3DEventMap>>) => void) => {

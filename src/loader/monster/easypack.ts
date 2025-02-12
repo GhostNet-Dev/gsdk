@@ -56,30 +56,30 @@ Spider.fbx
 Wasp.fbx
 */
 export class EasypackFrogFab extends EasyMonsterPack implements IAsset {
-    get Id() {return Char.EasypackFrog}
+    get Id() {return Char.CharAniEasypackFrog}
     constructor(loader: Loader) { super(loader, "assets/monster/easypack/Frog.fbx") }
 }
 export class EasypackRatFab extends EasyMonsterPack implements IAsset {
-    get Id() {return Char.EasypackRat}
+    get Id() {return Char.CharAniEasypackRat}
     constructor(loader: Loader) { super(loader, "assets/monster/easypack/Rat.fbx") }
 }
 export class EasypackSnakeFab extends EasyMonsterPack implements IAsset {
-    get Id() {return Char.EasypackSnake}
+    get Id() {return Char.CharAniEasypackSnake}
     constructor(loader: Loader) { super(loader, "assets/monster/easypack/Snake.fbx") }
 }
 export class EasypackSnakeAngryFab extends EasyMonsterPack implements IAsset {
-    get Id() {return Char.EasypackSnakeAngry}
+    get Id() {return Char.CharAniEasypackSnakeAngry}
     constructor(loader: Loader) { super(loader, "assets/monster/easypack/Snake_angry.fbx") }
 }
 export class EasypackSpiderFab extends EasyMonsterPack implements IAsset {
-    get Id() {return Char.EasypackSpider}
+    get Id() {return Char.CharAniEasypackSpider}
     constructor(loader: Loader) { super(loader, "assets/monster/easypack/Spider.fbx") }
 }
 export class EasypackWaspFab extends EasyMonsterPack implements IAsset {
-    get Id() {return Char.EasypackWasp}
+    get Id() {return Char.CharAniEasypackWasp}
     constructor(loader: Loader) { super(loader, "assets/monster/easypack/Wasp.fbx") }
 }
 export class EasypackSlimeFab extends EasyMonsterPack implements IAsset {
-    get Id() {return Char.EasypackSlime}
+    get Id() {return Char.CharMonEasypackSlime}
     constructor(loader: Loader) { super(loader, "assets/monster/easypack/Slime.fbx") }
 }

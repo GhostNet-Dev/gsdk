@@ -56,14 +56,14 @@ panther_red_animated.glb
 */
 
 export class PantherBlackWhiteFab extends Pantherpack implements IAsset {
-    get Id() {return Char.PantherBlackWhite}
+    get Id() {return Char.CharMonPantherBlackWhite}
     constructor(loader: Loader) { super(loader, "assets/monster/panther_black_and_white_animated.glb") }
 }
 export class PantherBlueFab extends Pantherpack implements IAsset {
-    get Id() {return Char.PantherBlue}
+    get Id() {return Char.CharMonPantherBlue}
     constructor(loader: Loader) { super(loader, "assets/monster/panther_blue_animated.glb") }
 }
 export class PantherRedFab extends Pantherpack implements IAsset {
-    get Id() {return Char.PantherRed}
+    get Id() {return Char.CharAniPantherRed}
     constructor(loader: Loader) { super(loader, "assets/monster/panther_red_animated.glb") }
 }

@@ -9,7 +9,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.Bee, {
             id: MonsterId.Bee,
             type: MonsterType.Insect,
-            model: Char.Bee,
+            model: Char.CharAniBee,
             health: 10,
             speed: 1,
             damageMin:1,
@@ -19,7 +19,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.Zombie, {
             id: MonsterId.Zombie,
             type: MonsterType.Undead,
-            model: Char.Zombie,
+            model: Char.CharMonZombie,
             health: 10,
             speed: 1,
             damageMin:1,
@@ -33,7 +33,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.Minotaur, {
             id: MonsterId.Minotaur,
             type: MonsterType.Beast,
-            model: Char.Minataur,
+            model: Char.CharMonMinataur,
             health: 10,
             speed: 1,
             damageMin:1,
@@ -47,7 +47,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.Batpig, {
             id: MonsterId.Batpig,
             type: MonsterType.Beast,
-            model: Char.BatPig,
+            model: Char.CharMonBatPig,
             health: 5,
             speed: 3,
             damageMin:1,
@@ -61,7 +61,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.Bilby, {
             id: MonsterId.Bilby,
             type: MonsterType.Beast,
-            model: Char.Bilby,
+            model: Char.CharAniBilby,
             health: 10,
             speed: 1,
             damageMin:1,
@@ -75,7 +75,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.Birdmon, {
             id: MonsterId.Birdmon,
             type: MonsterType.Beast,
-            model: Char.BirdMon,
+            model: Char.CharMonBird,
             health: 6,
             speed: 5,
             damageMin:1,
@@ -89,7 +89,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.Crab, {
             id: MonsterId.Crab,
             type: MonsterType.Beast,
-            model: Char.CrabMon,
+            model: Char.CharMonCrab,
             health: 8,
             speed: 1,
             damageMin:4,
@@ -103,7 +103,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.Builder, {
             id: MonsterId.Builder,
             type: MonsterType.Warrior,
-            model: Char.Builder,
+            model: Char.CharHumanBuilder,
             health: 10,
             speed: 4,
             damageMin:1,
@@ -117,7 +117,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.Golem, {
             id: MonsterId.Golem,
             type: MonsterType.Element,
-            model: Char.Golem,
+            model: Char.CharMonGolem,
             health: 10,
             speed: 1,
             damageMin:1,
@@ -131,7 +131,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.BigGolem, {
             id: MonsterId.BigGolem,
             type: MonsterType.Element,
-            model: Char.BigGolem,
+            model: Char.CharMonBigGolem,
             health: 10,
             speed: 4,
             damageMin:1,
@@ -145,7 +145,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.KittenMonk, {
             id: MonsterId.KittenMonk,
             type: MonsterType.Beast,
-            model: Char.KittenMonk,
+            model: Char.CharMonKittenMonk,
             health: 10,
             speed: 4,
             damageMin:4,
@@ -159,7 +159,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.Skeleton, {
             id: MonsterId.Skeleton,
             type: MonsterType.Undead,
-            model: Char.Skeleton,
+            model: Char.CharMonSkeleton,
             health: 10,
             speed: 3,
             damageMin:1,
@@ -172,7 +172,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.Snake, {
             id: MonsterId.Snake,
             type: MonsterType.Beast,
-            model: Char.Snake,
+            model: Char.CharMonSnake,
             health: 10,
             speed: 4,
             damageMin:1,
@@ -185,7 +185,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.ToadMage, {
             id: MonsterId.ToadMage,
             type: MonsterType.Beast,
-            model: Char.ToadMage,
+            model: Char.CharMonToadMage,
             health: 10,
             speed: 5,
             damageMin:1,
@@ -199,7 +199,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.Viking, {
             id: MonsterId.Viking,
             type: MonsterType.Warrior,
-            model: Char.Viking,
+            model: Char.CharHumanViking,
             health: 10,
             speed: 4,
             damageMin:1,
@@ -212,7 +212,7 @@ export class MonsterDb {
         this.monDb.set(MonsterId.WereWolf, {
             id: MonsterId.WereWolf,
             type: MonsterType.Beast,
-            model: Char.WereWolf,
+            model: Char.CharMonWereWolf,
             health: 10,
             speed: 4,
             damageMin:8,

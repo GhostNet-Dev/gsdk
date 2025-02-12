@@ -10,7 +10,7 @@ import GUI from "lil-gui";
 export class HellBoyFab extends AssetModel implements IAsset {
     gltf?:GLTF
 
-    get Id() {return Char.Hellboy}
+    get Id() {return Char.CharMonHellboy}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Fbx, "assets/cutemonster/monster.fbx", async (meshs: THREE.Group) => {

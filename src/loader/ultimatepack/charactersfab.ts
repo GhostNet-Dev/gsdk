@@ -45,10 +45,10 @@ class UltimatePack extends AssetModel {
     }
 }
 export class UltimateCharFab extends UltimatePack implements IAsset {
-    get Id() {return Char.UltimateChar}
+    get Id() {return Char.CharHumanUltimate}
     constructor(loader: Loader) { super(loader, "assets/ultimatepack/Character/Character.gltf") }
 }
 export class UltimateCharGunFab extends UltimatePack implements IAsset {
-    get Id() {return Char.UltimateCharGun}
+    get Id() {return Char.CharHumanUltimateGun}
     constructor(loader: Loader) { super(loader, "assets/ultimatepack/Character/Character_Gun.gltf") }
 }

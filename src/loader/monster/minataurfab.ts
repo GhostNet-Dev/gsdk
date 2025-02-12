@@ -8,7 +8,7 @@ import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 export class MinataurFab extends AssetModel implements IAsset {
     gltf?:GLTF
 
-    get Id() {return Char.Minataur}
+    get Id() {return Char.CharMonMinataur}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Gltf, "assets/monster/minataur_low_poly.glb", async (gltf: GLTF) => {

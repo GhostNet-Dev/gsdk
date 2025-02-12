@@ -57,50 +57,50 @@ class CharactersPack extends AssetModel {
     }
 }
 export class KenneyCriminalMaleFab extends CharactersPack implements IAsset {
-    get Id() {return Char.KenneyCriminalMale}
+    get Id() {return Char.CharHumanKenneyCriminalMale}
     constructor(loader: Loader) { super(loader, "assets/kenney/characters/criminalMaleA.png") }
 }
 export class KenneyCyborgFemaleFab extends CharactersPack implements IAsset {
-    get Id() {return Char.KenneyCyborgFemale}
+    get Id() {return Char.CharHumanKenneyCyborgFemale}
     constructor(loader: Loader) { super(loader, "assets/kenney/characters/cyborgFemaleA.png") }
 }
 export class KenneyHumanFemaleFab extends CharactersPack implements IAsset {
-    get Id() {return Char.KenneyHumanFemale}
+    get Id() {return Char.CharHumanKenneyHumanFemale}
     constructor(loader: Loader) { super(loader, "assets/kenney/characters/humanFemaleA.png") }
 }
 export class KenneyHumanMaleFab extends CharactersPack implements IAsset {
-    get Id() {return Char.KenneyHumanMale}
+    get Id() {return Char.CharHumanKenneyHumanMale}
     constructor(loader: Loader) { super(loader, "assets/kenney/characters/humanMaleA.png") }
 }
 export class KenneySkaterFemaleFab extends CharactersPack implements IAsset {
-    get Id() {return Char.KenneySkaterFemale}
+    get Id() {return Char.CharHumanKenneySkaterFemale}
     constructor(loader: Loader) { super(loader, "assets/kenney/characters/skaterFemaleA.png") }
 }
 export class KenneySkaterMaleFab extends CharactersPack implements IAsset {
-    get Id() {return Char.KenneySkaterMale}
+    get Id() {return Char.CharHumanKenneySkaterMale}
     constructor(loader: Loader) { super(loader, "assets/kenney/characters/skaterMaleA.png") }
 }
 export class KenneySurvivorFemaleFab extends CharactersPack implements IAsset {
-    get Id() {return Char.KenneySurvivorFemale}
+    get Id() {return Char.CharHumanKenneySurvivorFemale}
     constructor(loader: Loader) { super(loader, "assets/kenney/characters/survivorFemaleA.png") }
 }
 export class KenneySurvivorMaleFab extends CharactersPack implements IAsset {
-    get Id() {return Char.KenneySurvivorMale}
+    get Id() {return Char.CharHumanKenneySurvivorMale}
     constructor(loader: Loader) { super(loader, "assets/kenney/characters/survivorMaleB.png") }
 }
 export class KenneyZombieAFab extends CharactersPack implements IAsset {
-    get Id() {return Char.KenneyZombieA}
+    get Id() {return Char.CharMonKenneyZombieA}
     constructor(loader: Loader) { super(loader, "assets/kenney/characters/zombieA.png") }
 }
 export class KenneyZombieBFab extends CharactersPack implements IAsset {
-    get Id() {return Char.KenneyZombieB}
+    get Id() {return Char.CharMonKenneyZombieB}
     constructor(loader: Loader) { super(loader, "assets/kenney/characters/zombieC.png") }
 }
 export class KenneyZombieFemaleAFab extends CharactersPack implements IAsset {
-    get Id() {return Char.KenneyZombieFemaleA}
+    get Id() {return Char.CharMonKenneyZombieFemaleA}
     constructor(loader: Loader) { super(loader, "assets/kenney/characters/zombieFemaleA.png") }
 }
 export class KenneyZombieFemaleBFab extends CharactersPack implements IAsset {
-    get Id() {return Char.KenneyZombieFemaleB}
+    get Id() {return Char.CharMonKenneyZombieFemaleB}
     constructor(loader: Loader) { super(loader, "assets/kenney/characters/zombieMaleA.png") }
 }

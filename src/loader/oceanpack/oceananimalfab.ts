@@ -45,42 +45,42 @@ class OceanAnimalPack extends AssetModel {
     }
 }
 export class OceanDolphinFab extends OceanAnimalPack implements IAsset {
-    get Id() {return Char.OceanDolphin}
+    get Id() {return Char.CharAniOceanDolphin}
     constructor(loader: Loader) { super(loader, "assets/oceans/animalpack/Dolphin.fbx") }
 }
 
 
 export class OceanFish1Fab extends OceanAnimalPack implements IAsset {
-    get Id() {return Char.OceanFish1}
+    get Id() {return Char.CharAniOceanFish1}
     constructor(loader: Loader) { super(loader, "assets/oceans/animalpack/Fish1.fbx") }
 }
 
 
 export class OceanFish2Fab extends OceanAnimalPack implements IAsset {
-    get Id() {return Char.OceanFish2}
+    get Id() {return Char.CharAniOceanFish2}
     constructor(loader: Loader) { super(loader, "assets/oceans/animalpack/Fish2.fbx") }
 }
 
 
 export class OceanFish3Fab extends OceanAnimalPack implements IAsset {
-    get Id() {return Char.OceanFish3}
+    get Id() {return Char.CharAniOceanFish3}
     constructor(loader: Loader) { super(loader, "assets/oceans/animalpack/Fish3.fbx") }
 }
 
 
 export class OceanMantaRayFab extends OceanAnimalPack implements IAsset {
-    get Id() {return Char.OceanMantaRay}
+    get Id() {return Char.CharAniOceanMantaRay}
     constructor(loader: Loader) { super(loader, "assets/oceans/animalpack/Mantaray.fbx") }
 }
 
 
 export class OceanSharkFab extends OceanAnimalPack implements IAsset {
-    get Id() {return Char.OceanShark}
+    get Id() {return Char.CharAniOceanShark}
     constructor(loader: Loader) { super(loader, "assets/oceans/animalpack/Shark.fbx") }
 }
 
 
 export class OceanWhaleFab extends OceanAnimalPack implements IAsset {
-    get Id() {return Char.OceanWhale}
+    get Id() {return Char.CharAniOceanWhale}
     constructor(loader: Loader) { super(loader, "assets/oceans/animalpack/Whale.fbx") }
 }

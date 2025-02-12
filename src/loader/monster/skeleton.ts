@@ -8,7 +8,7 @@ import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 export class SkeletonFab extends AssetModel implements IAsset {
     gltf?:GLTF
 
-    get Id() {return Char.Skeleton}
+    get Id() {return Char.CharMonSkeleton}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Gltf, "assets/monster/skeleton.glb", async (gltf: GLTF) => {
