@@ -28,7 +28,7 @@ class CharactersPack extends AssetModel {
             this.meshs.scale.multiplyScalar(0.01)
             await this.LoadAnimation("assets/kenney/characters/idle.fbx", Ani.Idle)
             await this.LoadAnimation("assets/kenney/characters/jump.fbx", Ani.Jump)
-            await this.LoadAnimation("assets/kenney/characters/run.fbx", Ani.Run)
+            await this.LoadAnimation("assets/kenney/characters/Running.fbx", Ani.Run)
             await this.LoadAnimation("assets/kenney/characters/Dying.fbx", Ani.Dying)
             // const scale = 1
             // this.meshs.children[0].scale.set(scale, scale, scale)
