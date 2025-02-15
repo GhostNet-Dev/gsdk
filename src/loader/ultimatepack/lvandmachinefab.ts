@@ -59,7 +59,7 @@ export class UltimateLvAndMaArrowUpFab extends UltimatePack implements IAsset {
 }
 export class UltimateLvAndMaBombFab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaBomb}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Bomb.gltf") }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Bomb.gltf", () => { if (this.meshs) this.meshs.children[0].position.y += 1 }) }
 }
 export class UltimateLvAndMaBouncerFab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaBouncer}

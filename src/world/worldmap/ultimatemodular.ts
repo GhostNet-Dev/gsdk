@@ -61,6 +61,8 @@ export default class UltimateModular {
         const key = pos.x + "," + pos.y + "," + pos.z
         const old = this.map.get(key)
         if(old) this.scene.remove(old.mesh)
+        this.RebuildKey()
+
         const cub = await this.Build(pos, size, modType)
         cub.history = this.count++
         this.map.set(key, cub)
@@ -71,6 +73,14 @@ export default class UltimateModular {
             v.type = nCub.type
         })
         return cub.mesh
+    }
+    RebuildKey() {
+        const newMap = new Map<string, CubeEntry>()
+        this.map.forEach(async (v) => {
+            const k = v.mesh.position.x + "," + v.mesh.position.y + "," + v.mesh.position.z
+            newMap.set(k, v)
+        })
+        this.map = newMap
     }
     async Build(pos: THREE.Vector3, size: number, modType: ModularType, curMesh?: THREE.Group, curType?: Char, history?: number) {
         const key = pos.x + "," + pos.y + "," + pos.z

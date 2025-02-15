@@ -43,17 +43,17 @@ export default class WorldMap {
         width = 1024 * 3, height = 1024 * 3, size = 256, rows = 10, cols = 10,
         color = 0xA6C954,
     } ={}) {
-        const map: THREE.Object3D[] = []
+        let map: THREE.Object3D | undefined = undefined
         switch(mapType) {
             case MapType.Custom: {
                 const obj = new CustomGround(this.setNonGlow, { width: width, height: height, planeSize: size })
-                map.push(obj.obj)
+                map = obj.obj
                 this.customGround = obj
                 break
             }
             case MapType.Free: {
                 const obj = new Ground(this.setNonGlow, { width: width, height: height, planeSize: size })
-                map.push(obj.obj)
+                map = obj.obj
                 this.ground = obj
                 break
             }
@@ -61,14 +61,14 @@ export default class WorldMap {
                 if (grid){
                     if (this.gridLine) this.scene.remove(this.gridLine)
                     this.gridLine = this.grid.createGrid(width, gridDivision)
-                    map.push(this.gridLine)
+                    map = this.gridLine
                 } 
                 break
             case MapType.RectMesh:
                 if (grid){
                     if (this.gridMesh) this.scene.remove(this.gridMesh)
                     this.gridMesh = this.grid.createGridMesh(width, gridDivision, color)
-                    map.push(this.gridMesh)
+                    map = this.gridMesh
                 } 
                 break
             case MapType.Hex:
@@ -76,7 +76,7 @@ export default class WorldMap {
                     if (this.gridLine) this.scene.remove(this.gridLine)
                     this.gridLine = this.grid.createOptimizedHexGrid(rows, cols, gridSize)
                     console.log(this.gridLine.position)
-                    map.push(this.gridLine)
+                    map = this.gridLine
                 }
                 break
             case MapType.HexMesh:
@@ -84,11 +84,13 @@ export default class WorldMap {
                     if (this.gridMesh) this.scene.remove(this.gridMesh)
                     this.gridMesh = this.grid.createOptimizedHexGridMesh(rows, cols, gridSize, color)
                     console.log(this.gridMesh.position)
-                    map.push(this.gridMesh)
+                    map = this.gridMesh
                 }
                 break
         }
-        this.scene.add(...map)
+        if(!map) throw new Error("not defined");
+        
+        this.scene.add(map)
         return map
     }
     MakeSky(light: THREE.DirectionalLight) {
@@ -144,7 +146,7 @@ export default class WorldMap {
         this.scene.remove(obj.obj)
         obj.Dispose()
     }
-    DelGrid(obj: THREE.Group) {
+    DelGrid(obj: THREE.Object3D) {
         this.scene.remove(obj)
     }
     DeleteObj(obj: THREE.Object3D) {

@@ -17,30 +17,19 @@ export class SimpleWater {
         this.waterReflector.rotation.x = -Math.PI * 0.5;
         this.waterReflector.position.y = -1
         this.waterReflector.userData.isRoot = true
-        this.waterReflector.userData.simpleWater = this.waterReflector
+        this.waterReflector.userData.simpleWater = this
         nonglowfn?.(this.waterReflector)
-        this.scene.add(this.waterReflector)
         this.meshs.add(this.waterReflector)
-
-        /*
-        const waterGeometry = new THREE.PlaneGeometry(256, 256);
-        const material = new THREE.MeshStandardMaterial({ 
-            color: 0x14c6a5,
-            blending: THREE.CustomBlending,
-            transparent: true,
-            //opacity: .5
-        })
-        this.water = new THREE.Mesh(waterGeometry, material);
-        this.water.rotation.x = -Math.PI * 0.5;
-        this.water.position.y = -.9
-        nonglowfn?.(this.water)
-        //this.scene.add(this.water)
-        */
+        this.scene.add(this.meshs)
     }
     Dispose() {
         if (!this.waterReflector) return
-        this.scene.remove(this.waterReflector)
-        this.waterReflector.dispose()
-        this.waterGeometry.dispose()
+        if (this.scene.children.indexOf(this.meshs) > -1) {
+            this.scene.remove(this.meshs)
+            this.waterReflector.dispose()
+            this.waterGeometry.dispose()
+        } else {
+            throw new Error("bug!");
+        }
     }
 }

@@ -102,6 +102,7 @@ export default class TransformCtrl {
     }
     Enable() {
         if (!this.enable) {
+            console.log("transform Control Enable")
             window.addEventListener('click', this.onMouseClick.bind(this));
             this.enable = false
             document.body.appendChild(this.dom)
@@ -116,6 +117,7 @@ export default class TransformCtrl {
     }
     Disable() {
         if (this.enable) {
+            console.log("transform Control Disable")
             window.removeEventListener('click', this.onMouseClick.bind(this));
             document.body.removeChild(this.dom)
 
