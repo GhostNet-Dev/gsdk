@@ -50,6 +50,10 @@ icons.set(Icons.GoldenScroll, rootPath + pack1Path + 'Items/Scroll/64px/Golden S
 icons.set(Icons.BlueBook, rootPath + pack1Path + 'Items/Book/64px/Blue Book 1st Outline 64px.png')
 icons.set(Icons.Apple, rootPath + pack1Path + 'Nature/Apple/64px/Apple 1st Outline 64px.png')
 icons.set(Icons.Stats, rootPath + pack1Path + 'Main/Stats/64px/Stats 1st Outline 64px.png')
+icons.set(Icons.Wheel, rootPath + pack1Path + 'Main/Wheel/64px/Wheel 2nd 64px.png')
+icons.set(Icons.Rotate, rootPath + pack1Path + 'Main/Rebirth and Auto Open/64px/Auto Open 2nd Outline 64px.png')
+icons.set(Icons.Trade, rootPath + pack1Path + 'Main/Trade/64px/Trade 2nd 64px.png')
+icons.set(Icons.Box, rootPath + pack1Path + 'Items/Box/64px/Golden Box 1st Outline 64px.png')
 
 icons.set(Icons.Pause, rootPath + uiPath + 'Icon_Small_WhiteOutline_Pause.png')
 icons.set(Icons.ShoppingBag, rootPath + pack1Path + 'Main/Shopping Bag/64px/Golden Shopping Bag 1st Outline 64px.png')

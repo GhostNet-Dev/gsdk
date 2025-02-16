@@ -176,7 +176,7 @@ export class GPhysics implements IGPhysic {
     }
     Check(obj: IPhysicsObject): boolean {
         const pos = obj.BoxPos
-        // if (pos.y - obj.Size.y / 2 < this.landPos.y) return true
+        if (pos.y > -10) return true
         if (this.checkDown(obj)) return true
 
         const keys = this.makeHash(pos, obj.Size)
@@ -187,6 +187,7 @@ export class GPhysics implements IGPhysic {
             const objBox = obj.Box
             return boxs.some(box => {
                 if (objBox.intersectsBox(box.box)) {
+                    box.model.Collision(obj)
                     //console.log("Collision!!!!", objBox, box.box, key)
                     return true
                 }

@@ -8,7 +8,7 @@ import { FluffyTreeType, TreeMaker, TreeParam } from "../fluffytree/treemaker";
 import { SkyBoxAllTime } from "../sky/skyboxalltime";
 import { FluffyTree } from "../fluffytree/fluffytree";
 import { ZeldaGrass } from "../grassmin/zeldagrass";
-import { GrassData, GroundData, MapEntry, MapEntryType, MapType, TreeData } from "./worldmaptypes";
+import { GrassData, GroundData, MapEntry, MapEntryType, MapPackage, MapType, TreeData } from "./worldmaptypes";
 import CustomGround from "../ground/customground";
 import Ground from "../ground/ground";
 import UltimateModular, { ModularType } from "./ultimatemodular";
@@ -17,6 +17,10 @@ import { SimpleWater } from '../ocean/simplewater';
 import Grid from './grid';
 import { gui } from '@Glibs/helper/helper';
 import { Char } from '@Glibs/types/assettypes';
+import { GPhysics } from '../physics/gphysics';
+import { SimpleEvent } from '@Glibs/interactives/eventbox/simple';
+import EventBoxManager from '@Glibs/interactives/eventbox/boxmgr';
+import { EventBoxType } from '@Glibs/types/eventboxtypes';
 
 
 export default class WorldMap {
@@ -27,11 +31,13 @@ export default class WorldMap {
     gridLine? :THREE.LineSegments
     gridMesh? :THREE.Group
     grid = new Grid()
+    evntBox = new EventBoxManager()
 
     constructor(
         private loader: Loader,
         private scene: THREE.Scene,
         private eventCtrl: IEventController,
+        private physics: GPhysics,
         private light: THREE.DirectionalLight,
         private modular: UltimateModular,
         private setNonGlow: Function,
@@ -121,13 +127,23 @@ export default class WorldMap {
         if (pos.y < 0) pos.y = 0
         return this.modular.Create(pos, modType)
     }
-    async MakeModel(id: Char, pos: THREE.Vector3) {
+    async MakeModel(id: Char, pos: THREE.Vector3, type = EventBoxType.None) {
         const asset = this.loader.GetAssets(id)
         const mesh = await asset.CloneModel()
         mesh.position.copy(pos)
+        if (type != EventBoxType.None) {
+            const simple = this.evntBox.addEventBox(type, asset, mesh)
+            this.physics.addBuilding(simple, pos, simple.Size)
+        }
         console.log(pos)
-        this.scene.add(mesh)
-        return mesh
+        const meshs = new THREE.Group()
+        meshs.userData.model = meshs
+        meshs.add(mesh)
+        this.scene.add(meshs)
+        return meshs
+    }
+    DelModel(obj: THREE.Group) {
+        this.scene.remove(obj)
     }
     DelGrass(obj: ZeldaGrass) {
         this.grass.Delete(obj)
@@ -167,6 +183,8 @@ export default class WorldMap {
                     this.DelGrid(cur.userData.gridMesh)
                 } else if ("gridHexMesh" in cur.userData) {
                     this.DelGrid(cur.userData.gridHexMesh)
+                } else if ("model" in cur.userData) {
+                    this.DelModel(cur.userData.model)
                 }
             }
             cur = cur.parent
@@ -184,10 +202,10 @@ export default class WorldMap {
     CheckPoint(id: number) {
         return this.getPosition(id)
     }
-    async onLoad() {
-        const mapData = await loadDataTextureAndGeometry()
+    async onLoad(key: string) {
+        const mapData = await loadDataTextureAndGeometry(key)
         if (!mapData) return
-        mapData.forEach(entry => {
+        mapData.entries.forEach(entry => {
             switch(entry.type) {
                 case MapEntryType.CustomGround: {
                     const data = entry.data as GroundData
@@ -292,9 +310,26 @@ export default class WorldMap {
         return mapData
     }
     onSave() {
-        saveDataTextureAndGeometry(this.makeMapEntries())
+        const key = "mapData_" + this.generateDateKey()
+        const mp: MapPackage = {
+            key: key, entries: this.makeMapEntries(), date: Date.now()
+        } 
+        saveDataTextureAndGeometry(key, mp)
     }
     onDown() {
-        downDataTextureAndGeometry(this.makeMapEntries())
+        const key = "mapData_" + this.generateDateKey()
+        const mp: MapPackage = {
+            key: key, entries: this.makeMapEntries(), date: Date.now()
+        }
+        downDataTextureAndGeometry(mp)
+    }
+    generateDateKey(date: Date = new Date()): string {
+        const yy = date.getFullYear().toString().slice(-2); // 연도 (YY)
+        const mm = String(date.getMonth() + 1).padStart(2, "0"); // 월 (MM)
+        const dd = String(date.getDate()).padStart(2, "0"); // 일 (DD)
+        const hh = String(date.getHours()).padStart(2, "0"); // 시 (HH)
+        const mi = String(date.getMinutes()).padStart(2, "0"); // 분 (MM)
+
+        return `${yy}${mm}${dd}_${hh}${mi}`; // "220201_1233" 형식
     }
 }

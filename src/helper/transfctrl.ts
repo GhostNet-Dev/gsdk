@@ -32,6 +32,12 @@ export default class TransformCtrl {
         this.transformControls.setTranslationSnap(0.5);
         this.transformControls.setRotationSnap(Math.PI / 4);
         this.transformControls.setScaleSnap(0.5);
+        const helper = (this.transformControls as any).getHelper?.();
+        if (helper instanceof THREE.Object3D) {
+            this.scene.add(helper);
+        } else {
+            this.scene.add(this.transformControls)
+        }
 
         // TransformControls 조작 시 OrbitControls 비활성화
         this.transformControls.addEventListener('dragging-changed', (event) => {
@@ -57,7 +63,7 @@ export default class TransformCtrl {
         this.dom.style.fontFamily = fontFamily
 
         // 이벤트 리스너 등록
-        if (enable) window.addEventListener('click', this.onMouseClick.bind(this));
+        window.addEventListener('click', this.onMouseClick.bind(this));
         this.transformControls.addEventListener("enabled-changed", () => {
             this.dom.innerText = this.StatusToString()
         })
@@ -100,33 +106,21 @@ export default class TransformCtrl {
     add(obj: THREE.Group) {
         this.objects.push(obj)
     }
+    remove(object: THREE.Group) {
+        this.objects.splice(this.objects.findIndex(obj => obj.uuid == object.uuid), 1)
+    }
     Enable() {
         if (!this.enable) {
             console.log("transform Control Enable")
-            window.addEventListener('click', this.onMouseClick.bind(this));
-            this.enable = false
             document.body.appendChild(this.dom)
-            const helper = (this.transformControls as any).getHelper?.();
-            if (helper instanceof THREE.Object3D) {
-                this.scene.add(helper);
-            } else {
-                this.scene.add(this.transformControls)
-            }
             this.enable = true
         }
     }
     Disable() {
         if (this.enable) {
             console.log("transform Control Disable")
-            window.removeEventListener('click', this.onMouseClick.bind(this));
             document.body.removeChild(this.dom)
 
-            const helper = (this.transformControls as any).getHelper?.();
-            if (helper instanceof THREE.Object3D) {
-                this.scene.remove(helper);
-            } else {
-                this.scene.remove(this.transformControls)
-            }
             this.enable = false
             this.selectedObject = null;
             this.transformControls.detach();
@@ -134,6 +128,7 @@ export default class TransformCtrl {
     }
     // 마우스 클릭 감지
     onMouseClick(event: MouseEvent): void {
+        if (!this.enable) return
         this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 

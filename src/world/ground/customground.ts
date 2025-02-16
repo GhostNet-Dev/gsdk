@@ -53,7 +53,7 @@ export default class CustomGround {
         ground.receiveShadow = true
         ground.scale.set(this.scale, this.scale, this.scale)
         ground.userData.isRoot = true
-        ground.userData.customground = ground
+        ground.userData.customground = this
         this.setNonGlow(ground)
         this.obj = ground
     }

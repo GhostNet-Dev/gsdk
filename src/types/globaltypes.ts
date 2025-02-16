@@ -46,6 +46,8 @@ export enum EventTypes {
     PlayMode = "playmode",
     PlayerStatus = "playerstatus",
     Projectile = "Projectile",
+    JoypadOn = "joypadon",
+    JoypadOff = "joypadoff",
 
     AlarmWarning = "alarmwarning",
     AlarmNormal = "alarmnormal",

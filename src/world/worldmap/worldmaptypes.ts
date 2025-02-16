@@ -1,3 +1,4 @@
+import { Char } from "@Glibs/types/assettypes"
 
 export type MapDefaultEntry = {
     type: number
@@ -25,10 +26,22 @@ export interface GrassData {
     scale: number
     color: number
 }
+export interface NormalData {
+    type: Char
+    position: { x: number, y: number, z: number }
+    rotation: { x: number, y: number, z: number }
+    scale: number
+}
+
+export type MapPackage = {
+    key: string
+    entries: MapEntry[]
+    date: number
+}
 
 export type MapEntry = {
     type: MapEntryType
-    data: MapDefaultEntry | GrassData[] | TreeData[] | GroundData
+    data: MapDefaultEntry | GrassData[] | TreeData[] | GroundData | NormalData
 }
 
 export enum MapEntryType {

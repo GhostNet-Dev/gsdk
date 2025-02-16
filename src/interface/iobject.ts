@@ -20,6 +20,7 @@ export interface IBuildingObject {
     get BoxPos() : THREE.Vector3
     get Key(): string[]
     set Key(k: string[])
+    Collision(obj: IPhysicsObject): void
 }
 const boxMat = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true, lightMapIntensity: 0 })
 

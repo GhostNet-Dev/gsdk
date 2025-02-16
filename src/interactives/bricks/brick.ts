@@ -1,8 +1,8 @@
-import { GhostObject } from "@Glibs/interface/iobject";
+import { GhostObject, IBuildingObject, IPhysicsObject } from "@Glibs/interface/iobject";
 import * as THREE from "three";
 
 
-export class Brick extends GhostObject {
+export class Brick extends GhostObject implements IBuildingObject {
     get BoxPos() { return this.position }
     set Key(k: string[]) { this.key = k }
     get Key() { return this.key }
@@ -35,5 +35,8 @@ export class Brick extends GhostObject {
     Dispose() {
         this._geometry.dispose()
         this._material.dispose()
+    }
+    Collision(_: IPhysicsObject): void {
+        
     }
 }

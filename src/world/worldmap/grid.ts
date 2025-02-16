@@ -34,7 +34,7 @@ export default class Grid {
 
         // 🔷 사각형 InstancedMesh 생성
         const rectGeometry = new THREE.PlaneGeometry(rectWidth, rectHeight);
-        const rectMaterial = new THREE.MeshBasicMaterial({ color: color, side: THREE.DoubleSide });
+        const rectMaterial = new THREE.MeshStandardMaterial({ color: new THREE.Color(color), side: THREE.DoubleSide, transparent: true });
         const rectMesh = new THREE.InstancedMesh(rectGeometry, rectMaterial, mapWidth * mapHeight);
 
         // 🔲 개별적인 `LineSegments`를 추가하는 함수 (사각형 경계선)

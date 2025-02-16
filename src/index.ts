@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { Canvas } from "./systems/event/canvas";
 import { EventController } from "./systems/event/eventctrl";
-import { Input } from "./systems/inputs/input";
+import Input from "./systems/inputs/input";
 import { GPhysics } from "./world/physics/gphysics";
 import { GrassMaker } from "./world/grassmin/grassmaker";
 
