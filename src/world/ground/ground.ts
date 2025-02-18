@@ -10,7 +10,7 @@ export default class Ground {
     blendMap: THREE.DataTexture
     geometry: THREE.PlaneGeometry
     shaderMaterial: THREE.MeshStandardMaterial
-    constructor(private setNonGlow: Function, {
+    constructor({
         color = new THREE.Color(0xA6C954),
         width = 1024 * 3, height = 1024 * 3, planeSize = 256,
     } = {}) {
@@ -18,7 +18,6 @@ export default class Ground {
         this.height = height
         this.blendMapSize = width * height
         this.planSize = planeSize
-        this.setNonGlow = setNonGlow
         this.blendMapData = new Uint8Array(4 * this.blendMapSize); // RGB 값
         for (let i = 0; i < this.height * this.width * 4;) {
             this.blendMapData[i++] = color.r * 255;
@@ -42,7 +41,6 @@ export default class Ground {
         ground.rotation.x = -Math.PI / 2; // 땅에 평행하게 회전
         ground.position.setY(-.01)
         ground.receiveShadow = true
-        this.setNonGlow(ground)
         ground.userData.isRoot = true
         ground.userData.ground = ground
         this.obj = ground
@@ -68,7 +66,6 @@ export default class Ground {
         ground.rotation.x = -Math.PI / 2; // 땅에 평행하게 회전
         ground.position.setY(-.01)
         ground.receiveShadow = true
-        this.setNonGlow(ground)
         this.obj = ground
     }
     Dispose() {

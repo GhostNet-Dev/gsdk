@@ -9,7 +9,7 @@ export default class TapButton {
 
     constructor(
         private parent: HTMLElement, 
-        { opacity = "0.5", content = "Tap to continue", fontFamily = "coiny", open = () => { }, close = () => { }, click = () => { } } = {}
+        { opacity = "0.5", content = "Tap to continue", open = () => { }, close = () => { }, click = () => { } } = {}
     ) {
         this.open = open
         this.close = close
@@ -30,9 +30,8 @@ export default class TapButton {
         this.textDom.style.left = "50%"
         this.textDom.style.width = "fit-content"
         this.textDom.style.transform = "translate(-50%, -50%)"
-        this.textDom.style.fontFamily = fontFamily
         this.textDom.innerText = content
-        this.textDom.classList.add("gametext")
+        this.textDom.classList.add("gametext", "gfont")
 
         const container = document.createElement("div")
         container.classList.add("container", "p-2")

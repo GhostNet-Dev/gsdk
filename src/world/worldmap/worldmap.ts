@@ -21,6 +21,7 @@ import { GPhysics } from '../physics/gphysics';
 import { SimpleEvent } from '@Glibs/interactives/eventbox/simple';
 import EventBoxManager from '@Glibs/interactives/eventbox/boxmgr';
 import { EventBoxType } from '@Glibs/types/eventboxtypes';
+import { EventTypes } from '@Glibs/types/globaltypes';
 
 
 export default class WorldMap {
@@ -40,7 +41,6 @@ export default class WorldMap {
         private physics: GPhysics,
         private light: THREE.DirectionalLight,
         private modular: UltimateModular,
-        private setNonGlow: Function,
     ) {
 
     }
@@ -52,13 +52,13 @@ export default class WorldMap {
         let map: THREE.Object3D | undefined = undefined
         switch(mapType) {
             case MapType.Custom: {
-                const obj = new CustomGround(this.setNonGlow, { width: width, height: height, planeSize: size })
+                const obj = new CustomGround({ width: width, height: height, planeSize: size })
                 map = obj.obj
                 this.customGround = obj
                 break
             }
             case MapType.Free: {
-                const obj = new Ground(this.setNonGlow, { width: width, height: height, planeSize: size })
+                const obj = new Ground({ width: width, height: height, planeSize: size })
                 map = obj.obj
                 this.ground = obj
                 break
@@ -95,7 +95,8 @@ export default class WorldMap {
                 break
         }
         if(!map) throw new Error("not defined");
-        
+        this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, map)
+        this.physics.addLand(map)
         this.scene.add(map)
         return map
     }
@@ -104,12 +105,14 @@ export default class WorldMap {
     }
     MakeOcean() {
         const obj =  new Ocean(this.eventCtrl, this.light)
-        this.setNonGlow(obj.mesh)
+        this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, obj.mesh)
         this.scene.add(obj.mesh)
         return obj
     }
     MakeMirrorWater() {
-        return new SimpleWater(this.scene, this.setNonGlow)
+        const obj = new SimpleWater(this.scene)
+        this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, obj.meshs)
+        return obj
     }
     MakeWind() {
         return new Wind(this.eventCtrl)
@@ -222,12 +225,13 @@ export default class WorldMap {
                     }
                     geometry.attributes.position.needsUpdate = true;
                     if (this.customGround) this.scene.remove(this.customGround.obj)
-                    this.customGround = new CustomGround(this.setNonGlow, { 
+                    this.customGround = new CustomGround({ 
                         width: data.textureWidth, 
                         height: data.textureHeight, 
                         planeSize: data.mapSize, 
                     })
                     this.customGround.LoadMap(texture, geometry)
+                    this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, this.customGround.obj)
                     this.scene.add(this.customGround.obj)
                     break;
                 }

@@ -8,11 +8,11 @@ export default class WoodModal implements IDialog {
     child: IUiItem[] = []
     constructor({ width = "90%", height = "fit-content" } = {}) {
         this.applyDynamicStyle("woodmodal", getCSS())
-        this.dom.classList.add("woodmodal")
+        this.dom.classList.add("woodmodal", "gfont")
         this.dom.style.width = width
         this.dom.style.height = height
         this.dom.style.opacity = "0"
-        this.titleDom.classList.add("woodmodal_title")
+        this.titleDom.classList.add("woodmodal_title", "gfont")
         this.dom.appendChild(this.titleDom)
         this.container.classList.add("container", "p-0")
         this.dom.appendChild(this.container)
@@ -123,7 +123,7 @@ https://dribbble.com/shots/3456012-game-button
         cursor: pointer;
         text-decoration: none !important;
         outline: none !important;
-        font-family: 'Carter One', sans-serif;
+        /*font-family: 'Carter One', sans-serif;*/
         font-size: 20px;
         line-height: 1.5em;
         letter-spacing: .1em;

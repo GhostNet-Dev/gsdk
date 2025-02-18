@@ -9,6 +9,8 @@ import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectio
 import { ColorCorrectionShader } from 'three/examples/jsm/shaders/ColorCorrectionShader'
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader'
 import { ToonShader1 } from 'three/examples/jsm/shaders/ToonShader'
+import IEventController from '@Glibs/interface/ievent'
+import { EventTypes } from '@Glibs/types/globaltypes'
 
 export interface IPostPro {
   setGlow(target: THREE.Mesh | THREE.Group): void
@@ -46,7 +48,8 @@ export class Postpro implements IPostPro {
   constructor(
     private scene: THREE.Scene,
     private camera: THREE.Camera,
-    private renderer: THREE.WebGLRenderer
+    private renderer: THREE.WebGLRenderer,
+    eventCtrl: IEventController
   ) {
     this.renderer.toneMapping = THREE.ReinhardToneMapping
     this.renderer.toneMappingExposure = 1.5
@@ -95,6 +98,9 @@ export class Postpro implements IPostPro {
     this.finalComposer.addPass(new SMAAPass(
       window.innerWidth * this.renderer.getPixelRatio(), 
       window.innerHeight * this.renderer.getPixelRatio()))
+    eventCtrl.RegisterEventListener(EventTypes.SetNonGlow, (target: THREE.Mesh | THREE.Group) => {
+      this.setNonGlow(target)
+    })
   }
   resize(): void {
     this.bloomComposer.setSize(window.innerWidth, window.innerHeight)

@@ -3,6 +3,8 @@ export enum FontType {
     Boogaloo,
     Galindo,
     Coiny,
+    NotoSansKr,
+    Fredoka,
 }
 /*
 font
@@ -10,6 +12,8 @@ https://fonts.googleapis.com/css2?family=Wendy+One&display=swap
 https://fonts.googleapis.com/css2?family=Boogaloo&display=swap
 https://fonts.googleapis.com/css2?family=Galindo&display=swap
 https://fonts.googleapis.com/css2?family=Coiny&display=swap
+https://fonts.googleapis.com/css2?family=Fredoka:wght@600&display=swap
+https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap
 
 stylized font
 https://fonts.googleapis.com/css2?family=Galindo&family=Honk:MORF@17&display=swap

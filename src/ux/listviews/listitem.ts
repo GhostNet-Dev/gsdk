@@ -10,7 +10,7 @@ export default class ListItem implements IUiItem {
         icon = Icons.Star, customIcon = "", fontSize = "16px", 
         text = "list test", height = "40px", click = () => { }
     } = {}, btnDom?: HTMLButtonElement) {
-        this.dom.classList.add("container", "rounded")
+        this.dom.classList.add("container", "rounded", "gfont")
         this.dom.style.cursor = "pointer"
         this.dom.style.background = "linear-gradient(to bottom, #4caf50, #388e3c)"
         this.dom.style.fontSize = fontSize
@@ -27,7 +27,7 @@ export default class ListItem implements IUiItem {
         // value set
         const textDom = document.createElement('div') as HTMLDivElement
         textDom.innerText = text
-        textDom.classList.add("gametext", "p-1")
+        textDom.classList.add("gametext", "p-1", "gfont")
         
         const content: HTMLElement[] = [iconDom, textDom]
         // button

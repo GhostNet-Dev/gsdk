@@ -41,11 +41,9 @@ export class Player extends PhysicsObject {
                     case EventFlag.Start:
                         this.eventCtrl.SendEventMessage(EventTypes.CtrlObj, this)
                         this.Init()
-                        this.meshs.visible = true
                         break
                     case EventFlag.End:
                         this.Uninit()
-                        this.meshs.visible = false
                         break
                 }
                 return
@@ -93,11 +91,13 @@ export class Player extends PhysicsObject {
     }
 
     Uninit() {
+        this.meshs.visible = false
     }
 
     Init(pos: THREE.Vector3 = new THREE.Vector3(0, 0, 0)) {
         this.meshs.position.copy(pos)
         console.log("player Init: ", pos)
+        this.meshs.visible = true
     }
 
     async Viliageload(): Promise<void> {
@@ -117,6 +117,7 @@ export class Player extends PhysicsObject {
     async Loader(asset: IAsset, position: THREE.Vector3, name: string) {
         this.playerModel = asset.Id
         const [meshs, _exist] = await asset.UniqModel(name)
+        this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, meshs)
         
         this.meshs = meshs
         this.meshs.position.copy(position)

@@ -7,11 +7,11 @@ export default class Spinning {
     constructor(eventCtrl: IEventController) {
         this.applyDynamicStyle("spinngin", css)
         const dom = document.createElement('div')
-        dom.classList.add("spinning_gsdk", "justify-content-center")
+        dom.classList.add("spinning_gsdk", "justify-content-center", "vh-100")
         dom.innerHTML = html
         document.body.appendChild(dom)
         eventCtrl.RegisterEventListener(EventTypes.Spinner, (enable: boolean) => {
-            dom.style.display = (enable) ? "block" : "none"
+            dom.style.display = (enable) ? "grid" : "none"
         })
     }
     applyDynamicStyle(styleId: string, css: string) {
@@ -26,7 +26,7 @@ export default class Spinning {
     }
 }
 const html = `
-<div class="spinner-border text-danger vertical_spin" role="status">
+<div class="spinner-border text-danger m-auto" role="status">
   <span class="visually-hidden">Loading...</span>
 </div>
 `

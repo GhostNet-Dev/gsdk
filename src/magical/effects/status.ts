@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { IEffect } from "./ieffector";
 
-const font =  "bold 14pt sans-serif";
+const font = 'bold 14pt "Fredoka", sans-serif';
 //const shadowColor =  "rgba(0,0,0,0.8)";
 const shadowBlur = 2
 

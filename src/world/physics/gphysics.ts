@@ -137,8 +137,8 @@ export class GPhysics implements IGPhysic {
             model: model
         })
     }
-    addLand(obj: IPhysicsObject) {
-        this.lands.push(obj.Meshs)
+    addLand(obj: THREE.Object3D) {
+        this.lands.push(obj)
         this.landPos.y = 0
         console.log("Land: " , this.landPos, obj)
     }

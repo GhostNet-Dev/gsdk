@@ -22,7 +22,7 @@ export default class TransformCtrl {
         private camera: Camera,
         private renderer: THREE.WebGLRenderer,
         private scene: THREE.Scene,
-        { enable = false, fontFamily = "coiny" } = {}
+        { enable = false, fontFamily = "" } = {}
     ) {
         // getHelper()가 존재하는지 확인 후 추가 (안전한 방식)
         this.enable = enable
@@ -53,7 +53,7 @@ export default class TransformCtrl {
         //     }
         // });
 
-        this.dom.classList.add("container", "w-auto", "rounded", "p-1", "m-1", "gametext")
+        this.dom.classList.add("container", "w-auto", "rounded", "p-1", "m-1", "gametext", "gfont")
         this.dom.style.backgroundColor = `rgba(0, 0, 0, 0.5)`
         this.dom.style.boxShadow = `0 4px 8px rgba(0, 0, 0, 0.5)`
         this.dom.style.overflow = "hidden"

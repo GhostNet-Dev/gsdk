@@ -163,6 +163,17 @@ export class PlayerCtrl implements ILoop {
             this.UpdateBuff(buff)
         })
     }
+    init() {
+        this.playEnable = true
+        this.spec.ResetStatus()
+        this.eventCtrl.SendEventMessage(EventTypes.PlayerStatus, this.spec.Status)
+        this.currentState = this.IdleSt
+        this.currentState.Init()
+    }
+    uninit() {
+        this.playEnable = false
+        this.currentState.Uninit()
+    }
     add(...obj: THREE.Object3D[]) {
         this.targets.push(...obj)
     }

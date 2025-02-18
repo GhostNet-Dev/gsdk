@@ -16,8 +16,7 @@ export default class CustomGround {
     scale = .5
     radius = 30 / this.scale
     geometry: THREE.PlaneGeometry
-    setNonGlow: Function
-    constructor(setNonGlow: Function, {
+    constructor({
         color = new THREE.Color(0xA6C954),
         width = 1024 * 3, height = 1024 * 3, planeSize = 256, 
     } = {}) {
@@ -25,7 +24,6 @@ export default class CustomGround {
         this.height = height
         this.blendMapSize = width * height
         this.planSize = planeSize
-        this.setNonGlow = setNonGlow
         // 텍스처 크기 설정
         this.blendMapData = new Uint8Array(4 * this.blendMapSize); // RGB 값
         for (let i = 0; i < this.height * this.width * 4;) {
@@ -54,7 +52,6 @@ export default class CustomGround {
         ground.scale.set(this.scale, this.scale, this.scale)
         ground.userData.isRoot = true
         ground.userData.customground = this
-        this.setNonGlow(ground)
         this.obj = ground
     }
     LoadMap(texture: THREE.DataTexture, geometry: THREE.PlaneGeometry) {
@@ -77,7 +74,6 @@ export default class CustomGround {
         ground.rotation.x = -Math.PI / 2; // 땅에 평행하게 회전
         ground.position.setY(-.01)
         ground.receiveShadow = true
-        this.setNonGlow(ground)
         this.obj = ground
     }
     GetColor(uv: THREE.Vector2) {

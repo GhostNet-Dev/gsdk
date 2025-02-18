@@ -13,7 +13,7 @@ export default class GPhysicsRay implements IGPhysic {
     addBuilding(model: IBuildingObject, pos: Vector3, size: Vector3, rotation?: Euler | undefined): void {
         
     }
-    addLand(obj: IPhysicsObject): void {
+    addLand(obj: THREE.Object3D): void {
         
     }
     addMeshBuilding(...models: IBuildingObject[]): void {

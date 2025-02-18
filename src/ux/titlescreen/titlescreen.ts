@@ -31,7 +31,7 @@ export default class TitleScreen {
     }
     SubMenuShow(menuItem: MenuItem[]) {
         const container = document.createElement("div")
-        container.classList.add("container", "pt-5", "menuFont")
+        container.classList.add("container", "pt-5", "menustyle")
         menuItem.forEach((d) => {
             const row = document.createElement("div")
             row.classList.add("row")
@@ -63,13 +63,13 @@ export default class TitleScreen {
     font-style: normal;
     line-height: 1;
 }
-.menuFont {
+.menustyle {
     line-height: 1.5;
     white-space: nowrap;
 }
         `)
         const container = document.createElement("div")
-        container.classList.add("container", "pt-5", "menuFont")
+        container.classList.add("container", "pt-5", "menustyle")
         this.menuItem.forEach((d) => {
             const row = document.createElement("div")
             row.classList.add("row")
