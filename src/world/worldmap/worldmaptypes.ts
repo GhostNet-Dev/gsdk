@@ -6,12 +6,18 @@ export type MapDefaultEntry = {
     rotation: { x: number, y: number, z: number }
     scale: number
 }
-export interface GroundData {
+export interface CustomGroundData {
     textureData: number[];
     textureWidth: number;
     textureHeight: number;
     verticesData: number[];
     mapSize: number;
+}
+export interface GroundData {
+    type: Char
+    position: { x: number, y: number, z: number }
+    rotation: { x: number, y: number, z: number }
+    scale: number
 }
 export interface TreeData {
     type: number
@@ -41,7 +47,7 @@ export type MapPackage = {
 
 export type MapEntry = {
     type: MapEntryType
-    data: MapDefaultEntry | GrassData[] | TreeData[] | GroundData | NormalData
+    data: MapDefaultEntry | GrassData[] | TreeData[] | CustomGroundData | NormalData | GroundData
 }
 
 export enum MapEntryType {

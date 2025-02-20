@@ -8,25 +8,26 @@ import { FluffyTreeType, TreeMaker, TreeParam } from "../fluffytree/treemaker";
 import { SkyBoxAllTime } from "../sky/skyboxalltime";
 import { FluffyTree } from "../fluffytree/fluffytree";
 import { ZeldaGrass } from "../grassmin/zeldagrass";
-import { GrassData, GroundData, MapEntry, MapEntryType, MapPackage, MapType, TreeData } from "./worldmaptypes";
+import { GrassData, GroundData, MapEntry, MapEntryType, MapPackage, MapType, NormalData, TreeData } from "./worldmaptypes";
 import CustomGround from "../ground/customground";
 import Ground from "../ground/ground";
 import UltimateModular, { ModularType } from "./ultimatemodular";
 import { downDataTextureAndGeometry, loadDataTextureAndGeometry, saveDataTextureAndGeometry } from "./mapstore";
 import { SimpleWater } from '../ocean/simplewater';
 import Grid from './grid';
-import { gui } from '@Glibs/helper/helper';
 import { Char } from '@Glibs/types/assettypes';
 import { GPhysics } from '../physics/gphysics';
-import { SimpleEvent } from '@Glibs/interactives/eventbox/simple';
 import EventBoxManager from '@Glibs/interactives/eventbox/boxmgr';
 import { EventBoxType } from '@Glibs/types/eventboxtypes';
 import { EventTypes } from '@Glibs/types/globaltypes';
+import { CustomGroundData } from '@Glibs/types/worldmaptypes';
 
 
 export default class WorldMap {
     tree = new TreeMaker(this.loader, this.eventCtrl, this.scene)
     grass = new GrassMaker(this.scene, this.eventCtrl)
+    normalModel: NormalData[] = []
+    groundData?: GroundData
     customGround?: CustomGround
     ground?: Ground
     gridLine? :THREE.LineSegments
@@ -128,20 +129,24 @@ export default class WorldMap {
     }
     async MakeModular(pos: THREE.Vector3, modType = ModularType.Dirty) {
         if (pos.y < 0) pos.y = 0
-        return this.modular.Create(pos, modType)
+        const mesh = await this.modular.Create(pos, modType)
+        const asset = this.loader.GetAssets(Char.UltimateModPlatformSingleCubeGrass)
+        const simple = this.evntBox.addEventBox(EventBoxType.Physics, asset, mesh)
+        this.physics.addBuilding(simple, pos, simple.Size)
+        return mesh
     }
     async MakeModel(id: Char, pos: THREE.Vector3, type = EventBoxType.None) {
         const asset = this.loader.GetAssets(id)
         const mesh = await asset.CloneModel()
-        mesh.position.copy(pos)
         if (type != EventBoxType.None) {
             const simple = this.evntBox.addEventBox(type, asset, mesh)
-            this.physics.addBuilding(simple, pos, simple.Size)
+            this.physics.addBuilding(simple, pos.clone(), simple.Size)
         }
         console.log(pos)
         const meshs = new THREE.Group()
         meshs.userData.model = meshs
         meshs.add(mesh)
+        meshs.position.copy(pos)
         this.scene.add(meshs)
         return meshs
     }
@@ -211,7 +216,7 @@ export default class WorldMap {
         mapData.entries.forEach(entry => {
             switch(entry.type) {
                 case MapEntryType.CustomGround: {
-                    const data = entry.data as GroundData
+                    const data = entry.data as CustomGroundData
                     const textureData = new Uint8Array(data.textureData);
                     const texture = new THREE.DataTexture(textureData, data.textureWidth, data.textureHeight, THREE.RGBAFormat);
                     texture.needsUpdate = true;
@@ -302,7 +307,7 @@ export default class WorldMap {
             const map = this.customGround.blendMap
             const textureData = Array.from(new Uint8Array(map.image.data.buffer)); // Uint8Array to number array
             const verticesData = Array.from(geometry.attributes.position.array); // Vertex data
-            const gData: GroundData = {
+            const gData: CustomGroundData = {
                 textureData: textureData,
                 textureWidth: map.image.width,
                 textureHeight: map.image.height,

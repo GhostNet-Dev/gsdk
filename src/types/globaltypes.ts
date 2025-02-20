@@ -28,6 +28,7 @@ export enum EventTypes {
     KeyUp = "keyup",
     Input = "input",
     CtrlObj = "ctrlObj",
+    CtrlObjOff = "ctrlObjOff",
     SetNonGlow = "nonglow",
 
     Equipment = "Equip",

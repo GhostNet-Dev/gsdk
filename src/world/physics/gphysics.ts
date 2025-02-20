@@ -124,8 +124,10 @@ export class GPhysics implements IGPhysic {
     addBuilding(model: IBuildingObject, pos: THREE.Vector3, size: THREE.Vector3, rotation?: THREE.Euler) {
         // for debugggin
         const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), this.debugBoxMat)
+        pos.y += size.y / 2
         box.position.copy(pos)
         box.scale.copy(size)
+        this.scene.add(box)
         //box.scale.set(size.x * 1.1, size.y * 1.1, size.z * 1.1)
         if (rotation) box.rotation.copy(rotation)
 
@@ -176,7 +178,7 @@ export class GPhysics implements IGPhysic {
     }
     Check(obj: IPhysicsObject): boolean {
         const pos = obj.BoxPos
-        if (pos.y > -10) return true
+        if (pos.y < -10) return true
         if (this.checkDown(obj)) return true
 
         const keys = this.makeHash(pos, obj.Size)
