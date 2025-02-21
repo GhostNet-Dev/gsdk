@@ -61,6 +61,7 @@ export enum MapEntryType {
 
 export enum MapType {
     Custom,
+    Produce,
     Free,
     Rect,
     RectMesh,

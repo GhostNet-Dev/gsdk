@@ -21,6 +21,7 @@ import EventBoxManager from '@Glibs/interactives/eventbox/boxmgr';
 import { EventBoxType } from '@Glibs/types/eventboxtypes';
 import { EventTypes } from '@Glibs/types/globaltypes';
 import { CustomGroundData } from '@Glibs/types/worldmaptypes';
+import ProduceTerrain3 from '../ground/prodterrain3';
 
 
 export default class WorldMap {
@@ -56,6 +57,13 @@ export default class WorldMap {
                 const obj = new CustomGround({ width: width, height: height, planeSize: size })
                 map = obj.obj
                 this.customGround = obj
+                break
+            }
+            case MapType.Produce: {
+                const obj = new ProduceTerrain3()
+                map = obj.CreateTerrain()
+                obj.SetupGUI()
+                obj.Show()
                 break
             }
             case MapType.Free: {
@@ -170,6 +178,10 @@ export default class WorldMap {
         this.scene.remove(obj.obj)
         obj.Dispose()
     }
+    DelProduceGround(obj: ProduceTerrain3) {
+        this.scene.remove(obj.terrain!)
+        obj.Dispose()
+    }
     DelGrid(obj: THREE.Object3D) {
         this.scene.remove(obj)
     }
@@ -183,6 +195,8 @@ export default class WorldMap {
                     this.DelTree(cur.userData.tree)
                 } else if ("simpleWater" in cur.userData) {
                     this.DelMirrorWater(cur.userData.simpleWater)
+                } else if ("produce" in cur.userData) {
+                    this.DelProduceGround(cur.userData.produce)
                 } else if ("ground" in cur.userData) {
                     this.DelGround(cur.userData.ground)
                 } else if ("customground" in cur.userData) {

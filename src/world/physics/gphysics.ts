@@ -176,11 +176,11 @@ export class GPhysics implements IGPhysic {
         })
         box.model.Key = keys
     }
-    Check(obj: IPhysicsObject): boolean {
+    CheckDown(obj: IPhysicsObject): number {
+        return this.checkDown(obj)
+    }
+    CheckBoxs(obj: IPhysicsObject): boolean {
         const pos = obj.BoxPos
-        if (pos.y < -10) return true
-        if (this.checkDown(obj)) return true
-
         const keys = this.makeHash(pos, obj.Size)
         const ret = keys.some((key) => {
             const boxs = this.pboxs.get(key)
@@ -197,6 +197,12 @@ export class GPhysics implements IGPhysic {
             });
         })
         return ret
+    }
+    Check(obj: IPhysicsObject): boolean {
+        const pos = obj.BoxPos
+        // if (pos.y < -10) return true
+        if (this.checkDown(obj) < 0) return true
+        return this.CheckBoxs(obj)
     }
     CheckBox(pos: THREE.Vector3, box: THREE.Box3) {
         const keys = this.makeHash(pos, box.getSize(new THREE.Vector3))
@@ -261,9 +267,9 @@ export class GPhysics implements IGPhysic {
         this.downcast.set(this.center, this.downDir)
         const landTouch = this.downcast.intersectObjects(this.lands)
         if(landTouch.length > 0) {
-            return false
+            return landTouch[0].distance
         }
-        return true
+        return -1
 
     }
     // checkGravity(delta: number) {

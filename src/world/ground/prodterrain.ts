@@ -22,7 +22,7 @@ export default class ProduceTerrain {
     private dragDown = false;
     private prevWorldCoords = new THREE.Vector3();
 
-    constructor() {
+    constructor(private scene: THREE.Scene) {
         this.material = new THREE.ShaderMaterial({
             uniforms: {
                 uOffset: { value: new THREE.Vector2(0, 0) },
@@ -113,7 +113,11 @@ export default class ProduceTerrain {
         waterGui.add(this.waterMaterial, 'roughness', 0, 1, 0.01);
         waterGui.add(this.waterMaterial, 'ior').min(1).max(2).step(0.001);
         waterGui.addColor({ color: this.waterMaterial.color.getHexString(THREE.SRGBColorSpace) }, 'color').name('color').onChange((value: any) => this.waterMaterial.color.set(value));
+
+        gui.add({ convert: () => {this.cloneMesh = this.ConvertToStandardMaterial(); this.scene.add(this.cloneMesh)} }, 'convert')
+        gui.add({ convert: () => {if(this.cloneMesh) this.scene.remove(this.cloneMesh)} }, 'delete')
     }
+    cloneMesh?: THREE.Mesh
     Show() {
         gui.show()
     }
@@ -137,6 +141,34 @@ export default class ProduceTerrain {
 
     public onDragEnd() {
         this.dragDown = false;
+    }
+    ConvertToStandardMaterial(): THREE.Mesh {
+        if (!this.terrain) {
+            throw new Error("Terrain must be created first using CreateTerrain().");
+        }
+
+        const geometry = this.terrain.geometry.clone();
+        const positions = geometry.attributes.position;
+
+        const count = positions.count;
+
+        for (let i = 0; i < count; i++) {
+            const y = positions.getY(i);
+        }
+
+        positions.needsUpdate = true;
+        geometry.computeVertexNormals();
+
+        const standardMaterial = new THREE.MeshStandardMaterial({
+            color: '#85d534',
+            metalness: 0.2,
+            roughness: 0.8
+        });
+
+        const standardTerrain = new THREE.Mesh(geometry, standardMaterial);
+        standardTerrain.receiveShadow = true;
+        standardTerrain.castShadow = true;
+        return standardTerrain;
     }
 }
 
