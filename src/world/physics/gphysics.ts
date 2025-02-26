@@ -265,6 +265,7 @@ export class GPhysics implements IGPhysic {
         obj.Box.getCenter(this.center)
         this.center.y -= obj.Size.y / 2
         this.downcast.set(this.center, this.downDir)
+        this.downcast.far = 10
         const landTouch = this.downcast.intersectObjects(this.lands)
         if(landTouch.length > 0) {
             return landTouch[0].distance

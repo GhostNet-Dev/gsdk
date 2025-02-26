@@ -2,21 +2,34 @@ import * as THREE from 'three';
 import { gui } from '@Glibs/helper/helper';
 import GUI from 'lil-gui';
 
-export class ThreeGeometryViewer {
-    private scene: THREE.Scene;
+export default class GeometryGround {
+    meshs = new THREE.Group()
     private material: THREE.MeshStandardMaterial;
-    private wireMaterial: THREE.MeshBasicMaterial;
     private mesh?: THREE.Mesh;
+    private wireMaterial?: THREE.MeshBasicMaterial;
     private wireMesh?: THREE.Mesh;
     private gui: GUI;
     private geometryFolder?: GUI;
+    private debugMode = true
+    private callback?: Function
+    private removeCallback?: Function
 
-    constructor(scene: THREE.Scene) {
-        this.scene = scene;
+    constructor(private scene: THREE.Scene, { debug = true } = {}) {
+        this.debugMode = debug
         this.material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-        this.wireMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+        if (debug) this.wireMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
 
         this.gui = gui;
+    }
+    show(add: Function, remove: Function) {
+        this.callback = add
+        this.removeCallback = remove
+        this.gui.show()
+        this.initGUI()
+    }
+    hide() {
+        this.gui.hide()
+        if (this.debugMode) this.scene.remove(this.wireMesh!);
     }
 
     private initGUI() {
@@ -47,17 +60,24 @@ export class ThreeGeometryViewer {
 
     private createGeometry(type: string, params: any) {
         if (this.mesh) {
-            this.scene.remove(this.mesh);
-            this.scene.remove(this.wireMesh!);
+            this.meshs.remove(this.mesh)
+            if (this.debugMode) this.meshs.remove(this.wireMesh!);
+            this.removeCallback?.(this.meshs)
         }
 
         let geometry: THREE.BufferGeometry;
         geometry = new (THREE as any)[type](...Object.values(params));
 
         this.mesh = new THREE.Mesh(geometry, this.material);
-        this.wireMesh = new THREE.Mesh(geometry, this.wireMaterial);
-        this.scene.add(this.mesh);
-        this.scene.add(this.wireMesh);
+        this.meshs.add(this.mesh)
+
+        if (this.debugMode) {
+            this.wireMesh = new THREE.Mesh(geometry, this.wireMaterial);
+            this.meshs.add(this.wireMesh);
+        }
+
+        this.scene.add(this.meshs);
+        this.callback?.(this.meshs)
 
         if (this.geometryFolder) this.geometryFolder.destroy();
         this.geometryFolder = this.gui.addFolder('Parameters');

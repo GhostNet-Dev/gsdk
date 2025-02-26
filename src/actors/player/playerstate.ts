@@ -85,19 +85,19 @@ export class State {
         }
     }
     CheckGravity() {
-        this.player.Meshs.position.y -= 0.3
+        this.player.Meshs.position.y -= 0.1
         const distance = this.gphysic.CheckDown(this.player)
         const down = !this.gphysic.CheckBoxs(this.player)
         // if down, distance 검사 순서 중요!
         if (down && distance > this.player.Size.y) {
-            this.player.Meshs.position.y += 0.3
+            this.player.Meshs.position.y += 0.1
             this.playerCtrl.JumpSt.Init()
             this.playerCtrl.JumpSt.velocity_y = 0
             console.log("raycast going down! : ", distance)
             return this.playerCtrl.JumpSt
         } 
         
-        if (distance < 0.3) this.player.Meshs.position.y += 0.3
+        if (distance < 0.1) this.player.Meshs.position.y += 0.1
     }
 }
 
@@ -247,11 +247,11 @@ export class RunState extends State implements IPlayerAction {
         this.player.Meshs.quaternion.copy(qt)
 
         if (this.gphysic.Check(this.player)) {
-            this.player.Meshs.position.y += 1.5 // 계단 체크
+            this.player.Meshs.position.y += 1 // 계단 체크
             if (this.gphysic.Check(this.player)) {
                 this.player.Meshs.position.x -= movX
                 this.player.Meshs.position.z -= movZ
-                this.player.Meshs.position.y -= 1.5
+                this.player.Meshs.position.y -= 1
             }
         }
         return this

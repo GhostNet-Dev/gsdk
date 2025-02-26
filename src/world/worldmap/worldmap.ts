@@ -16,12 +16,14 @@ import { downDataTextureAndGeometry, loadDataTextureAndGeometry, saveDataTexture
 import { SimpleWater } from '../ocean/simplewater';
 import Grid from './grid';
 import { Char } from '@Glibs/types/assettypes';
-import { GPhysics } from '../physics/gphysics';
 import EventBoxManager from '@Glibs/interactives/eventbox/boxmgr';
 import { EventBoxType } from '@Glibs/types/eventboxtypes';
 import { EventTypes } from '@Glibs/types/globaltypes';
 import { CustomGroundData } from '@Glibs/types/worldmaptypes';
 import ProduceTerrain3 from '../ground/prodterrain3';
+import FenceModular from './fencemodular';
+import { IGPhysic } from '@Glibs/interface/igphysics';
+import GeometryGround from './defaultgeo';
 
 
 export default class WorldMap {
@@ -31,6 +33,7 @@ export default class WorldMap {
     groundData?: GroundData
     customGround?: CustomGround
     ground?: Ground
+    geometryGround?: GeometryGround
     gridLine? :THREE.LineSegments
     gridMesh? :THREE.Group
     grid = new Grid()
@@ -40,9 +43,10 @@ export default class WorldMap {
         private loader: Loader,
         private scene: THREE.Scene,
         private eventCtrl: IEventController,
-        private physics: GPhysics,
+        private physics: IGPhysic,
         private light: THREE.DirectionalLight,
         private modular: UltimateModular,
+        private fence: FenceModular,
     ) {
 
     }
@@ -57,6 +61,11 @@ export default class WorldMap {
                 const obj = new CustomGround({ width: width, height: height, planeSize: size })
                 map = obj.obj
                 this.customGround = obj
+                break
+            }
+            case MapType.Geometry: {
+                const obj = new GeometryGround(this.scene)
+                map = obj.meshs
                 break
             }
             case MapType.Produce: {
@@ -109,6 +118,15 @@ export default class WorldMap {
         this.scene.add(map)
         return map
     }
+    MakeGeometryEdit(add: Function, remove: Function) {
+        if (!this.geometryGround) 
+            this.geometryGround = new GeometryGround(this.scene, { debug: true })
+        this.geometryGround.show(add, remove)
+    }
+    GeometryEditDone() {
+        this.geometryGround!.hide()
+        this.physics.addLand(this.geometryGround!.meshs)
+    }
     MakeSky(light: THREE.DirectionalLight) {
         return new SkyBoxAllTime(light)
     }
@@ -135,6 +153,14 @@ export default class WorldMap {
     GetTreeInfo(type: FluffyTreeType) {
         return this.tree.GetTreeInfo(type)
     }
+    async MakeFence(pos: THREE.Vector3) {
+        if (pos.y < 0) pos.y = 0
+        const [mesh, type] = await this.fence.Create(pos)
+        const asset = this.loader.GetAssets(type)
+        const simple = this.evntBox.addEventBox(EventBoxType.Physics, asset, mesh)
+        this.physics.addBuilding(simple, pos, simple.Size)
+        return mesh
+    }
     async MakeModular(pos: THREE.Vector3, modType = ModularType.Dirty) {
         if (pos.y < 0) pos.y = 0
         const mesh = await this.modular.Create(pos, modType)
@@ -144,16 +170,21 @@ export default class WorldMap {
         return mesh
     }
     async MakeModel(id: Char, pos: THREE.Vector3, type = EventBoxType.None) {
+        if (pos.y < 0) pos.y = 0
         const asset = this.loader.GetAssets(id)
-        const mesh = await asset.CloneModel()
+        const [mesh, _] = await asset.UniqModel(id.toString() + pos.x + pos.y + pos.z)
         if (type != EventBoxType.None) {
             const simple = this.evntBox.addEventBox(type, asset, mesh)
             this.physics.addBuilding(simple, pos.clone(), simple.Size)
         }
-        console.log(pos)
-        const meshs = new THREE.Group()
-        meshs.userData.model = meshs
-        meshs.add(mesh)
+        let meshs: THREE.Group
+        if(mesh instanceof THREE.Group) {
+            meshs = mesh
+        } else {
+            meshs = new THREE.Group()
+            meshs.add(mesh)
+        }
+        meshs.userData.model = true
         meshs.position.copy(pos)
         this.scene.add(meshs)
         return meshs
@@ -206,7 +237,7 @@ export default class WorldMap {
                 } else if ("gridHexMesh" in cur.userData) {
                     this.DelGrid(cur.userData.gridHexMesh)
                 } else if ("model" in cur.userData) {
-                    this.DelModel(cur.userData.model)
+                    this.DelModel(cur as THREE.Group)
                 }
             }
             cur = cur.parent
