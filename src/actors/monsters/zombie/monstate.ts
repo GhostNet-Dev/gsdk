@@ -223,8 +223,12 @@ export class RunZState extends State implements IMonsterAction {
         this.zombie.Meshs.quaternion.copy(qt)
 
         if (this.gphysic.Check(this.zombie)){
-            this.zombie.Meshs.position.x -= movX
-            this.zombie.Meshs.position.z -= movZ
+            this.zombie.Pos.y += 1 // 계단 체크 
+            if (this.gphysic.Check(this.zombie)) {
+                this.zombie.Pos.x -= movX
+                this.zombie.Pos.z -= movZ
+                this.zombie.Pos.y -= 1
+            }
         }
         return this
     }
