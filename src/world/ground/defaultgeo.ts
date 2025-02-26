@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { gui } from '@Glibs/helper/helper';
 import GUI from 'lil-gui';
+import IEventController from '@Glibs/interface/ievent';
+import { EventTypes } from '@Glibs/types/globaltypes';
 
 export default class GeometryGround {
     meshs = new THREE.Group()
@@ -14,7 +16,7 @@ export default class GeometryGround {
     private callback?: Function
     private removeCallback?: Function
 
-    constructor(private scene: THREE.Scene, { debug = true } = {}) {
+    constructor(private scene: THREE.Scene, private eventCtrl: IEventController, { debug = true } = {}) {
         this.debugMode = debug
         this.material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
         if (debug) this.wireMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
@@ -64,8 +66,12 @@ export default class GeometryGround {
     private createGeometry(type: string, params: any) {
         if (this.mesh) {
             this.meshs.remove(this.mesh)
-            if (this.debugMode) this.meshs.remove(this.wireMesh!);
+            if (this.debugMode) {
+                this.meshs.remove(this.wireMesh!);
+                this.wireMesh!.geometry.dispose()
+            }
             this.removeCallback?.(this.meshs)
+            this.mesh.geometry.dispose()
         }
 
         let geometry: THREE.BufferGeometry;
@@ -78,16 +84,18 @@ export default class GeometryGround {
             shape.lineTo(params.height, params.width)
             shape.lineTo(params.height, 0)
             shape.lineTo(0, 0)
-            geometry = new (THREE as any)[type](...Object.values(param));
+            geometry = new THREE.ExtrudeGeometry(shape, param);
         } else {
             geometry = new (THREE as any)[type](...Object.values(params));
         }
 
         this.mesh = new THREE.Mesh(geometry, this.material);
+        this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, this.mesh)
         this.meshs.add(this.mesh)
 
         if (this.debugMode) {
             this.wireMesh = new THREE.Mesh(geometry, this.wireMaterial);
+            this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, this.wireMesh)
             this.meshs.add(this.wireMesh);
         }
 
@@ -98,7 +106,7 @@ export default class GeometryGround {
         this.geometryFolder = this.gui.addFolder('Parameters');
 
         Object.keys(params).forEach(key => {
-            this.geometryFolder!.add(params, key, 0.1, 10).onChange(() => this.createGeometry(type, params));
+            this.geometryFolder!.add(params, key, 0.1, 10, 1).onChange(() => this.createGeometry(type, params));
         });
         this.geometryFolder.open();
     }

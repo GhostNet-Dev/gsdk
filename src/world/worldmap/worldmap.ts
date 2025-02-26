@@ -64,7 +64,7 @@ export default class WorldMap {
                 break
             }
             case MapType.Geometry: {
-                const obj = new GeometryGround(this.scene)
+                const obj = new GeometryGround(this.scene, this.eventCtrl)
                 map = obj.meshs
                 break
             }
@@ -120,7 +120,7 @@ export default class WorldMap {
     }
     MakeGeometryEdit(add: Function, remove: Function) {
         if (!this.geometryGround) 
-            this.geometryGround = new GeometryGround(this.scene, { debug: true })
+            this.geometryGround = new GeometryGround(this.scene, this.eventCtrl, { debug: true })
         this.geometryGround.show(add, remove)
     }
     GeometryEditDone() {
