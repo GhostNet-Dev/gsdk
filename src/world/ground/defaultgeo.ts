@@ -47,7 +47,10 @@ export default class GeometryGround {
             OctahedronGeometry: { radius: 1, detail: 0 },
             TetrahedronGeometry: { radius: 1, detail: 0 },
             RingGeometry: { innerRadius: 0.5, outerRadius: 1, thetaSegments: 32 },
-            TorusKnotGeometry: { radius: 1, tube: 0.4, tubularSegments: 64, radialSegments: 8, p: 2, q: 3 }
+            TorusKnotGeometry: { radius: 1, tube: 0.4, tubularSegments: 64, radialSegments: 8, p: 2, q: 3 },
+            ExtrudeGeometry: { steps:2, depth: 32, bevelEnabled: true, bevelThickness: 3, bevelSize: 2, 
+                bevelOffset: 1, bevelSegments: 2, width: 1, height: 18
+        }
         };
 
         this.gui.add(shapeOptions, 'shape', Object.keys(geometryTypes)).onChange((value: any) => {
@@ -66,7 +69,19 @@ export default class GeometryGround {
         }
 
         let geometry: THREE.BufferGeometry;
-        geometry = new (THREE as any)[type](...Object.values(params));
+        if (type == "ExtrudeGeometry") {
+            const param = { ...params }
+            delete param.width, param.height
+            const shape = new THREE.Shape()
+            shape.moveTo(0, 0)
+            shape.lineTo(0, params.width)
+            shape.lineTo(params.height, params.width)
+            shape.lineTo(params.height, 0)
+            shape.lineTo(0, 0)
+            geometry = new (THREE as any)[type](...Object.values(param));
+        } else {
+            geometry = new (THREE as any)[type](...Object.values(params));
+        }
 
         this.mesh = new THREE.Mesh(geometry, this.material);
         this.meshs.add(this.mesh)

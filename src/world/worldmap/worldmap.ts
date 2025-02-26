@@ -23,7 +23,7 @@ import { CustomGroundData } from '@Glibs/types/worldmaptypes';
 import ProduceTerrain3 from '../ground/prodterrain3';
 import FenceModular from './fencemodular';
 import { IGPhysic } from '@Glibs/interface/igphysics';
-import GeometryGround from './defaultgeo';
+import GeometryGround from '../ground/defaultgeo';
 
 
 export default class WorldMap {
