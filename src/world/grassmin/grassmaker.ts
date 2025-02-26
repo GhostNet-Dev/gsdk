@@ -12,6 +12,7 @@ export type GrassParam = {
 }
 
 export class GrassMaker implements ILoop {
+    LoopId = 0
     grassParam: GrassParam[] = []
     models: ZeldaGrass[] = []
 

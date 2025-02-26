@@ -4,15 +4,18 @@ import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 
 export class Ocean implements ILoop {
+    LoopId = 0
     _geometry: THREE.PlaneGeometry
     _shader: THREE.ShaderMaterial
     mesh: THREE.Mesh
+    meshs = new THREE.Group()
     startTime: number = 0
 
     //=====// Scene //========================================//     
 
     constructor(
         eventCtrl: IEventController,
+        private light: THREE.DirectionalLight,
         path = "https://hons.ghostwebservice.com/",
     ) {
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
@@ -37,10 +40,26 @@ export class Ocean implements ILoop {
             vertexColors: true,
             side: THREE.DoubleSide,
         });
+        this._shader.onBeforeCompile = (shader) => {
+            // 유니폼 추가
+            shader.uniforms.lightColor = { value: new THREE.Color(1, 1, 1) }; // 조명 색상
+            shader.uniforms.lightIntensity = { value: 1.0 }; // 조명 강도
+
+            shader.fragmentShader = shader.fragmentShader.replace(
+                '#include <dithering_fragment>',
+                `
+                gl_FragColor.rgb *= lightColor * lightIntensity; // 시간에 따라 색상 변화 + 조명 강도 반영
+                #include <dithering_fragment>
+                `
+            );
+
+            this._shader.userData.shader = shader; // shader 저장 (실시간 업데이트를 위해)
+        };
 
         this.mesh = new THREE.Mesh(this._geometry, this._shader);
         this.mesh.position.y = -2
         this.mesh.scale.multiplyScalar(.1)
+        this.meshs.add(this.mesh)
         this.startTime = Date.now()
     }
 
@@ -48,6 +67,12 @@ export class Ocean implements ILoop {
         const elapsedTime = Date.now() - this.startTime
         this._shader.uniforms.uTime.value = elapsedTime * 0.001
         this._shader.uniformsNeedUpdate = true;
+
+        // 유니폼 값 업데이트
+        if (this._shader.userData.shader) {
+            this._shader.userData.shader.uniforms.lightColor.value.copy(this.light.color);
+            this._shader.userData.shader.uniforms.lightIntensity.value = this.light.intensity;
+        }
     }
 }
 

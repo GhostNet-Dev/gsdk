@@ -60,7 +60,7 @@ export default class MenuIcon {
     if (text.length > 0) {
       textHtml = `
       <!-- 텍스트를 SVG 위에 오버레이 -->
-      <div class="icon-font gametext text-center" ${textPosition}>
+      <div class="icon-font gametext text-center gfont" ${textPosition}>
         ${text}
       </div>
       `
@@ -98,7 +98,8 @@ function getCSS(width: string, height: string, rounded: string) {
       left: 50%;
       transform: translate(-50%, 0%);
       text-align: center;
-      font-family: coiny;
+      /* font-family: coiny; */
+      font-weight: 800;
   }
   .circle-icon {
       border-radius: 50%;

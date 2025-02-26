@@ -2,12 +2,13 @@ import * as THREE from "three";
 import { FoliageMaterial } from "./foliagematerial";
 import { PhysicsObject } from "@Glibs/interface/iobject";
 import { Loader } from "@Glibs/loader/loader";
+import { Char } from "@Glibs/types/assettypes";
 
 export class FluffyTree extends PhysicsObject {
   foliageMaterial: FoliageMaterial[] = []
 
   constructor(loader: Loader) {
-    super(loader.FluffyTreeAsset)
+    super(loader.GetAssets(Char.FluffyTree))
   }
 
   async createTree(

@@ -7,15 +7,15 @@ import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 import { GUI } from "lil-gui"
 
 export class FemaleFab extends AssetModel implements IAsset {
-    Gltf?:GLTF
+    gltf?:GLTF
 
-    get Id() {return Char.Female}
+    get Id() {return Char.CharHumanFemale}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Gltf, "assets/female/female2.gltf", async (gltf: GLTF) => {
         //super(loader, ModelType.Gltf, "assets/animals/Cow.gltf", async (gltf: GLTF) => {
         //super(loader, ModelType.Gltf, "assets/boy/child.gltf", async (gltf: GLTF) => {
-            this.Gltf = gltf
+            this.gltf = gltf
             this.meshs = gltf.scene
             this.meshs.castShadow = true
             this.meshs.receiveShadow = true

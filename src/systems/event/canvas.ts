@@ -9,20 +9,29 @@ export class Canvas {
     objs: IViewer[] = []
     loopObjs: ILoop[] = []
     timeScale = 1
+    objId = 1
 
     constructor(eventCtrl: IEventController) {
         this.width = window.innerWidth
         this.height = window.innerHeight
 
         eventCtrl.RegisterEventListener(EventTypes.RegisterLoop, (obj: ILoop) => {
-            if (this.loopObjs.indexOf(obj) > -1) {
-                console.warn("already register " + obj.constructor.name);
-                return
+            if(!obj.LoopId) {
+                obj.LoopId = this.objId++
+            } else {
+                if (this.loopObjs.findIndex(o => o.LoopId == obj.LoopId) > -1) {
+                    console.warn("already register " + obj.constructor.name);
+                    return
+                }
             }
             this.loopObjs.push(obj)
         })
         eventCtrl.RegisterEventListener(EventTypes.DeregisterLoop, (obj: ILoop) => {
-            this.loopObjs.splice(this.loopObjs.indexOf(obj), 1)
+            console.log("deregister " + obj.constructor.name);
+            const idx = this.loopObjs.findIndex(o => o.LoopId == obj.LoopId)
+            if(idx < 0) throw new Error("not exist in array");
+            
+            this.loopObjs.splice(idx, 1)
         })
         eventCtrl.RegisterEventListener(EventTypes.RegisterViewer, (obj: IViewer) => {
             this.objs.push(obj)

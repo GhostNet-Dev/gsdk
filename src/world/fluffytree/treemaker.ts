@@ -25,6 +25,7 @@ export type TreeParam = {
 }
 
 export class TreeMaker implements ILoop {
+    LoopId = 0
     treeParam: TreeParam[] = []
     models: FluffyTree[] = []
     treeStyle = new Map<FluffyTreeType, string[]>()

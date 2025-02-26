@@ -8,7 +8,7 @@ export class AssetModel {
     protected meshs?: THREE.Group
     protected size?: THREE.Vector3
     protected mixer?: THREE.AnimationMixer
-        protected clips = new Map<Ani, THREE.AnimationClip | undefined>()
+    protected clips = new Map<Ani, THREE.AnimationClip | undefined>()
     private models = new Map<string, THREE.Group>()
     private mixers = new Map<string, THREE.AnimationMixer>()
     protected boxMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, lightMapIntensity: 0 })

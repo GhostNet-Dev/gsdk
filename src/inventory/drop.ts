@@ -13,6 +13,7 @@ type DropBox = {
 }
 
 export class Drop implements ILoop {
+    LoopId = 0
     dropBox: DropBox[] = []
     activeDropBox: DropBox[] = []
     resetPos = new THREE.Vector3(0, -10, 0)

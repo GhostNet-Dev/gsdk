@@ -27,6 +27,7 @@ export type ProjectileSet = {
 }
 
 export class Projectile implements ILoop {
+    LoopId = 0
     projectiles = new Map<MonsterId, ProjectileSet[]>()
     processing = false
 

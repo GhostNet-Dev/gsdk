@@ -6,13 +6,13 @@ import { Ani, Char, ModelType } from "../assettypes";
 import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 
 export class GolemFab extends AssetModel implements IAsset {
-    Gltf?:GLTF
+    gltf?:GLTF
 
-    get Id() {return Char.Golem}
+    get Id() {return Char.CharMonGolem}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Gltf, "assets/monster/golem.glb", async (gltf: GLTF) => {
-            this.Gltf = gltf
+            this.gltf = gltf
             this.meshs = gltf.scene
             this.meshs.castShadow = true
             this.meshs.receiveShadow = true
@@ -58,14 +58,14 @@ export class GolemFab extends AssetModel implements IAsset {
 }
 
 export class BigGolemFab extends AssetModel implements IAsset {
-    Gltf?:GLTF
+    gltf?:GLTF
     scale = 0.02
 
-    get Id() {return Char.BigGolem}
+    get Id() {return Char.CharMonBigGolem}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Gltf, "assets/monster/big_golem.glb", async (gltf: GLTF) => {
-            this.Gltf = gltf
+            this.gltf = gltf
             this.meshs = gltf.scene
             this.meshs.castShadow = true
             this.meshs.receiveShadow = true

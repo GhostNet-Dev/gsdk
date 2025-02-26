@@ -14,6 +14,7 @@ import { IGPhysic } from "@Glibs/interface/igphysics";
 import IInventory from "@Glibs/interface/iinven";
 
 export class PlayerCtrl implements ILoop {
+    LoopId = 0
     mode: AppMode = AppMode.Play
     keyDownQueue: IKeyCommand[] = []
     keyUpQueue: IKeyCommand[] = []
@@ -161,6 +162,17 @@ export class PlayerCtrl implements ILoop {
         eventCtrl.RegisterEventListener(EventTypes.UpdateBuff, (buff: IBuffItem[]) => {
             this.UpdateBuff(buff)
         })
+    }
+    init() {
+        this.playEnable = true
+        this.spec.ResetStatus()
+        this.eventCtrl.SendEventMessage(EventTypes.PlayerStatus, this.spec.Status)
+        this.currentState = this.IdleSt
+        this.currentState.Init()
+    }
+    uninit() {
+        this.playEnable = false
+        this.currentState.Uninit()
     }
     add(...obj: THREE.Object3D[]) {
         this.targets.push(...obj)

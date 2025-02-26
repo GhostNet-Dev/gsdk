@@ -35,6 +35,7 @@ export class EventBrick implements IBuildingObject {
     Dispose() {
         if(this.brick) this.brick.Dispose()
     }
+    Collision(_: IPhysicsObject): void { }
 }
 
 export class Bricks {

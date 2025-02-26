@@ -3,7 +3,7 @@ export class GameButton {
     dom = document.createElement("div")
     constructor(options?: { color: "orange" | "green" | "red" }) {
         this.applyDynamicStyle("gamebutton", getCSS())
-        this.dom.classList.add("game-button", (options) ? options.color : "green")
+        this.dom.classList.add("game-button", (options) ? options.color : "green", "m-1")
     }
     GetContentElement() {
         return this.dom

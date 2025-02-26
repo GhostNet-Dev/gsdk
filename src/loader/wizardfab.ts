@@ -10,7 +10,7 @@ import { Ani, Bind, Char, ModelType } from "./assettypes";
 export class WizardFab extends AssetModel implements IAsset {
     gltf?:GLTF
 
-    get Id() {return Char.Wizard}
+    get Id() {return Char.CharHumanWizard}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Fbx, "assets/wizard/lowpolywizard.fbx", async (meshs: THREE.Group) => {

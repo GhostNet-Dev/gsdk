@@ -6,10 +6,10 @@ import { Ani, Char, ModelType } from "../../assettypes";
 import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 
 class KayKitSkeletons extends AssetModel {
-    Gltf?:GLTF
+    gltf?:GLTF
     constructor(loader: Loader, path: string) { 
         super(loader, ModelType.Gltf, path, async (gltf: GLTF) => {
-            this.Gltf = gltf
+            this.gltf = gltf
             this.meshs = gltf.scene
             this.meshs.castShadow = true
             this.meshs.receiveShadow = true
@@ -60,18 +60,18 @@ class KayKitSkeletons extends AssetModel {
     }
 }
 export class KayKitSkeletonMageFab extends KayKitSkeletons implements IAsset {
-    get Id() {return Char.KayKitSkeletonMage}
+    get Id() {return Char.CharMonKayKitSkeletonMage}
     constructor(loader: Loader) { super(loader, "assets/kaykit/skeletons/Skeleton_Mage.glb") }
 }
 export class KayKitSkeletonWarriorFab extends KayKitSkeletons implements IAsset {
-    get Id() {return Char.KayKitSkeletonWarrior}
+    get Id() {return Char.CharMonKayKitSkeletonWarrior}
     constructor(loader: Loader) { super(loader, "assets/kaykit/skeletons/Skeleton_Warrior.glb") }
 }
 export class KayKitSkeletonRogueFab extends KayKitSkeletons implements IAsset {
-    get Id() {return Char.KayKitSkeletonRogue}
+    get Id() {return Char.CharMonKayKitSkeletonRogue}
     constructor(loader: Loader) { super(loader, "assets/kaykit/skeletons/Skeleton_Rogue.glb") }
 }
 export class KayKitSkeletonMinionFab extends KayKitSkeletons implements IAsset {
-    get Id() {return Char.KayKitSkeletonMinion}
+    get Id() {return Char.CharMonKayKitSkeletonMinion}
     constructor(loader: Loader) { super(loader, "assets/kaykit/skeletons/Skeleton_Minion.glb") }
 }

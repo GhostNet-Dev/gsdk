@@ -6,13 +6,13 @@ import { Ani, Char, ModelType } from "../assettypes";
 import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 
 export class BatPigFab extends AssetModel implements IAsset {
-    Gltf?:GLTF
+    gltf?:GLTF
 
-    get Id() {return Char.BatPig}
+    get Id() {return Char.CharMonBatPig}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Gltf, "assets/monster/bat_pig.glb", async (gltf: GLTF) => {
-            this.Gltf = gltf
+            this.gltf = gltf
             this.meshs = gltf.scene
             this.meshs.castShadow = true
             this.meshs.receiveShadow = true

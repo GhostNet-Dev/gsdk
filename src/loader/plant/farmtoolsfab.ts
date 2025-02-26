@@ -8,7 +8,7 @@ import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 export class WarteringCanFab extends AssetModel implements IAsset {
     gltf?:GLTF
 
-    get Id() {return Char.WarteringCan}
+    get Id() {return Char.WateringCan}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Gltf, "assets/stub/watering_can.glb", async (gltf: GLTF) => {

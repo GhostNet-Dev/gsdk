@@ -50,6 +50,11 @@ export enum Icons {
     Apple,
     Pause,
     ShoppingBag,
+
+    Wheel,
+    Rotate,
+    Trade,
+    Box,
 }
 
 export enum IconsColor {

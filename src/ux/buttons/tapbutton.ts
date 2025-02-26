@@ -9,7 +9,9 @@ export default class TapButton {
 
     constructor(
         private parent: HTMLElement, 
-        { opacity = "0.5", content = "Tap to continue", fontFamily = "coiny", open = () => { }, close = () => { }, click = () => { } } = {}
+        { 
+            opacity = "0.5", content = "Tap to continue", fullScreen = false,
+            open = () => { }, close = () => { }, click = () => { } } = {}
     ) {
         this.open = open
         this.close = close
@@ -23,16 +25,15 @@ export default class TapButton {
         //     const index = Number(topDom.style.zIndex)
         //     this.dom.style.zIndex = ((index > 0) ? index - 1 : 0).toString()
         // }
-        this.dom.onclick = () => { click(); this.hide()}
+        this.dom.onclick = () => { if (fullScreen) this.toggleFullScreen(); click(); this.hide() }
         this.dom.addEventListener("click", (e) => { e.stopPropagation() })
 
         this.textDom.style.position = "relative"
         this.textDom.style.left = "50%"
         this.textDom.style.width = "fit-content"
         this.textDom.style.transform = "translate(-50%, -50%)"
-        this.textDom.style.fontFamily = fontFamily
         this.textDom.innerText = content
-        this.textDom.classList.add("gametext")
+        this.textDom.classList.add("gametext", "gfont")
 
         const container = document.createElement("div")
         container.classList.add("container", "p-2")
@@ -69,5 +70,20 @@ export default class TapButton {
         await this.close()
         this.ani?.kill()
         if (this.parent.contains(this.dom)) this.parent.removeChild(this.dom)
+    }
+    toggleFullScreen(): void {
+        const doc = document.documentElement;
+
+        if (!document.fullscreenElement) {
+            if (doc.requestFullscreen) {
+                doc.requestFullscreen();
+            } else if ((doc as any).mozRequestFullScreen) { // Firefox
+                (doc as any).mozRequestFullScreen();
+            } else if ((doc as any).webkitRequestFullscreen) { // Chrome, Safari, Opera
+                (doc as any).webkitRequestFullscreen();
+            } else if ((doc as any).msRequestFullscreen) { // IE/Edge
+                (doc as any).msRequestFullscreen();
+            }
+        }
     }
 }

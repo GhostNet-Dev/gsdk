@@ -1,5 +1,3 @@
-import MenuIcon from "./menuicon";
-
 export interface IMenuItem {
     dom: HTMLElement
 }

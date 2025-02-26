@@ -28,6 +28,8 @@ export enum EventTypes {
     KeyUp = "keyup",
     Input = "input",
     CtrlObj = "ctrlObj",
+    CtrlObjOff = "ctrlObjOff",
+    SetNonGlow = "nonglow",
 
     Equipment = "Equip",
     Drop = "drop",
@@ -46,6 +48,8 @@ export enum EventTypes {
     PlayMode = "playmode",
     PlayerStatus = "playerstatus",
     Projectile = "Projectile",
+    JoypadOn = "joypadon",
+    JoypadOff = "joypadoff",
 
     AlarmWarning = "alarmwarning",
     AlarmNormal = "alarmnormal",

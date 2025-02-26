@@ -11,6 +11,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 
 
 export class FlyCtrl implements ILoop, IFlyCtrl {
+    LoopId = 0
     IdleSt = new IdleFState(this, this.fly, this.targetList, this.gphysic)
     AttackSt = new AttackFState(this, this.fly, this.gphysic, this.targetList, this.eventCtrl, this.property)
     RunSt = new RunFState(this, this.fly, this.gphysic, this.property)
