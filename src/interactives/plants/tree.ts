@@ -28,6 +28,5 @@ export class Tree extends PhysicsObject {
             child.castShadow = true
             child.receiveShadow = true
         })
-        //this.gphysics.addMeshBuilding(this)
     }
 }

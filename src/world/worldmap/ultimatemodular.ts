@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { Loader } from "@Glibs/loader/loader";
 import { Char } from '@Glibs/types/assettypes';
 import { IAsset } from '@Glibs/interface/iasset';
+import { NormalData } from './worldmaptypes';
 
 export enum ModularType {
     Dirty,
@@ -69,7 +70,25 @@ export default class UltimateModular {
     GetModularList() {
         return this.platforms.map(entry => entry.name.slice("UltimateModPlatform".length));
     }
-
+    Save() {
+        const data: NormalData[] = []
+        this.map.forEach((v) => {
+            data.push({
+                type: v.type, 
+                position: v.mesh.position, 
+                rotation: v.mesh.rotation,
+                scale: v.mesh.scale.x,
+                custom: v.modType
+            })
+        })
+        return data
+    }
+    Load(data: NormalData[]) {
+        data.forEach(async (v) => {
+            const p = v.position
+            await this.Create(new THREE.Vector3(p.x, p.y, p.z))
+        })
+    }
     async Create(pos = new THREE.Vector3(), modType = ModularType.Dirty) {
         const size = 2;
         const key = `${pos.x},${pos.y},${pos.z}`;

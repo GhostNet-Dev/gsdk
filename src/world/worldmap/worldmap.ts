@@ -19,10 +19,9 @@ import { Char } from '@Glibs/types/assettypes';
 import EventBoxManager from '@Glibs/interactives/eventbox/boxmgr';
 import { EventBoxType } from '@Glibs/types/eventboxtypes';
 import { EventTypes } from '@Glibs/types/globaltypes';
-import { CustomGroundData } from '@Glibs/types/worldmaptypes';
+import { CustomGroundData, GeometryGroundData, ProductGroundData } from '@Glibs/types/worldmaptypes';
 import ProduceTerrain3 from '../ground/prodterrain3';
 import FenceModular from './fencemodular';
-import { IGPhysic } from '@Glibs/interface/igphysics';
 import GeometryGround from '../ground/defaultgeo';
 
 
@@ -33,17 +32,17 @@ export default class WorldMap {
     groundData?: GroundData
     customGround?: CustomGround
     ground?: Ground
+    productGround?: ProduceTerrain3
     geometryGround?: GeometryGround
     gridLine? :THREE.LineSegments
     gridMesh? :THREE.Group
     grid = new Grid()
-    evntBox = new EventBoxManager()
+    evntBox = new EventBoxManager(this.loader)
 
     constructor(
         private loader: Loader,
         private scene: THREE.Scene,
         private eventCtrl: IEventController,
-        private physics: IGPhysic,
         private light: THREE.DirectionalLight,
         private modular: UltimateModular,
         private fence: FenceModular,
@@ -73,6 +72,7 @@ export default class WorldMap {
                 map = obj.CreateTerrain()
                 obj.SetupGUI()
                 obj.Show()
+                this.productGround = obj
                 break
             }
             case MapType.Free: {
@@ -114,9 +114,16 @@ export default class WorldMap {
         }
         if(!map) throw new Error("not defined");
         this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, map)
-        this.physics.addLand(map)
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, map)
         this.scene.add(map)
         return map
+    }
+    MakeProductMapDone() {
+        if(this.productGround) {
+            this.productGround.Hide()
+            this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, this.productGround.terrain)
+            return this.productGround.terrain
+        }
     }
     MakeGeometryEdit(add: Function, remove: Function) {
         if (!this.geometryGround) 
@@ -125,7 +132,7 @@ export default class WorldMap {
     }
     GeometryEditDone() {
         this.geometryGround!.hide()
-        this.physics.addLand(this.geometryGround!.meshs)
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, this.geometryGround!.meshs)
     }
     MakeSky(light: THREE.DirectionalLight) {
         return new SkyBoxAllTime(light)
@@ -158,7 +165,7 @@ export default class WorldMap {
         const [mesh, type] = await this.fence.Create(pos)
         const asset = this.loader.GetAssets(type)
         const simple = this.evntBox.addEventBox(EventBoxType.Physics, asset, mesh)
-        this.physics.addBuilding(simple, pos, simple.Size)
+        if (simple) this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, simple.Meshs)
         return mesh
     }
     async MakeModular(pos: THREE.Vector3, modType = ModularType.Dirty) {
@@ -166,17 +173,17 @@ export default class WorldMap {
         const mesh = await this.modular.Create(pos, modType)
         const asset = this.loader.GetAssets(Char.UltimateModPlatformSingleCubeGrass)
         const simple = this.evntBox.addEventBox(EventBoxType.Physics, asset, mesh)
-        this.physics.addBuilding(simple, pos, simple.Size)
+        if (simple) this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, simple.Meshs)
         return mesh
     }
     async MakeModel(id: Char, pos: THREE.Vector3, type = EventBoxType.None) {
         if (pos.y < 0) pos.y = 0
         const asset = this.loader.GetAssets(id)
         const [mesh, _] = await asset.UniqModel(id.toString() + pos.x + pos.y + pos.z)
-        if (type != EventBoxType.None) {
-            const simple = this.evntBox.addEventBox(type, asset, mesh)
-            this.physics.addBuilding(simple, pos.clone(), simple.Size)
-        }
+
+        const simple = this.evntBox.addEventBox(type, asset, mesh)
+        if (simple) this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, simple.Meshs)
+
         let meshs: THREE.Group
         if(mesh instanceof THREE.Group) {
             meshs = mesh
@@ -190,6 +197,8 @@ export default class WorldMap {
         return meshs
     }
     DelModel(obj: THREE.Group) {
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, obj)
+        this.evntBox.removeEventBox(obj)
         this.scene.remove(obj)
     }
     DelGrass(obj: ZeldaGrass) {
@@ -203,45 +212,69 @@ export default class WorldMap {
     }
     DelGround(obj: Ground) {
         this.scene.remove(obj.obj)
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, obj.obj)
         obj.Dispose()
+        this.ground = undefined
     }
     DelCustomGround(obj: CustomGround) {
         this.scene.remove(obj.obj)
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, obj.obj)
         obj.Dispose()
+        this.customGround = undefined
+    }
+    DelGeometryGround(obj: GeometryGround) {
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, obj.meshs)
+        obj.Dispose()
+        this.geometryGround = undefined
     }
     DelProduceGround(obj: ProduceTerrain3) {
         this.scene.remove(obj.terrain!)
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, obj.terrain)
         obj.Dispose()
+        this.productGround = undefined
     }
     DelGrid(obj: THREE.Object3D) {
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, obj)
         this.scene.remove(obj)
+        this.gridMesh = undefined
     }
     DeleteObj(obj: THREE.Object3D) {
-        let cur = obj
-        while(cur.parent) {
-            if (cur.userData.isRoot == true) {
-                if("grass" in cur.userData) {
-                    this.DelGrass(cur.userData.grass)
-                } else if ("tree" in cur.userData) {
-                    this.DelTree(cur.userData.tree)
-                } else if ("simpleWater" in cur.userData) {
-                    this.DelMirrorWater(cur.userData.simpleWater)
-                } else if ("produce" in cur.userData) {
-                    this.DelProduceGround(cur.userData.produce)
-                } else if ("ground" in cur.userData) {
-                    this.DelGround(cur.userData.ground)
-                } else if ("customground" in cur.userData) {
-                    this.DelCustomGround(cur.userData.customground)
-                } else if ("gridMesh" in cur.userData) {
-                    this.DelGrid(cur.userData.gridMesh)
-                } else if ("gridHexMesh" in cur.userData) {
-                    this.DelGrid(cur.userData.gridHexMesh)
-                } else if ("model" in cur.userData) {
-                    this.DelModel(cur as THREE.Group)
-                }
+        let cur: THREE.Object3D | null = obj
+        do {
+            if ("grass" in cur.userData) {
+                this.DelGrass(cur.userData.grass)
+                break
+            } else if ("tree" in cur.userData) {
+                this.DelTree(cur.userData.tree)
+                break
+            } else if ("simpleWater" in cur.userData) {
+                this.DelMirrorWater(cur.userData.simpleWater)
+                break
+            } else if ("produce" in cur.userData) {
+                this.DelProduceGround(cur.userData.produce)
+                break
+            } else if ("ground" in cur.userData) {
+                this.DelGround(cur.userData.ground)
+                break
+            } else if ("customground" in cur.userData) {
+                this.DelCustomGround(cur.userData.customground)
+                break
+            } else if ("geometryGround" in cur.userData) {
+                this.DelGeometryGround(cur.userData.geometryGround)
+                break
+            } else if ("gridMesh" in cur.userData) {
+                this.DelGrid(cur.userData.gridMesh)
+                break
+            } else if ("gridHexMesh" in cur.userData) {
+                this.DelGrid(cur.userData.gridHexMesh)
+                break
+            } else if ("model" in cur.userData) {
+                this.DelModel(cur as THREE.Group)
+                break
             }
             cur = cur.parent
-        }
+        } while (cur)
+        return cur
     }
     getPosition(id: number) {
         const dummy = new THREE.Object3D()
@@ -283,6 +316,22 @@ export default class WorldMap {
                     this.customGround.LoadMap(texture, geometry)
                     this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, this.customGround.obj)
                     this.scene.add(this.customGround.obj)
+                    break;
+                }
+                case MapEntryType.GeometryGround: {
+                    if (!this.geometryGround)
+                        this.geometryGround = new GeometryGround(this.scene, this.eventCtrl)
+                    const data: GeometryGroundData = entry.data as GeometryGroundData
+                    this.geometryGround.LoadData(data.data.type, data.data.value)
+                    this.geometryGround.meshs.position.set(data.position.x, data.position.y, data.position.z)
+                    this.geometryGround.meshs.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z)
+                    this.geometryGround.meshs.scale.set(data.scale.x, data.scale.y, data.scale.z)
+                    break;
+                }
+                case MapEntryType.ProductGround: {
+                    break;
+                }
+                case MapEntryType.EventBoxModel: {
                     break;
                 }
                 case MapEntryType.Tree: {
@@ -361,6 +410,28 @@ export default class WorldMap {
             }
             mapData.push({ type: MapEntryType.CustomGround, data: gData })
         }
+        if(this.geometryGround) {
+            const t = this.geometryGround.meshs
+            const gData: GeometryGroundData = {
+                data: this.geometryGround.GetData(),
+                position: { x: t.position.x, y: t.position.y, z: t.position.z },
+                rotation: { x: t.rotation.x, y: t.rotation.y, z: t.rotation.z },
+                scale: t.scale,
+                color: this.geometryGround.currColor
+            }
+            mapData.push({ type: MapEntryType.GeometryGround, data: gData })
+        }
+        if(this.productGround) {
+            const t = this.productGround.terrain!
+            const gData: ProductGroundData = {
+                data: this.productGround.terrainConfig,
+                position: { x: t.position.x, y: t.position.y, z: t.position.z },
+                rotation: { x: t.rotation.x, y: t.rotation.y, z: t.rotation.z },
+                scale: t.scale,
+            }
+            mapData.push({ type: MapEntryType.ProductGround, data: gData })
+        }
+        mapData.push({ type:MapEntryType.EventBoxModel, data: this.evntBox.Save()})
         return mapData
     }
     onSave() {

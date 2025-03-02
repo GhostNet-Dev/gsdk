@@ -198,6 +198,9 @@ export class GPhysics implements IGPhysic {
         })
         return ret
     }
+    CheckDirection(obj: IPhysicsObject, dir: THREE.Vector3) {
+        return { obj: undefined, distance: (this.Check(obj)) ? 0 : -1 }
+    }
     Check(obj: IPhysicsObject): boolean {
         const pos = obj.BoxPos
         // if (pos.y < -10) return true

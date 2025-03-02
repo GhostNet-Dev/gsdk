@@ -85,19 +85,15 @@ export class State {
         }
     }
     CheckGravity() {
-        this.player.Meshs.position.y -= 0.1
         const distance = this.gphysic.CheckDown(this.player)
-        const down = !this.gphysic.CheckBoxs(this.player)
-        // if down, distance 검사 순서 중요!
-        if (down && distance > this.player.Size.y) {
-            this.player.Meshs.position.y += 0.1
+        if (distance > 1) {
             this.playerCtrl.JumpSt.Init()
             this.playerCtrl.JumpSt.velocity_y = 0
             console.log("raycast going down! : ", distance)
             return this.playerCtrl.JumpSt
+        } else {
+            this.player.Pos.y += -distance
         } 
-        
-        if (distance < 0.1) this.player.Meshs.position.y += 0.1
     }
 }
 
@@ -187,6 +183,7 @@ export class IdleState extends State implements IPlayerAction {
     Init(): void {
         this.player.ChangeAction(ActionType.Idle)
         this.playerCtrl.RunSt.PreviousState(this)
+        console.log("Idle!!")
     }
     Uninit(): void {
         
@@ -220,6 +217,7 @@ export class RunState extends State implements IPlayerAction {
     YV = new THREE.Vector3(0, 1, 0)
     MX = new THREE.Matrix4()
     QT = new THREE.Quaternion()
+    dir = new THREE.Vector3()
 
     Update(delta: number, v: THREE.Vector3): IPlayerAction {
         const checkAtt = this.CheckAttack()
@@ -237,20 +235,27 @@ export class RunState extends State implements IPlayerAction {
         }
         v.y = 0
 
-        const movX = v.x * delta * this.speed
-        const movZ = v.z * delta * this.speed
-        this.player.Meshs.position.x += movX
-        this.player.Meshs.position.z += movZ
-
         const mx = this.MX.lookAt(v, this.ZeroV, this.YV)
         const qt = this.QT.setFromRotationMatrix(mx)
         this.player.Meshs.quaternion.copy(qt)
 
-        if (this.gphysic.Check(this.player)) {
+        const dis = this.gphysic.CheckDirection(this.player, this.dir.set(v.x, 0, v.z))
+        const moveAmount = this.dir.normalize().multiplyScalar(delta * this.speed)
+        const moveDis = moveAmount.length()
+
+        // this.player.Meshs.position.x += movX
+        // this.player.Meshs.position.z += movZ
+
+        if (moveDis > dis.distance) {
+            this.player.Pos.add(moveAmount)
+        } else {
             this.player.Meshs.position.y += 1 // 계단 체크
-            if (this.gphysic.Check(this.player)) {
-                this.player.Meshs.position.x -= movX
-                this.player.Meshs.position.z -= movZ
+            const dis = this.gphysic.CheckDirection(this.player, moveAmount)
+            if (dis.distance > 0) {
+                this.player.Pos.add(moveAmount)
+                // this.player.Meshs.position.x -= movX
+                // this.player.Meshs.position.z -= movZ
+            } else {
                 this.player.Meshs.position.y -= 1
             }
         }
@@ -265,6 +270,7 @@ export class JumpState implements IPlayerAction {
     YV = new THREE.Vector3(0, 1, 0)
     MX = new THREE.Matrix4()
     QT = new THREE.Quaternion()
+    dir = new THREE.Vector3()
 
     constructor(private playerCtrl: PlayerCtrl, private player: Player, private gphysic: IGPhysic) { }
     Init(): void {
@@ -277,14 +283,9 @@ export class JumpState implements IPlayerAction {
         this.velocity_y = 16
     }
     Update(delta: number, v: THREE.Vector3): IPlayerAction {
-        const movX = v.x * delta * this.speed
-        const movZ = v.z * delta * this.speed
         const movY = this.velocity_y * delta
 
-        this.player.Meshs.position.x += movX
-        this.player.Meshs.position.z += movZ
-
-        if (movX || movZ) {
+        if (v.x || v.z) {
             this.dirV.copy(v)
             this.dirV.y = 0
             const mx = this.MX.lookAt(this.dirV, this.ZeroV, this.YV)
@@ -292,20 +293,25 @@ export class JumpState implements IPlayerAction {
             this.player.Meshs.quaternion.copy(qt)
         }
 
-        if (this.gphysic.Check(this.player)) {
-            this.player.Meshs.position.x -= movX
-            this.player.Meshs.position.z -= movZ
+        const dirdis = this.gphysic.CheckDirection(this.player, this.dir.set(v.x, 0, v.z))
+        const moveAmount = this.dir.normalize().multiplyScalar(delta * this.speed)
+        const moveDis = moveAmount.length()
+
+        if (moveDis > dirdis.distance) {
+            this.player.Pos.add(moveAmount)
         }
 
-        this.player.Meshs.position.y += movY
-
-        if (this.gphysic.Check(this.player)) {
-            this.player.Meshs.position.y -= movY
+        const dis = this.gphysic.CheckDown(this.player)
+        if (movY > 0 || dis > Math.abs(movY)) {
+            this.player.Meshs.position.y += movY
+        } else {
+            this.player.Meshs.position.y += -dis
 
             this.Uninit()
             this.playerCtrl.IdleSt.Init()
             return this.playerCtrl.IdleSt
         }
+
         this.velocity_y -= 9.8 * 3 *delta
 
         return this

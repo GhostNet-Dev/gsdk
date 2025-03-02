@@ -18,8 +18,10 @@ export interface IPhysicsObject {
 export interface IBuildingObject {
     get Size() : THREE.Vector3
     get BoxPos() : THREE.Vector3
+    get Box(): THREE.Box3
     get Key(): string[]
     set Key(k: string[])
+    get Meshs(): THREE.Group | THREE.Mesh
     Collision(obj: IPhysicsObject): void
 }
 const boxMat = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true, lightMapIntensity: 0 })

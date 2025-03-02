@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Joystick } from "./joystic";
-import { KeyAction1, KeyAction2, KeyAction3, KeyDown, KeyLeft, KeyRight, KeySpace, KeyUp } from "../event/keycommand";
+import { KeyAction1, KeyAction2, KeyAction3, KeyAction4, KeyAction5, KeyDown, KeyLeft, KeyRight, KeySpace, KeySystem0, KeyUp } from "../event/keycommand";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import IEventController from "@Glibs/interface/ievent";
 
@@ -16,14 +16,14 @@ export default class Input {
     virtualV = new THREE.Vector3()
     zeroV = new THREE.Vector3()
 
-    left = document.getElementById("goleft") as HTMLDivElement
-    right = document.getElementById("goright") as HTMLDivElement
-    up = document.getElementById("goup") as HTMLDivElement
-    down = document.getElementById("godown") as HTMLDivElement
-    jump = document.getElementById("joypad_button1") as HTMLDivElement
-    action1 = document.getElementById("joypad_button2") as HTMLDivElement
-    action2 = document.getElementById("joypad_button3") as HTMLDivElement
-    action3 = document.getElementById("joypad_button4") as HTMLDivElement
+    left: HTMLDivElement
+    right: HTMLDivElement
+    up: HTMLDivElement
+    down: HTMLDivElement
+    jump: HTMLDivElement
+    action1: HTMLDivElement
+    action2: HTMLDivElement
+    action3: HTMLDivElement
     currentEvent?: Touch
     clock = new THREE.Clock()
     startTime = this.clock.getElapsedTime().toFixed(2)
@@ -108,6 +108,7 @@ export default class Input {
 
         this.jump.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeySpace) }
         this.jump.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeySpace) }
+        this.jump.onclick = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeySpace) }
 
         this.action1.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyAction1) }
         this.action1.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyAction1) }
@@ -117,6 +118,36 @@ export default class Input {
 
         this.action3.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyAction3) }
         this.action3.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyAction3) }
+        window.addEventListener("keydown", (e) => {
+            switch (e.code) {
+                case "ArrowUp": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyUp); break
+                case "ArrowDown": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyDown); break;
+                case "ArrowLeft": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyLeft); break;
+                case "ArrowRight": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyRight); break;
+            }
+            switch (e.key) {
+                case '0':
+                    if (window.location.hostname != "hons.ghostwebservice.com") {
+                        this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeySystem0);
+                    }
+                    break;
+                case `1`: this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyAction1); break;
+                case '2': this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyAction2); break;
+                case '3': this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyAction3); break;
+                case '4': this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyAction4); break;
+                case '5': this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyAction5); break;
+                case ' ': this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeySpace); break;
+            }
+        })
+        window.addEventListener("keyup", (e) => {
+            switch (e.code) {
+                case "ArrowUp": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyUp); break
+                case "ArrowDown": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyDown); break;
+                case "ArrowLeft": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyLeft); break;
+                case "ArrowRight": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyRight); break;
+                case "Space": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeySpace); break;
+            }
+        })
     }
     LegacyButtonShow() {
         const joypad = document.getElementById("joypad") as HTMLDivElement
@@ -267,7 +298,7 @@ const css = `
     bottom: 10px;
 }
 .joypad_arrow {
-display: inline-block;
+    display: inline-block;
     width: 4rem;
     height: 4rem;
     vertical-align: -0.125em;
@@ -276,6 +307,9 @@ display: inline-block;
     margin: 0 auto;
 }
 .joypad_button {
+    user-select: none;
+    cursor: pointer;
+    text-decoration: none !important;
     display: inline-block;
     width: 4rem;
     height: 4rem;

@@ -16,7 +16,6 @@ export class SimpleWater {
         })
         this.waterReflector.rotation.x = -Math.PI * 0.5;
         this.waterReflector.position.y = -1
-        this.waterReflector.userData.isRoot = true
         this.waterReflector.userData.simpleWater = this
         nonglowfn?.(this.waterReflector)
         this.meshs.add(this.waterReflector)

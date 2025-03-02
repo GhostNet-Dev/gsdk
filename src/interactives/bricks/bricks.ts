@@ -25,6 +25,8 @@ export type BrickOption = {
 export class EventBrick implements IBuildingObject {
     brick?: Brick
     get Size() { return this.size }
+    get Meshs() { return this.brick!.Meshs }
+    get Box() { return this.brick!.Box }
     get BoxPos() { return this.position }
     set Key(k: string[]) { this.key = k }
     get Key() { return this.key }

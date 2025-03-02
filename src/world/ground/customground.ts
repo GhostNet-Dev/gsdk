@@ -50,7 +50,6 @@ export default class CustomGround {
         ground.position.setY(-.01)
         ground.receiveShadow = true
         ground.scale.set(this.scale, this.scale, this.scale)
-        ground.userData.isRoot = true
         ground.userData.customground = this
         this.obj = ground
     }
@@ -114,7 +113,6 @@ export default class CustomGround {
                 const blendAmount = gradient;
 
                 const index = (posY * this.width + posX) * 4;
-                console.log(index)
                 this.blendMapData[index] = Math.min(255, this.blendMapData[index] + blendAmount * 255); // R 채널
                 this.blendMapData[index + 1] = Math.min(204, this.blendMapData[index + 1] + blendAmount * 255); // G 채널
                 this.blendMapData[index + 2] = Math.min(102, this.blendMapData[index + 2] + blendAmount * 255); // B 채널

@@ -64,6 +64,9 @@ export enum EventTypes {
     DeregisterLoop = "deregloop",
     RegisterViewer = "regviewer",
 
+    RegisterPhysic = "regphysic",
+    DeregisterPhysic = "deregphysic",
+
     AgentEpisode = "agentep",
     AgentSave = "agentsv",
     AgentLoad = "agentld",

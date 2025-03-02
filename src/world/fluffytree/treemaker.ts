@@ -79,7 +79,6 @@ export class TreeMaker implements ILoop {
 
         const tree = new FluffyTree(this.loader)
         await tree.createTree(rotation, position, scale, color, leafPath)
-        tree.Meshs.userData.isRoot = true
         tree.Meshs.userData.tree = tree
         this.models.push(tree)
         this.scene.add(tree.Meshs)

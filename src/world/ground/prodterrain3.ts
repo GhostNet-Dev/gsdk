@@ -7,7 +7,7 @@ export default class ProduceTerrain3 {
     private material = this.createMaterial()
     private water?: THREE.Mesh;
     private noise = new ImprovedNoise();
-    private terrainConfig = {
+    terrainConfig = {
         heightScale: 1,
         frequency: .3,
         noiseStrength: 1,

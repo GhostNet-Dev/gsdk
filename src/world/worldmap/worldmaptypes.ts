@@ -19,6 +19,19 @@ export interface GroundData {
     rotation: { x: number, y: number, z: number }
     scale: number
 }
+export interface GeometryGroundData {
+    data: { type: string, value: any }
+    position: { x: number, y: number, z: number }
+    rotation: { x: number, y: number, z: number }
+    scale: { x: number, y: number, z: number }
+    color: number
+}
+export interface ProductGroundData {
+    data: any
+    position: { x: number, y: number, z: number }
+    rotation: { x: number, y: number, z: number }
+    scale: { x: number, y: number, z: number }
+}
 export interface TreeData {
     type: number
     position: { x: number, y: number, z: number }
@@ -37,6 +50,7 @@ export interface NormalData {
     position: { x: number, y: number, z: number }
     rotation: { x: number, y: number, z: number }
     scale: number
+    custom?: any
 }
 
 export type MapPackage = {
@@ -47,16 +61,18 @@ export type MapPackage = {
 
 export type MapEntry = {
     type: MapEntryType
-    data: MapDefaultEntry | GrassData[] | TreeData[] | CustomGroundData | NormalData | GroundData
+    data: MapDefaultEntry | GrassData[] | TreeData[] | CustomGroundData 
+    | NormalData | NormalData[] | GroundData | GeometryGroundData | ProductGroundData
 }
 
 export enum MapEntryType {
-    Land = "land",
-    Building = "build",
     Nature = "nature",
     Grass = "grass",
     Tree = "Tree",
-    CustomGround = "cg"
+    CustomGround = "cg",
+    GeometryGround = "gg",
+    ProductGround = "pg",
+    EventBoxModel = "ebm",
 }
 
 export enum MapType {
