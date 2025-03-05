@@ -1,12 +1,16 @@
+import { IWorldMapObject, MapEntryType, OceanData } from '@Glibs/types/worldmaptypes';
 import * as THREE from 'three';
 import { Reflector } from 'three/examples/jsm/objects/Reflector'
 
 
-export class SimpleWater {
+export class SimpleWater implements IWorldMapObject {
+    Type: MapEntryType = MapEntryType.SimpleWater
     meshs = new THREE.Group()
     waterReflector?: Reflector
-    waterGeometry: THREE.PlaneGeometry
-    constructor(private scene: THREE.Scene, nonglowfn?: Function) {
+    waterGeometry?: THREE.PlaneGeometry
+    constructor(private scene: THREE.Scene) {
+    }
+    Create(...param: any) {
         this.waterGeometry = new THREE.PlaneGeometry(1024, 1024);
         const pixel = (window.devicePixelRatio >= 2) ? window.devicePixelRatio / 4 : window.devicePixelRatio / 2
         this.waterReflector = new Reflector(this.waterGeometry, {
@@ -16,13 +20,32 @@ export class SimpleWater {
         })
         this.waterReflector.rotation.x = -Math.PI * 0.5;
         this.waterReflector.position.y = -1
-        this.waterReflector.userData.simpleWater = this
-        nonglowfn?.(this.waterReflector)
         this.meshs.add(this.waterReflector)
-        this.scene.add(this.meshs)
+        this.meshs.userData.mapObj = this
+        return this.meshs
+    }
+    Delete(...param: any) {
+        return this.meshs
+    }
+    Load(data: OceanData): void {
+        const mesh = this.Create()
+        const p = data.position
+        const r = data.rotation
+        const s = data.scale
+        mesh.position.set(p.x, p.y, p.z)
+        mesh.rotation.set(p.x, p.y, p.z)
+        mesh.scale.set(p.x, p.y, p.z)
+    }
+    Save() {
+        const data: OceanData = {
+            position: this.meshs.position,
+            rotation: this.meshs.rotation,
+            scale: this.meshs.scale.x,
+        }
+        return data
     }
     Dispose() {
-        if (!this.waterReflector) return
+        if (!this.waterReflector || !this.waterGeometry) return
         if (this.scene.children.indexOf(this.meshs) > -1) {
             this.scene.remove(this.meshs)
             this.waterReflector.dispose()

@@ -1,5 +1,45 @@
 import { Char } from "@Glibs/types/assettypes"
 
+export type MapPackage = {
+    key: string
+    entries: MapEntry[]
+    date: number
+}
+
+export type MapSaveDataType = MapDefaultEntry | GrassData[] | TreeData[] | CustomGroundData 
+    | NormalData | NormalData[] | GroundData | GeometryGroundData | ProductGroundData | OceanData
+
+export type MapEntry = {
+    type: MapEntryType
+    data: MapSaveDataType
+}
+
+export enum MapEntryType {
+    Nature = "nature",
+    Grass = "GrassMaker",
+    Tree = "TreeMaker",
+    Ocean = "Ocean",
+    SimpleWater = "SimpleWater",
+    Ground = "Ground",
+    CustomGround = "CustomGround",
+    GeometryGround = "GeometryGround",
+    ProductGround = "ProduceTerrain3",
+    EventBoxModel = "EventBoxManager",
+    UltimateModular = "UltimateModular",
+    FenceModular = "FenceModular",
+}
+
+export enum MapType {
+    Custom,
+    Produce,
+    Geometry,
+    Free,
+    Rect,
+    RectMesh,
+    Hex,
+    HexMesh,
+}
+
 export type MapDefaultEntry = {
     type: number
     position: { x: number, y: number, z: number }
@@ -45,6 +85,11 @@ export interface GrassData {
     scale: number
     color: number
 }
+export interface OceanData {
+    position: { x: number, y: number, z: number }
+    rotation: { x: number, y: number, z: number }
+    scale: number
+}
 export interface NormalData {
     type: Char
     position: { x: number, y: number, z: number }
@@ -53,35 +98,15 @@ export interface NormalData {
     custom?: any
 }
 
-export type MapPackage = {
-    key: string
-    entries: MapEntry[]
-    date: number
+export interface IWorldMapObject {
+    Type: MapEntryType
+    Mesh?: THREE.Object3D
+    Create(...param: any): Promise<any> | any
+    CreateDone?(): Promise<any> | any
+    Delete(...param: any): any
+    Show?():void
+    Hide?(): void
+    Save?(): any
+    Load?(data: any): void
 }
 
-export type MapEntry = {
-    type: MapEntryType
-    data: MapDefaultEntry | GrassData[] | TreeData[] | CustomGroundData 
-    | NormalData | NormalData[] | GroundData | GeometryGroundData | ProductGroundData
-}
-
-export enum MapEntryType {
-    Nature = "nature",
-    Grass = "grass",
-    Tree = "Tree",
-    CustomGround = "cg",
-    GeometryGround = "gg",
-    ProductGround = "pg",
-    EventBoxModel = "ebm",
-}
-
-export enum MapType {
-    Custom,
-    Produce,
-    Geometry,
-    Free,
-    Rect,
-    RectMesh,
-    Hex,
-    HexMesh,
-}

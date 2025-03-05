@@ -79,7 +79,11 @@ export class AssetModel {
 
     async CloneModel(): Promise<THREE.Group> {
         if(this.meshs != undefined) {
+            const backupUserdata = this.meshs.userData
+            this.meshs.userData = {}
             const clone = this.meshs.clone()
+            this.meshs.userData = backupUserdata
+            clone.userData = backupUserdata
             return clone
         }
         return await this.NewModel()

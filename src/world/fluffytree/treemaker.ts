@@ -3,6 +3,8 @@ import { FluffyTree } from "./fluffytree"
 import IEventController, { ILoop } from '@Glibs/interface/ievent'
 import { EventTypes } from '@Glibs/types/globaltypes'
 import { Loader } from '@Glibs/loader/loader'
+import { IWorldMapObject } from '../worldmap/worldmaptypes'
+import { MapEntryType, TreeData } from '@Glibs/types/worldmaptypes'
 
 
 export enum FluffyTreeType {
@@ -24,7 +26,8 @@ export type TreeParam = {
     color?: string
 }
 
-export class TreeMaker implements ILoop {
+export class TreeMaker implements ILoop, IWorldMapObject {
+    Type = MapEntryType.Tree
     LoopId = 0
     treeParam: TreeParam[] = []
     models: FluffyTree[] = []
@@ -59,10 +62,10 @@ export class TreeMaker implements ILoop {
     GetTreeInfo(type: FluffyTreeType) {
         return this.treeStyle.get(type)!
     }
-    Delete(obj: FluffyTree) {
-        this.models.splice(this.models.indexOf(obj), 1)
-        this.scene.remove(obj.Meshs)
-        obj.Dispose()
+    Delete(obj: TreeMaker, tree: FluffyTree) {
+        this.models.splice(this.models.indexOf(tree), 1)
+        this.scene.remove(tree.Meshs)
+        tree.Dispose()
     }
     async Create({
         type = FluffyTreeType.Default,
@@ -79,14 +82,41 @@ export class TreeMaker implements ILoop {
 
         const tree = new FluffyTree(this.loader)
         await tree.createTree(rotation, position, scale, color, leafPath)
-        tree.Meshs.userData.tree = tree
+        tree.Meshs.userData.mapObj = this
+        tree.Meshs.userData.params = [tree]
         this.models.push(tree)
-        this.scene.add(tree.Meshs)
-        return tree
+        return tree.Meshs
     }
     update(delta: number): void {
         this.models.forEach((t) => {
             t.update(delta)
         })
+    }
+    Save() {
+        const treeData: TreeData[] = []
+        this.treeParam.forEach((t) => {
+            if (!t.position || !t.rotation || t.type == undefined || t.scale == undefined || !t.color) throw new Error("undefined data");
+            treeData.push({
+                position: { x: t.position.x, y: t.position.y, z: t.position.z },
+                rotation: { x: t.rotation.x, y: t.rotation.y, z: t.rotation.z },
+                scale: t.scale,
+                color: t.color,
+                type: t.type,
+            })
+        })
+        return treeData
+    }
+    Load(treeData: TreeData[]): void {
+        const treeParam: TreeParam[] = []
+        treeData.forEach((t) => {
+            treeParam.push({
+                position: new THREE.Vector3(t.position.x, t.position.y, t.position.z),
+                rotation: new THREE.Euler(t.rotation.x, t.rotation.y, t.rotation.z),
+                scale: t.scale,
+                type: t.type,
+                color: t.color
+            })
+        })
+        this.LoadTree(treeParam)
     }
 }

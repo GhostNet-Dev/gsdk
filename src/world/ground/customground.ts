@@ -1,25 +1,31 @@
 import * as THREE from 'three';
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise'; // Three.js의 ImprovedNoise 사용
+import { IWorldMapObject, MapEntryType } from '../worldmap/worldmaptypes';
+import { CustomGroundData } from '@Glibs/types/worldmaptypes';
 
-export default class CustomGround {
-    obj: THREE.Mesh
-    blendMap: THREE.DataTexture
-    shaderMaterial: THREE.MeshStandardMaterial
+export default class CustomGround implements IWorldMapObject {
+    Type: MapEntryType = MapEntryType.CustomGround
+    obj!: THREE.Mesh
+    blendMap!: THREE.DataTexture
+    shaderMaterial!: THREE.MeshStandardMaterial
     planSize = 256
     width = 1024 * 3;
     height = 1024 * 3;
     blendMapSize = this.width * this.height
-    blendMapData: Uint8Array
+    blendMapData!: Uint8Array
     noise = new ImprovedNoise();
     noiseScale = 20.0; // 노이즈의 세기 조정
     noiseStrength = .5
     scale = .5
     radius = 30 / this.scale
-    geometry: THREE.PlaneGeometry
+    geometry!: THREE.PlaneGeometry
     constructor({
         color = new THREE.Color(0xA6C954),
         width = 1024 * 3, height = 1024 * 3, planeSize = 256, 
     } = {}) {
+        this.Create({ color: color, width: width, height: height, planeSize: planeSize })
+    }
+    Create({ color = new THREE.Color(0xA6C954), width = 1024 * 3, height = 1024 * 3, planeSize = 256 } = {}) {
         this.width = width
         this.height = height
         this.blendMapSize = width * height
@@ -50,8 +56,32 @@ export default class CustomGround {
         ground.position.setY(-.01)
         ground.receiveShadow = true
         ground.scale.set(this.scale, this.scale, this.scale)
-        ground.userData.customground = this
+        ground.userData.mapObj = this
         this.obj = ground
+        return ground
+    }
+    Delete(...param: any) {
+        return this.obj
+    }
+    Load(data: CustomGroundData) {
+        const textureData = new Uint8Array(data.textureData);
+        const texture = new THREE.DataTexture(textureData, data.textureWidth, data.textureHeight, THREE.RGBAFormat);
+        texture.needsUpdate = true;
+
+        // Restore PlaneGeometry
+        const geometry = new THREE.PlaneGeometry(128, 128, 128, 128);
+        const vertices = geometry.attributes.position.array as Float32Array;
+
+        for (let i = 0; i < vertices.length; i++) {
+            vertices[i] = data.verticesData[i];
+        }
+        geometry.attributes.position.needsUpdate = true;
+        this.Create({
+            width: data.textureWidth,
+            height: data.textureHeight,
+            planeSize: data.mapSize,
+        })
+        this.LoadMap(texture, geometry)
     }
     LoadMap(texture: THREE.DataTexture, geometry: THREE.PlaneGeometry) {
         this.blendMap = texture
@@ -74,6 +104,20 @@ export default class CustomGround {
         ground.position.setY(-.01)
         ground.receiveShadow = true
         this.obj = ground
+    }
+    Save() {
+        const geometry = this.geometry
+        const map = this.blendMap
+        const textureData = Array.from(new Uint8Array(map.image.data.buffer)); // Uint8Array to number array
+        const verticesData = Array.from(geometry.attributes.position.array); // Vertex data
+        const gData: CustomGroundData = {
+            textureData: textureData,
+            textureWidth: map.image.width,
+            textureHeight: map.image.height,
+            verticesData: verticesData,
+            mapSize: this.planSize,
+        }
+        return gData
     }
     GetColor(uv: THREE.Vector2) {
         const posX = Math.floor(uv.x * this.width);

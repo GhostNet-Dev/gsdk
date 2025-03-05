@@ -2,7 +2,8 @@ import * as THREE from 'three'
 import { ZeldaGrass} from "./zeldagrass"
 import IEventController, { ILoop } from '@Glibs/interface/ievent'
 import { EventTypes } from '@Glibs/types/globaltypes'
-import grass from './shader/grass'
+import { IWorldMapObject } from '../worldmap/worldmaptypes'
+import { GrassData, MapEntryType } from '@Glibs/types/worldmaptypes'
 
 export type GrassParam = {
     position?: THREE.Vector3,
@@ -11,7 +12,8 @@ export type GrassParam = {
     color?: THREE.Color
 }
 
-export class GrassMaker implements ILoop {
+export class GrassMaker implements ILoop, IWorldMapObject {
+    Type = MapEntryType.Grass
     LoopId = 0
     grassParam: GrassParam[] = []
     models: ZeldaGrass[] = []
@@ -49,19 +51,44 @@ export class GrassMaker implements ILoop {
         this.grassParam.push({ position, rotation, scale, color })
 
         const grass = new ZeldaGrass(color)
-        grass.mesh.userData.isRoot = true
-        grass.mesh.userData.grass = grass
+        grass.mesh.userData.mapObj = this
+        grass.mesh.userData.params = [grass]
         grass.mesh.position.copy(position)
         grass.mesh.rotation.copy(rotation)
         grass.mesh.scale.set(scale, scale, scale)
 
         this.models.push(grass)
         this.scene.add(grass.mesh)
-        return grass
+        return grass.mesh
     }
     update(): void {
         this.models.forEach((m)=> {
             m.update()
         })
+    }
+    Save() {
+        const grassData: GrassData[] = []
+        this.grassParam.forEach((t) => {
+            if (!t.position || !t.rotation || t.scale == undefined || !t.color) throw new Error("undefined data");
+            grassData.push({
+                position: { x: t.position.x, y: t.position.y, z: t.position.z },
+                rotation: { x: t.rotation.x, y: t.rotation.y, z: t.rotation.z },
+                scale: t.scale,
+                color: t.color.getHex(),
+            })
+        })
+        return grassData
+    }
+    Load(grassData: GrassData[]): void {
+        const grassParam: GrassParam[] = []
+        grassData.forEach((t) => {
+            grassParam.push({
+                position: new THREE.Vector3(t.position.x, t.position.y, t.position.z),
+                rotation: new THREE.Euler(t.rotation.x, t.rotation.y, t.rotation.z),
+                scale: t.scale,
+                color: new THREE.Color(t.color)
+            })
+        })
+        this.LoadGrass(grassParam)
     }
 }

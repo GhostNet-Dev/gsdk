@@ -40,7 +40,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     update() {
         if (this.lookTarget) {
             this.controls.update()
-            this.lookAt(this.player!.Pos)
+            this.updateCamera()
         }
     }
 
@@ -66,5 +66,33 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         }
 
         updateShake();
+    }
+
+    lerpFactor = 0.1; // 보간 속도 조절 (0~1, 작을수록 부드러움)
+    cameraTarget = new THREE.Vector3(); // 목표 바라볼 위치
+    offset = new THREE.Vector3(10, 15, 10)
+
+    updateCamera() {
+        if (!this.player) return
+        // 목표 위치 설정 (캐릭터를 따라가는 오프셋 위치)
+        const targetPosition = this.player.Pos.clone().add(this.offset);
+
+        // 카메라 위치를 보간하여 이동
+        this.position.lerp(targetPosition, this.lerpFactor);
+
+        // 📌 목표 바라볼 위치도 부드럽게 이동
+        this.cameraTarget.lerp(this.player.Pos, this.lerpFactor);
+
+        // 📌 부드러운 회전을 위해 Quaternion 보간 적용
+        const targetQuaternion = new THREE.Quaternion();
+        const currentQuaternion = this.quaternion.clone();
+
+        this.lookAt(this.cameraTarget);
+        console.log(this.cameraTarget)
+        // targetQuaternion.copy(this.quaternion); // 목표 회전값 저장
+        // this.quaternion.copy(currentQuaternion); // 기존 회전값으로 복구 (즉시 회전 방지)
+
+        // // Quaternion을 보간하여 천천히 회전
+        // this.quaternion.slerp(targetQuaternion, this.lerpFactor);
     }
 }

@@ -3,8 +3,10 @@ import { gui } from '@Glibs/helper/helper';
 import GUI from 'lil-gui';
 import IEventController from '@Glibs/interface/ievent';
 import { EventTypes } from '@Glibs/types/globaltypes';
+import { GeometryGroundData, IWorldMapObject, MapEntryType } from '@Glibs/types/worldmaptypes';
 
-export default class GeometryGround {
+export default class GeometryGround implements IWorldMapObject {
+    Type: MapEntryType = MapEntryType.GeometryGround
     meshs = new THREE.Group()
     currColor = 0
     private material: THREE.MeshStandardMaterial;
@@ -14,8 +16,6 @@ export default class GeometryGround {
     private gui: GUI;
     private geometryFolder?: GUI;
     private debugMode = true
-    private callback?: Function
-    private removeCallback?: Function
     private currType = ""
     private geometryTypes: Record<string, any> = {
         BoxGeometry: { width: 1, height: 1, depth: 1 },
@@ -43,13 +43,23 @@ export default class GeometryGround {
 
         this.gui = gui;
     }
-    show(add: Function, remove: Function) {
-        this.callback = add
-        this.removeCallback = remove
+    Create() {
+        this.initGUI()
+        this.Show()
+        return this.meshs
+    }
+    CreateDone() {
+        this.Hide()
+        return this.meshs
+    }
+    Delete(): void {
+        this.Dispose()
+    }
+    Show() {
         this.gui.show()
         this.initGUI()
     }
-    hide() {
+    Hide() {
         this.gui.hide()
         if (this.debugMode) this.scene.remove(this.wireMesh!);
     }
@@ -57,10 +67,26 @@ export default class GeometryGround {
         this.scene.remove(this.meshs);
         if (this.debugMode) this.scene.remove(this.wireMesh!);
     }
+    Load(data: GeometryGroundData): void {
+        this.LoadData(data.data.type, data.data.value)
+        this.meshs.position.set(data.position.x, data.position.y, data.position.z)
+        this.meshs.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z)
+        this.meshs.scale.set(data.scale.x, data.scale.y, data.scale.z)
+    }
+    Save() {
+        const t = this.meshs
+        const gData: GeometryGroundData = {
+            data: this.GetData(),
+            position: { x: t.position.x, y: t.position.y, z: t.position.z },
+            rotation: { x: t.rotation.x, y: t.rotation.y, z: t.rotation.z },
+            scale: t.scale,
+            color: this.currColor
+        }
+        return gData
+    }
 
     private initGUI() {
         const shapeOptions = { shape: 'BoxGeometry', color: this.material.color.getHex() };
-        
         this.createGeometry(shapeOptions.shape, this.geometryTypes[shapeOptions.shape])
 
         this.gui.add(shapeOptions, 'shape', Object.keys(this.geometryTypes)).onChange((value: any) => {
@@ -85,7 +111,6 @@ export default class GeometryGround {
                 this.meshs.remove(this.wireMesh!);
                 this.wireMesh!.geometry.dispose()
             }
-            this.removeCallback?.(this.meshs)
             this.mesh.geometry.dispose()
         }
 
@@ -107,7 +132,7 @@ export default class GeometryGround {
         this.mesh = new THREE.Mesh(geometry, this.material);
         this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, this.mesh)
         this.meshs.add(this.mesh)
-        this.meshs.userData.geometryGround = this
+        this.meshs.userData.mapObj = this
 
         if (this.debugMode) {
             this.wireMesh = new THREE.Mesh(geometry, this.wireMaterial);
@@ -116,7 +141,6 @@ export default class GeometryGround {
         }
 
         this.scene.add(this.meshs);
-        this.callback?.(this.meshs)
 
         if (this.geometryFolder) this.geometryFolder.destroy();
         this.geometryFolder = this.gui.addFolder('Parameters');

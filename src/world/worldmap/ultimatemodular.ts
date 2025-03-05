@@ -3,6 +3,9 @@ import { Loader } from "@Glibs/loader/loader";
 import { Char } from '@Glibs/types/assettypes';
 import { IAsset } from '@Glibs/interface/iasset';
 import { NormalData } from './worldmaptypes';
+import { IWorldMapObject, MapEntryType } from '@Glibs/types/worldmaptypes';
+import IEventController from '@Glibs/interface/ievent';
+import { EventTypes } from '@Glibs/types/globaltypes';
 
 export enum ModularType {
     Dirty,
@@ -17,7 +20,8 @@ type CubeEntry = {
 }
 
 
-export default class UltimateModular {
+export default class UltimateModular implements IWorldMapObject {
+    Type: MapEntryType = MapEntryType.UltimateModular
     private assets = new Map<Char, IAsset>();
     private platforms: { name: string; value: Char }[] = [];
     private map = new Map<string, CubeEntry>();
@@ -56,7 +60,8 @@ export default class UltimateModular {
 
     constructor(
         private loader: Loader,
-        private scene: THREE.Scene
+        private scene: THREE.Scene,
+        private eventCtrl: IEventController,
     ) {
         this.platforms = Object.entries(Char)
             .filter(([key]) => isNaN(Number(key)) && key.startsWith("UltimateModPlatform"))
@@ -70,26 +75,27 @@ export default class UltimateModular {
     GetModularList() {
         return this.platforms.map(entry => entry.name.slice("UltimateModPlatform".length));
     }
-    Save() {
-        const data: NormalData[] = []
-        this.map.forEach((v) => {
-            data.push({
-                type: v.type, 
-                position: v.mesh.position, 
-                rotation: v.mesh.rotation,
-                scale: v.mesh.scale.x,
-                custom: v.modType
+    async Delete(mesh: THREE.Group) {
+        const pos = mesh.position
+        const size = 2
+        const key = `${pos.x},${pos.y},${pos.z}`;
+        const old = this.map.get(key)
+        if(!old) throw new Error("there is no fence");
+        this.map.delete(key)
+        this.scene.remove(old.mesh)
+
+        await Promise.all(
+            Array.from(this.map.values()).map(async (v) => {
+                const nCub = await this.Build(v.mesh.position, size, v.modType, v.mesh, v.type, v.history);
+                v.mesh = nCub.mesh;
+                v.type = nCub.type;
+                this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, nCub.mesh)
             })
-        })
-        return data
-    }
-    Load(data: NormalData[]) {
-        data.forEach(async (v) => {
-            const p = v.position
-            await this.Create(new THREE.Vector3(p.x, p.y, p.z))
-        })
+        );
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, old.mesh)
     }
     async Create(pos = new THREE.Vector3(), modType = ModularType.Dirty) {
+        if (pos.y < 0) pos.y = 0
         const size = 2;
         const key = `${pos.x},${pos.y},${pos.z}`;
         const old = this.map.get(key);
@@ -105,10 +111,34 @@ export default class UltimateModular {
                 const nCub = await this.Build(v.mesh.position, size, v.modType, v.mesh, v.type, v.history);
                 v.mesh = nCub.mesh;
                 v.type = nCub.type;
+                this.scene.add(v.mesh);
+                this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, nCub.mesh)
             })
         );
 
+        cub.mesh.userData.mapObj = this
         return cub.mesh;
+    }
+    Load(data: NormalData[]): void {
+        const p = new THREE.Vector3()
+        data.forEach((v) => {
+            const modType = v.custom as ModularType
+            p.set(v.position.x, v.position.y, v.position.z)
+            this.Create(p, modType)
+        })
+    }
+    Save() {
+        const data: NormalData[] = []
+        this.map.forEach((v) => {
+            data.push({
+                type: v.type, 
+                position: v.mesh.position, 
+                rotation: v.mesh.rotation, 
+                scale: v.mesh.scale.x,
+                custom: v.modType,
+            })
+        })
+        return data
     }
 
     private RebuildKey() {
@@ -148,7 +178,6 @@ export default class UltimateModular {
 
         curMesh.position.copy(pos);
         curMesh.rotation.copy(rot);
-        this.scene.add(curMesh);
 
         return { type: id, mesh: curMesh, history: 0, modType };
     }

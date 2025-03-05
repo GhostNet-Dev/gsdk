@@ -2,13 +2,17 @@ import * as THREE from 'three'
 import { Loader } from '@Glibs/loader/loader';
 import { Char } from '@Glibs/types/assettypes';
 import { NormalData } from './worldmaptypes';
+import { IWorldMapObject, MapEntryType } from '@Glibs/types/worldmaptypes';
+import IEventController from '@Glibs/interface/ievent';
+import { EventTypes } from '@Glibs/types/globaltypes';
 
 type FenceEntry = {
     type: Char
     mesh: THREE.Group
 }
 
-export default class FenceModular {
+export default class FenceModular implements IWorldMapObject {
+    Type: MapEntryType = MapEntryType.FenceModular
     fence1 = Char.UltimateLvAndMaFence1
     middle = Char.UltimateLvAndMaFenceMiddle
     corner = Char.UltimateLvAndMaFenceCorner
@@ -17,27 +21,11 @@ export default class FenceModular {
     constructor(
         private loader: Loader,
         private scene:  THREE.Scene,
+        private eventCtrl: IEventController,
     ) {
     }
-    Save() {
-        const data: NormalData[] = []
-        this.map.forEach((v) => {
-            data.push({
-                type: v.type, 
-                position: v.mesh.position, 
-                rotation: v.mesh.rotation,
-                scale: v.mesh.scale.x
-            })
-        })
-        return data
-    }
-    Load(data: NormalData[]) {
-        data.forEach(async (v) => {
-            const p = v.position
-            await this.Create(new THREE.Vector3(p.x, p.y, p.z))
-        })
-    }
     async Create(pos = new THREE.Vector3()): Promise<[THREE.Group, Char]> {
+        if (pos.y < 0) pos.y = 0
         const size = 2
         const key = pos.x + "," + pos.y + "," + pos.z
         const old = this.map.get(key)
@@ -51,7 +39,45 @@ export default class FenceModular {
             v.mesh = nCub.mesh
             v.type = nCub.type
         })
+
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, cub.mesh)
+        cub.mesh.userData.mapObj = this
         return [cub.mesh, cub.type]
+    }
+    async Delete(mesh: THREE.Group) {
+        const pos = mesh.position
+        const size = 2
+        const key = `${pos.x},${pos.y},${pos.z}`;
+        const old = this.map.get(key)
+        if(!old) throw new Error("there is no fence");
+        this.map.delete(key)
+        this.scene.remove(old.mesh)
+
+        this.map.forEach(async (v) => {
+            const nCub = await this.Build(v.mesh.position, size, v.mesh, v.type)
+            v.mesh = nCub.mesh
+            v.type = nCub.type
+        })
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, old.mesh)
+    }
+    Load(data: NormalData[]): void {
+        const p = new THREE.Vector3()
+        data.forEach((v) => {
+            p.set(v.position.x, v.position.y, v.position.z)
+            this.Create(p)
+        })
+    }
+    Save() {
+        const data: NormalData[] = []
+        this.map.forEach((v) => {
+            data.push({
+                type: v.type, 
+                position: v.mesh.position, 
+                rotation: v.mesh.rotation, 
+                scale: v.mesh.scale.x,
+            })
+        })
+        return data
     }
     async Build(pos: THREE.Vector3, size: number, curMesh?: THREE.Group, curType?: Char) {
         const key = pos.x + "," + pos.y + "," + pos.z

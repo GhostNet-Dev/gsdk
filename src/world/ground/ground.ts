@@ -1,16 +1,20 @@
+import { CustomGroundData, IWorldMapObject, MapEntryType } from '@Glibs/types/worldmaptypes';
 import * as THREE from 'three';
 
-export default class Ground {
-    obj: THREE.Mesh
+export default class Ground implements IWorldMapObject {
+    Type: MapEntryType = MapEntryType.Ground
+    obj?: THREE.Mesh
     width = 0
     height = 0
     planSize = 256
     blendMapSize = 0
-    blendMapData: Uint8Array
-    blendMap: THREE.DataTexture
-    geometry: THREE.PlaneGeometry
-    shaderMaterial: THREE.MeshStandardMaterial
-    constructor({
+    blendMapData?: Uint8Array
+    blendMap?: THREE.DataTexture
+    geometry?: THREE.PlaneGeometry
+    shaderMaterial?: THREE.MeshStandardMaterial
+    constructor() {
+    }
+    Create({
         color = new THREE.Color(0xA6C954),
         width = 1024 * 3, height = 1024 * 3, planeSize = 256,
     } = {}) {
@@ -41,9 +45,27 @@ export default class Ground {
         ground.rotation.x = -Math.PI / 2; // 땅에 평행하게 회전
         ground.position.setY(-.01)
         ground.receiveShadow = true
-        ground.userData.isRoot = true
-        ground.userData.ground = ground
+        ground.userData.mapObj = this
         this.obj = ground
+    }
+    Delete(...param: any) {
+        this.Dispose()
+        return this.obj
+    }
+    Load(data: CustomGroundData) {
+        const textureData = new Uint8Array(data.textureData);
+        const texture = new THREE.DataTexture(textureData, data.textureWidth, data.textureHeight, THREE.RGBAFormat);
+        texture.needsUpdate = true;
+
+        // Restore PlaneGeometry
+        const geometry = new THREE.PlaneGeometry(128, 128, 128, 128);
+        const vertices = geometry.attributes.position.array as Float32Array;
+
+        for (let i = 0; i < vertices.length; i++) {
+            vertices[i] = data.verticesData[i];
+        }
+        geometry.attributes.position.needsUpdate = true;
+        this.LoadMap(texture, geometry)
     }
 
     LoadMap(texture: THREE.DataTexture, geometry: THREE.PlaneGeometry) {
@@ -69,7 +91,7 @@ export default class Ground {
         this.obj = ground
     }
     Dispose() {
-        this.shaderMaterial.dispose()
-        this.geometry.dispose()
+        this.shaderMaterial?.dispose()
+        this.geometry?.dispose()
     }
 }

@@ -250,8 +250,8 @@ export class RunState extends State implements IPlayerAction {
             this.player.Pos.add(moveAmount)
         } else {
             this.player.Meshs.position.y += 1 // 계단 체크
-            const dis = this.gphysic.CheckDirection(this.player, moveAmount)
-            if (dis.distance > 0) {
+            const dis = this.gphysic.CheckDirection(this.player, this.dir.set(v.x, 0, v.z))
+            if (moveDis > dis.distance) {
                 this.player.Pos.add(moveAmount)
                 // this.player.Meshs.position.x -= movX
                 // this.player.Meshs.position.z -= movZ

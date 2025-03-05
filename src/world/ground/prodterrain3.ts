@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js';
 import { gui } from '@Glibs/helper/helper';
+import { IWorldMapObject, MapEntryType, ProductGroundData } from '@Glibs/types/worldmaptypes';
 
-export default class ProduceTerrain3 {
+export default class ProduceTerrain3 implements IWorldMapObject{
+    Type: MapEntryType = MapEntryType.ProductGround
     terrain?: THREE.Mesh;
     private material = this.createMaterial()
     private water?: THREE.Mesh;
@@ -26,6 +28,40 @@ export default class ProduceTerrain3 {
             vertexColors: true,
         });
     }
+    Create(scale = 50) {
+        const mesh = this.CreateTerrain(scale)
+        this.SetupGUI()
+        this.Show()
+        return mesh
+    }
+    CreateDone() {
+        this.Hide()
+        return this.terrain!
+    }
+    Delete() {
+       this.Dispose() 
+        return this.terrain!
+    }
+    Load(data: ProductGroundData): void {
+        this.terrainConfig = data.data
+        const mesh = this.CreateTerrain()
+        const p = data.position
+        const r = data.rotation
+        const s = data.scale
+        mesh.position.set(p.x, p.y, p.z)
+        mesh.rotation.set(r.x, r.y, r.z)
+        mesh.scale.set(s.x, s.y, s.z)
+    }
+    Save() {
+        const t = this.terrain!
+        const gData: ProductGroundData = {
+            data: this.terrainConfig,
+            position: { x: t.position.x, y: t.position.y, z: t.position.z },
+            rotation: { x: t.rotation.x, y: t.rotation.y, z: t.rotation.z },
+            scale: t.scale,
+        }
+        return gData
+    }
 
     CreateTerrain(scale = 50): THREE.Mesh {
         const geometry = new THREE.PlaneGeometry(10, 10, 100, 100);
@@ -37,12 +73,11 @@ export default class ProduceTerrain3 {
         terrain.receiveShadow = true;
         terrain.scale.set(scale, scale, scale)
         this.terrain = terrain
-        this.terrain.userData.produce = this
+        this.terrain.userData.mapObj = this
         return terrain;
     }
 
     private modifyTerrainGeometry(geometry: THREE.BufferGeometry): void {
-        
         const positions = geometry.attributes.position;
         const count = positions.count;
         const colors = new Float32Array(count * 3);
