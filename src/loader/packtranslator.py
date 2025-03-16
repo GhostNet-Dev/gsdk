@@ -4,28 +4,39 @@ import os
 input_directory = "assets/kaykit/dungeon_pack/fbx"
 output_file = "generated_classes.ghost"
 
-# 파일 리스트 가져오기
-fbx_files = [f for f in os.listdir(input_directory) if f.endswith(".fbx")]
+# 파일 리스트 가져오기 및 정렬
+fbx_files = sorted([f for f in os.listdir(input_directory) if f.endswith(".fbx")])
+
+# 언더스코어(_)를 제거하고, CamelCase로 변환하는 함수
+def format_class_name(filename):
+    name_without_ext = filename.replace(".fbx", "")
+    parts = name_without_ext.split("_")
+    formatted_name = "".join(part.capitalize() for part in parts)  # 각 부분을 대문자로 변환
+    return formatted_name
 
 # TypeScript 코드 생성
 def generate_class_code(filename):
-    class_name = "KayKitDungeon" + filename.replace(".fbx", "").replace("_", "") + "Fab"
-    id_name = "Char.KayKitDungeon" + filename.replace(".fbx", "").replace("_", "")
+    formatted_name = format_class_name(filename)
+    class_name = "KayKitDungeon" + formatted_name + "Fab"
+    id_name = "Char.KayKitDungeon" + formatted_name
     return (f"export class {class_name} extends KayKitDungeonPack implements IAsset {{\n"
             f"    get Id() {{return {id_name}}}\n"
             f"    constructor(loader: Loader) {{ super(loader, \"{input_directory}/{filename}\") }}\n"
             f"}}\n")
 def generate_enum_code(filename):
-    id_name = "KayKitDungeon" + filename.replace(".fbx", "").replace("_", "")
+    formatted_name = format_class_name(filename)
+    id_name = "KayKitDungeon" + formatted_name
     return (f"{id_name},")
 
 def generate_loader_code(filename):
-    class_name = "KayKitDungeon" + filename.replace(".fbx", "").replace("_", "") + "Fab"
-    id_name = "Char.KayKitDungeon" + filename.replace(".fbx", "").replace("_", "")
+    formatted_name = format_class_name(filename)
+    class_name = "KayKitDungeon" + formatted_name + "Fab"
+    id_name = "Char.KayKitDungeon" + formatted_name
     return (f"this.fabClasses.set({id_name}, {class_name});")
 
 def generate_import_code(filename):
-    class_name = "KayKitDungeon" + filename.replace(".fbx", "").replace("_", "") + "Fab"
+    formatted_name = format_class_name(filename)
+    class_name = "KayKitDungeon" + formatted_name + "Fab"
     return (f"{class_name}")
 # 모든 클래스를 하나의 파일에 저장
 with open(output_file, "w", encoding="utf-8") as f:
