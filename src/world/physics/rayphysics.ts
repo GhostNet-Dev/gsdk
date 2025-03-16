@@ -36,7 +36,8 @@ export default class RayPhysics implements IGPhysic {
     }
     CheckDirection(obj: IPhysicsObject, dir: THREE.Vector3) {
         obj.Box.getCenter(this.center)
-        this.center.y -= obj.Size.y / 2
+        const height = (Math.floor(obj.Size.y * 100) / 100) / 2 - 0.2
+        this.center.y -= height
         this.raycast.set(this.center, dir)
         this.raycast.far = 10
         const intersects = this.raycast.intersectObjects(this.targetObjs)
@@ -46,7 +47,7 @@ export default class RayPhysics implements IGPhysic {
             const intersect = intersects[0];
             const ret = intersect.distance - width
 
-            if(intersect.face) {
+            if(ret < width && intersect.face) {
                 const normal = intersect.face.normal.clone().normalize(); // 충돌 면의 법선 벡터
                 const slopeAngle = Math.acos(normal.dot(new THREE.Vector3(0, 1, 0))) * (180 / Math.PI); // 경사 각도 계산
 
@@ -64,7 +65,7 @@ export default class RayPhysics implements IGPhysic {
             console.log("move", ret, width, this.center)
             return { obj: intersects[0].object, distance: (ret < 0) ? -1 : ret, move: adjustedMoveVector }
         }
-        return { obj: undefined, distance: -1 }
+        return { obj: undefined, distance: 10 }
     }
     Check(obj: IPhysicsObject): boolean {
         if (this.CheckDown(obj) < 0) return true
@@ -76,12 +77,12 @@ export default class RayPhysics implements IGPhysic {
         this.raycast.far = 10
         const landTouch = this.raycast.intersectObjects(this.targetObjs)
         if(landTouch.length > 0) {
-            const height = (Math.floor(obj.Size.y * 100) / 100) / 2
-            const ret = Math.floor(landTouch[0].distance * 100) / 100 -  height
-            console.log("down", ret, height)
-            return (ret < 0) ? -1 : ret
+            const height = obj.Size.y / 2
+            const ret = landTouch[0].distance -  height
+            //ret = Math.floor(ret * 100) / 100
+            return ret //(ret < 0) ? -1 : ret
         }
-        return -1
+        return this.raycast.far
     }
     CheckBox(pos: THREE.Vector3, box: THREE.Box3): boolean {
         return true

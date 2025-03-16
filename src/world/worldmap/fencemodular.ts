@@ -24,7 +24,7 @@ export default class FenceModular implements IWorldMapObject {
         private eventCtrl: IEventController,
     ) {
     }
-    async Create(pos = new THREE.Vector3()): Promise<[THREE.Group, Char]> {
+    async Create(pos = new THREE.Vector3()) {
         if (pos.y < 0) pos.y = 0
         const size = 2
         const key = pos.x + "," + pos.y + "," + pos.z
@@ -42,7 +42,7 @@ export default class FenceModular implements IWorldMapObject {
 
         this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, cub.mesh)
         cub.mesh.userData.mapObj = this
-        return [cub.mesh, cub.type]
+        return cub.mesh
     }
     async Delete(mesh: THREE.Group) {
         const pos = mesh.position
@@ -148,6 +148,7 @@ export default class FenceModular implements IWorldMapObject {
             const mesh = await asset.CloneModel()
             mesh.rotation.copy(rot)
             mesh.position.copy(childPos)
+            this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, mesh)
             curMesh = new THREE.Group()
             curMesh.add(mesh)
         } else {

@@ -86,6 +86,7 @@ export default class MenuIcon {
 function getCSS(width: string, height: string, rounded: string) {
   return `
   .icon-img {
+      user-select: none;
       position: absolute;
       width: ${width};
       height: ${height};
@@ -94,6 +95,7 @@ function getCSS(width: string, height: string, rounded: string) {
       transform: translate(-50%, 0%);
   }
   .icon-font {
+      user-select: none;
       position: absolute;
       left: 50%;
       transform: translate(-50%, 0%);
@@ -102,6 +104,7 @@ function getCSS(width: string, height: string, rounded: string) {
       font-weight: 800;
   }
   .circle-icon {
+      user-select: none;
       border-radius: 50%;
       box-shadow:
           0 4px 8px rgba(0, 0, 0, 0.2),
@@ -138,6 +141,7 @@ function getCSS(width: string, height: string, rounded: string) {
           transition: all 0.3s ease; /* 부드러운 애니메이션 */
   }
   .lolli {
+      user-select: none;
       /*Lollipop background gradient*/
       background-image: linear-gradient(
           -45deg,

@@ -42,12 +42,13 @@ export default class EventBoxManager implements IWorldMapObject {
             meshs = new THREE.Group()
             meshs.add(mesh)
         }
-        meshs.userData.model = true
+        meshs.userData.mapObj = this
         meshs.position.copy(pos)
         return meshs
     }
-    Delete(...param: any): void {
-        
+    Delete(obj: THREE.Group) {
+        this.removeEventBox(obj)
+        return obj
     }
     Save() {
         const saveData: NormalData[] = []

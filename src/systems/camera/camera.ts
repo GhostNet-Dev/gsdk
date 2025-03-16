@@ -88,7 +88,6 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         const currentQuaternion = this.quaternion.clone();
 
         this.lookAt(this.cameraTarget);
-        console.log(this.cameraTarget)
         // targetQuaternion.copy(this.quaternion); // 목표 회전값 저장
         // this.quaternion.copy(currentQuaternion); // 기존 회전값으로 복구 (즉시 회전 방지)
 

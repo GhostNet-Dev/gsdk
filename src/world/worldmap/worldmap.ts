@@ -9,13 +9,11 @@ import { SkyBoxAllTime } from "../sky/skyboxalltime";
 import { GroundData, MapEntry, MapEntryType, MapPackage, MapType, NormalData, IWorldMapObject } from "./worldmaptypes";
 import CustomGround from "../ground/customground";
 import Ground from "../ground/ground";
-import UltimateModular, { ModularType } from "./ultimatemodular";
+import UltimateModular from "./ultimatemodular";
 import { downDataTextureAndGeometry, loadDataTextureAndGeometry, saveDataTextureAndGeometry } from "./mapstore";
 import { SimpleWater } from '../ocean/simplewater';
 import Grid from './grid';
-import { Char } from '@Glibs/types/assettypes';
 import EventBoxManager from '@Glibs/interactives/eventbox/boxmgr';
-import { EventBoxType } from '@Glibs/types/eventboxtypes';
 import { EventTypes } from '@Glibs/types/globaltypes';
 import ProduceTerrain3 from '../ground/prodterrain3';
 import FenceModular from './fencemodular';
@@ -98,17 +96,16 @@ export default class WorldMap {
         this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, mesh)
         return mesh
     }
-    DeleteMapObject(mapType = MapEntryType.CustomGround, obj: THREE.Object3D) {
-        const mapObj = this.mapObj.get(mapType)
-        if (!mapObj) throw new Error("there is no map objects");
-        mapObj.Delete(obj)
-        this.scene.remove(obj)
-        this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, obj)
-    }
+    // DeleteMapObject(mapType = MapEntryType.CustomGround, obj: THREE.Object3D) {
+    //     const mapObj = this.mapObj.get(mapType)
+    //     if (!mapObj) throw new Error("there is no map objects");
+    //     mapObj.Delete(obj)
+    //     this.scene.remove(obj)
+    //     this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, obj)
+    // }
     MakeGround({
         mapType = MapType.Free, grid = false, gridSize = 1, gridDivision = 100,
-        width = 1024 * 3, height = 1024 * 3, size = 256, rows = 10, cols = 10,
-        color = 0xA6C954,
+        width = 1024 * 3, rows = 10, cols = 10, color = 0xA6C954,
     } ={}) {
         let map: THREE.Object3D | undefined = undefined
         switch(mapType) {
@@ -168,7 +165,7 @@ export default class WorldMap {
         do {
             if ("mapObj" in cur.userData) {
                 const mapObj = cur.userData.mapObj as IWorldMapObject
-                const mesh = mapObj.Delete(cur, ...cur.userData.params)
+                const mesh = mapObj.Delete(cur, ...(cur.userData.params !== undefined) ? [cur.userData.params] : [])
                 if (mesh) {
                     this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, mesh)
                     this.scene.remove(mesh)

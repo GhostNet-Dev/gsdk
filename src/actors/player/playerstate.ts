@@ -199,7 +199,7 @@ export class IdleState extends State implements IPlayerAction {
     }
 }
 export class RunState extends State implements IPlayerAction {
-    speed = 10
+    speed = 7
     previous: IPlayerAction = this.playerCtrl.IdleSt
     constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic) {
         super(playerPhy, player, gphysic)
@@ -246,24 +246,28 @@ export class RunState extends State implements IPlayerAction {
         // this.player.Meshs.position.x += movX
         // this.player.Meshs.position.z += movZ
 
-        if (moveDis > dis.distance) {
+        if (moveDis < dis.distance) {
+            // console.log(moveDis, dis.distance)
             this.player.Pos.add(moveAmount)
+        } else if (dis.move) {
+            this.player.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed))
         } else {
-            this.player.Meshs.position.y += 1 // 계단 체크
-            const dis = this.gphysic.CheckDirection(this.player, this.dir.set(v.x, 0, v.z))
-            if (moveDis > dis.distance) {
-                this.player.Pos.add(moveAmount)
-                // this.player.Meshs.position.x -= movX
-                // this.player.Meshs.position.z -= movZ
-            } else {
-                this.player.Meshs.position.y -= 1
-            }
+            // this.player.Meshs.position.y += 1 // 계단 체크
+            // const dis = this.gphysic.CheckDirection(this.player, this.dir.set(v.x, 0, v.z))
+            // if (moveDis > dis.distance) {
+            //     this.player.Pos.add(moveAmount)
+            //     console.log("계단 ", moveAmount)
+            //     // this.player.Meshs.position.x -= movX
+            //     // this.player.Meshs.position.z -= movZ
+            // } else {
+            //     this.player.Meshs.position.y -= 1
+            // }
         }
         return this
     }
 }
 export class JumpState implements IPlayerAction {
-    speed = 10
+    speed = 5
     velocity_y = 16
     dirV = new THREE.Vector3(0, 0, 0)
     ZeroV = new THREE.Vector3(0, 0, 0)
@@ -297,7 +301,8 @@ export class JumpState implements IPlayerAction {
         const moveAmount = this.dir.normalize().multiplyScalar(delta * this.speed)
         const moveDis = moveAmount.length()
 
-        if (moveDis > dirdis.distance) {
+        console.log("jump movedis ", moveDis, ", dist", dirdis.distance)
+        if (moveDis < dirdis.distance) {
             this.player.Pos.add(moveAmount)
         }
 

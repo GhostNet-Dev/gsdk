@@ -89,6 +89,7 @@ export default class UltimateModular implements IWorldMapObject {
                 const nCub = await this.Build(v.mesh.position, size, v.modType, v.mesh, v.type, v.history);
                 v.mesh = nCub.mesh;
                 v.type = nCub.type;
+                this.scene.add(v.mesh);
                 this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, nCub.mesh)
             })
         );
@@ -174,6 +175,7 @@ export default class UltimateModular implements IWorldMapObject {
             if (curType !== id && curMesh) this.scene.remove(curMesh);
             const asset = this.loader.GetAssets(id);
             curMesh = await asset.CloneModel();
+            this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, curMesh)
         }
 
         curMesh.position.copy(pos);

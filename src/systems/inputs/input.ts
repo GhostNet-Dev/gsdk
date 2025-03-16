@@ -57,7 +57,7 @@ export default class Input {
         */
     })
     constructor(private eventCtrl: IEventController) {
-        this.applyDynamicStyle("joypad", css)
+        this.applyDynamicStyle("joypad_style", css)
         document.body.insertAdjacentHTML("afterend", html)
 
         this.left = document.getElementById("goleft") as HTMLDivElement
@@ -97,10 +97,10 @@ export default class Input {
             }
         })
 
-        this.up.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyUp); }
-        this.down.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyDown); }
-        this.left.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyLeft); }
-        this.right.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyRight); }
+        this.up.onclick = this.up.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyUp); }
+        this.down.onclick = this.down.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyDown); }
+        this.left.onclick = this.left.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyLeft); }
+        this.right.onclick = this.right.ontouchstart = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyRight); }
         this.up.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyUp); }
         this.down.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyDown); }
         this.left.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyLeft); }
@@ -120,10 +120,10 @@ export default class Input {
         this.action3.ontouchend = () => { this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyAction3) }
         window.addEventListener("keydown", (e) => {
             switch (e.code) {
-                case "ArrowUp": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyUp); break
-                case "ArrowDown": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyDown); break;
-                case "ArrowLeft": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyLeft); break;
-                case "ArrowRight": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyRight); break;
+                case "ArrowUp":case "KeyW": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyUp); break
+                case "ArrowDown":case "KeyS": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyDown); break;
+                case "ArrowLeft":case "KeyA": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyLeft); break;
+                case "ArrowRight":case "KeyD": this.eventCtrl.SendEventMessage(EventTypes.KeyDown, new KeyRight); break;
             }
             switch (e.key) {
                 case '0':
@@ -141,10 +141,10 @@ export default class Input {
         })
         window.addEventListener("keyup", (e) => {
             switch (e.code) {
-                case "ArrowUp": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyUp); break
-                case "ArrowDown": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyDown); break;
-                case "ArrowLeft": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyLeft); break;
-                case "ArrowRight": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyRight); break;
+                case "ArrowUp":case "KeyW": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyUp); break
+                case "ArrowDown":case "KeyS": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyDown); break;
+                case "ArrowLeft":case "KeyA": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyLeft); break;
+                case "ArrowRight":case "KeyD": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeyRight); break;
                 case "Space": this.eventCtrl.SendEventMessage(EventTypes.KeyUp, new KeySpace); break;
             }
         })
@@ -293,6 +293,7 @@ const css = `
 }
 #joypad_buttons {
     display: none;
+    user-select: none;
     position: absolute;
     right: 0px;
     bottom: 10px;
@@ -328,5 +329,10 @@ const css = `
     border-radius: 50%;
     margin: 0;
     text-align: center;
+}
+.select-disable {
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 `
