@@ -521,6 +521,21 @@ export enum Char{
     TV,
     Stone,
 
+    QuaterniusZombieCharactersGermanshepherd,
+    QuaterniusZombieCharactersLis,
+    QuaterniusZombieCharactersLisSingleweapon,
+    QuaterniusZombieCharactersMatt,
+    QuaterniusZombieCharactersMattSingleweapon,
+    QuaterniusZombieCharactersPug,
+    QuaterniusZombieCharactersSam,
+    QuaterniusZombieCharactersSamSingleweapon,
+    QuaterniusZombieCharactersShaun,
+    QuaterniusZombieCharactersShaunSingleweapon,
+    QuaterniusZombieZombieArm,
+    QuaterniusZombieZombieBasic,
+    QuaterniusZombieZombieChubby,
+    QuaterniusZombieZombieRibcage,
+
     Empty,
     None,
 }
