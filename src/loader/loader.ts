@@ -70,6 +70,7 @@ import { PantherBlackWhiteFab, PantherBlueFab, PantherRedFab } from "./monster/p
 import { KenneyCriminalMaleFab, KenneyCyborgFemaleFab, KenneyHumanFemaleFab, KenneyHumanMaleFab, KenneySkaterFemaleFab, KenneySkaterMaleFab, KenneySurvivorFemaleFab, KenneySurvivorMaleFab, KenneyZombieAFab, KenneyZombieBFab, KenneyZombieFemaleAFab, KenneyZombieFemaleBFab } from "./kenney/charactersfab";
 import { KayKitDungeonArrowFab, KayKitDungeonArtifactFab, KayKitDungeonAxedoubleCommonFab, KayKitDungeonAxedoubleRareFab, KayKitDungeonAxedoubleUncommonFab, KayKitDungeonAxeCommonFab, KayKitDungeonAxeRareFab, KayKitDungeonAxeUncommonFab, KayKitDungeonBannerFab, KayKitDungeonBarrelFab, KayKitDungeonBarreldarkFab, KayKitDungeonBenchFab, KayKitDungeonBookaFab, KayKitDungeonBookbFab, KayKitDungeonBookcFab, KayKitDungeonBookdFab, KayKitDungeonBookeFab, KayKitDungeonBookfFab, KayKitDungeonBookopenaFab, KayKitDungeonBookopenbFab, KayKitDungeonBookcaseFab, KayKitDungeonBookcasefilledFab, KayKitDungeonBookcasefilledBrokenFab, KayKitDungeonBookcasewideFab, KayKitDungeonBookcasewidefilledFab, KayKitDungeonBookcasewidefilledBrokenFab, KayKitDungeonBookcasewideBrokenFab, KayKitDungeonBookcaseBrokenFab, KayKitDungeonBricksFab, KayKitDungeonBucketFab, KayKitDungeonChairFab, KayKitDungeonChesttopCommonFab, KayKitDungeonChesttopCommonEmptyFab, KayKitDungeonChesttopRareFab, KayKitDungeonChesttopRareMimicFab, KayKitDungeonChesttopUncommonFab, KayKitDungeonChesttopUncommonMimicFab, KayKitDungeonChestCommonFab, KayKitDungeonChestCommonEmptyFab, KayKitDungeonChestRareFab, KayKitDungeonChestRareMimicFab, KayKitDungeonChestUncommonFab, KayKitDungeonChestUncommonMimicFab, KayKitDungeonCoinFab, KayKitDungeonCoinslargeFab, KayKitDungeonCoinsmediumFab, KayKitDungeonCoinssmallFab, KayKitDungeonCrateFab, KayKitDungeonCratedarkFab, KayKitDungeonCrateplatformLargeFab, KayKitDungeonCrateplatformMediumFab, KayKitDungeonCrateplatformSmallFab, KayKitDungeonCrossbowCommonFab, KayKitDungeonCrossbowRareFab, KayKitDungeonCrossbowUncommonFab, KayKitDungeonDaggerCommonFab, KayKitDungeonDaggerRareFab, KayKitDungeonDaggerUncommonFab, KayKitDungeonDoorFab, KayKitDungeonDoorGateFab, KayKitDungeonFloordecorationShatteredbricksFab, KayKitDungeonFloordecorationTileslargeFab, KayKitDungeonFloordecorationTilessmallFab, KayKitDungeonFloordecorationWoodFab, KayKitDungeonFloordecorationWoodleftFab, KayKitDungeonFloordecorationWoodrightFab, KayKitDungeonHammerCommonFab, KayKitDungeonHammerRareFab, KayKitDungeonHammerUncommonFab, KayKitDungeonLootsackaFab, KayKitDungeonLootsackbFab, KayKitDungeonMugFab, KayKitDungeonPillarFab, KayKitDungeonPillarBrokenFab, KayKitDungeonPlateFab, KayKitDungeonPlatefullFab, KayKitDungeonPlatehalfFab, KayKitDungeonPotaFab, KayKitDungeonPotaDecoratedFab, KayKitDungeonPotbFab, KayKitDungeonPotbDecoratedFab, KayKitDungeonPotcFab, KayKitDungeonPotcDecoratedFab, KayKitDungeonPotionlargeBlueFab, KayKitDungeonPotionlargeGreenFab, KayKitDungeonPotionlargeRedFab, KayKitDungeonPotionmediumBlueFab, KayKitDungeonPotionmediumGreenFab, KayKitDungeonPotionmediumRedFab, KayKitDungeonPotionsmallBlueFab, KayKitDungeonPotionsmallGreenFab, KayKitDungeonPotionsmallRedFab, KayKitDungeonPotsFab, KayKitDungeonQuiverEmptyFab, KayKitDungeonQuiverFullFab, KayKitDungeonQuiverHalfFullFab, KayKitDungeonScaffoldHighFab, KayKitDungeonScaffoldHighCornerbothFab, KayKitDungeonScaffoldHighCornerleftFab, KayKitDungeonScaffoldHighCornerrightFab, KayKitDungeonScaffoldHighRailingFab, KayKitDungeonScaffoldLowFab, KayKitDungeonScaffoldLowCornerbothFab, KayKitDungeonScaffoldLowCornerleftFab, KayKitDungeonScaffoldLowCornerrightFab, KayKitDungeonScaffoldLowRailingFab, KayKitDungeonScaffoldMediumFab, KayKitDungeonScaffoldMediumCornerbothFab, KayKitDungeonScaffoldMediumCornerleftFab, KayKitDungeonScaffoldMediumCornerrightFab, KayKitDungeonScaffoldMediumRailingFab, KayKitDungeonScaffoldSmallHighFab, KayKitDungeonScaffoldSmallHighCornerleftFab, KayKitDungeonScaffoldSmallHighCornerrightFab, KayKitDungeonScaffoldSmallHighLongFab, KayKitDungeonScaffoldSmallHighRailingFab, KayKitDungeonScaffoldSmallHighRailingLongFab, KayKitDungeonScaffoldSmallLowFab, KayKitDungeonScaffoldSmallLowCornerleftFab, KayKitDungeonScaffoldSmallLowCornerrightFab, KayKitDungeonScaffoldSmallLowLongFab, KayKitDungeonScaffoldSmallLowRailingFab, KayKitDungeonScaffoldSmallLowRailingLongFab, KayKitDungeonScaffoldSmallMediumFab, KayKitDungeonScaffoldSmallMediumCornerleftFab, KayKitDungeonScaffoldSmallMediumCornerrightFab, KayKitDungeonScaffoldSmallMediumLongFab, KayKitDungeonScaffoldSmallMediumRailingFab, KayKitDungeonScaffoldSmallMediumRailingLongFab, KayKitDungeonScaffoldStairsFab, KayKitDungeonShieldCommonFab, KayKitDungeonShieldRareFab, KayKitDungeonShieldUncommonFab, KayKitDungeonSpellbookFab, KayKitDungeonStaffCommonFab, KayKitDungeonStaffRareFab, KayKitDungeonStaffUncommonFab, KayKitDungeonStairsFab, KayKitDungeonStairsWideFab, KayKitDungeonStoolFab, KayKitDungeonSwordCommonFab, KayKitDungeonSwordRareFab, KayKitDungeonSwordUncommonFab, KayKitDungeonTablelargeFab, KayKitDungeonTablemediumFab, KayKitDungeonTablesmallFab, KayKitDungeonTilebrickaLargeFab, KayKitDungeonTilebrickaMediumFab, KayKitDungeonTilebrickaSmallFab, KayKitDungeonTilebrickbLargeFab, KayKitDungeonTilebrickbLargecrackedaFab, KayKitDungeonTilebrickbLargecrackedbFab, KayKitDungeonTilebrickbMediumFab, KayKitDungeonTilebrickbSmallFab, KayKitDungeonTilespikesFab, KayKitDungeonTilespikesLargeFab, KayKitDungeonTilespikesShallowFab, KayKitDungeonTorchFab, KayKitDungeonTorchwallFab, KayKitDungeonTrapdoorFab, KayKitDungeonWallFab, KayKitDungeonWallcornerFab, KayKitDungeonWalldecorationaFab, KayKitDungeonWalldecorationbFab, KayKitDungeonWallintersectionFab, KayKitDungeonWallsingleFab, KayKitDungeonWallsingleBrokenFab, KayKitDungeonWallsingleCornerFab, KayKitDungeonWallsingleDecorationaFab, KayKitDungeonWallsingleDecorationbFab, KayKitDungeonWallsingleDoorFab, KayKitDungeonWallsingleSplitFab, KayKitDungeonWallsingleWindowFab, KayKitDungeonWallsingleWindowgateFab, KayKitDungeonWallsplitFab, KayKitDungeonWallBrokenFab, KayKitDungeonWallDoorFab, KayKitDungeonWallEndFab, KayKitDungeonWallEndBrokenFab, KayKitDungeonWallGateFab, KayKitDungeonWallGatecornerFab, KayKitDungeonWallGatedoorFab, KayKitDungeonWallWindowFab, KayKitDungeonWallWindowgateFab, KayKitDungeonWeaponrackFab, } from "./kaykit/dungeon_pack/dungeonfab";
 import { QuaterniusZombieCharactersGermanshepherdFab, QuaterniusZombieCharactersLisFab, QuaterniusZombieCharactersLisSingleweaponFab, QuaterniusZombieCharactersMattFab, QuaterniusZombieCharactersMattSingleweaponFab, QuaterniusZombieCharactersPugFab, QuaterniusZombieCharactersSamFab, QuaterniusZombieCharactersSamSingleweaponFab, QuaterniusZombieCharactersShaunFab, QuaterniusZombieCharactersShaunSingleweaponFab, QuaterniusZombieZombieArmFab, QuaterniusZombieZombieBasicFab, QuaterniusZombieZombieChubbyFab, QuaterniusZombieZombieRibcageFab,} from "./quaterniuspack/qzombiefab" 
+import { QuaterniusNatureBushCommonFab, QuaterniusNatureBushCommonFlowersFab, QuaterniusNatureClover1Fab, QuaterniusNatureClover2Fab, QuaterniusNatureCommontree1Fab, QuaterniusNatureCommontree2Fab, QuaterniusNatureCommontree3Fab, QuaterniusNatureCommontree4Fab, QuaterniusNatureCommontree5Fab, QuaterniusNatureDeadtree1Fab, QuaterniusNatureDeadtree2Fab, QuaterniusNatureDeadtree3Fab, QuaterniusNatureDeadtree4Fab, QuaterniusNatureDeadtree5Fab, QuaterniusNatureFern1Fab, QuaterniusNatureFlower3GroupFab, QuaterniusNatureFlower3SingleFab, QuaterniusNatureFlower4GroupFab, QuaterniusNatureFlower4SingleFab, QuaterniusNatureGrassCommonShortFab, QuaterniusNatureGrassCommonTallFab, QuaterniusNatureGrassWispyShortFab, QuaterniusNatureGrassWispyTallFab, QuaterniusNatureMushroomCommonFab, QuaterniusNatureMushroomLaetiporusFab, QuaterniusNaturePebbleRound1Fab, QuaterniusNaturePebbleRound2Fab, QuaterniusNaturePebbleRound3Fab, QuaterniusNaturePebbleRound4Fab, QuaterniusNaturePebbleRound5Fab, QuaterniusNaturePebbleSquare1Fab, QuaterniusNaturePebbleSquare2Fab, QuaterniusNaturePebbleSquare3Fab, QuaterniusNaturePebbleSquare4Fab, QuaterniusNaturePebbleSquare5Fab, QuaterniusNaturePebbleSquare6Fab, QuaterniusNaturePetal1Fab, QuaterniusNaturePetal2Fab, QuaterniusNaturePetal3Fab, QuaterniusNaturePetal4Fab, QuaterniusNaturePetal5Fab, QuaterniusNaturePine1Fab, QuaterniusNaturePine2Fab, QuaterniusNaturePine3Fab, QuaterniusNaturePine4Fab, QuaterniusNaturePine5Fab, QuaterniusNaturePlant1Fab, QuaterniusNaturePlant1BigFab, QuaterniusNaturePlant7Fab, QuaterniusNaturePlant7BigFab, QuaterniusNatureRockpathRoundSmall1Fab, QuaterniusNatureRockpathRoundSmall2Fab, QuaterniusNatureRockpathRoundSmall3Fab, QuaterniusNatureRockpathRoundThinFab, QuaterniusNatureRockpathRoundWideFab, QuaterniusNatureRockpathSquareSmall1Fab, QuaterniusNatureRockpathSquareSmall2Fab, QuaterniusNatureRockpathSquareSmall3Fab, QuaterniusNatureRockpathSquareThinFab, QuaterniusNatureRockpathSquareWideFab, QuaterniusNatureRockMedium1Fab, QuaterniusNatureRockMedium2Fab, QuaterniusNatureRockMedium3Fab, QuaterniusNatureTwistedtree1Fab, QuaterniusNatureTwistedtree2Fab, QuaterniusNatureTwistedtree3Fab, QuaterniusNatureTwistedtree4Fab, QuaterniusNatureTwistedtree5Fab, } from "./quaterniuspack/qnaturefab" 
 
 
 // Fab 클래스 타입
@@ -577,20 +578,89 @@ export class Loader {
         this.fabClasses.set(Char.KayKitDungeonWallWindowgate, KayKitDungeonWallWindowgateFab);
         this.fabClasses.set(Char.KayKitDungeonWeaponrack, KayKitDungeonWeaponrackFab);
 
-        this.fabClasses.set(Char.QuaterniusZombieCharactersGermanshepherd, QuaterniusZombieCharactersGermanshepherdFab);
-        this.fabClasses.set(Char.QuaterniusZombieCharactersLis, QuaterniusZombieCharactersLisFab);
-        this.fabClasses.set(Char.QuaterniusZombieCharactersLisSingleweapon, QuaterniusZombieCharactersLisSingleweaponFab);
-        this.fabClasses.set(Char.QuaterniusZombieCharactersMatt, QuaterniusZombieCharactersMattFab);
-        this.fabClasses.set(Char.QuaterniusZombieCharactersMattSingleweapon, QuaterniusZombieCharactersMattSingleweaponFab);
-        this.fabClasses.set(Char.QuaterniusZombieCharactersPug, QuaterniusZombieCharactersPugFab);
-        this.fabClasses.set(Char.QuaterniusZombieCharactersSam, QuaterniusZombieCharactersSamFab);
-        this.fabClasses.set(Char.QuaterniusZombieCharactersSamSingleweapon, QuaterniusZombieCharactersSamSingleweaponFab);
-        this.fabClasses.set(Char.QuaterniusZombieCharactersShaun, QuaterniusZombieCharactersShaunFab);
-        this.fabClasses.set(Char.QuaterniusZombieCharactersShaunSingleweapon, QuaterniusZombieCharactersShaunSingleweaponFab);
-        this.fabClasses.set(Char.QuaterniusZombieZombieArm, QuaterniusZombieZombieArmFab);
-        this.fabClasses.set(Char.QuaterniusZombieZombieBasic, QuaterniusZombieZombieBasicFab);
-        this.fabClasses.set(Char.QuaterniusZombieZombieChubby, QuaterniusZombieZombieChubbyFab);
-        this.fabClasses.set(Char.QuaterniusZombieZombieRibcage, QuaterniusZombieZombieRibcageFab);
+        this.fabClasses.set(Char.CharAniQuaterniusZombieCharactersGermanshepherd, QuaterniusZombieCharactersGermanshepherdFab);
+        this.fabClasses.set(Char.CharHumanQuaterniusZombieCharactersLis, QuaterniusZombieCharactersLisFab);
+        this.fabClasses.set(Char.CharHumanQuaterniusZombieCharactersLisSingleweapon, QuaterniusZombieCharactersLisSingleweaponFab);
+        this.fabClasses.set(Char.CharHumanQuaterniusZombieCharactersMatt, QuaterniusZombieCharactersMattFab);
+        this.fabClasses.set(Char.CharHumanQuaterniusZombieCharactersMattSingleweapon, QuaterniusZombieCharactersMattSingleweaponFab);
+        this.fabClasses.set(Char.CharAniQuaterniusZombieCharactersPug, QuaterniusZombieCharactersPugFab);
+        this.fabClasses.set(Char.CharHumanQuaterniusZombieCharactersSam, QuaterniusZombieCharactersSamFab);
+        this.fabClasses.set(Char.CharHumanQuaterniusZombieCharactersSamSingleweapon, QuaterniusZombieCharactersSamSingleweaponFab);
+        this.fabClasses.set(Char.CharHumanQuaterniusZombieCharactersShaun, QuaterniusZombieCharactersShaunFab);
+        this.fabClasses.set(Char.CharHumanQuaterniusZombieCharactersShaunSingleweapon, QuaterniusZombieCharactersShaunSingleweaponFab);
+        this.fabClasses.set(Char.CharMonQuaterniusZombieZombieArm, QuaterniusZombieZombieArmFab);
+        this.fabClasses.set(Char.CharMonQuaterniusZombieZombieBasic, QuaterniusZombieZombieBasicFab);
+        this.fabClasses.set(Char.CharMonQuaterniusZombieZombieChubby, QuaterniusZombieZombieChubbyFab);
+        this.fabClasses.set(Char.CharMonQuaterniusZombieZombieRibcage, QuaterniusZombieZombieRibcageFab);
+
+        this.fabClasses.set(Char.QuaterniusNatureBushCommon, QuaterniusNatureBushCommonFab);
+        this.fabClasses.set(Char.QuaterniusNatureBushCommonFlowers, QuaterniusNatureBushCommonFlowersFab);
+        this.fabClasses.set(Char.QuaterniusNatureClover1, QuaterniusNatureClover1Fab);
+        this.fabClasses.set(Char.QuaterniusNatureClover2, QuaterniusNatureClover2Fab);
+        this.fabClasses.set(Char.QuaterniusNatureCommontree1, QuaterniusNatureCommontree1Fab);
+        this.fabClasses.set(Char.QuaterniusNatureCommontree2, QuaterniusNatureCommontree2Fab);
+        this.fabClasses.set(Char.QuaterniusNatureCommontree3, QuaterniusNatureCommontree3Fab);
+        this.fabClasses.set(Char.QuaterniusNatureCommontree4, QuaterniusNatureCommontree4Fab);
+        this.fabClasses.set(Char.QuaterniusNatureCommontree5, QuaterniusNatureCommontree5Fab);
+        this.fabClasses.set(Char.QuaterniusNatureDeadtree1, QuaterniusNatureDeadtree1Fab);
+        this.fabClasses.set(Char.QuaterniusNatureDeadtree2, QuaterniusNatureDeadtree2Fab);
+        this.fabClasses.set(Char.QuaterniusNatureDeadtree3, QuaterniusNatureDeadtree3Fab);
+        this.fabClasses.set(Char.QuaterniusNatureDeadtree4, QuaterniusNatureDeadtree4Fab);
+        this.fabClasses.set(Char.QuaterniusNatureDeadtree5, QuaterniusNatureDeadtree5Fab);
+        this.fabClasses.set(Char.QuaterniusNatureFern1, QuaterniusNatureFern1Fab);
+        this.fabClasses.set(Char.QuaterniusNatureFlower3Group, QuaterniusNatureFlower3GroupFab);
+        this.fabClasses.set(Char.QuaterniusNatureFlower3Single, QuaterniusNatureFlower3SingleFab);
+        this.fabClasses.set(Char.QuaterniusNatureFlower4Group, QuaterniusNatureFlower4GroupFab);
+        this.fabClasses.set(Char.QuaterniusNatureFlower4Single, QuaterniusNatureFlower4SingleFab);
+        this.fabClasses.set(Char.QuaterniusNatureGrassCommonShort, QuaterniusNatureGrassCommonShortFab);
+        this.fabClasses.set(Char.QuaterniusNatureGrassCommonTall, QuaterniusNatureGrassCommonTallFab);
+        this.fabClasses.set(Char.QuaterniusNatureGrassWispyShort, QuaterniusNatureGrassWispyShortFab);
+        this.fabClasses.set(Char.QuaterniusNatureGrassWispyTall, QuaterniusNatureGrassWispyTallFab);
+        this.fabClasses.set(Char.QuaterniusNatureMushroomCommon, QuaterniusNatureMushroomCommonFab);
+        this.fabClasses.set(Char.QuaterniusNatureMushroomLaetiporus, QuaterniusNatureMushroomLaetiporusFab);
+        this.fabClasses.set(Char.QuaterniusNaturePebbleRound1, QuaterniusNaturePebbleRound1Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePebbleRound2, QuaterniusNaturePebbleRound2Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePebbleRound3, QuaterniusNaturePebbleRound3Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePebbleRound4, QuaterniusNaturePebbleRound4Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePebbleRound5, QuaterniusNaturePebbleRound5Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePebbleSquare1, QuaterniusNaturePebbleSquare1Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePebbleSquare2, QuaterniusNaturePebbleSquare2Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePebbleSquare3, QuaterniusNaturePebbleSquare3Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePebbleSquare4, QuaterniusNaturePebbleSquare4Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePebbleSquare5, QuaterniusNaturePebbleSquare5Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePebbleSquare6, QuaterniusNaturePebbleSquare6Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePetal1, QuaterniusNaturePetal1Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePetal2, QuaterniusNaturePetal2Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePetal3, QuaterniusNaturePetal3Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePetal4, QuaterniusNaturePetal4Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePetal5, QuaterniusNaturePetal5Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePine1, QuaterniusNaturePine1Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePine2, QuaterniusNaturePine2Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePine3, QuaterniusNaturePine3Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePine4, QuaterniusNaturePine4Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePine5, QuaterniusNaturePine5Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePlant1, QuaterniusNaturePlant1Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePlant1Big, QuaterniusNaturePlant1BigFab);
+        this.fabClasses.set(Char.QuaterniusNaturePlant7, QuaterniusNaturePlant7Fab);
+        this.fabClasses.set(Char.QuaterniusNaturePlant7Big, QuaterniusNaturePlant7BigFab);
+        this.fabClasses.set(Char.QuaterniusNatureRockpathRoundSmall1, QuaterniusNatureRockpathRoundSmall1Fab);
+        this.fabClasses.set(Char.QuaterniusNatureRockpathRoundSmall2, QuaterniusNatureRockpathRoundSmall2Fab);
+        this.fabClasses.set(Char.QuaterniusNatureRockpathRoundSmall3, QuaterniusNatureRockpathRoundSmall3Fab);
+        this.fabClasses.set(Char.QuaterniusNatureRockpathRoundThin, QuaterniusNatureRockpathRoundThinFab);
+        this.fabClasses.set(Char.QuaterniusNatureRockpathRoundWide, QuaterniusNatureRockpathRoundWideFab);
+        this.fabClasses.set(Char.QuaterniusNatureRockpathSquareSmall1, QuaterniusNatureRockpathSquareSmall1Fab);
+        this.fabClasses.set(Char.QuaterniusNatureRockpathSquareSmall2, QuaterniusNatureRockpathSquareSmall2Fab);
+        this.fabClasses.set(Char.QuaterniusNatureRockpathSquareSmall3, QuaterniusNatureRockpathSquareSmall3Fab);
+        this.fabClasses.set(Char.QuaterniusNatureRockpathSquareThin, QuaterniusNatureRockpathSquareThinFab);
+        this.fabClasses.set(Char.QuaterniusNatureRockpathSquareWide, QuaterniusNatureRockpathSquareWideFab);
+        this.fabClasses.set(Char.QuaterniusNatureRockMedium1, QuaterniusNatureRockMedium1Fab);
+        this.fabClasses.set(Char.QuaterniusNatureRockMedium2, QuaterniusNatureRockMedium2Fab);
+        this.fabClasses.set(Char.QuaterniusNatureRockMedium3, QuaterniusNatureRockMedium3Fab);
+        this.fabClasses.set(Char.QuaterniusNatureTwistedtree1, QuaterniusNatureTwistedtree1Fab);
+        this.fabClasses.set(Char.QuaterniusNatureTwistedtree2, QuaterniusNatureTwistedtree2Fab);
+        this.fabClasses.set(Char.QuaterniusNatureTwistedtree3, QuaterniusNatureTwistedtree3Fab);
+        this.fabClasses.set(Char.QuaterniusNatureTwistedtree4, QuaterniusNatureTwistedtree4Fab);
+        this.fabClasses.set(Char.QuaterniusNatureTwistedtree5, QuaterniusNatureTwistedtree5Fab);
     }
 
     GetAssets(id: Char): IAsset {

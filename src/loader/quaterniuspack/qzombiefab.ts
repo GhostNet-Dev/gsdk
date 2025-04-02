@@ -45,72 +45,72 @@ class QuaterniusZombiePack extends AssetModel {
 }
 
 export class QuaterniusZombieCharactersGermanshepherdFab extends QuaterniusZombiePack implements IAsset {
-    get Id() {return Char.QuaterniusZombieCharactersGermanshepherd}
+    get Id() {return Char.CharAniQuaterniusZombieCharactersGermanshepherd}
     constructor(loader: Loader) { super(loader, "assets/quaterniuspack/zombie/characters/glTF/Characters_GermanShepherd.gltf") }
 }
 
 export class QuaterniusZombieCharactersLisFab extends QuaterniusZombiePack implements IAsset {
-    get Id() {return Char.QuaterniusZombieCharactersLis}
+    get Id() {return Char.CharHumanQuaterniusZombieCharactersLis}
     constructor(loader: Loader) { super(loader, "assets/quaterniuspack/zombie/characters/glTF/Characters_Lis.gltf") }
 }
 
 export class QuaterniusZombieCharactersLisSingleweaponFab extends QuaterniusZombiePack implements IAsset {
-    get Id() {return Char.QuaterniusZombieCharactersLisSingleweapon}
+    get Id() {return Char.CharHumanQuaterniusZombieCharactersLisSingleweapon}
     constructor(loader: Loader) { super(loader, "assets/quaterniuspack/zombie/characters/glTF/Characters_Lis_SingleWeapon.gltf") }
 }
 
 export class QuaterniusZombieCharactersMattFab extends QuaterniusZombiePack implements IAsset {
-    get Id() {return Char.QuaterniusZombieCharactersMatt}
+    get Id() {return Char.CharHumanQuaterniusZombieCharactersMatt}
     constructor(loader: Loader) { super(loader, "assets/quaterniuspack/zombie/characters/glTF/Characters_Matt.gltf") }
 }
 
 export class QuaterniusZombieCharactersMattSingleweaponFab extends QuaterniusZombiePack implements IAsset {
-    get Id() {return Char.QuaterniusZombieCharactersMattSingleweapon}
+    get Id() {return Char.CharHumanQuaterniusZombieCharactersMattSingleweapon}
     constructor(loader: Loader) { super(loader, "assets/quaterniuspack/zombie/characters/glTF/Characters_Matt_SingleWeapon.gltf") }
 }
 
 export class QuaterniusZombieCharactersPugFab extends QuaterniusZombiePack implements IAsset {
-    get Id() {return Char.QuaterniusZombieCharactersPug}
+    get Id() {return Char.CharAniQuaterniusZombieCharactersPug}
     constructor(loader: Loader) { super(loader, "assets/quaterniuspack/zombie/characters/glTF/Characters_Pug.gltf") }
 }
 
 export class QuaterniusZombieCharactersSamFab extends QuaterniusZombiePack implements IAsset {
-    get Id() {return Char.QuaterniusZombieCharactersSam}
+    get Id() {return Char.CharHumanQuaterniusZombieCharactersSam}
     constructor(loader: Loader) { super(loader, "assets/quaterniuspack/zombie/characters/glTF/Characters_Sam.gltf") }
 }
 
 export class QuaterniusZombieCharactersSamSingleweaponFab extends QuaterniusZombiePack implements IAsset {
-    get Id() {return Char.QuaterniusZombieCharactersSamSingleweapon}
+    get Id() {return Char.CharHumanQuaterniusZombieCharactersSamSingleweapon}
     constructor(loader: Loader) { super(loader, "assets/quaterniuspack/zombie/characters/glTF/Characters_Sam_SingleWeapon.gltf") }
 }
 
 export class QuaterniusZombieCharactersShaunFab extends QuaterniusZombiePack implements IAsset {
-    get Id() {return Char.QuaterniusZombieCharactersShaun}
+    get Id() {return Char.CharHumanQuaterniusZombieCharactersShaun}
     constructor(loader: Loader) { super(loader, "assets/quaterniuspack/zombie/characters/glTF/Characters_Shaun.gltf") }
 }
 
 export class QuaterniusZombieCharactersShaunSingleweaponFab extends QuaterniusZombiePack implements IAsset {
-    get Id() {return Char.QuaterniusZombieCharactersShaunSingleweapon}
+    get Id() {return Char.CharHumanQuaterniusZombieCharactersShaunSingleweapon}
     constructor(loader: Loader) { super(loader, "assets/quaterniuspack/zombie/characters/glTF/Characters_Shaun_SingleWeapon.gltf") }
 }
 
 export class QuaterniusZombieZombieArmFab extends QuaterniusZombiePack implements IAsset {
-    get Id() {return Char.QuaterniusZombieZombieArm}
+    get Id() {return Char.CharMonQuaterniusZombieZombieArm}
     constructor(loader: Loader) { super(loader, "assets/quaterniuspack/zombie/characters/glTF/Zombie_Arm.gltf") }
 }
 
 export class QuaterniusZombieZombieBasicFab extends QuaterniusZombiePack implements IAsset {
-    get Id() {return Char.QuaterniusZombieZombieBasic}
+    get Id() {return Char.CharMonQuaterniusZombieZombieBasic}
     constructor(loader: Loader) { super(loader, "assets/quaterniuspack/zombie/characters/glTF/Zombie_Basic.gltf") }
 }
 
 export class QuaterniusZombieZombieChubbyFab extends QuaterniusZombiePack implements IAsset {
-    get Id() {return Char.QuaterniusZombieZombieChubby}
+    get Id() {return Char.CharMonQuaterniusZombieZombieChubby}
     constructor(loader: Loader) { super(loader, "assets/quaterniuspack/zombie/characters/glTF/Zombie_Chubby.gltf") }
 }
 
 export class QuaterniusZombieZombieRibcageFab extends QuaterniusZombiePack implements IAsset {
-    get Id() {return Char.QuaterniusZombieZombieRibcage}
+    get Id() {return Char.CharMonQuaterniusZombieZombieRibcage}
     constructor(loader: Loader) { super(loader, "assets/quaterniuspack/zombie/characters/glTF/Zombie_Ribcage.gltf") }
 }
 
