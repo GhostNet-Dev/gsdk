@@ -1,10 +1,10 @@
 import os
 
 # 설정: 파일이 있는 디렉토리 및 출력 파일
-input_directory = "assets/quaterniuspack/3d_card/glTF"
+input_directory = "assets/quaterniuspack/ultimate_animated_char/glTF"
 output_file = "generated_classes.ghost"
-pack_name = "QuaterniusCardPack"
-front_name = "QuaterniusCard"
+pack_name = "QuaterniusAniCharPack"
+front_name = "QuaterniusAniChar"
 exe_name = ".gltf"
 
 # 파일 리스트 가져오기 및 정렬
