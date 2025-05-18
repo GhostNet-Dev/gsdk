@@ -27,6 +27,7 @@ export enum MapEntryType {
     EventBoxModel = "EventBoxManager",
     UltimateModular = "UltimateModular",
     FenceModular = "FenceModular",
+    FluffyNature = "FluffyNature",
 }
 
 export enum MapType {
