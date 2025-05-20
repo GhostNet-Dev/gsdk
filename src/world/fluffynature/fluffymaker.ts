@@ -13,7 +13,7 @@ export type FluffyParam = {
 }
 
 export default class FluffyMaker implements IWorldMapObject {
-    Type: MapEntryType = MapEntryType.FluffyNature
+    Type: MapEntryType = MapEntryType.FluffyMaker
     models: FluffyNature[] = []
     treeParam: FluffyParam[] = []
     constructor(

@@ -28,18 +28,21 @@ export class SimpleWater implements IWorldMapObject {
         return this.meshs
     }
     Load(data: OceanData): void {
+        console.log("Load Ocean")
         const mesh = this.Create()
         const p = data.position
         const r = data.rotation
         const s = data.scale
         mesh.position.set(p.x, p.y, p.z)
-        mesh.rotation.set(p.x, p.y, p.z)
-        mesh.scale.set(p.x, p.y, p.z)
+        mesh.rotation.set(r.x, r.y, r.z)
+        mesh.scale.set(s, s, s)
+        this.scene.add(mesh)
     }
     Save() {
+        const r = this.meshs.rotation
         const data: OceanData = {
-            position: this.meshs.position,
-            rotation: this.meshs.rotation,
+            position: { ...this.meshs.position },
+            rotation: { x: r.x, y: r.y, z: r.z },
             scale: this.meshs.scale.x,
         }
         return data

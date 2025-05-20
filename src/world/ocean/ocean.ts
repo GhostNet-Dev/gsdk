@@ -2,8 +2,7 @@ import * as THREE from "three";
 import oceanShader from "./shader/ocean"
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
-import { IWorldMapObject, MapEntryType, NormalData, OceanData } from "@Glibs/types/worldmaptypes";
-import { Scale } from "three-nebula";
+import { IWorldMapObject, MapEntryType, OceanData } from "@Glibs/types/worldmaptypes";
 
 export class Ocean implements ILoop, IWorldMapObject {
     Type: MapEntryType = MapEntryType.Ocean
@@ -83,8 +82,8 @@ export class Ocean implements ILoop, IWorldMapObject {
     }
     Save() {
         const data: OceanData = {
-            position: this.meshs.position,
-            rotation: this.meshs.rotation,
+            position: { ...this.meshs.position },
+            rotation: { ...this.meshs.rotation },
             scale: this.meshs.scale.x,
         }
         return data

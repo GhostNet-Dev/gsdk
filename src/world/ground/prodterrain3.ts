@@ -20,7 +20,7 @@ export default class ProduceTerrain3 implements IWorldMapObject{
         colorSnow: '#ffffff',
     };
 
-    constructor() {
+    constructor(private scene: THREE.Scene) {
     }
     
     private createMaterial(): THREE.MeshStandardMaterial {
@@ -51,6 +51,7 @@ export default class ProduceTerrain3 implements IWorldMapObject{
         mesh.position.set(p.x, p.y, p.z)
         mesh.rotation.set(r.x, r.y, r.z)
         mesh.scale.set(s.x, s.y, s.z)
+        this.scene.add(mesh)
     }
     Save() {
         const t = this.terrain!

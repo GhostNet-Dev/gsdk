@@ -1,5 +1,30 @@
 const DBName = "ThreeJSData"
 const StoreName = "DataStore"
+async function initDB(): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DBName, 1);
+
+        request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(StoreName)) {
+                db.createObjectStore(StoreName);
+                console.log("✅ DataStore 생성됨");
+            }
+        };
+
+        request.onsuccess = () => {
+            console.log("✅ DB open 성공");
+            request.result.close();
+            resolve();
+        };
+
+        request.onerror = () => {
+            console.error("❌ DB open 실패", request.error);
+            reject(request.error);
+        };
+    });
+}
+
 function saveToIndexedDB<T>(data: T, key: string): Promise<void> {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DBName, 1);
@@ -63,7 +88,14 @@ function loadFromIndexedDB<T>(key: string): Promise<T | undefined> {
 
 async function getAllData<T>(dbName: string, storeName: string): Promise<T[]> {
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(dbName);
+        const request = indexedDB.open(dbName, 1);
+
+        request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(storeName)) {
+                db.createObjectStore(storeName); // ✅ object store를 만들어줌
+            }
+        };
 
         request.onsuccess = (event: Event) => {
             const db = (event.target as IDBOpenDBRequest).result;
@@ -84,10 +116,12 @@ async function getAllData<T>(dbName: string, storeName: string): Promise<T[]> {
 
             getAllRequest.onsuccess = () => {
                 resolve(getAllRequest.result as T[]);
+                db.close();
             };
 
             getAllRequest.onerror = () => {
                 reject(getAllRequest.error);
+                db.close();
             };
         };
 
@@ -173,4 +207,4 @@ async function getDataListElement(eventCtrl: IEventController, click: Function) 
     dom.appendChild(ol)
     return dom
 }
-export { saveDataTextureAndGeometry, loadDataTextureAndGeometry, downDataTextureAndGeometry, getAllDataTextureAndGeometry, getDataListElement }
+export { initDB, saveDataTextureAndGeometry, loadDataTextureAndGeometry, downDataTextureAndGeometry, getAllDataTextureAndGeometry, getDataListElement }

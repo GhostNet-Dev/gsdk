@@ -19,7 +19,7 @@ export default class CustomGround implements IWorldMapObject {
     scale = .5
     radius = 30 / this.scale
     geometry!: THREE.PlaneGeometry
-    constructor({
+    constructor(private scene: THREE.Scene, {
         color = new THREE.Color(0xA6C954),
         width = 1024 * 3, height = 1024 * 3, planeSize = 256, 
     } = {}) {
@@ -63,25 +63,33 @@ export default class CustomGround implements IWorldMapObject {
     Delete(...param: any) {
         return this.obj
     }
-    Load(data: CustomGroundData) {
+    /**
+     * Loads a custom ground data.
+     * @param data The custom ground data
+     */
+
+    Load(data: CustomGroundData, callback?: Function) {
+        console.log("Load Custom Ground")
         const textureData = new Uint8Array(data.textureData);
         const texture = new THREE.DataTexture(textureData, data.textureWidth, data.textureHeight, THREE.RGBAFormat);
         texture.needsUpdate = true;
 
         // Restore PlaneGeometry
-        const geometry = new THREE.PlaneGeometry(128, 128, 128, 128);
+        const geometry = new THREE.PlaneGeometry(data.mapSize, data.mapSize, data.mapSize, data.mapSize);
         const vertices = geometry.attributes.position.array as Float32Array;
 
         for (let i = 0; i < vertices.length; i++) {
             vertices[i] = data.verticesData[i];
         }
         geometry.attributes.position.needsUpdate = true;
-        this.Create({
-            width: data.textureWidth,
-            height: data.textureHeight,
-            planeSize: data.mapSize,
-        })
+        // this.Create({
+        //     width: data.textureWidth,
+        //     height: data.textureHeight,
+        //     planeSize: data.mapSize,
+        // })
         this.LoadMap(texture, geometry)
+        this.scene.add(this.obj)
+        callback?.(this.obj, this.Type)
     }
     LoadMap(texture: THREE.DataTexture, geometry: THREE.PlaneGeometry) {
         this.blendMap = texture

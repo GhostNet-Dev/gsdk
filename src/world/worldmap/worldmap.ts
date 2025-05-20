@@ -10,7 +10,7 @@ import { GroundData, MapEntry, MapEntryType, MapPackage, MapType, NormalData, IW
 import CustomGround from "../ground/customground";
 import Ground from "../ground/ground";
 import UltimateModular from "./ultimatemodular";
-import { downDataTextureAndGeometry, loadDataTextureAndGeometry, saveDataTextureAndGeometry } from "./mapstore";
+import { downDataTextureAndGeometry, initDB, loadDataTextureAndGeometry, saveDataTextureAndGeometry } from "./mapstore";
 import { SimpleWater } from '../ocean/simplewater';
 import Grid from './grid';
 import EventBoxManager from '@Glibs/interactives/eventbox/boxmgr';
@@ -18,6 +18,7 @@ import { EventTypes } from '@Glibs/types/globaltypes';
 import ProduceTerrain3 from '../ground/prodterrain3';
 import FenceModular from './fencemodular';
 import GeometryGround from '../ground/defaultgeo';
+import FluffyMaker from '../fluffynature/fluffymaker';
 
 
 export default class WorldMap {
@@ -43,11 +44,12 @@ export default class WorldMap {
         UltimateModular: UltimateModular,
         FenceModular: FenceModular,
         EventBoxManager: EventBoxManager,
+        FlufffyMaker: FluffyMaker,
     };
     private worldMapTypes: Record<string, any> = {
-        CustomGround: { width: 1024 * 3, height: 1024 * 3, planeSize: 256 },
+        CustomGround: { scene: this.scene },
         GeometryGround: { scene: this.scene, eventCtrl: this.eventCtrl },
-        ProduceTerrain3: {},
+        ProduceTerrain3: { scene: this.scene },
         Ground: { width: 1024 * 3, height: 1024 * 3, planeSize: 256 },
         GrassMaker: { scene: this.scene, eventCtrl: this.eventCtrl },
         TreeMaker: { loader: this.loader, eventCtrl: this.eventCtrl, scene: this.scene },
@@ -56,6 +58,7 @@ export default class WorldMap {
         UltimateModular: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl },
         FenceModular: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl },
         EventBoxManager: { loader: this.loader, eventCtrl: this.eventCtrl },
+        FluffyMaker: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl  }
     }
 
     constructor(
@@ -64,8 +67,14 @@ export default class WorldMap {
         private eventCtrl: IEventController,
         private light: THREE.DirectionalLight,
     ) {
+       initDB() 
     }
     GetMapObject(mapType = MapEntryType.CustomGround) {
+        // if(typeof mapType == "number") {
+        //     const t = MapEntryType[mapType]
+        //     if(!t) throw new Error("there is not types = " + mapType);
+        //     mapType = t
+        // }
         let obj = this.mapObj.get(mapType)
         if (!obj) {
             const params = this.worldMapTypes[mapType]
@@ -194,20 +203,23 @@ export default class WorldMap {
     CheckPoint(id: number) {
         return this.getPosition(id)
     }
-    async onLoad(key: string) {
+    makeMapEntries() {
+        const mapData: MapEntry[] = []
+        this.mapObj.forEach((v) => {
+            const type = v.Type
+            const data = v.Save?.()
+            //const values = Array.isArray(params) ? params : Object.values(params || {});
+            mapData.push({ type, data })
+        })
+        return mapData
+    }
+    async onLoad(key: string, callback?: (obj: THREE.Mesh, type: MapEntryType) => void) {
         const mapData = await loadDataTextureAndGeometry(key)
         if (!mapData) return
 
         mapData.entries.forEach(entry => {
-            this.GetMapObject(entry.type).Load?.(entry.data)
+            this.GetMapObject(entry.type).Load?.(entry.data, callback)
         });
-    }
-    makeMapEntries() {
-        const mapData: MapEntry[] = []
-        this.mapObj.forEach((v) => {
-            mapData.push(...v.Save?.())
-        })
-        return mapData
     }
     onSave() {
         const key = "mapData_" + this.generateDateKey()

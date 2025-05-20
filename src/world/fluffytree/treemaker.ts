@@ -49,14 +49,16 @@ export class TreeMaker implements ILoop, IWorldMapObject {
         this.treeStyle.set(FluffyTreeType.Sakura, [this.rootPath + 'assets/texture/foliage/flat/sprite_0049.png', "#ffc0cb"])
         this.treeStyle.set(FluffyTreeType.White, [this.rootPath + 'assets/texture/foliage/flat/sprite_0050.png', "#ffffff"])
     }
-    async LoadTree(trees: TreeParam[]) {
+    async LoadTree(trees: TreeParam[], callback?: Function) {
         this.models.forEach((t) => {
             this.scene.remove(t.Meshs)
             t.Dispose()
         })
 
         trees.map(async (t) => {
-            await this.Create(t)
+            const tree = await this.Create(t)
+            this.scene.add(tree)
+            callback?.(tree, this.Type)
         })
     }
     GetTreeInfo(type: FluffyTreeType) {
@@ -106,7 +108,8 @@ export class TreeMaker implements ILoop, IWorldMapObject {
         })
         return treeData
     }
-    Load(treeData: TreeData[]): void {
+    Load(treeData: TreeData[], callback?: Function): void {
+        console.log("Load Tree")
         const treeParam: TreeParam[] = []
         treeData.forEach((t) => {
             treeParam.push({
@@ -117,6 +120,6 @@ export class TreeMaker implements ILoop, IWorldMapObject {
                 color: t.color
             })
         })
-        this.LoadTree(treeParam)
+        this.LoadTree(treeParam, callback)
     }
 }

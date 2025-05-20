@@ -53,10 +53,11 @@ export default class EventBoxManager implements IWorldMapObject {
     Save() {
         const saveData: NormalData[] = []
         this.data.forEach((v) => {
+            const r = v.mesh.rotation
             saveData.push({
                 type: v.charType,
-                position: v.mesh.position,
-                rotation: v.mesh.rotation,
+                position: { ...v.mesh.position },
+                rotation: { x: r.x, y: r.y, z: r.z },
                 scale: v.mesh.scale.x,
                 custom: v.EvtType
             })

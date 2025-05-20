@@ -27,7 +27,7 @@ export enum MapEntryType {
     EventBoxModel = "EventBoxManager",
     UltimateModular = "UltimateModular",
     FenceModular = "FenceModular",
-    FluffyNature = "FluffyNature",
+    FluffyMaker = "FluffyMaker",
 }
 
 export enum MapType {
@@ -108,6 +108,6 @@ export interface IWorldMapObject {
     Show?():void
     Hide?(): void
     Save?(): any
-    Load?(data: any): void
+    Load?(data: any, callback?: Function): void
 }
 
