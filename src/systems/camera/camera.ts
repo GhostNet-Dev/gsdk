@@ -4,11 +4,24 @@ import IEventController, { ILoop, IViewer } from "@Glibs/interface/ievent";
 import { Canvas } from "@Glibs/systems/event/canvas";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { CameraMode, ICameraStrategy } from "./cameratypes";
+import TopViewCameraStrategy from "./topview";
+import ThirdPersonCameraStrategy from "./thirdperson";
+import ThirdPersonFollowCameraStrategy from "./followcam";
+import FirstPersonCameraStrategy from "./firstperson";
+import FreeCameraStrategy from "./freeview";
+import CinematicCameraStrategy from "./cinemaview";
 
 export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     LoopId = 0
     controls: OrbitControls
+
+    targetObjs: THREE.Object3D[] = []
+    private strategy: ICameraStrategy
+    private strategies: Map<CameraMode, ICameraStrategy> = new Map()
+    private mode: CameraMode = CameraMode.TopView
     lookTarget = true
+
     constructor(
         canvas: Canvas,
         eventCtrl: IEventController,
@@ -22,26 +35,36 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         eventCtrl.RegisterEventListener(EventTypes.CtrlObj, (obj: IPhysicsObject) => {
             this.lookTarget = true
             this.player = obj
+            this.setMode(CameraMode.ThirdFollowPerson)
         })
         eventCtrl.RegisterEventListener(EventTypes.CtrlObjOff, () => {
             this.lookTarget = false
+            this.setMode(CameraMode.Free)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.RegisterPhysic, (obj: THREE.Object3D) => {
+            this.targetObjs.push(obj)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.DeregisterPhysic, (obj: THREE.Object3D) => {
+            this.targetObjs.splice(this.targetObjs.findIndex(o => o.uuid == obj.uuid), 1)
         })
         this.position.set(7, 5, 7)
         this.lookTarget = lookTarget
         if (lookTarget) this.lookAt(player!.Pos)
+
         this.controls = new OrbitControls(this, dom)
-    }
-
-    resize(width: number, height: number) {
-        this.aspect = width / height
-        this.updateProjectionMatrix()
-    }
-
-    update() {
-        if (this.lookTarget) {
-            this.controls.update()
-            this.updateCamera()
-        }
+        // 전략 초기화
+        this.strategies.set(CameraMode.TopView, new TopViewCameraStrategy())
+        this.strategies.set(CameraMode.ThirdPerson, new ThirdPersonCameraStrategy());
+        this.strategies.set(CameraMode.ThirdFollowPerson, new ThirdPersonFollowCameraStrategy(this.controls, this, this.targetObjs));
+        this.strategies.set(CameraMode.FirstPerson, new FirstPersonCameraStrategy());
+        this.strategies.set(CameraMode.Free, new FreeCameraStrategy(this.controls));
+        this.strategies.set(CameraMode.Cinematic, new CinematicCameraStrategy([
+            new THREE.Vector3(0, 10, 20),
+            new THREE.Vector3(10, 10, 0),
+            new THREE.Vector3(0, 5, -10)
+        ]));
+        // 여기에 다른 전략도 추가하세요
+        this.strategy = this.strategies.get(this.mode)!;
     }
 
     shakeCamera(intensity = 0.5, duration = 0.3) {
@@ -67,31 +90,19 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
 
         updateShake();
     }
+    setMode(mode: CameraMode) {
+        if (this.strategies.has(mode)) {
+            this.mode = mode;
+            this.strategy = this.strategies.get(mode)!;
+        }
+    }
 
-    lerpFactor = 0.1; // 보간 속도 조절 (0~1, 작을수록 부드러움)
-    cameraTarget = new THREE.Vector3(); // 목표 바라볼 위치
-    offset = new THREE.Vector3(10, 15, 10)
+    resize(width: number, height: number) {
+        this.aspect = width / height
+        this.updateProjectionMatrix()
+    }
 
-    updateCamera() {
-        if (!this.player) return
-        // 목표 위치 설정 (캐릭터를 따라가는 오프셋 위치)
-        const targetPosition = this.player.Pos.clone().add(this.offset);
-
-        // 카메라 위치를 보간하여 이동
-        this.position.lerp(targetPosition, this.lerpFactor);
-
-        // 📌 목표 바라볼 위치도 부드럽게 이동
-        this.cameraTarget.lerp(this.player.Pos, this.lerpFactor);
-
-        // 📌 부드러운 회전을 위해 Quaternion 보간 적용
-        const targetQuaternion = new THREE.Quaternion();
-        const currentQuaternion = this.quaternion.clone();
-
-        this.lookAt(this.cameraTarget);
-        // targetQuaternion.copy(this.quaternion); // 목표 회전값 저장
-        // this.quaternion.copy(currentQuaternion); // 기존 회전값으로 복구 (즉시 회전 방지)
-
-        // // Quaternion을 보간하여 천천히 회전
-        // this.quaternion.slerp(targetQuaternion, this.lerpFactor);
+    update() {
+        this.strategy.update(this, this.player)
     }
 }

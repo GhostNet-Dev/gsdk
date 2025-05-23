@@ -201,7 +201,7 @@ export class IdleState extends State implements IPlayerAction {
 export class RunState extends State implements IPlayerAction {
     speed = 7
     previous: IPlayerAction = this.playerCtrl.IdleSt
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic) {
+    constructor(playerPhy: PlayerCtrl, player: Player, private camera: THREE.Camera, gphysic: IGPhysic) {
         super(playerPhy, player, gphysic)
     }
     Init(): void {
@@ -230,27 +230,41 @@ export class RunState extends State implements IPlayerAction {
         if (checkGravity != undefined) return checkGravity
 
         if (v.x == 0 && v.z == 0) {
-            this.previous.Init()
-            return this.previous
+            this.previous.Init();
+            return this.previous;
         }
-        v.y = 0
 
-        const mx = this.MX.lookAt(v, this.ZeroV, this.YV)
-        const qt = this.QT.setFromRotationMatrix(mx)
-        this.player.Meshs.quaternion.copy(qt)
+        // ✅ 카메라 기준 방향으로 변환
+        const camForward = new THREE.Vector3();
+        this.camera.getWorldDirection(camForward);
+        camForward.y = 0;
+        camForward.normalize();
 
-        const dis = this.gphysic.CheckDirection(this.player, this.dir.set(v.x, 0, v.z))
-        const moveAmount = this.dir.normalize().multiplyScalar(delta * this.speed)
-        const moveDis = moveAmount.length()
+        const camRight = new THREE.Vector3();
+        camRight.crossVectors(camForward, new THREE.Vector3(0, 1, 0)).normalize();
 
-        // this.player.Meshs.position.x += movX
-        // this.player.Meshs.position.z += movZ
+        // 입력 벡터를 카메라 기준 방향으로 변환
+        const worldDir = new THREE.Vector3()
+            .addScaledVector(camForward, -v.z)
+            .addScaledVector(camRight, v.x)
+            .normalize();
+
+        worldDir.y = 0;
+
+        // ✅ 회전 처리 (lookAt → Quaternion)
+        const mx = this.MX.lookAt(worldDir, this.ZeroV, this.YV);
+        const qt = this.QT.setFromRotationMatrix(mx);
+        this.player.Meshs.quaternion.copy(qt);
+
+        // ✅ 이동 처리
+        const dis = this.gphysic.CheckDirection(this.player, this.dir.copy(worldDir));
+        const moveAmount = worldDir.clone().multiplyScalar(delta * this.speed);
+        const moveDis = moveAmount.length();
 
         if (moveDis < dis.distance) {
-            // console.log(moveDis, dis.distance)
-            this.player.Pos.add(moveAmount)
+            this.player.Pos.add(moveAmount);
         } else if (dis.move) {
-            this.player.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed))
+            this.player.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
         } else {
             // this.player.Meshs.position.y += 1 // 계단 체크
             // const dis = this.gphysic.CheckDirection(this.player, this.dir.set(v.x, 0, v.z))
@@ -276,7 +290,7 @@ export class JumpState implements IPlayerAction {
     QT = new THREE.Quaternion()
     dir = new THREE.Vector3()
 
-    constructor(private playerCtrl: PlayerCtrl, private player: Player, private gphysic: IGPhysic) { }
+    constructor(private playerCtrl: PlayerCtrl, private player: Player, private camera: THREE.Camera, private gphysic: IGPhysic) { }
     Init(): void {
         console.log("Jump Init!!")
         this.player.ChangeAction(ActionType.Jump)
@@ -289,35 +303,57 @@ export class JumpState implements IPlayerAction {
     Update(delta: number, v: THREE.Vector3): IPlayerAction {
         const movY = this.velocity_y * delta
 
+        // ✅ 카메라 기준 방향으로 변환
+        const camForward = new THREE.Vector3();
+        this.camera.getWorldDirection(camForward);
+        camForward.y = 0;
+        camForward.normalize();
+
+        const camRight = new THREE.Vector3();
+        camRight.crossVectors(camForward, new THREE.Vector3(0, 1, 0)).normalize();
+
+        const worldDir = new THREE.Vector3()
+            .addScaledVector(camForward, -v.z)
+            .addScaledVector(camRight, v.x)
+            .normalize();
+
+        worldDir.y = 0;
+
+        // ✅ 방향 회전 처리
         if (v.x || v.z) {
-            this.dirV.copy(v)
-            this.dirV.y = 0
-            const mx = this.MX.lookAt(this.dirV, this.ZeroV, this.YV)
-            const qt = this.QT.setFromRotationMatrix(mx)
-            this.player.Meshs.quaternion.copy(qt)
+            const mx = this.MX.lookAt(worldDir, this.ZeroV, this.YV);
+            const qt = this.QT.setFromRotationMatrix(mx);
+            this.player.Meshs.quaternion.copy(qt);
         }
 
-        const dirdis = this.gphysic.CheckDirection(this.player, this.dir.set(v.x, 0, v.z))
-        const moveAmount = this.dir.normalize().multiplyScalar(delta * this.speed)
-        const moveDis = moveAmount.length()
+        // ✅ 이동 처리 (카메라 기준 방향 적용)
+        const dirdis = this.gphysic.CheckDirection(this.player, this.dir.copy(worldDir));
+        const moveAmount = worldDir.clone().multiplyScalar(delta * this.speed);
+        const moveDis = moveAmount.length();
 
-        console.log("jump movedis ", moveDis, ", dist", dirdis.distance)
+        console.log("jump movedis ", moveDis, ", dist", dirdis.distance);
+
         if (moveDis < dirdis.distance) {
-            this.player.Pos.add(moveAmount)
+            this.player.Pos.add(moveAmount);
+        } else if (dirdis.move) {
+            this.player.Pos.add(dirdis.move.normalize().multiplyScalar(delta * this.speed));
         }
 
-        const dis = this.gphysic.CheckDown(this.player)
+        // ✅ 점프/낙하 처리
+        const dis = this.gphysic.CheckDown(this.player);
+
         if (movY > 0 || dis > Math.abs(movY)) {
-            this.player.Meshs.position.y += movY
+            this.player.Meshs.position.y += movY;
         } else {
-            this.player.Meshs.position.y += -dis
+            this.player.Meshs.position.y += -dis;
 
-            this.Uninit()
-            this.playerCtrl.IdleSt.Init()
-            return this.playerCtrl.IdleSt
+            this.Uninit();
+            this.playerCtrl.IdleSt.Init();
+            return this.playerCtrl.IdleSt;
         }
 
-        this.velocity_y -= 9.8 * 3 *delta
+        // ✅ 중력 적용
+        this.velocity_y -= 9.8 * 3 * delta;
 
         return this
     }

@@ -53,6 +53,7 @@ export interface CustomGroundData {
     textureHeight: number;
     verticesData: number[];
     mapSize: number;
+    scale: number;
 }
 export interface GroundData {
     type: Char

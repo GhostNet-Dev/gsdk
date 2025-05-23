@@ -8,6 +8,7 @@ export interface IPhysicsObject {
     get CBox(): THREE.Mesh
     get BoxPos() : THREE.Vector3
     get Box(): THREE.Box3
+    get HeadPos(): THREE.Vector3
     get CenterPos(): THREE.Vector3
     get Pos(): THREE.Vector3
     set Visible(flag: boolean)
@@ -36,9 +37,14 @@ export class PhysicsObject implements IPhysicsObject {
     collisionBox?: THREE.Mesh
 
     protected centerPos = new THREE.Vector3()
+    protected headPos = new THREE.Vector3()
 
     get Velocity() {return this.velocity}
     set Velocity(n: number) { this.velocity = n }
+    get HeadPos(): THREE.Vector3 { 
+        this.headPos.copy(this.meshs.position).y += this.Size.y
+        return this.headPos
+    }
     get CenterPos(): THREE.Vector3 { 
         this.centerPos.copy(this.meshs.position).y += this.Size.y / 2
         return this.centerPos
@@ -85,12 +91,13 @@ export class PhysicsObject implements IPhysicsObject {
     CBoxUpdate() {
         this.collisionBox?.position.copy(this.Pos)
     }
-    constructor(protected asset: IAsset) {}
+    constructor(protected asset: IAsset) { }
 }
 
 export class GhostObject extends THREE.Mesh {
     protected size?: THREE.Vector3
     protected velocity = 0
+    protected headPos = new THREE.Vector3()
     protected centerPos = new THREE.Vector3()
     protected collisionBox?: THREE.Mesh
 
@@ -98,6 +105,10 @@ export class GhostObject extends THREE.Mesh {
     set Velocity(n: number) { this.velocity = n }
     get Box() {
         return new THREE.Box3().setFromObject(this)
+    }
+    get HeadPos(): THREE.Vector3 { 
+        this.headPos.copy(this.position).y += this.Size.y / 2
+        return this.headPos
     }
     get CenterPos(): THREE.Vector3 { 
         this.centerPos.copy(this.position).y += this.Size.y / 2

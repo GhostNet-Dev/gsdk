@@ -70,6 +70,9 @@ export default class CustomGround implements IWorldMapObject {
 
     Load(data: CustomGroundData, callback?: Function) {
         console.log("Load Custom Ground")
+        if (this.obj) {
+            this.scene.remove(this.obj)
+        }
         const textureData = new Uint8Array(data.textureData);
         const texture = new THREE.DataTexture(textureData, data.textureWidth, data.textureHeight, THREE.RGBAFormat);
         texture.needsUpdate = true;
@@ -88,6 +91,8 @@ export default class CustomGround implements IWorldMapObject {
         //     planeSize: data.mapSize,
         // })
         this.LoadMap(texture, geometry)
+        const s = data.scale ?? this.scale
+        this.obj.scale.set(s, s, s)
         this.scene.add(this.obj)
         callback?.(this.obj, this.Type)
     }
@@ -124,6 +129,7 @@ export default class CustomGround implements IWorldMapObject {
             textureHeight: map.image.height,
             verticesData: verticesData,
             mapSize: this.planSize,
+            scale: this.scale,
         }
         return gData
     }

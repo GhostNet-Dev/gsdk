@@ -33,8 +33,8 @@ export class PlayerCtrl implements ILoop {
     MagicH1St = new MagicH1State(this, this.player, this.gphysic)
     MagicH2St = new MagicH2State(this, this.player, this.gphysic)
     AttackIdleSt = new AttackIdleState(this, this.player, this.gphysic)
-    RunSt = new RunState(this, this.player, this.gphysic)
-    JumpSt = new JumpState(this, this.player, this.gphysic)
+    RunSt = new RunState(this, this.player, this.camera, this.gphysic)
+    JumpSt = new JumpState(this, this.player, this.camera, this.gphysic)
     IdleSt = new IdleState(this, this.player, this.gphysic)
     DyingSt = new DeadState(this, this.player, this.gphysic)
     PickFruitSt = new PickFruitState(this, this.player, this.gphysic, this.eventCtrl)
@@ -61,6 +61,7 @@ export class PlayerCtrl implements ILoop {
         private player: Player,
         public inventory: IInventory,
         private gphysic: IGPhysic,
+        private camera: THREE.Camera,
         private eventCtrl: IEventController,
         param: PlayerStatusParam = {}
     ) {
