@@ -72,6 +72,7 @@ export default class GeometryGround implements IWorldMapObject {
         this.meshs.position.set(data.position.x, data.position.y, data.position.z)
         this.meshs.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z)
         this.meshs.scale.set(data.scale.x, data.scale.y, data.scale.z)
+        this.scene.add(this.meshs)
     }
     Save() {
         const t = this.meshs

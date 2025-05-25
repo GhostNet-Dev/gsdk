@@ -35,7 +35,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         eventCtrl.RegisterEventListener(EventTypes.CtrlObj, (obj: IPhysicsObject) => {
             this.lookTarget = true
             this.player = obj
-            this.setMode(CameraMode.ThirdFollowPerson)
+            this.setMode(CameraMode.ThirdPerson)
         })
         eventCtrl.RegisterEventListener(EventTypes.CtrlObjOff, () => {
             this.lookTarget = false
@@ -52,9 +52,18 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         if (lookTarget) this.lookAt(player!.Pos)
 
         this.controls = new OrbitControls(this, dom)
+        // 🖱️ 드래그 감지
+        this.controls.addEventListener("start", () => {
+            this.strategy?.orbitStart?.()
+        });
+
+        // 드래그 종료 후 offset 저장
+        this.controls.addEventListener("end", () => {
+            this.strategy?.orbitEnd?.()
+        });
         // 전략 초기화
         this.strategies.set(CameraMode.TopView, new TopViewCameraStrategy())
-        this.strategies.set(CameraMode.ThirdPerson, new ThirdPersonCameraStrategy());
+        this.strategies.set(CameraMode.ThirdPerson, new ThirdPersonCameraStrategy(this.controls, this, this.targetObjs));
         this.strategies.set(CameraMode.ThirdFollowPerson, new ThirdPersonFollowCameraStrategy(this.controls, this, this.targetObjs));
         this.strategies.set(CameraMode.FirstPerson, new FirstPersonCameraStrategy());
         this.strategies.set(CameraMode.Free, new FreeCameraStrategy(this.controls));

@@ -4,7 +4,6 @@ import { ICameraStrategy } from "./cameratypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 
 export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy {
-
     private targetPosition = new THREE.Vector3();
     private lookTarget = new THREE.Vector3();
 
@@ -22,28 +21,25 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
     constructor(
         private controls: OrbitControls,
         private camera: THREE.Camera,
-    /** 충돌 감지할 장애물 설정 */
+        /** 충돌 감지할 장애물 설정 */
         private obstacles: THREE.Object3D[],
     ) {
+    }
+    orbitStart(): void {
+        this.isFreeView = true;
+        if (this.dragTimer) clearTimeout(this.dragTimer);
 
-        // 🖱️ 드래그 감지
-        controls.addEventListener("start", () => {
-            this.isFreeView = true;
-            if (this.dragTimer) clearTimeout(this.dragTimer);
-        });
+    }
+    orbitEnd(): void {
+        this.dragTimer = setTimeout(() => {
+            this.isFreeView = false;
 
-        // 드래그 종료 후 offset 저장
-controls.addEventListener("end", () => {
-    this.dragTimer = setTimeout(() => {
-        this.isFreeView = false;
-
-                // 🎯 사용자 시점에서 거리, 높이 계산
-                const camToTarget = new THREE.Vector3().subVectors(this.camera.position, this.controls.target);
-                this.followHeight = camToTarget.y;
-                camToTarget.y = 0;
-                this.followDistance = camToTarget.length();
-    }, this.dragTimeoutMs);
-});
+            // 🎯 사용자 시점에서 거리, 높이 계산
+            const camToTarget = new THREE.Vector3().subVectors(this.camera.position, this.controls.target);
+            this.followHeight = camToTarget.y;
+            camToTarget.y = 0;
+            this.followDistance = camToTarget.length();
+        }, this.dragTimeoutMs);
     }
 
     /** 매 프레임 호출 */

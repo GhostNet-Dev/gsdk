@@ -49,6 +49,7 @@ export class FluffyNature extends PhysicsObject implements IPhysicsObject, ILoop
         this.meshs.traverse((child: any) => {
             if (child.isMesh && child.material.isMeshStandardMaterial) {
                 child.material.onBeforeCompile = (shader: any) => {
+                    console.log(shader)
 
                     shader.uniforms.time = { value: 0 };
                     shader.uniforms.windStrength = { value: windStrength };
@@ -77,6 +78,7 @@ export class FluffyNature extends PhysicsObject implements IPhysicsObject, ILoop
                     child.material.userData.shader = shader;
                     this.shader.push(shader)
                 };
+                child.material.needsUpdate = true;
             }
         });
 

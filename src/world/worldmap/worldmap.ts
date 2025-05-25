@@ -44,7 +44,7 @@ export default class WorldMap {
         UltimateModular: UltimateModular,
         FenceModular: FenceModular,
         EventBoxManager: EventBoxManager,
-        FlufffyMaker: FluffyMaker,
+        FluffyMaker: FluffyMaker,
     };
     private worldMapTypes: Record<string, any> = {
         CustomGround: { scene: this.scene },
@@ -90,7 +90,7 @@ export default class WorldMap {
         const map = await obj.Create(...param)
 
         if(!map) throw new Error("not defined");
-        if(mapType != MapEntryType.Tree)
+        if(mapType != MapEntryType.Tree && mapType != MapEntryType.FluffyMaker)
             this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, map)
         this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, map)
         if (mapType != MapEntryType.UltimateModular &&

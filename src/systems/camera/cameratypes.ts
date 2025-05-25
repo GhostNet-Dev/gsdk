@@ -11,4 +11,6 @@ export enum CameraMode {
 
 export interface ICameraStrategy {
     update(camera: THREE.Camera, player?: IPhysicsObject): void
+    orbitStart?(): void
+    orbitEnd?(): void
 }

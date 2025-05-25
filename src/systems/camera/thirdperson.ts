@@ -1,82 +1,69 @@
 import * as THREE from "three";
-import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { ICameraStrategy } from "./cameratypes";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
 
 export default class ThirdPersonCameraStrategy implements ICameraStrategy {
-    offset = new THREE.Vector3(0, 5, -10); // 캐릭터 뒤에서 위쪽
-    lerpFactor = 0.1;
-    target = new THREE.Vector3();
+    private offset = new THREE.Vector3(10, 15, 10)
+    private isFreeView = false;
+    private targetPosition = new THREE.Vector3();
+    private raycaster = new THREE.Raycaster();
+    target = new THREE.Vector3()
+    private followDistance = 6;
+    lerpFactor = 0.1
+
+    constructor(
+        private controls: OrbitControls,
+        private camera: THREE.Camera,
+        /** 충돌 감지할 장애물 설정 */
+        private obstacles: THREE.Object3D[],
+    ) {
+    }
+    orbitStart(): void {
+        this.isFreeView = true
+    }
+    orbitEnd(): void {
+        // 🎯 사용자 시점에서 거리, 높이 계산
+        const camToTarget = new THREE.Vector3().subVectors(this.camera.position, this.controls.target);
+        this.offset.copy(camToTarget);
+        this.isFreeView = false
+    }
 
     update(camera: THREE.Camera, player?: IPhysicsObject) {
-        if (!player) return;
+    if (!player) return;
 
-        const targetPos = player.CenterPos.clone().add(this.offset);
-        camera.position.lerp(targetPos, this.lerpFactor);
-        this.target.lerp(player.CenterPos, this.lerpFactor);
-        (camera as THREE.PerspectiveCamera).lookAt(this.target);
+    this.controls.target.copy(player.CenterPos);
+    this.controls.update();
+
+    // OrbitControls 또는 자동 위치 계산
+    const intendedCameraPos = this.isFreeView
+        ? this.camera.position.clone()
+        : player.HeadPos.clone().add(this.offset);
+
+    // ✅ Raycaster로 충돌 감지
+    const direction = intendedCameraPos.clone().sub(player.HeadPos).normalize();
+    this.raycaster.set(player.HeadPos, direction);
+    this.raycaster.far = player.HeadPos.distanceTo(intendedCameraPos);
+
+    const hits = this.raycaster.intersectObjects(this.obstacles, true);
+    if (hits.length > 0) {
+        this.targetPosition.copy(hits[0].point);
+    } else {
+        this.targetPosition.copy(intendedCameraPos);
     }
+
+    // ✅ 카메라 위치 적용 (보간 or 직접)
+    if (this.isFreeView) {
+        // 유저가 직접 조작하는 중에는 충돌 보정만 적용 (즉시 위치)
+        camera.position.copy(this.targetPosition);
+    } else {
+        // TPS 모드에서는 부드럽게 따라가도록
+        camera.position.lerp(this.targetPosition, this.lerpFactor);
+    }
+
+    // ✅ 바라보는 타겟은 항상 플레이어 기준
+    this.target.lerp(player.HeadPos, this.lerpFactor);
+    camera.lookAt(this.target);
 }
 
-// export class ThirdPersonFollowCameraStrategy implements ICameraStrategy {
-//     private defaultOffset = new THREE.Vector3(0, 3, -6);
-//     private targetPosition = new THREE.Vector3();
-//     private lookTarget = new THREE.Vector3();
-
-//     private isFreeView = false;
-//     private lerpFactor = 0.1;
-//     private dragTimer: ReturnType<typeof setTimeout> | null = null;
-//     private dragTimeoutMs = 3000;
-
-//     private prevPlayerPos = new THREE.Vector3();
-//     private followDistance = 6; // 사용자 줌 길이 반영
-
-//     constructor(private controls: OrbitControls, private camera: THREE.Camera) {
-//         controls.addEventListener("start", () => {
-//             this.isFreeView = true;
-//             if (this.dragTimer) clearTimeout(this.dragTimer);
-//         });
-
-//         controls.addEventListener("end", () => {
-//             this.dragTimer = setTimeout(() => {
-//                 this.isFreeView = false;
-
-//                 // ✅ 드래그 종료 시, 카메라 거리 측정하여 저장
-//                 this.followDistance = camera.position.distanceTo(controls.target);
-//             }, this.dragTimeoutMs);
-//         });
-//     }
-
-//     update(camera: THREE.Camera, player?: IPhysicsObject) {
-//         if (!player) return;
-
-//         const moved = this.prevPlayerPos.distanceToSquared(player.HeadPos) > 0.0001;
-//         this.prevPlayerPos.copy(player.HeadPos);
-
-//         if (this.isFreeView && moved) {
-//             this.isFreeView = false;
-
-//             // ✅ 드래그 도중 이동 → 즉시 TPS 복귀 + 현재 카메라 거리 유지
-//             this.followDistance = camera.position.distanceTo(this.controls.target);
-//             if (this.dragTimer) clearTimeout(this.dragTimer);
-//         }
-
-//         if (this.isFreeView) {
-//             this.controls.update();
-//             return;
-//         }
-
-//         // ✅ TPS 복귀: 사용자가 줌한 거리 유지하며 캐릭터 뒤에 배치
-//         const rotatedOffset = this.defaultOffset.clone()
-//             .normalize()
-//             .applyQuaternion(player.Meshs.quaternion)
-//             .multiplyScalar(this.followDistance);
-
-//         this.targetPosition.copy(player.HeadPos).add(rotatedOffset);
-
-//         camera.position.lerp(this.targetPosition, this.lerpFactor);
-//         this.lookTarget.lerp(player.HeadPos, this.lerpFactor);
-//         camera.lookAt(this.lookTarget);
-
-//         this.controls.target.copy(player.HeadPos);
-//     }
-// }
+}

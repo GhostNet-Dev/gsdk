@@ -20,6 +20,7 @@ export default class StatusBar {
         this.dom.style.borderRadius = "30px"
         this.dom.onclick = () => { click() }
         this.dom.classList.add("h-100")
+        this.dom.setAttribute("role", "presentation")
         
         // Icon set
         const iconDom = document.createElement('img') as HTMLImageElement

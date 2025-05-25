@@ -21,7 +21,6 @@ export default class FluffyMaker implements IWorldMapObject {
         private scene: THREE.Scene,
         private eventCtrl: IEventController,
     ) {
-        this.loader = loader
     }
     async Create({
         type: model = Char.QuaterniusNatureTwistedtree1,
@@ -45,14 +44,16 @@ export default class FluffyMaker implements IWorldMapObject {
         this.scene.remove(tree.Meshs)
         tree.Dispose()
     }
-    async LoadTree(trees: FluffyParam[]) {
+    async LoadTree(trees: FluffyParam[], callback?: Function) {
         this.models.forEach((t) => {
             this.scene.remove(t.Meshs)
             t.Dispose()
         })
 
         trees.map(async (t) => {
-            await this.Create(t)
+            const mesh = await this.Create(t)
+            this.scene.add(mesh)
+            callback?.(mesh, this.Type)
         })
     }
     Save() {
@@ -68,7 +69,7 @@ export default class FluffyMaker implements IWorldMapObject {
         })
         return treeData
     }
-    Load(treeData: NormalData[]): void {
+    Load(treeData: NormalData[], callback?: Function): void {
         const treeParam: FluffyParam[] = []
         treeData.forEach((t) => {
             treeParam.push({
@@ -78,6 +79,6 @@ export default class FluffyMaker implements IWorldMapObject {
                 type: t.type,
             })
         })
-        this.LoadTree(treeParam)
+        this.LoadTree(treeParam, callback)
     }
 }

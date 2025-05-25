@@ -231,7 +231,7 @@ const html =`
                 </div>
             </div>
             <div class="row text-center select-disable" id="godown">
-                <div class="joypad_arrow select-disable"><span class="visually-hidden">joypad</span></div>
+                <div class="joypad_arrow select-disable"><span role="presentation" class="visually-hidden">joypad</span></div>
             </div>
         </div>
     </div>
@@ -240,7 +240,7 @@ const html =`
             <div class="row">
                 <div class="col pb-2 text-right" style="display: flex;justify-content: flex-end;">
                     <div id="joypad_button4" class="joypad_button select-disable pt-2">
-                        <span style="font-size:xxx-large;opacity: 0.7;" class="material-symbols-outlined">
+                        <span role="presentation" style="font-size:xxx-large;opacity: 0.7;" class="material-symbols-outlined">
                             change_history
                         </span>
                     </div>
@@ -249,7 +249,7 @@ const html =`
             <div class="row">
                 <div class="col pb-2 text-right" style="display: flex;justify-content: flex-end;">
                     <div id="joypad_button3" class="joypad_button select-disable pt-2">
-                        <span style="font-size:xxx-large;opacity: 0.7;" class="material-symbols-outlined">
+                        <span role="presentation" style="font-size:xxx-large;opacity: 0.7;" class="material-symbols-outlined">
                             square
                         </span>
                     </div>
@@ -258,7 +258,7 @@ const html =`
             <div class="row">
                 <div class="col pb-2 text-right" style="display: flex;justify-content: flex-end;">
                     <div id="joypad_button2" class="joypad_button select-disable pt-2">
-                        <span style="font-size:xxx-large;opacity: 0.7;" class="material-symbols-outlined">
+                        <span role="presentation" style="font-size:xxx-large;opacity: 0.7;" class="material-symbols-outlined">
                             circle
                         </span>
                     </div>
@@ -267,7 +267,7 @@ const html =`
             <div class="row">
                 <div class="col">
                     <div id="joypad_button1" class="joypad_button select-disable pt-2">
-                        <span style="font-size:xxx-large;opacity: 0.7;" class="material-symbols-outlined">
+                        <span role="presentation" style="font-size:xxx-large;opacity: 0.7;" class="material-symbols-outlined">
                             close
                         </span>
                     </div>
