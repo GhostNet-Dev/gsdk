@@ -222,17 +222,19 @@ export default class WorldMap {
         if (!mapData) return
 
         mapData.entries.forEach(async (entry) => {
+            if(entry.type === MapEntryType.CustomGround) {
+                this.GetMapObject(entry.type).Load?.(entry.data, callback)
+                return
+            }
             if(Array.isArray(entry.data)) {
                 entry.data.forEach(async (data) => {
                     const mesh = await this.MakeMapObject(entry.type, data)
                     callback?.(mesh, entry.type)
                 })
                 return
-            } else {
-                const mesh = await this.MakeMapObject(entry.type, entry.data)
-                callback?.(mesh, entry.type)
             }
-            // this.GetMapObject(entry.type).Load?.(entry.data, callback)
+            const mesh = await this.MakeMapObject(entry.type, entry.data)
+            callback?.(mesh, entry.type)
         });
     }
     onSave() {

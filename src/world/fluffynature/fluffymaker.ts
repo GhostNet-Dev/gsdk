@@ -26,7 +26,7 @@ export default class FluffyMaker implements IWorldMapObject {
         type: model = Char.QuaterniusNatureTwistedtree1,
         position = new THREE.Vector3(),
         rotation = new THREE.Euler(),
-        scale = 2,
+        scale = 1,
     }: FluffyParam = {}
     ) {
         this.treeParam.push({type: model, position, rotation, scale})

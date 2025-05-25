@@ -50,7 +50,7 @@ export class FluffyNature extends PhysicsObject implements IPhysicsObject, ILoop
         this.meshs.traverse((child: any) => {
             if (child.isMesh && child.material.isMeshStandardMaterial) {
                 console.log(this.asset.Id)
-                child.material = child.material.clone();
+                // child.material = child.material.clone();
                 child.material.onBeforeCompile = (shader: any) => {
                     shader.uniforms.time = { value: 0 };
                     shader.uniforms.windStrength = { value: windStrength };

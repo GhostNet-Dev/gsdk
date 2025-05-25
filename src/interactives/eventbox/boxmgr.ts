@@ -3,13 +3,13 @@ import { IAsset } from "@Glibs/interface/iasset";
 import { EventBoxType } from "./eventboxtypes";
 import { IBuildingObject } from "@Glibs/interface/iobject";
 import { SimpleEvent } from "./simple";
-import { IWorldMapObject, MapEntryType, NormalData } from "@Glibs/types/worldmaptypes";
+import { EventBoxData, IWorldMapObject, MapEntryType, NormalData } from "@Glibs/types/worldmaptypes";
 import { Char } from "@Glibs/types/assettypes";
 import { Loader } from "@Glibs/loader/loader";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 
-type EventBoxData = {
+type EventBoxParam = {
     EvtType: EventBoxType,
     charType: Char,
     mesh: THREE.Group,
@@ -25,15 +25,21 @@ export class EventBox extends THREE.Mesh {
 
 export default class EventBoxManager implements IWorldMapObject {
     Type: MapEntryType = MapEntryType.EventBoxModel
-    data: EventBoxData[] = []
+    data: EventBoxParam[] = []
     id = 0
     constructor(private loader: Loader, private eventCtrl:IEventController) { }
-    async Create(id: Char, pos: THREE.Vector3, type = EventBoxType.None) {
-        if (pos.y < 0) pos.y = 0
-        const asset = this.loader.GetAssets(id)
-        const [mesh, _] = await asset.UniqModel(id.toString() + pos.x + pos.y + pos.z)
+    async Create({
+        type = Char.None,
+        position = new THREE.Vector3(),
+        rotation = new THREE.Euler(),
+        scale = 1,
+        boxType = EventBoxType.None,
+    }) {
+        if (position.y < 0) position.y = 0
+        const asset = this.loader.GetAssets(type)
+        const [mesh, _] = await asset.UniqModel(type.toString() + position.x + position.y + position.z)
 
-        this.addEventBox(type, asset, mesh)
+        this.addEventBox(boxType, asset, mesh)
 
         let meshs: THREE.Group
         if(mesh instanceof THREE.Group) {
@@ -43,7 +49,7 @@ export default class EventBoxManager implements IWorldMapObject {
             meshs.add(mesh)
         }
         meshs.userData.mapObj = this
-        meshs.position.copy(pos)
+        meshs.position.copy(position)
         return meshs
     }
     Delete(obj: THREE.Group) {

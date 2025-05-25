@@ -92,6 +92,13 @@ export interface OceanData {
     rotation: { x: number, y: number, z: number }
     scale: number
 }
+export interface EventBoxData {
+    type: Char
+    position: { x: number, y: number, z: number }
+    rotation: { x: number, y: number, z: number }
+    scale: number
+    boxType: number
+}
 export interface NormalData {
     type: Char
     position: { x: number, y: number, z: number }
