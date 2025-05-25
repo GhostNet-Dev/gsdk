@@ -47,8 +47,8 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         if (!player) return;
 
         // 🧠 이동 감지: 이동 시 TPS 모드 복귀
-        const moved = this.prevPlayerPos.distanceToSquared(player.HeadPos) > 0.0001;
-        this.prevPlayerPos.copy(player.HeadPos);
+        const moved = this.prevPlayerPos.distanceToSquared(player.CenterPos) > 0.0001;
+        this.prevPlayerPos.copy(player.CenterPos);
 
         if (this.isFreeView && moved) {
             this.isFreeView = false;
@@ -72,13 +72,13 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         backDir.normalize();
 
         // ✅ 카메라 목표 위치 = 뒤쪽 + 높이
-        const desiredCameraPos = player.HeadPos.clone()
+        const desiredCameraPos = player.CenterPos.clone()
             .add(backDir.multiplyScalar(this.followDistance))
             .add(new THREE.Vector3(0, this.followHeight, 0));
 
         // ✅ Raycaster로 충돌 검사
-        const direction = desiredCameraPos.clone().sub(player.HeadPos).normalize();
-        this.raycaster.set(player.HeadPos, direction);
+        const direction = desiredCameraPos.clone().sub(player.CenterPos).normalize();
+        this.raycaster.set(player.CenterPos, direction);
         this.raycaster.far = this.followDistance;
 
         const hits = this.raycaster.intersectObjects(this.obstacles, true);
@@ -90,10 +90,10 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
 
         // ✅ 카메라 위치/회전 부드럽게 보간
         camera.position.lerp(this.targetPosition, this.lerpFactor);
-        this.lookTarget.lerp(player.HeadPos, this.lerpFactor);
+        this.lookTarget.lerp(player.CenterPos, this.lerpFactor);
         camera.lookAt(this.lookTarget);
 
         // ✅ OrbitControls target도 캐릭터로 유지
-        this.controls.target.copy(player.HeadPos);
+        this.controls.target.copy(player.CenterPos);
     }
 }

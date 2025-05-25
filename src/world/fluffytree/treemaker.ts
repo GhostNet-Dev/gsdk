@@ -34,7 +34,7 @@ export class TreeMaker implements ILoop, IWorldMapObject {
     treeStyle = new Map<FluffyTreeType, string[]>()
     constructor(
         private loader: Loader,
-        eventCtrl: IEventController,
+        private eventCtrl: IEventController,
         private scene: THREE.Scene,
         private rootPath: string = "https://hons.ghostwebservice.com/"
     ) {
@@ -59,6 +59,7 @@ export class TreeMaker implements ILoop, IWorldMapObject {
             const tree = await this.Create(t)
             this.scene.add(tree)
             callback?.(tree, this.Type)
+            // this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, map)
         })
     }
     GetTreeInfo(type: FluffyTreeType) {

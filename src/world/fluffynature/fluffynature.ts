@@ -46,27 +46,30 @@ export class FluffyNature extends PhysicsObject implements IPhysicsObject, ILoop
         const windStrength = 0.2;
         const windFrequency = 1.0;
         const maxHeight = box.max.y;
+        console.log(maxHeight)
         this.meshs.traverse((child: any) => {
             if (child.isMesh && child.material.isMeshStandardMaterial) {
+                console.log(this.asset.Id)
+                child.material = child.material.clone();
                 child.material.onBeforeCompile = (shader: any) => {
-                    console.log(shader)
-
                     shader.uniforms.time = { value: 0 };
                     shader.uniforms.windStrength = { value: windStrength };
                     shader.uniforms.windFrequency = { value: windFrequency };
+                    shader.uniforms.maxheight = { value: maxHeight };
 
                     shader.vertexShader = shader.vertexShader
                         .replace('void main() {', `
                         uniform float time;
                         uniform float windStrength;
                         uniform float windFrequency;
+                        uniform float maxheight;
                         void main() {
                         `)
                                             .replace('#include <begin_vertex>', `
                         vec3 transformed = vec3(position);
 
                         // 흔들림 세기 (위로 갈수록 강해짐)
-                        float strength = pow(clamp(position.y / ${maxHeight.toFixed(1)}, 0.0, 1.0), 2.0);
+                        float strength = pow(clamp(position.y / maxheight, 0.0, 1.0), 2.0);
 
                         // 흔들림 계산 (위상차 줄이고 방향 통일)
                         float sway = sin(time * windFrequency + position.x * 0.5) * windStrength * strength;

@@ -90,12 +90,16 @@ export default class WorldMap {
         const map = await obj.Create(...param)
 
         if(!map) throw new Error("not defined");
+
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, map)
+
         if(mapType != MapEntryType.Tree && mapType != MapEntryType.FluffyMaker)
             this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, map)
-        this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, map)
+
         if (mapType != MapEntryType.UltimateModular &&
             mapType != MapEntryType.FenceModular)
             this.scene.add(map)
+
         return map
     }
     MakeMapObjectDone(mapType = MapEntryType.GeometryGround) {
@@ -217,8 +221,18 @@ export default class WorldMap {
         const mapData = await loadDataTextureAndGeometry(key)
         if (!mapData) return
 
-        mapData.entries.forEach(entry => {
-            this.GetMapObject(entry.type).Load?.(entry.data, callback)
+        mapData.entries.forEach(async (entry) => {
+            if(Array.isArray(entry.data)) {
+                entry.data.forEach(async (data) => {
+                    const mesh = await this.MakeMapObject(entry.type, data)
+                    callback?.(mesh, entry.type)
+                })
+                return
+            } else {
+                const mesh = await this.MakeMapObject(entry.type, entry.data)
+                callback?.(mesh, entry.type)
+            }
+            // this.GetMapObject(entry.type).Load?.(entry.data, callback)
         });
     }
     onSave() {

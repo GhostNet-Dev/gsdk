@@ -38,12 +38,12 @@ export default class ThirdPersonCameraStrategy implements ICameraStrategy {
     // OrbitControls 또는 자동 위치 계산
     const intendedCameraPos = this.isFreeView
         ? this.camera.position.clone()
-        : player.HeadPos.clone().add(this.offset);
+        : player.CenterPos.clone().add(this.offset);
 
     // ✅ Raycaster로 충돌 감지
-    const direction = intendedCameraPos.clone().sub(player.HeadPos).normalize();
-    this.raycaster.set(player.HeadPos, direction);
-    this.raycaster.far = player.HeadPos.distanceTo(intendedCameraPos);
+    const direction = intendedCameraPos.clone().sub(player.CenterPos).normalize();
+    this.raycaster.set(player.CenterPos, direction);
+    this.raycaster.far = player.CenterPos.distanceTo(intendedCameraPos);
 
     const hits = this.raycaster.intersectObjects(this.obstacles, true);
     if (hits.length > 0) {
@@ -62,7 +62,7 @@ export default class ThirdPersonCameraStrategy implements ICameraStrategy {
     }
 
     // ✅ 바라보는 타겟은 항상 플레이어 기준
-    this.target.lerp(player.HeadPos, this.lerpFactor);
+    this.target.lerp(player.CenterPos, this.lerpFactor);
     camera.lookAt(this.target);
 }
 
