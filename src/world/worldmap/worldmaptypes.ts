@@ -99,6 +99,10 @@ export interface EventBoxData {
     scale: number
     boxType: number
 }
+export interface ModularData {
+    position: { x: number, y: number, z: number }
+    modType?: number
+}
 export interface NormalData {
     type: Char
     position: { x: number, y: number, z: number }

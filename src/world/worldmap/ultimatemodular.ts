@@ -3,7 +3,7 @@ import { Loader } from "@Glibs/loader/loader";
 import { Char } from '@Glibs/types/assettypes';
 import { IAsset } from '@Glibs/interface/iasset';
 import { NormalData } from './worldmaptypes';
-import { IWorldMapObject, MapEntryType } from '@Glibs/types/worldmaptypes';
+import { IWorldMapObject, MapEntryType, ModularData } from '@Glibs/types/worldmaptypes';
 import IEventController from '@Glibs/interface/ievent';
 import { EventTypes } from '@Glibs/types/globaltypes';
 
@@ -95,15 +95,15 @@ export default class UltimateModular implements IWorldMapObject {
         );
         this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, old.mesh)
     }
-    async Create(pos = new THREE.Vector3(), modType = ModularType.Dirty) {
-        if (pos.y < 0) pos.y = 0
+    async Create({ position = new THREE.Vector3(), modType = ModularType.Dirty } = {}) {
+        if (position.y < 0) position.y = 0
         const size = 2;
-        const key = `${pos.x},${pos.y},${pos.z}`;
+        const key = `${position.x},${position.y},${position.z}`;
         const old = this.map.get(key);
         if (old) this.scene.remove(old.mesh);
         this.RebuildKey();
 
-        const cub = await this.Build(pos, size, modType);
+        const cub = await this.Build(position, size, modType);
         cub.history = this.count++;
         this.map.set(key, cub);
 
@@ -120,23 +120,19 @@ export default class UltimateModular implements IWorldMapObject {
         cub.mesh.userData.mapObj = this
         return cub.mesh;
     }
-    Load(data: NormalData[]): void {
+    Load(data: ModularData[]): void {
         const p = new THREE.Vector3()
         data.forEach((v) => {
-            const modType = v.custom as ModularType
             p.set(v.position.x, v.position.y, v.position.z)
-            this.Create(p, modType)
+            this.Create({ position: p, modType: v.modType })
         })
     }
     Save() {
-        const data: NormalData[] = []
+        const data: ModularData[] = []
         this.map.forEach((v) => {
             data.push({
-                type: v.type, 
                 position: v.mesh.position, 
-                rotation: v.mesh.rotation, 
-                scale: v.mesh.scale.x,
-                custom: v.modType,
+                modType: v.modType,
             })
         })
         return data

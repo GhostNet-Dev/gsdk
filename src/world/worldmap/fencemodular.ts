@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { Loader } from '@Glibs/loader/loader';
 import { Char } from '@Glibs/types/assettypes';
 import { NormalData } from './worldmaptypes';
-import { IWorldMapObject, MapEntryType } from '@Glibs/types/worldmaptypes';
+import { IWorldMapObject, MapEntryType, ModularData } from '@Glibs/types/worldmaptypes';
 import IEventController from '@Glibs/interface/ievent';
 import { EventTypes } from '@Glibs/types/globaltypes';
 
@@ -24,14 +24,16 @@ export default class FenceModular implements IWorldMapObject {
         private eventCtrl: IEventController,
     ) {
     }
-    async Create(pos = new THREE.Vector3()) {
-        if (pos.y < 0) pos.y = 0
+    async Create({
+        position = new THREE.Vector3()
+    } = {}) {
+        if (position.y < 0) position.y = 0
         const size = 2
-        const key = pos.x + "," + pos.y + "," + pos.z
+        const key = position.x + "," + position.y + "," + position.z
         const old = this.map.get(key)
         if(old) this.scene.remove(old.mesh)
 
-        const cub = await this.Build(pos, size)
+        const cub = await this.Build(position, size)
         this.map.set(key, cub)
 
         this.map.forEach(async (v) => {
@@ -60,21 +62,18 @@ export default class FenceModular implements IWorldMapObject {
         })
         this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, old.mesh)
     }
-    Load(data: NormalData[]): void {
+    Load(data: ModularData[]): void {
         const p = new THREE.Vector3()
         data.forEach((v) => {
             p.set(v.position.x, v.position.y, v.position.z)
-            this.Create(p)
+            this.Create({position: p})
         })
     }
     Save() {
-        const data: NormalData[] = []
+        const data: ModularData[] = []
         this.map.forEach((v) => {
             data.push({
-                type: v.type, 
                 position: v.mesh.position, 
-                rotation: v.mesh.rotation, 
-                scale: v.mesh.scale.x,
             })
         })
         return data
