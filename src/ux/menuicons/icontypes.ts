@@ -55,6 +55,9 @@ export enum Icons {
     Rotate,
     Trade,
     Box,
+    
+    // Item
+    Axe,
 }
 
 export enum IconsColor {
