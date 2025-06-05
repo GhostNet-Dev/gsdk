@@ -34,6 +34,9 @@ export default class RayPhysics implements IGPhysic {
         this.physicalObjs.push(...models)
         this.targetObjs.push(...models.map(obj => obj.Meshs))
     }
+    GetObjects(): THREE.Object3D[] {
+        return this.targetObjs
+    }
     CheckDirection(obj: IPhysicsObject, dir: THREE.Vector3) {
         obj.Box.getCenter(this.center)
         const height = (Math.floor(obj.Size.y * 100) / 100) / 2 - 0.2
@@ -85,10 +88,10 @@ export default class RayPhysics implements IGPhysic {
         return this.raycast.far
     }
     CheckBox(pos: THREE.Vector3, box: THREE.Box3): boolean {
-        return true
+        return false
     }
     CheckBoxs(obj: IPhysicsObject): boolean {
-        return true
+        return false
     }
     addBuilding(model: IBuildingObject, pos: THREE.Vector3, size: THREE.Vector3, rotation?: THREE.Euler | undefined): void {
     }

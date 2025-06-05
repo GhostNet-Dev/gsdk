@@ -15,8 +15,6 @@ export class CreateMon {
         private loader: Loader,
         private eventCtrl: IEventController,
         private player: IPhysicsObject,
-        private instanceBlock: (THREE.InstancedMesh | undefined)[],
-        private meshBlock: THREE.Mesh[],
         private gphysic: IGPhysic,
         private game: THREE.Scene,
         private monDb: MonsterDb,
@@ -30,7 +28,7 @@ export class CreateMon {
         await monster.Loader(pos, monId as string, id)
 
         const zCtrl = new MonsterCtrl(id, this.player, monster, 
-            this.instanceBlock, this.meshBlock, this.gphysic, this.eventCtrl, property)
+            this.gphysic, this.eventCtrl, property)
         const monSet: MonsterSet =  { 
             monModel: monster, monCtrl: zCtrl, live: true, respawn: false, deadtime: new Date().getTime()
         }

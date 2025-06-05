@@ -33,8 +33,6 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
         id: number,
         private player: IPhysicsObject, 
         private zombie: Zombie, 
-        private instanceBlock: (THREE.InstancedMesh | undefined)[],
-        private meshBlock: THREE.Mesh[],
         private gphysic: IGPhysic,
         private eventCtrl: IEventController,
         private property: MonsterProperty
@@ -70,10 +68,10 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
 
             let find = false
 
-            this.instanceBlock.forEach((block) => {
-                if (block) find = this.CheckVisible(block, dist)
-            })
-            find = this.CheckVisibleMeshs(this.meshBlock, dist)
+            // this.instanceBlock.forEach((block) => {
+            //     if (block) find = this.CheckVisible(block, dist)
+            // })
+            find = this.CheckVisibleMeshs(this.gphysic.GetObjects(), dist)
             /*
             if (this.legos.instancedBlock != undefined)
                 find = this.CheckVisible(this.legos.instancedBlock, dist)
@@ -119,7 +117,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
         }
         return false
     }
-    CheckVisibleMeshs(physBox: THREE.Mesh[], dist: number): boolean {
+    CheckVisibleMeshs(physBox: THREE.Object3D[], dist: number): boolean {
         const intersects = this.raycast.intersectObjects(physBox, false)
         if (intersects.length > 0 && intersects[0].distance < dist) {
             return true //keep searching

@@ -351,8 +351,8 @@ export class Loader {
         this.fabClasses.set(Char.CharAniFarmPetZebra, FarmPetZebraFab);
 
         // Stup
-        this.fabClasses.set(Char.Bat, BatFab);
-        this.fabClasses.set(Char.Gun, GunFab);
+        this.fabClasses.set(Char.ItemsBat, BatFab);
+        this.fabClasses.set(Char.ItemsGun, GunFab);
         this.fabClasses.set(Char.Stone, StoneFab);
         this.fabClasses.set(Char.Bed, BedFab);
         this.fabClasses.set(Char.Bath, BathFab);
@@ -386,8 +386,8 @@ export class Loader {
 
         this.fabClasses.set(Char.Grass, GrassFab);
 
-        this.fabClasses.set(Char.WateringCan, WarteringCanFab);
-        this.fabClasses.set(Char.Hammer, HammerFab);
+        this.fabClasses.set(Char.ItemsWateringCan, WarteringCanFab);
+        this.fabClasses.set(Char.ItemsHammer, HammerFab);
 
         this.fabClasses.set(Char.Empty, EmptyFab);
 

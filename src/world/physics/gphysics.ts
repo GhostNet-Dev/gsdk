@@ -139,6 +139,9 @@ export class GPhysics implements IGPhysic {
             model: model
         })
     }
+    GetObjects(): THREE.Object3D<THREE.Object3DEventMap>[] {
+        return [...this.lands, ...this.debugBox]
+    }
     addLand(obj: THREE.Object3D) {
         this.lands.push(obj)
         this.landPos.y = 0

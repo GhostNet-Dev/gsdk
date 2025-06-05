@@ -11,6 +11,7 @@ export type ObjectInfo = {
 export interface IGPhysic {
     addPlayer(model: IPhysicsObject): void
     add(...models: IPhysicsObject[]): void
+    GetObjects(): THREE.Object3D[]
     Check(obj: IPhysicsObject): boolean
     CheckDirection(obj: IPhysicsObject, dir: THREE.Vector3): ObjectInfo 
     CheckDown(obj: IPhysicsObject): number

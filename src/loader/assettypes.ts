@@ -486,10 +486,11 @@ export enum Char {
     CharAniBee,
     CharAniPetSnake,
 
-    Bat,
-    Gun,
-    WateringCan,
-    Hammer,
+    ItemsBat,
+    ItemsGun,
+    ItemsWateringCan,
+    ItemsHammer,
+
     Grass,
     FluffyTree,
     AppleTree,

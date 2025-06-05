@@ -70,7 +70,6 @@ export class PlayerCtrl implements ILoop {
 
         this.worker.onmessage = (e: any) => { console.log(e) }
 
-        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         eventCtrl.RegisterEventListener(EventTypes.AppMode, (mode: AppMode, e: EventFlag) => {
             this.mode = mode
             if (mode == AppMode.EditPlay || mode == AppMode.Weapon) {
@@ -165,6 +164,7 @@ export class PlayerCtrl implements ILoop {
         })
     }
     init() {
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         this.playEnable = true
         this.spec.ResetStatus()
         this.eventCtrl.SendEventMessage(EventTypes.PlayerStatus, this.spec.Status)
@@ -174,6 +174,7 @@ export class PlayerCtrl implements ILoop {
     uninit() {
         this.playEnable = false
         this.currentState.Uninit()
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
     }
     add(...obj: THREE.Object3D[]) {
         this.targets.push(...obj)

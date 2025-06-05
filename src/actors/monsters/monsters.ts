@@ -41,7 +41,7 @@ export class Monsters {
     respawntimeout?:NodeJS.Timeout
     mode = false
     createMon = new CreateMon(this.loader, this.eventCtrl, this.player,
-        this.instanceBlock, this.meshBlock, this.gphysic, this.game, this.monDb)
+        this.gphysic, this.game, this.monDb)
 
     get Enable() { return this.mode }
     set Enable(flag: boolean) { 
@@ -54,8 +54,6 @@ export class Monsters {
         private eventCtrl: IEventController,
         private game: THREE.Scene,
         private player: IPhysicsObject,
-        private instanceBlock: (THREE.InstancedMesh | undefined)[],
-        private meshBlock: THREE.Mesh[],
         private gphysic: IGPhysic,
         private monDb: MonsterDb
     ) {

@@ -8,7 +8,7 @@ import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 export class BatFab extends AssetModel implements IAsset {
     gltf?:GLTF
 
-    get Id() {return Char.Bat}
+    get Id() {return Char.ItemsBat}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Gltf, "assets/weapon/bat.glb", async (gltf: GLTF) => {
