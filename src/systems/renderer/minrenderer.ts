@@ -9,6 +9,7 @@ export default class MiniRenderer implements IViewer, ILoop {
   private renderer: THREE.WebGLRenderer;
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
+  private center = new THREE.Vector3()
 
   constructor(
     private eventCtrl: IEventController,
@@ -39,6 +40,8 @@ export default class MiniRenderer implements IViewer, ILoop {
 
     const ctrl = new OrbitControls(this.camera, this.renderer.domElement)
     ctrl.rotateSpeed = 0.5
+    ctrl.enablePan = false;              // 팬 비활성화
+    ctrl.enableZoom = false;             // 줌 비활성화 (선택)
   }
   currentObj?: THREE.Object3D
   add(obj: THREE.Object3D) {
@@ -50,6 +53,7 @@ export default class MiniRenderer implements IViewer, ILoop {
   }
 
   update() {
+    this.camera.lookAt(this.center);
     this.renderer.render(this.scene, this.camera);
   };
   hide() {
@@ -92,6 +96,7 @@ export default class MiniRenderer implements IViewer, ILoop {
     // 카메라 위치 조정
     this.camera.position.set(center.x + distance, center.y, center.z + distance);
     this.camera.lookAt(center);
+    this.center = center
   }
 }
 

@@ -50,8 +50,8 @@ export class Item implements IItem {
     async Loader() {
         const asset = this.property.asset
         if (asset == undefined) return
-        const [meshs, _exist] = await asset.UniqModel(this.property.name)
-        //const meshs = await asset.CloneModel()
+        //const [meshs, _exist] = await asset.UniqModel(this.property.name)
+        const meshs = await asset.CloneModel()
         this.property.meshs = meshs
     }
 }

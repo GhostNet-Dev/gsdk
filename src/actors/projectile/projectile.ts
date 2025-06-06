@@ -6,9 +6,10 @@ import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { EventFlag } from "@Glibs/types/eventtypes";
 import { MonsterDb } from "@Glibs/types/monsterdb";
+import { BulletLine } from "./bulletline";
 
 export interface IProjectileModel {
-    get Meshs(): THREE.Mesh | THREE.Points | undefined
+    get Meshs(): THREE.Mesh | THREE.Points | THREE.Line | undefined
     create(position: THREE.Vector3): void
     update(position:THREE.Vector3): void
     release(): void
@@ -29,7 +30,6 @@ export type ProjectileSet = {
 export class Projectile implements ILoop {
     LoopId = 0
     projectiles = new Map<MonsterId, ProjectileSet[]>()
-    processing = false
 
     constructor(
         private eventCtrl: IEventController,
@@ -38,20 +38,8 @@ export class Projectile implements ILoop {
         private monDb: MonsterDb,
     ) {
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
-        eventCtrl.RegisterEventListener(EventTypes.PlayMode, (e: EventFlag) => {
-            switch (e) {
-                case EventFlag.Start:
-                    this.processing = true
-                    //this.InitMonster()
-                    break
-                case EventFlag.End:
-                    this.processing = false
-                    this.ReleaseAllProjPool()
-                    break
-            }
-        })
         eventCtrl.RegisterEventListener(EventTypes.Projectile, (opt: ProjectileMsg) => {
-                this.AllocateProjPool(opt.id, opt.src, opt.dir, opt.damage)
+            this.AllocateProjPool(opt.id, opt.src, opt.dir, opt.damage)
         })
     }
     
@@ -59,6 +47,8 @@ export class Projectile implements ILoop {
         switch(id) {
             case MonsterId.DefaultBullet:
                 return new Bullet3()
+            case MonsterId.BulletLine:
+                return new BulletLine()
             case MonsterId.DefaultBall:
             default:
                 return new DefaultBall(.1)
@@ -76,7 +66,6 @@ export class Projectile implements ILoop {
         return set
     }
     update(delta: number): void {
-        if (!this.processing) return
         this.projectiles.forEach(a => {
             a.forEach(s => {
                 s.ctrl.update(delta)

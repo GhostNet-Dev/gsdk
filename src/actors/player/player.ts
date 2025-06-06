@@ -29,7 +29,8 @@ export class Player extends PhysicsObject {
         private loader: Loader, 
         asset: IAsset,
         private eventCtrl: IEventController,
-        private game: THREE.Scene
+        private game: THREE.Scene,
+        private inventory: IInventory
     ) {
         super(asset)
         this.meshs = new THREE.Group
@@ -50,22 +51,22 @@ export class Player extends PhysicsObject {
             }
             this.meshs.visible = false
         })
-        this.eventCtrl.RegisterEventListener(EventTypes.Equipment, (inven: IInventory) => {
+        this.eventCtrl.RegisterEventListener(EventTypes.Equipment, () => {
             // right hand
-            this.ReloadBindingItem(inven, Bind.Head)
-            this.ReloadBindingItem(inven, Bind.Hands_L)
-            this.ReloadBindingItem(inven, Bind.Hands_R)
+            this.ReloadBindingItem(this.inventory, Bind.Head)
+            this.ReloadBindingItem(this.inventory, Bind.Hands_L)
+            this.ReloadBindingItem(this.inventory, Bind.Hands_R)
         })
     }
     GetItemPosition(target: THREE.Vector3) {
-        const rightId = this.loader.GetAssets(Char.CharHumanMale).GetBodyMeshId(Bind.Hands_R)
+        const rightId = this.asset.GetBodyMeshId(Bind.Hands_R)
         if (rightId == undefined) return
         const mesh = this.meshs.getObjectByName(rightId)
         if (!mesh) return
         mesh.getWorldPosition(target)
     }
     ReloadBindingItem(inven: IInventory, bind: Bind) {
-        const rightId = this.loader.GetAssets(Char.CharHumanMale).GetBodyMeshId(bind)
+        const rightId = this.asset.GetBodyMeshId(bind)
         if (rightId == undefined) return
 
         const mesh = this.meshs.getObjectByName(rightId)
@@ -115,6 +116,7 @@ export class Player extends PhysicsObject {
     }
 
     async Loader(asset: IAsset, position: THREE.Vector3, name: string) {
+        this.asset = asset
         this.playerModel = asset.Id
         const [meshs, _exist] = await asset.UniqModel(name)
         this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, meshs)

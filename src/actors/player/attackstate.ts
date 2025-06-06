@@ -82,7 +82,7 @@ export class AttackState extends State implements IPlayerAction {
         this.player.Meshs.getWorldDirection(this.attackDir)
         this.player.GetItemPosition(startPos)
         this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
-            id: MonsterId.DefaultBullet, 
+            id: MonsterId.BulletLine, 
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
             src: startPos, 
             dir: this.attackDir
