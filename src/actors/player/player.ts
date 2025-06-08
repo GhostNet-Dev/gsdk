@@ -187,6 +187,53 @@ export class Player extends PhysicsObject {
         this.changeAnimate(this.clipMap.get(action), speed)
         return clip?.duration
     }
+
+ /**
+ * 사정거리 표시용 점선 원 생성
+ * @param radius 사정거리 (원 반지름)
+ * @param segments 원의 부드러움 (기본: 64)
+ */
+    line?: THREE.Line
+    radius = 0
+    createDashedCircle(
+        radius: number,
+        segments: number = 32
+    ): THREE.Line {
+        if(this.radius == radius && this.line) {
+            this.game.add(this.line)
+            return this.line
+        } else {
+            this.releaseDashsedCircle()
+        }
+        const geometry = new THREE.BufferGeometry();
+        const positions: number[] = [];
+
+        for (let i = 0; i <= segments; i++) {
+            const theta = (i / segments) * Math.PI * 2;
+            const x = Math.cos(theta) * radius;
+            const z = Math.sin(theta) * radius;
+            positions.push(x, 0, z); // Y = 0 평면에 생성
+        }
+
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.computeBoundingSphere();
+
+        const material = new THREE.LineDashedMaterial({
+            color: 0xffffff,
+            dashSize: 0.5,
+            gapSize: 0.3,
+        });
+
+        const line = new THREE.Line(geometry, material);
+        line.computeLineDistances(); // 점선 설정 필수
+        this.game.add(line);
+        this.line = line
+        this.radius = radius
+        return line;
+    }
+    releaseDashsedCircle() {
+        if (this.line) this.game.remove(this.line)
+    }
     DamageEffect(damage: number) {
         this.effector.StartEffector(EffectType.BloodExplosion, this.CenterPos)
         this.effector.StartEffector(EffectType.Status, damage.toString(), "#fff")
@@ -198,5 +245,6 @@ export class Player extends PhysicsObject {
         this.effector.Update(delta)
         this.mixer?.update(delta)
         this.CBoxUpdate()
+        if (this.line) this.line.position.copy(this.Pos)
     }
 }

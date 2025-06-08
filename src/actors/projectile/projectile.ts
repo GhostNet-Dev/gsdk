@@ -78,8 +78,8 @@ export class Projectile implements ILoop {
     resize(): void { }
 
     Release(entry: ProjectileSet) {
-        entry.ctrl.Release()
         if (entry.model.Meshs) this.game.remove(entry.model.Meshs)
+        entry.ctrl.Release()
     }
     AllocateProjPool(id: MonsterId, src: THREE.Vector3, dir: THREE.Vector3, damage: number) {
         let pool = this.projectiles.get(id)

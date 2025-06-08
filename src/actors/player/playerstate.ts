@@ -5,6 +5,7 @@ import { IGPhysic } from "@Glibs/interface/igphysics";
 import { KeyType } from "@Glibs/types/eventtypes";
 import { AppMode } from "@Glibs/types/globaltypes";
 import { ActionType } from "./playertypes";
+import { Bind } from "@Glibs/types/assettypes";
 
 export interface IPlayerAction {
     Init(): void
@@ -94,6 +95,17 @@ export class State {
         } else {
             this.player.Pos.y += -distance
         } 
+    }
+    CheckEnermyInRange() {
+        const handItem = this.playerCtrl.inventory.GetBindItem(Bind.Hands_R)
+        if(handItem == undefined || handItem.AttackRange == undefined) return
+        for (const v of this.playerCtrl.targets) {
+            const dis = this.player.Pos.distanceTo(v.position)
+            if(handItem.AttackRange > dis) {
+                this.playerCtrl.AttackSt.Init()
+                return this.playerCtrl.AttackSt
+            }
+        }
     }
 }
 
@@ -194,6 +206,9 @@ export class IdleState extends State implements IPlayerAction {
 
         const checkGravity = this.CheckGravity()
         if (checkGravity != undefined) return checkGravity
+
+        const checkEnermy = this.CheckEnermyInRange()
+        if (checkEnermy != undefined) return checkEnermy
 
         return this
     }

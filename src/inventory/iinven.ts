@@ -16,6 +16,8 @@ export interface IItem {
     get DamageMax(): number
     get ItemType(): ItemType
     get Speed(): number
+    get AttackRange(): number
+    get AutoAttack(): boolean
     get IconPath(): string
     get Bindable(): boolean
     get Bind(): Bind | undefined

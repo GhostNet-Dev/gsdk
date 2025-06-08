@@ -19,8 +19,8 @@ export class ItemDb {
             level: Level.Common,
             name: "Hanhwa's Bat",
             icon: "WeaponTool/TopazStaff.png",
-            stackable: false, binding: true,
-            damageMax: 5, damageMin: 3, speed: 1,
+            stackable: false, binding: true, autoAttack: true,
+            damageMax: 5, damageMin: 3, speed: 1, attackRange: 5,
         })
         this.itemDb.set(ItemId.DefaultGun, {
             id: ItemId.DefaultGun,
@@ -31,8 +31,8 @@ export class ItemDb {
             level: Level.Common,
             name: "Legacy Gun",
             icon: "WeaponTool/Bow.png",
-            stackable: false, binding: true,
-            damageMax: 9, damageMin: 3, speed: 1,
+            stackable: false, binding: true, autoAttack: true,
+            damageMax: 9, damageMin: 3, speed: 1, attackRange: 10,
         })
         this.itemDb.set(ItemId.WarterCan, {
             id: ItemId.WarterCan,
@@ -43,7 +43,7 @@ export class ItemDb {
             name: "Wartering Can",
             icon: "Misc/Lantern.png",
             stackable: false, binding: true,
-            damageMax: 5, damageMin: 3, speed: 1,
+            damageMax: 5, damageMin: 3, speed: 1, attackRange: 5,
         })
         this.itemDb.set(ItemId.Hammer, {
             id: ItemId.Hammer,
@@ -54,7 +54,7 @@ export class ItemDb {
             name: "Hammer H3",
             icon: "WeaponTool/Hammer.png",
             stackable: false, binding: true,
-            damageMax: 5, damageMin: 3, speed: 1.5,
+            damageMax: 5, damageMin: 3, speed: 1.5, attackRange: 5,
         })
         this.itemDb.set(ItemId.Leather, {
             id: ItemId.Leather,

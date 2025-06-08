@@ -51,6 +51,8 @@ export type ItemProperty = {
     damageMin?: number
     damageMax?: number
     armor?: number
+    attackRange?: number
+    autoAttack?: boolean
 
     speed?: number
 

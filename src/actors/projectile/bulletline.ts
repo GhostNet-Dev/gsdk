@@ -5,7 +5,7 @@ import { IProjectileModel } from "./projectile";
 export class BulletLine implements IProjectileModel {
   private line?: THREE.Line;
   private positions!: THREE.BufferAttribute;
-  private readonly segmentCount = 20;
+  private readonly segmentCount = 10;
 
   private history: THREE.Vector3[] = [];
 

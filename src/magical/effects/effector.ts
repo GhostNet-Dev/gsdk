@@ -112,6 +112,7 @@ export class Effector {
     StartEffector(type: EffectType, ...arg: any) {
         this.effects[type].Start(...arg)
     }
+
     Complete(type:EffectType) {
         this.effects[type].Complete()
     }

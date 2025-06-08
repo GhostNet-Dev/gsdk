@@ -31,6 +31,7 @@ export class AttackState extends State implements IPlayerAction {
         super(playerCtrl, player, gphysic)
         this.raycast.params.Points.threshold = 20
     }
+
     Init(): void {
         console.log("Attack!!")
         this.attackProcess = false
@@ -46,38 +47,81 @@ export class AttackState extends State implements IPlayerAction {
                 case AttackItemType.Axe:
                 case AttackItemType.Sword:
                     this.player.ChangeAction(ActionType.Sword, this.attackSpeed)
-                    this.attackDist = 5
+                    this.attackDist = handItem.AttackRange ?? 5
                     this.meleeAttackMode = true
                     break;
                 case AttackItemType.Knife:
                     this.player.ChangeAction(ActionType.Sword, this.attackSpeed)
-                    this.attackDist = 2
+                    this.attackDist = handItem.AttackRange ?? 2
                     this.meleeAttackMode = true
                     break;
                 case AttackItemType.Gun:
                     this.player.ChangeAction(ActionType.Gun, this.attackSpeed)
-                    this.attackDist = 20
+                    this.attackDist = handItem.AttackRange ?? 20
                     this.meleeAttackMode = false
                     break;
                 case AttackItemType.Bow:
                     this.player.ChangeAction(ActionType.Bow, this.attackSpeed)
+                    this.attackDist = handItem.AttackRange ?? 20
                     this.meleeAttackMode = false
                     break;
                 case AttackItemType.Wand:
                     this.player.ChangeAction(ActionType.Wand, this.attackSpeed)
+                    this.attackDist = handItem.AttackRange ?? 20
                     this.meleeAttackMode = false
                     break;
             }
+            if (handItem.AutoAttack) this.autoDirection()
         }
         
         this.playerCtrl.RunSt.PreviousState(this)
         this.attackTime = this.attackSpeed
         this.clock = new THREE.Clock()
+        this.player.createDashedCircle(this.attackDist)
     }
+    /**
+     * 해제
+     * - attack timeout 해제
+     * - 공격 반경 표시 해제
+     */
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
+        this.player.releaseDashsedCircle()
     }
-    rangedAttack() {
+    autoDirection() {
+        const playerPos = this.player.CenterPos;
+        let closestTarget: THREE.Object3D | null = null;
+        let minDistance = this.attackDist;
+
+        // 🎯 1. 모든 적 중에서 가장 가까운 대상 찾기
+        for (const target of this.playerCtrl.targets) {
+            const dist = target.position.distanceTo(playerPos);
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestTarget = target;
+            }
+        }
+
+        // 🎯 2. 범위 내 적이 없으면 종료
+        if (!closestTarget) {
+            this.attackProcess = false;
+            return null;
+        }
+
+        // 🔁 3. 가장 가까운 적을 향해 회전
+        const lookDir = new THREE.Vector3().subVectors(closestTarget.position, playerPos).normalize();
+        const targetQuat = new THREE.Quaternion().setFromUnitVectors(
+            new THREE.Vector3(0, 0, 1),
+            lookDir
+        );
+        // this.player.Meshs.quaternion.slerp(targetQuat, 0.2); // 부드럽게 회전
+        this.player.Meshs.quaternion.copy(targetQuat); // 부드럽게 회전
+        return closestTarget
+    }
+    rangedAttack(auto = false) {
+        if (auto) {
+            this.autoDirection()
+        }
         const startPos = new THREE.Vector3()
         this.player.Meshs.getWorldDirection(this.attackDir)
         this.player.GetItemPosition(startPos)
@@ -88,6 +132,21 @@ export class AttackState extends State implements IPlayerAction {
             dir: this.attackDir
         })
         this.attackProcess = false
+    }
+    meleeAutoAttack() {
+        const closestTarget = this.autoDirection()
+        if (closestTarget == null) return
+        // 💥 4. 공격 메시지 전송
+        const damage = THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax);
+        const msg = {
+            type: AttackType.NormalSwing,
+            damage: damage,
+            obj: closestTarget
+        };
+
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + closestTarget.name, [msg]);
+
+        this.attackProcess = false;
     }
     
     meleeAttack() {
@@ -136,8 +195,11 @@ export class AttackState extends State implements IPlayerAction {
 
         this.attackProcess = true
         this.keytimeout = setTimeout(() => {
-            if (this.meleeAttackMode) this.meleeAttack()
-            else this.rangedAttack()
+            const handItem = this.playerCtrl.inventory.GetBindItem(Bind.Hands_R)
+            if (this.meleeAttackMode) {
+                if(handItem && handItem.AutoAttack) this.meleeAutoAttack()
+                else this.meleeAttack()
+            } else this.rangedAttack(handItem.AutoAttack)
         }, this.attackSpeed * 1000 * 0.6)
         return this
     }
@@ -151,11 +213,11 @@ export class AttackIdleState extends State implements IPlayerAction {
         this.player.ChangeAction(ActionType.Fight)
     }
     Uninit(): void {
-        
+
     }
     Update(): IPlayerAction {
         const d = this.DefaultCheck()
-        if(d != undefined) return d
+        if (d != undefined) return d
 
         return this
     }

@@ -142,7 +142,7 @@ export class Zombie extends PhysicsObject {
             case EffectType.Damage:
             default:
                 //this.effector.StartEffector(EffectType.Lightning)
-                this.effector.StartEffector(EffectType.BloodExplosion)
+                this.effector.StartEffector(EffectType.BloodExplosion, this.CenterPos)
                 break;
             case EffectType.LightningStrike:
                 this.effector.StartEffector(EffectType.Damage)

@@ -14,6 +14,8 @@ export class Item implements IItem {
     get Mesh() { return this.property.meshs }
     get Name() { return this.property.name }
     get AttackType() { return this.property.weapon }
+    get AttackRange() { return this.property.attackRange ?? 1 }
+    get AutoAttack() { return this.property.autoAttack ?? false }
     get Stackable() { return this.property.stackable }
     get Deck() { return this.property.deck }
     constructor(public property: ItemProperty) {}

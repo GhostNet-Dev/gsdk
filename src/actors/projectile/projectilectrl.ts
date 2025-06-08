@@ -55,16 +55,16 @@ export class ProjectileCtrl {
             const dist = obj.position.distanceTo(this.position)
             if(this.attackDist < dist) return
             const mons = msgs.get(obj.name)
-                const msg = {
-                        type: AttackType.NormalSwing,
-                        damage: this.damage,
-                        obj: obj
-                    }
-                if(mons == undefined) {
-                    msgs.set(obj.name, [msg])
-                } else {
-                    mons.push(msg)
-                }
+            const msg = {
+                type: AttackType.NormalSwing,
+                damage: this.damage,
+                obj: obj
+            }
+            if (mons == undefined) {
+                msgs.set(obj.name, [msg])
+            } else {
+                mons.push(msg)
+            }
         })
         if (msgs.size > 0) {
             msgs.forEach((v, k) => {
@@ -72,7 +72,7 @@ export class ProjectileCtrl {
             })
             return true
         }
-        
+
         return false
     }
 }
