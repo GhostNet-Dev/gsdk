@@ -42,8 +42,8 @@ export default class RayPhysics implements IGPhysic {
         const height = (Math.floor(obj.Size.y * 100) / 100) / 2 - 0.2
         this.center.y -= height
         this.raycast.set(this.center, dir)
-        this.raycast.far = 10
-        const intersects = this.raycast.intersectObjects(this.targetObjs)
+        this.raycast.far = 5
+        const intersects = this.raycast.intersectObjects(this.targetObjs, false)
         let adjustedMoveVector
         if (intersects.length > 0) {
             const width = (Math.floor(obj.Size.z * 100) / 100) / 2
@@ -68,7 +68,7 @@ export default class RayPhysics implements IGPhysic {
             console.log("move", ret, width, this.center)
             return { obj: intersects[0].object, distance: (ret < 0) ? -1 : ret, move: adjustedMoveVector }
         }
-        return { obj: undefined, distance: 10 }
+        return { obj: undefined, distance: this.raycast.far }
     }
     Check(obj: IPhysicsObject): boolean {
         if (this.CheckDown(obj) < 0) return true
@@ -77,8 +77,8 @@ export default class RayPhysics implements IGPhysic {
     CheckDown(obj: IPhysicsObject): number {
         obj.Box.getCenter(this.center)
         this.raycast.set(this.center, this.downDir)
-        this.raycast.far = 10
-        const landTouch = this.raycast.intersectObjects(this.targetObjs)
+        this.raycast.far = 5
+        const landTouch = this.raycast.intersectObjects(this.targetObjs, false)
         if(landTouch.length > 0) {
             const height = obj.Size.y / 2
             const ret = landTouch[0].distance -  height
@@ -87,6 +87,34 @@ export default class RayPhysics implements IGPhysic {
         }
         return this.raycast.far
     }
+
+    CheckDownAABB(obj: IPhysicsObject): number {
+        const objBox = obj.Box.clone(); // AABB: THREE.Box3
+        const objBottomY = objBox.min.y;
+
+        let minDist = Infinity;
+
+        for (const target of this.targetObjs) {
+            const targetBox = new THREE.Box3().setFromObject(target);
+            const targetTopY = targetBox.max.y;
+
+            const horizontalOverlap =
+                objBox.max.x > targetBox.min.x &&
+                objBox.min.x < targetBox.max.x &&
+                objBox.max.z > targetBox.min.z &&
+                objBox.min.z < targetBox.max.z;
+
+            if (horizontalOverlap && objBottomY >= targetTopY) {
+                const dist = objBottomY - targetTopY;
+                if (dist < minDist) {
+                    minDist = dist;
+                }
+            }
+        }
+
+        return (minDist < Infinity) ? minDist : 5; // 5는 raycast.far과 동일한 fallback
+    }
+
     CheckBox(pos: THREE.Vector3, box: THREE.Box3): boolean {
         return false
     }

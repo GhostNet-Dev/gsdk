@@ -137,6 +137,17 @@ export class Zombie extends PhysicsObject {
     clock = new THREE.Clock()
     flag = false
 
+    stunEffect() {
+        // 타격 시 애니메이션 일시 정지
+        if (this.currentAni) {
+            this.currentAni.paused = true
+
+            // 예: 0.5초 후 다시 재생
+            setTimeout(() => {
+                this.currentAni!.paused = false
+            }, 500)
+        }
+    }
     DamageEffect(damage: number, effect?: EffectType) {
         switch(effect) {
             case EffectType.Damage:

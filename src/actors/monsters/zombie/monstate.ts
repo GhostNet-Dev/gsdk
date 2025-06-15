@@ -213,23 +213,34 @@ export class RunZState extends State implements IMonsterAction {
         }
         v.y = 0
 
-        const movX = v.x * delta * this.speed
-        const movZ = v.z * delta * this.speed
-        this.zombie.Meshs.position.x += movX
-        this.zombie.Meshs.position.z += movZ
+        // const movX = v.x * delta * this.speed
+        // const movZ = v.z * delta * this.speed
+        // this.zombie.Meshs.position.x += movX
+        // this.zombie.Meshs.position.z += movZ
 
         const mx = this.MX.lookAt(v, this.ZeroV, this.YV)
         const qt = this.QT.setFromRotationMatrix(mx)
         this.zombie.Meshs.quaternion.copy(qt)
 
-        if (this.gphysic.Check(this.zombie)){
-            this.zombie.Pos.y += 1 // 계단 체크 
-            if (this.gphysic.Check(this.zombie)) {
-                this.zombie.Pos.x -= movX
-                this.zombie.Pos.z -= movZ
-                this.zombie.Pos.y -= 1
-            }
+        // ✅ 이동 처리
+        const dis = this.gphysic.CheckDirection(this.zombie, v);
+        const moveAmount = v.clone().multiplyScalar(delta * this.speed);
+        const moveDis = moveAmount.length();
+
+        if (moveDis < dis.distance) {
+            this.zombie.Pos.add(moveAmount);
+        } else if (dis.move) {
+            this.zombie.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
         }
+
+        // if (this.gphysic.Check(this.zombie)){
+        //     this.zombie.Pos.y += 1 // 계단 체크 
+        //     if (this.gphysic.Check(this.zombie)) {
+        //         this.zombie.Pos.x -= movX
+        //         this.zombie.Pos.z -= movZ
+        //         this.zombie.Pos.y -= 1
+        //     }
+        // }
         return this
     }
 }

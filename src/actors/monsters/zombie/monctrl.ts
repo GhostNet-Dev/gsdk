@@ -51,7 +51,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
         this.phybox.position.copy(this.zombie.Pos)
     }
     Respawning() {
-        this.health = 10
+        this.health = this.property.health
         this.zombie.SetOpacity(1)
         this.currentState = this.IdleSt
         this.currentState.Init()
@@ -118,10 +118,36 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
         return false
     }
     CheckVisibleMeshs(physBox: THREE.Object3D[], dist: number): boolean {
-        const intersects = this.raycast.intersectObjects(physBox, false)
-        if (intersects.length > 0 && intersects[0].distance < dist) {
-            return true //keep searching
+        return this.getClosestHit(this.player.CenterPos, this.zombie.CenterPos, physBox, this.zombie.Size.x)
+        // this.raycast.far = dist
+        // const intersects = this.raycast.intersectObjects(physBox, false)
+        // if (intersects.length > 0 && intersects[0].distance < dist) {
+        //     return true //keep searching
+        // }
+        // return false
+    }
+    getClosestHit(
+        p1: THREE.Vector3,
+        p2: THREE.Vector3,
+        targets: THREE.Object3D[],
+        radius = 1
+    ) {
+        for (const target of targets) {
+            const center = target.position;
+            const seg = new THREE.Vector3().subVectors(p2, p1);
+            const segDir = seg.clone().normalize();
+            const toCenter = new THREE.Vector3().subVectors(center, p1);
+            const projLen = toCenter.dot(segDir);
+
+            // 충돌 지점 계산
+            const closestPoint = p1.clone().add(segDir.clone().multiplyScalar(projLen));
+            const distToCenter = closestPoint.distanceTo(center);
+
+            if (distToCenter <= radius) {
+                return true
+            }
         }
-        return false
+
+        return false;
     }
 }

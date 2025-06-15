@@ -118,7 +118,7 @@ export class AttackState extends State implements IPlayerAction {
         this.player.Meshs.quaternion.copy(targetQuat); // 부드럽게 회전
         return closestTarget
     }
-    rangedAttack(auto = false) {
+    rangedAttack(auto = false, attackRange = 20) {
         if (auto) {
             this.autoDirection()
         }
@@ -129,7 +129,8 @@ export class AttackState extends State implements IPlayerAction {
             id: MonsterId.BulletLine, 
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
             src: startPos, 
-            dir: this.attackDir
+            dir: this.attackDir,
+            range: attackRange,
         })
         this.attackProcess = false
     }
@@ -199,7 +200,7 @@ export class AttackState extends State implements IPlayerAction {
             if (this.meleeAttackMode) {
                 if(handItem && handItem.AutoAttack) this.meleeAutoAttack()
                 else this.meleeAttack()
-            } else this.rangedAttack(handItem.AutoAttack)
+            } else this.rangedAttack(handItem.AutoAttack, handItem.AttackRange)
         }, this.attackSpeed * 1000 * 0.6)
         return this
     }

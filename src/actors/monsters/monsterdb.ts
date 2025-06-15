@@ -274,7 +274,7 @@ export class MonsterDb {
             type: MonsterType.Rock,
             model: Char.None,
             health: 1,
-            speed: 30,
+            speed: 40,
             damageMin:3,
             damageMax: 4,
             attackSpeed: 7,

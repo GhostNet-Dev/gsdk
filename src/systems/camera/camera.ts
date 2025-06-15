@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { gsap } from "gsap"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 import IEventController, { ILoop, IViewer } from "@Glibs/interface/ievent";
 import { Canvas } from "@Glibs/systems/event/canvas";
@@ -11,6 +12,7 @@ import ThirdPersonFollowCameraStrategy from "./followcam";
 import FirstPersonCameraStrategy from "./firstperson";
 import FreeCameraStrategy from "./freeview";
 import CinematicCameraStrategy from "./cinemaview";
+import { AttackOption } from "@Glibs/types/playertypes";
 
 export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     LoopId = 0
@@ -46,6 +48,9 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         })
         eventCtrl.RegisterEventListener(EventTypes.DeregisterPhysic, (obj: THREE.Object3D) => {
             this.targetObjs.splice(this.targetObjs.findIndex(o => o.uuid == obj.uuid), 1)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.Attack + "mon", (opts: AttackOption[]) => {
+            this.cameraPushIn(this.player!.Meshs)
         })
         this.position.set(7, 5, 7)
         this.lookTarget = lookTarget
@@ -98,6 +103,28 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         }
 
         updateShake();
+    }
+    cameraPushIn(target: THREE.Object3D, dist = 1.0, duration = 0.15) {
+        const dir = new THREE.Vector3()
+        this.getWorldDirection(dir)
+        const pushPos = this.position.clone().add(dir.multiplyScalar(dist))
+
+        const originalPos = this.position.clone()
+
+        gsap.to(this.position, {
+            x: pushPos.x,
+            y: pushPos.y,
+            z: pushPos.z,
+            duration: duration,
+            onComplete: () => {
+                gsap.to(this.position, {
+                    x: originalPos.x,
+                    y: originalPos.y,
+                    z: originalPos.z,
+                    duration: duration
+                })
+            }
+        })
     }
     setMode(mode: CameraMode) {
         if (this.strategies.has(mode)) {

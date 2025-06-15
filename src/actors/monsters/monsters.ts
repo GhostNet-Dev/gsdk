@@ -126,21 +126,21 @@ export class Monsters {
             }, 5000)
         }
     }
-    async Resurrection(id: MonsterId) {
+    async Resurrection(id: MonsterId, timer: number) {
         let mon = this.monsters.get(id)
         if(!mon) {
             mon = []
             this.monsters.set(id, mon)
         }
         const now = new Date().getTime()
-        const set = mon.find((e) => e.live == false && now - e.deadtime > 5000)
+        const set = mon.find((e) => e.live == false && now - e.deadtime > timer)
         return set
     }
-    async CreateMonster(id: MonsterId, respawn: boolean, pos?: THREE.Vector3) {
+    async CreateMonster(id: MonsterId, { respawn = false, timer = 5000 }, pos?: THREE.Vector3) {
         let set
         if (!respawn) {
             // respawn 이 트루면 죽을 때 타이머로 부활이 설정되어 있다.
-            set = await this.Resurrection(id)
+            set = await this.Resurrection(id, timer)
         }
         console.log("Create", set, this.monsters.get(id))
         return this.Spawning(id, respawn, set, pos)
