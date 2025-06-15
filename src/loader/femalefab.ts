@@ -4,7 +4,7 @@ import { AssetModel } from "./assetmodel";
 import { IAsset } from "./iasset";
 import { Ani, Bind, Char, ModelType } from "./assettypes";
 import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
-import { GUI } from "lil-gui"
+import { gui } from "@Glibs/helper/helper";
 
 export class FemaleFab extends AssetModel implements IAsset {
     gltf?:GLTF
@@ -49,13 +49,13 @@ export class FemaleFab extends AssetModel implements IAsset {
             /*
             const right = this.meshs.getObjectByName("mixamorigRightHand")
             //const right = this.meshs
-            const bat = await this.loader.Load.loadAsync("assets/furniture/bed.glb")
-            const meshs = bat.scene
+            const bat = await this.loader.FBXLoader.loadAsync("assets/weapon/guns/m4a1.fbx")
+            const meshs = bat
 
-            const scale = 1
+            const scale = 0.025
             meshs.scale.set(scale, scale, scale)
-            meshs.position.set(0, 0, 0)
-            meshs.rotation.set(0, 0, 0)
+            meshs.position.set(0.0, 0.1, 0)
+            meshs.rotation.set(3.5, -0.1, -1.6)
             const fp = gui.addFolder("tools")
             fp.close()
 
@@ -65,11 +65,6 @@ export class FemaleFab extends AssetModel implements IAsset {
             right?.add(meshs)
             */
         })
-    }
-    CreateVectorGui(f: GUI, v: THREE.Vector3 | THREE.Euler, name: string, step: number) {
-        f.add(v, "x", -100, 100, step).listen().name(name + "X")
-        f.add(v, "y", -100, 100, step).listen().name(name + "Y")
-        f.add(v, "z", -100, 100, step).listen().name(name + "Z")
     }
     
     GetBodyMeshId(bind: Bind) { 

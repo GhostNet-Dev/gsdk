@@ -490,6 +490,8 @@ export enum Char {
     ItemsGun,
     ItemsWateringCan,
     ItemsHammer,
+    ItemsPistol,
+    ItemsM4A1,
 
     Grass,
     FluffyTree,
