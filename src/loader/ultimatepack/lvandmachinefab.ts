@@ -129,7 +129,13 @@ export class UltimateLvAndMaHazardCylinderFab extends UltimatePack implements IA
 }
 export class UltimateLvAndMaHazardSawFab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaHazardSaw}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Hazard_Saw.gltf", () => { if (this.meshs) this.meshs.position.y = 1.5 }) }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Hazard_Saw.gltf", () => { 
+        if (this.meshs) {
+            this.meshs.position.y = 1.5 
+            this.meshs.children[0].position.y = 1
+        }
+    })
+    }
 }
 export class UltimateLvAndMaHazardSpikeTrapFab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaHazardSpikeTrap}
