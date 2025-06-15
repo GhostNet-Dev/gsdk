@@ -18,6 +18,7 @@ export interface IItem {
     get Speed(): number
     get AttackRange(): number
     get AutoAttack(): boolean
+    get Sound(): string | undefined
     get IconPath(): string
     get Bindable(): boolean
     get Bind(): Bind | undefined

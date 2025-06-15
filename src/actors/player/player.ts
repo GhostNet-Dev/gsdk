@@ -23,12 +23,12 @@ export class Player extends PhysicsObject {
     bindMesh: THREE.Group[] = []
 
     clipMap = new Map<ActionType, THREE.AnimationClip | undefined>()
-    private effector = new Effector(this.game)
     meshs: THREE.Group
     constructor(
         private loader: Loader, 
         asset: IAsset,
         private eventCtrl: IEventController,
+        private effector: Effector,
         private game: THREE.Scene,
         private inventory: IInventory
     ) {
@@ -62,6 +62,11 @@ export class Player extends PhysicsObject {
         const rightId = this.asset.GetBodyMeshId(Bind.Hands_R)
         if (rightId == undefined) return
         const mesh = this.meshs.getObjectByName(rightId)
+        if (!mesh) return
+        mesh.getWorldPosition(target)
+    }
+    GetMuzzlePosition(target: THREE.Vector3) {
+        const mesh = this.meshs.getObjectByName("muzzlePoint")
         if (!mesh) return
         mesh.getWorldPosition(target)
     }

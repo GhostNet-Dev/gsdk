@@ -3,6 +3,7 @@ import { AttackItemType, ItemId, ItemProperty, ItemType, Level } from "../invent
 import { Bind } from "@Glibs/types/assettypes"
 import { Loader } from "@Glibs/loader/loader"
 import { Char } from "@Glibs/loader/assettypes"
+import { SoundType } from "@Glibs/types/soundtypes"
 
 
 
@@ -33,6 +34,31 @@ export class ItemDb {
             icon: "WeaponTool/Bow.png",
             stackable: false, binding: true, autoAttack: true,
             damageMax: 9, damageMin: 3, speed: 1, attackRange: 10,
+        })
+        this.itemDb.set(ItemId.Pistol, {
+            id: ItemId.Pistol,
+            type: ItemType.Attack,
+            weapon: AttackItemType.Gun,
+            bind: Bind.Hands_R,
+            asset: this.loader.GetAssets(Char.ItemsPistol),
+            level: Level.Common,
+            name: "Pistol",
+            icon: "WeaponTool/Bow.png",
+            sound: SoundType.Pistol762x39,
+            stackable: false, binding: true, autoAttack: true,
+            damageMax: 9, damageMin: 3, speed: 1, attackRange: 15,
+        })
+        this.itemDb.set(ItemId.M4A1, {
+            id: ItemId.M4A1,
+            type: ItemType.Attack,
+            weapon: AttackItemType.Gun,
+            bind: Bind.Hands_R,
+            asset: this.loader.GetAssets(Char.ItemsM4A1),
+            level: Level.Common,
+            name: "M4A1",
+            icon: "WeaponTool/Bow.png",
+            stackable: false, binding: true, autoAttack: true,
+            damageMax: 9, damageMin: 3, speed: .3, attackRange: 20,
         })
         this.itemDb.set(ItemId.WarterCan, {
             id: ItemId.WarterCan,

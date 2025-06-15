@@ -23,7 +23,6 @@ export class Materials implements ILoop {
     private stoneBoxes: TargetBox[] = []
     private treeBoxes: TargetBox[] = []
     dropPos = new THREE.Vector3()
-    effector = new Effector(this.game)
 
     material = new THREE.MeshBasicMaterial({ 
             //color: 0xD9AB61,
@@ -36,6 +35,7 @@ export class Materials implements ILoop {
         private worldSize: number,
         private loader: Loader,
         private eventCtrl: IEventController,
+        private effector: Effector,
         private game: THREE.Scene,
         private monDb: MonsterDb,
     ) {

@@ -10,6 +10,7 @@ import IEventController from "@Glibs/interface/ievent";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { MonsterDb } from "./monsterdb";
 import { Loader } from "@Glibs/loader/loader";
+import { Effector } from "@Glibs/magical/effects/effector";
 
 export type MonsterSet = {
     monModel: IPhysicsObject,
@@ -41,7 +42,7 @@ export class Monsters {
     respawntimeout?:NodeJS.Timeout
     mode = false
     createMon = new CreateMon(this.loader, this.eventCtrl, this.player,
-        this.gphysic, this.game, this.monDb)
+        this.gphysic, this.effector, this.game, this.monDb)
 
     get Enable() { return this.mode }
     set Enable(flag: boolean) { 
@@ -52,6 +53,7 @@ export class Monsters {
     constructor(
         private loader: Loader,
         private eventCtrl: IEventController,
+        private effector: Effector,
         private game: THREE.Scene,
         private player: IPhysicsObject,
         private gphysic: IGPhysic,

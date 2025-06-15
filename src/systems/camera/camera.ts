@@ -29,9 +29,12 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         eventCtrl: IEventController,
         dom: HTMLElement,
         private player?: IPhysicsObject,
+        private audioListener?: THREE.AudioListener,
         { lookTarget = false } = {}
     ) {
         super(45, canvas.Width / canvas.Height, 0.1, 1000)
+        if (audioListener) this.add(audioListener)
+
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         eventCtrl.SendEventMessage(EventTypes.RegisterViewer, this)
         eventCtrl.RegisterEventListener(EventTypes.CtrlObj, (obj: IPhysicsObject) => {

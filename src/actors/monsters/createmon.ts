@@ -16,6 +16,7 @@ export class CreateMon {
         private eventCtrl: IEventController,
         private player: IPhysicsObject,
         private gphysic: IGPhysic,
+        private effector: Effector,
         private game: THREE.Scene,
         private monDb: MonsterDb,
     ) {
@@ -24,7 +25,7 @@ export class CreateMon {
         if(!pos) pos = new THREE.Vector3(10, 0, 15)
         const property = this.monDb.GetItem(monId)
         const asset = this.loader.GetAssets(property.model)
-        const monster = new Zombie(asset, monId, new Effector(this.game))
+        const monster = new Zombie(asset, monId, this.effector)
         await monster.Loader(pos, monId as string, id)
 
         const zCtrl = new MonsterCtrl(id, this.player, monster, 

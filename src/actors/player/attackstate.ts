@@ -11,6 +11,7 @@ import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { Bind } from "@Glibs/types/assettypes";
 import { ActionType } from "./playertypes";
+import { IItem } from "@Glibs/interface/iinven";
 
 export class AttackState extends State implements IPlayerAction {
     raycast = new THREE.Raycaster()
@@ -72,6 +73,7 @@ export class AttackState extends State implements IPlayerAction {
                     break;
             }
             if (handItem.AutoAttack) this.autoDirection()
+            this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, handItem.Mesh, handItem.Sound)
         }
         
         this.playerCtrl.RunSt.PreviousState(this)
@@ -118,19 +120,20 @@ export class AttackState extends State implements IPlayerAction {
         this.player.Meshs.quaternion.copy(targetQuat); // 부드럽게 회전
         return closestTarget
     }
-    rangedAttack(auto = false, attackRange = 20) {
-        if (auto) {
+    rangedAttack(itemInfo: IItem) {
+        this.eventCtrl.SendEventMessage(EventTypes.PlaySound, itemInfo.Mesh, itemInfo.Sound)
+        if (itemInfo.AutoAttack) {
             this.autoDirection()
         }
         const startPos = new THREE.Vector3()
         this.player.Meshs.getWorldDirection(this.attackDir)
-        this.player.GetItemPosition(startPos)
+        this.player.GetMuzzlePosition(startPos)
         this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
             id: MonsterId.BulletLine, 
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
             src: startPos, 
             dir: this.attackDir,
-            range: attackRange,
+            range: itemInfo.AttackRange,
         })
         this.attackProcess = false
     }
@@ -146,7 +149,6 @@ export class AttackState extends State implements IPlayerAction {
         };
 
         this.eventCtrl.SendEventMessage(EventTypes.Attack + closestTarget.name, [msg]);
-
         this.attackProcess = false;
     }
     
@@ -200,7 +202,7 @@ export class AttackState extends State implements IPlayerAction {
             if (this.meleeAttackMode) {
                 if(handItem && handItem.AutoAttack) this.meleeAutoAttack()
                 else this.meleeAttack()
-            } else this.rangedAttack(handItem.AutoAttack, handItem.AttackRange)
+            } else this.rangedAttack(handItem)
         }, this.attackSpeed * 1000 * 0.6)
         return this
     }

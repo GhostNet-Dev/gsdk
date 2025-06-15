@@ -73,6 +73,9 @@ export enum EventTypes {
 
     LoadingProgress = "loading",
 
+    RegisterSound = "sound",
+    PlaySound = "soundplay",
+
     GameCenter = "gcenter",
 }
 export enum UiInfoType {

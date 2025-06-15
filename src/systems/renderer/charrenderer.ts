@@ -11,6 +11,7 @@ import { Char } from '@Glibs/types/assettypes';
 import { IAsset } from '@Glibs/interface/iasset';
 import { ActionType } from '@Glibs/types/playertypes';
 import IInventory from '@Glibs/interface/iinven';
+import { Effector } from '@Glibs/magical/effects/effector';
 
 export default class CharMiniRenderer implements IViewer, ILoop {
     LoopId = 0
@@ -21,11 +22,13 @@ export default class CharMiniRenderer implements IViewer, ILoop {
     private directlight = new THREE.DirectionalLight(0xffffff, 3);
     private grass = new ZeldaGrass(this.eventCtrl)
     private sky = new SkyBoxAllTime(this.directlight, { daytime: 0 })
-    private player = new Player(this.loader, this.loader.GetAssets(Char.CharHumanMale), this.eventCtrl, this.scene, this.inventory)
+    private player = new Player(this.loader, this.loader.GetAssets(Char.CharHumanMale), 
+        this.eventCtrl, this.effector, this.scene, this.inventory)
 
     constructor(
         private loader: Loader,
         private eventCtrl: IEventController,
+        private effector: Effector,
         private container: HTMLDivElement,
         private inventory: IInventory,
     ) {

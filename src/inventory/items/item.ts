@@ -18,6 +18,7 @@ export class Item implements IItem {
     get AutoAttack() { return this.property.autoAttack ?? false }
     get Stackable() { return this.property.stackable }
     get Deck() { return this.property.deck }
+    get Sound() {return this.property.sound}
     constructor(public property: ItemProperty) {}
 
     MakeInformation() {

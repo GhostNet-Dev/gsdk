@@ -70,40 +70,6 @@ export class PlayerCtrl implements ILoop {
 
         this.worker.onmessage = (e: any) => { console.log(e) }
 
-        eventCtrl.RegisterEventListener(EventTypes.AppMode, (mode: AppMode, e: EventFlag) => {
-            this.mode = mode
-            if (mode == AppMode.EditPlay || mode == AppMode.Weapon) {
-                switch (e) {
-                    case EventFlag.Start:
-                        this.playEnable = true
-                        while (this.gphysic.Check(player)) {
-                            player.Pos.y += 0.2
-                        }
-                        this.currentState = this.IdleSt
-                        this.currentState.Init()
-                        break
-                    case EventFlag.End:
-                        this.playEnable = false
-                        this.currentState.Uninit()
-                        break
-                }
-            }
-            if (mode == AppMode.Play) {
-                switch (e) {
-                    case EventFlag.Start:
-                        this.playEnable = true
-                        this.spec.ResetStatus()
-                        eventCtrl.SendEventMessage(EventTypes.PlayerStatus, this.spec.Status)
-                        this.currentState = this.IdleSt
-                        this.currentState.Init()
-                        break
-                    case EventFlag.End:
-                        this.playEnable = false
-                        this.currentState.Uninit()
-                        break
-                }
-            }
-        })
         eventCtrl.RegisterEventListener(EventTypes.KeyDown, (keyCommand: IKeyCommand) => {
             if (!this.contollerEnable || !this.playEnable) return
             this.keyDownQueue.push(keyCommand)
