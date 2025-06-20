@@ -1,10 +1,10 @@
 import { AttackItemType, DeckType, InventorySlot, ItemId, ItemProperty, ItemType } from "@Glibs/inventory/inventypes";
+import { StatKey } from "@Glibs/inventory/stat/stattypes";
 import { Bind } from "@Glibs/types/assettypes";
 
 export default interface IInventory {
     GetItem(id: ItemId): InventorySlot | undefined
     GetItemInfo(key: ItemId): ItemProperty
-    GetBindItem(pos: Bind): IItem
     NewItem(key: ItemId): Promise<IItem | undefined>
     GetNewItem(key: string): Promise<IItem>
 }
@@ -12,11 +12,7 @@ export default interface IInventory {
 export interface IItem {
     get Id(): string
     get Name(): string
-    get DamageMin(): number
-    get DamageMax(): number
     get ItemType(): ItemType
-    get Speed(): number
-    get AttackRange(): number
     get AutoAttack(): boolean
     get Sound(): string | undefined
     get IconPath(): string
@@ -26,5 +22,6 @@ export interface IItem {
     get AttackType(): AttackItemType | undefined
     get Stackable(): boolean
     get Deck(): DeckType | undefined
-    MakeInformation(): Array<{k?: string, v: string}>
+    get Stats(): Partial<Record<string, number>> | undefined
+    get Enchantments(): Partial<Record<string, number>> | undefined
 }

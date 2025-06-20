@@ -42,7 +42,7 @@ export class Monsters {
     respawntimeout?:NodeJS.Timeout
     mode = false
     createMon = new CreateMon(this.loader, this.eventCtrl, this.player,
-        this.gphysic, this.effector, this.game, this.monDb)
+        this.gphysic, this.game, this.monDb)
 
     get Enable() { return this.mode }
     set Enable(flag: boolean) { 
@@ -53,7 +53,6 @@ export class Monsters {
     constructor(
         private loader: Loader,
         private eventCtrl: IEventController,
-        private effector: Effector,
         private game: THREE.Scene,
         private player: IPhysicsObject,
         private gphysic: IGPhysic,
@@ -138,14 +137,14 @@ export class Monsters {
         const set = mon.find((e) => e.live == false && now - e.deadtime > timer)
         return set
     }
-    async CreateMonster(id: MonsterId, { respawn = false, timer = 5000 }, pos?: THREE.Vector3) {
+    async CreateMonster(monId: MonsterId, { respawn = false, timer = 5000 }, pos?: THREE.Vector3) {
         let set
         if (!respawn) {
             // respawn 이 트루면 죽을 때 타이머로 부활이 설정되어 있다.
-            set = await this.Resurrection(id, timer)
+            set = await this.Resurrection(monId, timer)
         }
-        console.log("Create", set, this.monsters.get(id))
-        return this.Spawning(id, respawn, set, pos)
+        console.log("Create", set, this.monsters.get(monId))
+        return this.Spawning(monId, respawn, set, pos)
     }
     ReleaseMonster() {
         this.monsters.forEach((mon) => {

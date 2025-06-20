@@ -10,7 +10,7 @@ export default class ThirdPersonCameraStrategy implements ICameraStrategy {
     private raycaster = new THREE.Raycaster();
     target = new THREE.Vector3()
     private followDistance = 6;
-    lerpFactor = 0.1
+    lerpFactor = 0.5
 
     constructor(
         private controls: OrbitControls,

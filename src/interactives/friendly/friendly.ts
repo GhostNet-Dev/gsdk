@@ -9,6 +9,8 @@ import IEventController from "@Glibs/interface/ievent";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { MonsterDb } from "@Glibs/types/monsterdb";
 import { EventFlag } from "@Glibs/types/eventtypes";
+import { StatFactory } from "@Glibs/actors/battle/statfactory";
+import { BaseSpec } from "@Glibs/actors/battle/basespec";
 
 export type FriendlySet = {
     friendlyModel: IPhysicsObject,
@@ -23,6 +25,7 @@ export interface IFlyCtrl {
     Release(): void
 }
 export class Friendly {
+    fab = new StatFactory()
     friendly = new Map<MonsterId, FriendlySet>()
     mode = AppMode.Close
 
@@ -64,8 +67,11 @@ export class Friendly {
         const friendly = new Fly(asset, id as string)
         await friendly.Loader(pos)
 
+        const stat = this.fab.getDefaultStats(id as string)
+        const spec = new BaseSpec(stat)
+
         const zCtrl = new FlyCtrl(friendly, this.player, this.targetList,
-            this.gphysic, this.eventCtrl, property)
+            this.gphysic, this.eventCtrl, property, spec)
         const monSet: FriendlySet =  { 
             friendlyModel: friendly, friendlyCtrl: zCtrl, live: true, respawn: false, deadtime: new Date().getTime()
         }

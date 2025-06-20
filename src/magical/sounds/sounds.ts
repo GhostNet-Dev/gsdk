@@ -18,6 +18,7 @@ export default class Sounds {
         eventCtrl: IEventController,
         domain = "https://hons.ghostwebservice.com/"
     ) {
+        eventCtrl.SendEventMessage(EventTypes.RegisterSoundListener, listener)
         eventCtrl.RegisterEventListener(EventTypes.RegisterSound, (target: THREE.Object3D, audioPath: SoundType) => {
             const sound = new THREE.PositionalAudio(listener)
             if(this.sounds.has(audioPath)) {

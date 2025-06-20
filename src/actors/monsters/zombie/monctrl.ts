@@ -9,14 +9,15 @@ import { MonsterProperty } from "../monstertypes";
 import { EffectType } from "@Glibs/types/effecttypes";
 import { IMonsterAction } from "../imonsters";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { BaseSpec } from "@Glibs/actors/battle/basespec";
 
 
 
 export class MonsterCtrl implements ILoop, IMonsterCtrl {
     LoopId = 0
     IdleSt = new IdleZState(this, this.zombie, this.gphysic)
-    AttackSt = new AttackZState(this, this.zombie, this.gphysic, this.eventCtrl, this.property)
-    RunSt = new RunZState(this, this.zombie, this.gphysic, this.property)
+    AttackSt = new AttackZState(this, this.zombie, this.gphysic, this.eventCtrl, this.spec)
+    RunSt = new RunZState(this, this.zombie, this.gphysic, this.spec)
     DyingSt = new DyingZState(this, this.zombie, this.gphysic, this.eventCtrl)
     JumpSt = new JumpZState(this, this.zombie, this.gphysic)
 
@@ -24,7 +25,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
     raycast = new THREE.Raycaster()
     dir = new THREE.Vector3(0, 0, 0)
     moveDirection = new THREE.Vector3()
-    health = this.property.health
+    health = this.spec.Health
     private phybox: MonsterBox
     get Drop() { return this.property.drop }
     get MonsterBox() { return this.phybox }
@@ -35,7 +36,8 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
         private zombie: Zombie, 
         private gphysic: IGPhysic,
         private eventCtrl: IEventController,
-        private property: MonsterProperty
+        private property: MonsterProperty,
+        private spec: BaseSpec,
     ) {
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         const size = zombie.Size
@@ -51,7 +53,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
         this.phybox.position.copy(this.zombie.Pos)
     }
     Respawning() {
-        this.health = this.property.health
+        this.health = this.spec.Health
         this.zombie.SetOpacity(1)
         this.currentState = this.IdleSt
         this.currentState.Init()
@@ -89,9 +91,9 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
             } else {
                 this.moveDirection.copy(this.dir)
             }
+            this.currentState = this.currentState.Update(delta, this.moveDirection, dist)
         }
 
-        this.currentState = this.currentState.Update(delta, this.moveDirection, dist)
         this.zombie.update(delta)
 
         this.phybox.position.copy(this.zombie.Pos)

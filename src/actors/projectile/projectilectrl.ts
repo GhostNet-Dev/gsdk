@@ -4,6 +4,7 @@ import { AttackType } from "@Glibs/types/playertypes";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { MonsterProperty } from "@Glibs/types/monstertypes";
+import { BaseSpec } from "../battle/basespec";
 
 
 
@@ -26,6 +27,7 @@ export class ProjectileCtrl {
         private eventCtrl: IEventController,
         private range: number,
         private property: MonsterProperty,
+        private spec: BaseSpec
     ){
     }
     Release () {
@@ -48,7 +50,7 @@ export class ProjectileCtrl {
     }
     update(delta: number): void {
         if (!this.live) return
-        const mov = this.property.speed * delta
+        const mov = this.spec.Speed * delta
         this.currenttime += delta
         this.moving += mov
         this.prevPosition.copy(this.position)

@@ -42,7 +42,7 @@ export default class RayPhysics implements IGPhysic {
         const height = (Math.floor(obj.Size.y * 100) / 100) / 2 - 0.2
         this.center.y -= height
         this.raycast.set(this.center, dir)
-        this.raycast.far = 5
+        this.raycast.far = 2
         const intersects = this.raycast.intersectObjects(this.targetObjs, false)
         let adjustedMoveVector
         if (intersects.length > 0) {
@@ -77,7 +77,7 @@ export default class RayPhysics implements IGPhysic {
     CheckDown(obj: IPhysicsObject): number {
         obj.Box.getCenter(this.center)
         this.raycast.set(this.center, this.downDir)
-        this.raycast.far = 5
+        this.raycast.far = this.center.y + 2
         const landTouch = this.raycast.intersectObjects(this.targetObjs, false)
         if(landTouch.length > 0) {
             const height = obj.Size.y / 2

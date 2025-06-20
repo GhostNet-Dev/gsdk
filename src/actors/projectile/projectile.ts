@@ -7,6 +7,8 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { EventFlag } from "@Glibs/types/eventtypes";
 import { MonsterDb } from "@Glibs/types/monsterdb";
 import { BulletLine } from "./bulletline";
+import { StatFactory } from "../battle/statfactory";
+import { BaseSpec } from "../battle/basespec";
 
 export interface IProjectileModel {
     get Meshs(): THREE.Mesh | THREE.Points | THREE.Line | undefined
@@ -31,6 +33,7 @@ export type ProjectileSet = {
 export class Projectile implements ILoop {
     LoopId = 0
     projectiles = new Map<MonsterId, ProjectileSet[]>()
+    fab = new StatFactory()
 
     constructor(
         private eventCtrl: IEventController,
@@ -58,7 +61,9 @@ export class Projectile implements ILoop {
     CreateProjectile(id: MonsterId, src: THREE.Vector3, dir: THREE.Vector3, damage: number, range: number) {
         const property = this.monDb.GetItem(id)
         const ball = this.GetModel(id)
-        const ctrl = new ProjectileCtrl(ball, this.targetList, this.eventCtrl, range, property)
+        const stat = this.fab.getDefaultStats(id as string)
+        const spec = new BaseSpec(stat)
+        const ctrl = new ProjectileCtrl(ball, this.targetList, this.eventCtrl, range, property, spec)
         ctrl.start(src, dir, damage)
 
         const set: ProjectileSet = {

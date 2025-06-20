@@ -1,8 +1,9 @@
 import IEventController from "@Glibs/interface/ievent"
 import { EventTypes } from "@Glibs/types/globaltypes"
-import { AttackType, PlayerStatus } from "@Glibs/types/playertypes"
+import { AttackType } from "@Glibs/types/playertypes"
 import { EffectType } from "@Glibs/types/effecttypes"
 import { IBuffItem } from "./ibuff"
+import { BaseSpec } from "@Glibs/actors/battle/basespec"
 
 
 
@@ -40,8 +41,8 @@ export class AreaAttack implements IBuffItem {
     GetAttackSpeed(): number { return 1 }
     GetMoveSpeed(): number { return 1 }
     GetDamageMax(): number { return 1 }
-    Update(delta: number, status: PlayerStatus): void {
-        if (status.health <= 0) return
+    Update(delta: number, status: BaseSpec): void {
+        if (status.Health <= 0) return
         this.accTime += delta
         if(this.accTime / (this.time) < 1) {
             return
@@ -71,8 +72,8 @@ export class Healing implements IBuffItem {
     GetAttackSpeed(): number { return 1 }
     GetMoveSpeed(): number { return 1 }
     GetDamageMax(): number { return 1 }
-    Update(delta: number, status: PlayerStatus): void {
-        if (status.health <= 0) return
+    Update(delta: number, status: BaseSpec): void {
+        if (status.Health >= status.stats.getStat("hp") || status.Health <= 0) return
         this.accTime += delta
         if(this.accTime / (this.time) < 1) {
             return
@@ -81,7 +82,7 @@ export class Healing implements IBuffItem {
 
         this.eventCtrl.SendEventMessage(EventTypes.Attack + "player", [{
             type: AttackType.Heal,
-            damage: status.maxHealth * (this.heal * this.lv)
+            damage: status.stats.getStat("hp") * (this.heal * this.lv)
         }])
     }
 }

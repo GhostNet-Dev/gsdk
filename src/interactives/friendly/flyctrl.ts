@@ -8,13 +8,14 @@ import { MonsterProperty } from "@Glibs/types/monstertypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { IMonsterAction } from "@Glibs/interface/imonsters";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { BaseSpec } from "@Glibs/actors/battle/basespec";
 
 
 export class FlyCtrl implements ILoop, IFlyCtrl {
     LoopId = 0
     IdleSt = new IdleFState(this, this.fly, this.targetList, this.gphysic)
-    AttackSt = new AttackFState(this, this.fly, this.gphysic, this.targetList, this.eventCtrl, this.property)
-    RunSt = new RunFState(this, this.fly, this.gphysic, this.property)
+    AttackSt = new AttackFState(this, this.fly, this.gphysic, this.targetList, this.eventCtrl, this.property, this.spec)
+    RunSt = new RunFState(this, this.fly, this.gphysic, this.property, this.spec)
     DyingSt = new DyingFState(this, this.fly, this.gphysic)
 
     currentState: IMonsterAction = this.IdleSt
@@ -28,7 +29,8 @@ export class FlyCtrl implements ILoop, IFlyCtrl {
         private targetList: THREE.Object3D[],
         private gphysic: IGPhysic,
         private eventCtrl: IEventController,
-        private property: MonsterProperty
+        private property: MonsterProperty,
+        private spec: BaseSpec
     ) {
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
     }

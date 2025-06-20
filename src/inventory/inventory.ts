@@ -4,7 +4,6 @@ import { InvenData, InventorySlot, ItemId } from "@Glibs/inventory/inventypes";
 import { ItemDb } from "./items/itemdb";
 import { Item } from "./items/item";
 import IInventory, { IItem } from "@Glibs/interface/iinven";
-import { Bind } from "@Glibs/types/assettypes";
 
 const maxSlot = 15
 
@@ -44,29 +43,29 @@ export class Inventory implements IInventory {
         this.data.inventroySlot.push({ item: item, count: 1 })
         return item
     }
-    MoveToInvenFromBindItem(pos: Bind) {
-        const item = this.data.bodySlot[pos]
-        const index = this.data.bodySlot.indexOf(item)
-        if (index < 0) throw new Error("there is no item");
-        this.data.bodySlot.splice(index, 1)
+    // MoveToInvenFromBindItem(pos: Bind) {
+    //     const item = this.data.bodySlot[pos]
+    //     const index = this.data.bodySlot.indexOf(item)
+    //     if (index < 0) throw new Error("there is no item");
+    //     this.data.bodySlot.splice(index, 1)
 
-        this.data.inventroySlot.push({ item: item, count: 1 })
-    }
-    MoveToBindFromInvenItem(pos: Bind, item:IItem) {
-        const find = this.data.inventroySlot.find((slot) => slot.item.Id == item.Id)
-        if (find == undefined) throw new Error("there is no item");
-        const index = this.data.inventroySlot.indexOf(find)
-        this.data.inventroySlot.splice(index, 1)
+    //     this.data.inventroySlot.push({ item: item, count: 1 })
+    // }
+    // MoveToBindFromInvenItem(pos: Bind, item:IItem) {
+    //     const find = this.data.inventroySlot.find((slot) => slot.item.Id == item.Id)
+    //     if (find == undefined) throw new Error("there is no item");
+    //     const index = this.data.inventroySlot.indexOf(find)
+    //     this.data.inventroySlot.splice(index, 1)
         
-        this.data.bodySlot[pos] = item
-    }
+    //     this.data.bodySlot[pos] = item
+    // }
     GetInventory(i: number): InventorySlot {
         return this.data.inventroySlot[i]
     }
 
-    GetBindItem(pos: Bind) {
-        return this.data.bodySlot[pos]
-    }
+    // GetBindItem(pos: Bind) {
+    //     return this.data.bodySlot[pos]
+    // }
     GetItemInfo(key: ItemId) {
         return this.itemDb.GetItem(key)
     }

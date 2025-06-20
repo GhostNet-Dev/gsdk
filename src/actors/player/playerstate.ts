@@ -97,11 +97,10 @@ export class State {
         } 
     }
     CheckEnermyInRange() {
-        const handItem = this.playerCtrl.inventory.GetBindItem(Bind.Hands_R)
-        if(handItem == undefined || handItem.AttackRange == undefined) return
+        const attackRange = this.playerCtrl.spec.stats.getStat("attackRange")
         for (const v of this.playerCtrl.targets) {
             const dis = this.player.Pos.distanceTo(v.position)
-            if(handItem.AttackRange > dis) {
+            if(attackRange > dis) {
                 this.playerCtrl.AttackSt.Init()
                 return this.playerCtrl.AttackSt
             }

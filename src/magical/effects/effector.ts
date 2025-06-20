@@ -16,6 +16,7 @@ import { SmokeVfx } from "./fire/smoke";
 import { EffectType } from "./effecttypes";
 import { IEffect } from "./ieffector";
 import { SoundEffect } from "./soundeffect";
+import IEventController from "@Glibs/interface/ievent";
 
 
 export class Effector {
@@ -24,7 +25,7 @@ export class Effector {
     nonglow?: Function
     constructor(
         private game: THREE.Scene,
-        private audioListener: THREE.AudioListener,
+        private eventCtrl: IEventController,
         private rootPath: string = "https://hons.ghostwebservice.com/"
     ) {
         this.meshs.name = "effector"
@@ -103,12 +104,12 @@ export class Effector {
                 ret = vfx
                 break;
             }
-            case EffectType.Sound:
-                {
-                    const sound = new SoundEffect(this.audioListener, arg[0])
-                    ret = sound
-                    break
-                }
+            // case EffectType.Sound:
+            //     {
+            //         const sound = new SoundEffect(this.audioListener, arg[0])
+            //         ret = sound
+            //         break
+            //     }
             case EffectType.Test:
             default:
                 ret = new TestVfx(this.game)

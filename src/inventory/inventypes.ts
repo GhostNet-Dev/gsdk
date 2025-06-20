@@ -1,5 +1,6 @@
 import { IAsset } from "@Glibs/interface/iasset"
 import { IItem } from "@Glibs/interface/iinven"
+import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { Bind } from "@Glibs/types/assettypes"
 import { MonsterId } from "@Glibs/types/monstertypes"
 
@@ -33,37 +34,41 @@ export enum Level {
 }
 
 export type ItemProperty = {
-    id: string
-    type: ItemType
-    weapon?: AttackItemType
-    bind?: Bind
-    asset?: IAsset
-    meshs?: THREE.Group
+    // 기본 정보
+    id: string;                        // 고유 ID
+    name: string;                     // 이름
+    namekr?: string;                  // 한국어 이름
+    icon: string;                     // UI 아이콘 경로
+    type: ItemType;                   // weapon, armor 등
+    slot?: string;                    // 장착 부위
+    weapon?: AttackItemType;          // 귀속 타입
+    autoAttack?: boolean;
+    level?: Level;
+    levelRequirement: number;
+    durability?: number;
+    weight?: number;
+    price?: number;
+    tradable?: boolean;
+    stackable: boolean;
+    binding: boolean;
+    bind?: Bind;                      // 귀속 타입
+    deck?: DeckType;                  // 세트, 강화 슬롯 등
 
-    level?: Level
-    name: string
-    namekr?: string
-    icon: string
-    stackable: boolean
-    binding: boolean
-    price?: number
+    asset?: IAsset;                   // 시각 자산
+    meshs?: THREE.Group;             // 3D 메쉬
+    sound?: string;
 
-    damageMin?: number
-    damageMax?: number
-    armor?: number
-    attackRange?: number
-    autoAttack?: boolean
+    // 전투용 또는 능력치용 스탯
+    stats?: Partial<Record<StatKey, number>>;
 
-    sound?: string
+    // 확장 효과
+    enchantments?: Partial<Record<StatKey, number>>;
+    sockets?: number;
+    setBonus?: number;
 
-    speed?: number
-
-    agility?: number
-    stamina?: number
-    fireResistance?: number
-    natureResistance?: number
-
-    deck?: DeckType
+    // 접두사/접미사 이름
+    prefix?: string;
+    suffix?: string;
 }
 
 export class ItemId {

@@ -1,10 +1,10 @@
 export enum Bind {
-    Body, // chainmail, platemail, wizard robe
-    Hands_L, //Gloves
-    Hands_R, //Gloves
-    Head,
-    Legs,
-    Feet,
+    Body = "body", // chainmail, platemail, wizard robe
+    Hands_L = "handl", //Gloves
+    Hands_R = "handr", //Gloves
+    Head = "head", //Helm
+    Legs = "legs",
+    Feet = "feet",
 }
 
 export enum Ani {

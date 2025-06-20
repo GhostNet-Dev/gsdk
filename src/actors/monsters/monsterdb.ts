@@ -1,3 +1,4 @@
+import { baseStatPresets } from "@Glibs/actors/battle/stats"
 import { ItemId } from "@Glibs/inventory/inventypes"
 import { Char } from "@Glibs/types/assettypes"
 import { MonsterId, MonsterProperty, MonsterType } from "@Glibs/types/monstertypes"
@@ -10,63 +11,42 @@ export class MonsterDb {
             id: MonsterId.Bee,
             type: MonsterType.Insect,
             model: Char.CharAniBee,
-            health: 10,
-            speed: 1,
-            damageMin:1,
-            damageMax: 5,
-            attackSpeed: 2,
+            stats: baseStatPresets[MonsterId.Bee]
         })
         this.monDb.set(MonsterId.Zombie, {
             id: MonsterId.Zombie,
             type: MonsterType.Undead,
             model: Char.CharMonZombie,
-            health: 10,
-            speed: 1,
-            damageMin:1,
-            damageMax: 5,
-            attackSpeed: 2,
             drop: [
                 { itemId: ItemId.Leather, ratio: 0.5 },
                 { itemId: ItemId.ZombieDeck, ratio: 0.1 }
-            ]
+            ],
+            stats: baseStatPresets[MonsterId.Zombie]
         })
         this.monDb.set(MonsterId.Minotaur, {
             id: MonsterId.Minotaur,
             type: MonsterType.Beast,
             model: Char.CharMonMinataur,
-            health: 10,
-            speed: 1,
-            damageMin:1,
-            damageMax: 5,
-            attackSpeed: 2,
             drop: [
                 { itemId: ItemId.Leather, ratio: 0.5 },
                 { itemId: ItemId.MinataurDeck, ratio: 0.05 }
-            ]
+            ],
+            stats: baseStatPresets[MonsterId.Minotaur]
         })
         this.monDb.set(MonsterId.Batpig, {
             id: MonsterId.Batpig,
             type: MonsterType.Beast,
             model: Char.CharMonBatPig,
-            health: 5,
-            speed: 3,
-            damageMin:1,
-            damageMax: 3,
-            attackSpeed: 1,
             drop: [
                 { itemId: ItemId.Leather, ratio: 0.5 },
                 { itemId: ItemId.BatPigDeck, ratio: 0.05 }
-            ]
+            ],
+            stats: baseStatPresets[MonsterId.Batpig]
         })
         this.monDb.set(MonsterId.Bilby, {
             id: MonsterId.Bilby,
             type: MonsterType.Beast,
             model: Char.CharAniBilby,
-            health: 10,
-            speed: 1,
-            damageMin:1,
-            damageMax: 5,
-            attackSpeed: 2,
             drop: [
                 { itemId: ItemId.Leather, ratio: 0.5 },
                 { itemId: ItemId.BilbyDeck, ratio: 0.05 }
@@ -76,11 +56,6 @@ export class MonsterDb {
             id: MonsterId.Birdmon,
             type: MonsterType.Beast,
             model: Char.CharMonBird,
-            health: 6,
-            speed: 5,
-            damageMin:1,
-            damageMax: 3,
-            attackSpeed: 2,
             drop: [
                 { itemId: ItemId.Leather, ratio: 0.5 },
                 { itemId: ItemId.BirdmonDeck, ratio: 0.05 }
@@ -90,11 +65,6 @@ export class MonsterDb {
             id: MonsterId.Crab,
             type: MonsterType.Beast,
             model: Char.CharMonCrab,
-            health: 8,
-            speed: 1,
-            damageMin:4,
-            damageMax: 6,
-            attackSpeed: 1,
             drop: [
                 { itemId: ItemId.Leather, ratio: 0.5 },
                 { itemId: ItemId.CrabDeck, ratio: 0.05 }
@@ -104,11 +74,6 @@ export class MonsterDb {
             id: MonsterId.Builder,
             type: MonsterType.Warrior,
             model: Char.CharHumanBuilder,
-            health: 10,
-            speed: 4,
-            damageMin:1,
-            damageMax: 5,
-            attackSpeed: 2,
             drop: [
                 { itemId: ItemId.Leather, ratio: 0.5 },
                 { itemId: ItemId.BuilderDeck, ratio: 0.05 }
@@ -118,11 +83,6 @@ export class MonsterDb {
             id: MonsterId.Golem,
             type: MonsterType.Element,
             model: Char.CharMonGolem,
-            health: 10,
-            speed: 1,
-            damageMin:1,
-            damageMax: 5,
-            attackSpeed: 2,
             drop: [
                 { itemId: ItemId.Rocks, ratio: 0.5 },
                 { itemId: ItemId.GolemDeck, ratio: 0.05 }
@@ -132,11 +92,6 @@ export class MonsterDb {
             id: MonsterId.BigGolem,
             type: MonsterType.Element,
             model: Char.CharMonBigGolem,
-            health: 10,
-            speed: 4,
-            damageMin:1,
-            damageMax: 5,
-            attackSpeed: 2,
             drop: [
                 { itemId: ItemId.Rocks, ratio: 0.5 },
                 { itemId: ItemId.BigGolemDeck, ratio: 0.05 }
@@ -146,11 +101,6 @@ export class MonsterDb {
             id: MonsterId.KittenMonk,
             type: MonsterType.Beast,
             model: Char.CharMonKittenMonk,
-            health: 10,
-            speed: 4,
-            damageMin:4,
-            damageMax: 5,
-            attackSpeed: 1,
             drop: [
                 { itemId: ItemId.Leather, ratio: 0.5 },
                 { itemId: ItemId.KittenMonkDeck, ratio: 0.05 }
@@ -160,11 +110,6 @@ export class MonsterDb {
             id: MonsterId.Skeleton,
             type: MonsterType.Undead,
             model: Char.CharMonSkeleton,
-            health: 10,
-            speed: 3,
-            damageMin:1,
-            damageMax: 5,
-            attackSpeed: 2,
             drop: [
                 { itemId: ItemId.SkeletonDeck, ratio: 0.05 }
             ]
@@ -173,11 +118,6 @@ export class MonsterDb {
             id: MonsterId.Snake,
             type: MonsterType.Beast,
             model: Char.CharMonSnake,
-            health: 10,
-            speed: 4,
-            damageMin:1,
-            damageMax: 5,
-            attackSpeed: 2,
             drop: [
                 { itemId: ItemId.SnakeDeck, ratio: 0.05 }
             ]
@@ -186,11 +126,6 @@ export class MonsterDb {
             id: MonsterId.ToadMage,
             type: MonsterType.Beast,
             model: Char.CharMonToadMage,
-            health: 10,
-            speed: 5,
-            damageMin:1,
-            damageMax: 5,
-            attackSpeed: 2,
             drop: [
                 { itemId: ItemId.Leather, ratio: 0.5 },
                 { itemId: ItemId.ToadMageDeck, ratio: 0.05 }
@@ -200,11 +135,6 @@ export class MonsterDb {
             id: MonsterId.Viking,
             type: MonsterType.Warrior,
             model: Char.CharHumanViking,
-            health: 10,
-            speed: 4,
-            damageMin:1,
-            damageMax: 5,
-            attackSpeed: 2,
             drop: [
                 { itemId: ItemId.VikingDeck, ratio: 0.05 }
             ]
@@ -213,11 +143,6 @@ export class MonsterDb {
             id: MonsterId.WereWolf,
             type: MonsterType.Beast,
             model: Char.CharMonWereWolf,
-            health: 10,
-            speed: 4,
-            damageMin:8,
-            damageMax: 10,
-            attackSpeed: 2,
             drop: [
                 { itemId: ItemId.Leather, ratio: 0.5 },
                 { itemId: ItemId.WereWolfDeck, ratio: 0.05 }
@@ -227,11 +152,6 @@ export class MonsterDb {
             id: MonsterId.Stone,
             type: MonsterType.Rock,
             model: Char.Stone,
-            health: 1,
-            speed: 0,
-            damageMin:0,
-            damageMax: 0,
-            attackSpeed: 0,
             drop: [
                 { itemId: ItemId.Rocks, ratio: 1 }
             ]
@@ -240,11 +160,6 @@ export class MonsterDb {
             id: MonsterId.Tree,
             type: MonsterType.Plant,
             model: Char.Tree,
-            health: 1,
-            speed: 0,
-            damageMin:0,
-            damageMax: 0,
-            attackSpeed: 0,
             drop: [
                 { itemId: ItemId.Logs, ratio: 1 }
             ]
@@ -253,31 +168,16 @@ export class MonsterDb {
             id: MonsterId.DefaultBall,
             type: MonsterType.Rock,
             model: Char.None,
-            health: 1,
-            speed: 8,
-            damageMin:3,
-            damageMax: 4,
-            attackSpeed: 7,
         })
         this.monDb.set(MonsterId.DefaultBullet, {
             id: MonsterId.DefaultBullet,
             type: MonsterType.Rock,
             model: Char.None,
-            health: 1,
-            speed: 17,
-            damageMin:3,
-            damageMax: 4,
-            attackSpeed: 7,
         })
         this.monDb.set(MonsterId.BulletLine, {
             id: MonsterId.BulletLine,
             type: MonsterType.Rock,
             model: Char.None,
-            health: 1,
-            speed: 40,
-            damageMin:3,
-            damageMax: 4,
-            attackSpeed: 7,
         })
     }
     GetItem(key: MonsterId): MonsterProperty  {

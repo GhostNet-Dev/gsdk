@@ -7,6 +7,7 @@ import { MonsterProperty } from "../monstertypes";
 import { ActionType, AttackType } from "@Glibs/types/playertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { IMonsterAction } from "../imonsters";
+import { BaseSpec } from "@Glibs/actors/battle/basespec";
 
 class State {
     attackDist = 3
@@ -22,7 +23,9 @@ class State {
             return this.zCtrl.RunSt
         }
     }
+    perf = 0
     CheckGravity() {
+        if (this.perf++ % 3 != 0) return
         this.zombie.Meshs.position.y -= 0.5
         if (!this.gphysic.Check(this.zombie)) {
             this.zombie.Meshs.position.y += 0.5
@@ -87,21 +90,23 @@ export class JumpZState implements IMonsterAction {
 }
 export class AttackZState extends State implements IMonsterAction {
     keytimeout?:NodeJS.Timeout
-    attackSpeed = this.property.attackSpeed
     attackProcess = false
     attackTime = 0
-    attackDamageMax = this.property.damageMax
-    attackDamageMin = this.property.damageMin
+    attackSpeed = this.spec.AttackSpeed
+    attackDamageMax = this.spec.AttackDamageMax
+    attackDamageMin = this.spec.AttackDamageMin
 
     constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: IGPhysic,
-        private eventCtrl: IEventController, private property: MonsterProperty
+        private eventCtrl: IEventController, private spec: BaseSpec
     ) {
         super(zCtrl, zombie, gphysic)
     }
     Init(): void {
+        this.attackSpeed = this.spec.AttackSpeed
+        this.attackDamageMax = this.spec.AttackDamageMax
+        this.attackDamageMin = this.spec.AttackDamageMin
         const duration = this.zombie.ChangeAction(ActionType.Punch)
         if (duration != undefined) this.attackSpeed = duration * 0.8
-        this.attackTime = this.attackSpeed
     }
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
@@ -183,8 +188,8 @@ export class DyingZState extends State implements IMonsterAction {
     }
 }
 export class RunZState extends State implements IMonsterAction {
-    speed = this.property.speed
-    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: IGPhysic, private property: MonsterProperty) {
+    speed = this.spec.Speed
+    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: IGPhysic, private spec: BaseSpec) {
         super(zCtrl, zombie, gphysic)
     }
     Init(): void {

@@ -23,12 +23,11 @@ export default class CharMiniRenderer implements IViewer, ILoop {
     private grass = new ZeldaGrass(this.eventCtrl)
     private sky = new SkyBoxAllTime(this.directlight, { daytime: 0 })
     private player = new Player(this.loader, this.loader.GetAssets(Char.CharHumanMale), 
-        this.eventCtrl, this.effector, this.scene, this.inventory)
+        this.eventCtrl, this.scene, this.inventory)
 
     constructor(
         private loader: Loader,
         private eventCtrl: IEventController,
-        private effector: Effector,
         private container: HTMLDivElement,
         private inventory: IInventory,
     ) {
