@@ -3,7 +3,7 @@ import { StatKey } from "@Glibs/types/stattypes";
 
 export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, number>>> = {
   [MonsterId.Zombie]: {
-    hp: 150,
+    hp: 10,
     mp: 0,
     attack: 12,
     defense: 8,
@@ -116,17 +116,17 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
   'DefaultBall': {
     'hp': 1,
     'attack': 5,
-    'speed': 2.0
+    'speed': 5.0
   },
   'DefaultBullet': {
     'hp': 1,
     'attack': 5,
-    'speed': 2.0
+    'speed': 10.0
   },
   'BulletL': {
     'hp': 1,
     'attack': 5,
-    'speed': 2.0
+    'speed': 10.0
   },
 };
 

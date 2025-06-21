@@ -45,7 +45,7 @@ export class QuarksVfx implements IEffect {
         this.endCallback = callback
         this.groups[this.refreshIndex].position.copy(pos)
         this.groups[this.refreshIndex].updateMatrixWorld(true)
-        console.log(pos, this.groups[this.refreshIndex].position, this.obj.position, this.batchRenderer.position)
+        // console.log(pos, this.groups[this.refreshIndex].position, this.obj.position, this.batchRenderer.position)
         try {
             this.groups[this.refreshIndex].traverse((object) => {
                 if (object instanceof ParticleEmitter) {

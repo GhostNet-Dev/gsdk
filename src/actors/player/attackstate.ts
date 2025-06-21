@@ -19,12 +19,11 @@ export class AttackState extends State implements IPlayerAction {
     attackDir = new THREE.Vector3()
     attackTime = 0
     attackSpeed = 2
-    attackDamageMax = 1
-    attackDamageMin = 1
     keytimeout?:NodeJS.Timeout
     attackProcess = false
     clock?: THREE.Clock
     meleeAttackMode = true
+    detectEnermy = false
 
     constructor(playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic, 
         private eventCtrl: IEventController, private spec: BaseSpec
@@ -37,8 +36,6 @@ export class AttackState extends State implements IPlayerAction {
         console.log("Attack!!")
         this.attackProcess = false
         this.attackSpeed = this.spec.AttackSpeed
-        this.attackDamageMax = this.spec.AttackDamageMax
-        this.attackDamageMin = this.spec.AttackDamageMin
         this.attackDist = this.spec.AttackRange
         const handItem = this.playerCtrl.spec.GetBindItem(Bind.Hands_R)
         if(handItem == undefined) {
@@ -103,6 +100,7 @@ export class AttackState extends State implements IPlayerAction {
         // 🎯 2. 범위 내 적이 없으면 종료
         if (!closestTarget) {
             this.attackProcess = false;
+            this.detectEnermy = false
             return null;
         }
 
@@ -116,34 +114,35 @@ export class AttackState extends State implements IPlayerAction {
         // this.player.Meshs.quaternion.slerp(targetQuat, 0.2); // 부드럽게 회전
         // this.player.Meshs.quaternion.copy(targetQuat); // 부드럽게 회전
 
+        this.detectEnermy = true
         this.player.Meshs.lookAt(closestTarget.position.x, playerPos.y, closestTarget.position.z);
         return closestTarget
     }
     rangedAttack(itemInfo: IItem) {
         this.eventCtrl.SendEventMessage(EventTypes.PlaySound, itemInfo.Mesh, itemInfo.Sound)
-        if (itemInfo.AutoAttack) {
-            this.autoDirection()
+        if (itemInfo.AutoAttack && this.autoDirection() == null) {
+            return false
         }
         const startPos = new THREE.Vector3()
         this.player.Meshs.getWorldDirection(this.attackDir)
         this.player.GetMuzzlePosition(startPos)
         this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
             id: MonsterId.BulletLine, 
-            damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
+            damage: this.spec.Damage,
             src: startPos, 
             dir: this.attackDir,
             range: this.attackDist
         })
         this.attackProcess = false
+        return true
     }
     meleeAutoAttack() {
         const closestTarget = this.autoDirection()
         if (closestTarget == null) return
         // 💥 4. 공격 메시지 전송
-        const damage = THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax);
         const msg = {
             type: AttackType.NormalSwing,
-            damage: damage,
+            damage: this.spec.Damage,
             obj: closestTarget
         };
 
@@ -162,11 +161,11 @@ export class AttackState extends State implements IPlayerAction {
                 if (obj.distance> this.attackDist) return false
                 const mons = msgs.get(obj.object.name)
                 const msg = {
-                        type: AttackType.NormalSwing,
-                        damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
-                        obj: obj.object
-                    }
-                if(mons == undefined) {
+                    type: AttackType.NormalSwing,
+                    damage: this.spec.Damage,
+                    obj: obj.object
+                }
+                if (mons == undefined) {
                     msgs.set(obj.object.name, [msg])
                 } else {
                     mons.push(msg)
@@ -177,6 +176,11 @@ export class AttackState extends State implements IPlayerAction {
             })
         }
         this.attackProcess = false
+    }
+    ChangeMode(state: IPlayerAction) {
+        this.Uninit()
+        state.Init()
+        return state
     }
     Update(delta: number): IPlayerAction {
         const d = this.DefaultCheck()
@@ -195,6 +199,9 @@ export class AttackState extends State implements IPlayerAction {
         }
         this.attackTime -= this.attackSpeed
 
+        if (!this.meleeAttackMode && !this.detectEnermy) {
+            return this.ChangeMode(this.playerCtrl.IdleSt)
+        }
         this.attackProcess = true
         this.keytimeout = setTimeout(() => {
             const handItem = this.playerCtrl.spec.GetBindItem(Bind.Hands_R)

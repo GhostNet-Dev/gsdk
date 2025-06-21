@@ -27,7 +27,7 @@ export class BaseSpec {
     get AttackRange() { return this.stats.getStat("attackRange") }
     get Speed() { return this.stats.getStat("speed") }
     get Damage() {
-        return 1
+        return this.stats.getStat("attack")
     }
 
     get AttackDamageMax() {

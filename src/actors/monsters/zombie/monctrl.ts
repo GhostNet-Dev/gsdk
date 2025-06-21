@@ -57,6 +57,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
         this.zombie.SetOpacity(1)
         this.currentState = this.IdleSt
         this.currentState.Init()
+        this.MonsterBox.position.copy(this.zombie.Pos)
     }
 
     update(delta: number): void {

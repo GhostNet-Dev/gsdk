@@ -59,11 +59,10 @@ export class Projectile implements ILoop {
         }
     }
     CreateProjectile(id: MonsterId, src: THREE.Vector3, dir: THREE.Vector3, damage: number, range: number) {
-        const property = this.monDb.GetItem(id)
         const ball = this.GetModel(id)
         const stat = this.fab.getDefaultStats(id as string)
         const spec = new BaseSpec(stat)
-        const ctrl = new ProjectileCtrl(ball, this.targetList, this.eventCtrl, range, property, spec)
+        const ctrl = new ProjectileCtrl(ball, this.targetList, this.eventCtrl, range, spec)
         ctrl.start(src, dir, damage)
 
         const set: ProjectileSet = {

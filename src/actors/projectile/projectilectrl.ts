@@ -26,7 +26,6 @@ export class ProjectileCtrl {
         private targetList: THREE.Object3D[],
         private eventCtrl: IEventController,
         private range: number,
-        private property: MonsterProperty,
         private spec: BaseSpec
     ){
     }

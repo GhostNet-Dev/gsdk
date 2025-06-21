@@ -171,9 +171,10 @@ export class Monsters {
         }
 
         if (!monSet) {
+            // called resurrection
             monSet = await this.createMon.Call(monId, mon.length)
+            mon.push(monSet)
         }
-        mon.push(monSet)
 
         if(!pos) {
             monSet.monModel.Meshs.position.x = this.player.Meshs.position.x + THREE.MathUtils.randInt(-20, 20)
@@ -191,7 +192,7 @@ export class Monsters {
         monSet.monCtrl.Respawning()
 
         monSet.monModel.Visible = true
-        console.log("Spawning", monSet, mon)
+        console.log("Spawning", monSet.monCtrl.MonsterBox.Id, monSet, mon)
 
         this.eventCtrl.SendEventMessage(EventTypes.AddInteractive, monSet.monCtrl.MonsterBox)
         this.game.add(monSet.monModel.Meshs, monSet.monCtrl.MonsterBox)
