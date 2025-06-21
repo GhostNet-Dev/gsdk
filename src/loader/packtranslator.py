@@ -1,14 +1,15 @@
 import os
 
 # 설정: 파일이 있는 디렉토리 및 출력 파일
-input_directory = "assets/quaterniuspack/ultimate_animated_char/glTF"
+input_directory = "assets/weapon/swords/fbx"
 output_file = "generated_classes.ghost"
-pack_name = "QuaterniusAniCharPack"
-front_name = "QuaterniusAniChar"
-exe_name = ".gltf"
+pack_name = "Sword"
+front_name = "ItemSword"
+exe_name = ".fbx"
 
 # 파일 리스트 가져오기 및 정렬
 fbx_files = sorted([f for f in os.listdir(input_directory) if f.endswith(exe_name)])
+print(f"{fbx_files}")
 
 # 언더스코어(_)를 제거하고, CamelCase로 변환하는 함수
 def format_class_name(filename):

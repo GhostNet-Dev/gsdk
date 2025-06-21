@@ -47,7 +47,7 @@ export class ItemDb {
             level: Level.Common,
             name: "Pistol",
             icon: "WeaponTool/Bow.png",
-            sound: SoundType.Pistol762x39,
+            sound: SoundType.Pistol9mm,
             stackable: false, binding: true, autoAttack: true,
             stats: { magicAttack: 9, attack: 3, attackSpeed:1, speed: 1, attackRange: 7 },
         })
@@ -61,7 +61,7 @@ export class ItemDb {
             level: Level.Common,
             name: "M4A1",
             icon: "WeaponTool/Bow.png",
-            sound: SoundType.Pistol762x39,
+            sound: SoundType.NATO556,
             stackable: false, binding: true, autoAttack: true,
             stats: { 
                 magicAttack: 9, attack: 3, attackSpeed: .2, speed: 1, attackRange: 10 
