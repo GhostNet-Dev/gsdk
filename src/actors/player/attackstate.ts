@@ -52,8 +52,12 @@ export class AttackState extends State implements IPlayerAction {
                     this.player.ChangeAction(ActionType.Sword, this.attackSpeed)
                     this.meleeAttackMode = true
                     break;
-                case AttackItemType.Gun:
-                    this.player.ChangeAction(ActionType.Gun, this.attackSpeed)
+                case AttackItemType.OneHandGun:
+                    this.player.ChangeAction(ActionType.OneHandGun, this.attackSpeed)
+                    this.meleeAttackMode = false
+                    break;
+                case AttackItemType.TwoHandGun:
+                    this.player.ChangeAction(ActionType.OneHandGun, this.attackSpeed)
                     this.meleeAttackMode = false
                     break;
                 case AttackItemType.Bow:

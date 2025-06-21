@@ -16,6 +16,7 @@ export enum Ani {
     FightIdle,
     Dying,
     Shooting,
+    Gunplay,
     Sword,
     MagicH1,
     MagicH2,

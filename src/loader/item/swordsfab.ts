@@ -48,11 +48,18 @@ class Sword extends AssetModel {
         meshs.castShadow = true
         meshs.receiveShadow = true
 
+        const tloader = new THREE.TextureLoader()
         meshs.traverse(child => {
             child.castShadow = true
             child.receiveShadow = true
+            if (child instanceof THREE.Mesh)
+                tloader.load("assets/weapon/swords/texture/Texture_MAp_sword.png", (texture) => {
+                    child.material.map = texture
+                    child.material.needsupdate = true
+                    child.material = new THREE.MeshToonMaterial({ map: child.material.map })
+                })
         })
-        const scale = 1
+        const scale = 0.03
         meshs.scale.set(scale, scale, scale)
     }
 }

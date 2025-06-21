@@ -20,7 +20,8 @@ export enum AttackItemType {
     Knife,
     Sword,
     Bow,
-    Gun,
+    OneHandGun,
+    TwoHandGun,
     Wand,
 }
 
