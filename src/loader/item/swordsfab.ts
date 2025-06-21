@@ -58,121 +58,121 @@ class Sword extends AssetModel {
 }
 
 export class ItemSwordSword1Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword1}
+    get Id() {return Char.ItemsSwordSword1}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_1.fbx") }
 }
 
 export class ItemSwordSword10Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword10}
+    get Id() {return Char.ItemsSwordSword10}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_10.fbx") }
 }
 
 export class ItemSwordSword11Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword11}
+    get Id() {return Char.ItemsSwordSword11}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_11.fbx") }
 }
 
 export class ItemSwordSword12Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword12}
+    get Id() {return Char.ItemsSwordSword12}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_12.fbx") }
 }
 
 export class ItemSwordSword13Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword13}
+    get Id() {return Char.ItemsSwordSword13}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_13.fbx") }
 }
 
 export class ItemSwordSword15Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword15}
+    get Id() {return Char.ItemsSwordSword15}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_15.fbx") }
 }
 
 export class ItemSwordSword16Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword16}
+    get Id() {return Char.ItemsSwordSword16}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_16.fbx") }
 }
 
 export class ItemSwordSword17Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword17}
+    get Id() {return Char.ItemsSwordSword17}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_17.fbx") }
 }
 
 export class ItemSwordSword18Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword18}
+    get Id() {return Char.ItemsSwordSword18}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_18.fbx") }
 }
 
 export class ItemSwordSword19Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword19}
+    get Id() {return Char.ItemsSwordSword19}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_19.fbx") }
 }
 
 export class ItemSwordSword2Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword2}
+    get Id() {return Char.ItemsSwordSword2}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_2.fbx") }
 }
 
 export class ItemSwordSword20Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword20}
+    get Id() {return Char.ItemsSwordSword20}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_20.fbx") }
 }
 
 export class ItemSwordSword21Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword21}
+    get Id() {return Char.ItemsSwordSword21}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_21.fbx") }
 }
 
 export class ItemSwordSword22Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword22}
+    get Id() {return Char.ItemsSwordSword22}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_22.fbx") }
 }
 
 export class ItemSwordSword23Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword23}
+    get Id() {return Char.ItemsSwordSword23}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_23.fbx") }
 }
 
 export class ItemSwordSword24Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword24}
+    get Id() {return Char.ItemsSwordSword24}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_24.fbx") }
 }
 
 export class ItemSwordSword3Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword3}
+    get Id() {return Char.ItemsSwordSword3}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_3.fbx") }
 }
 
 export class ItemSwordSword4Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword4}
+    get Id() {return Char.ItemsSwordSword4}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_4.fbx") }
 }
 
 export class ItemSwordSword5Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword5}
+    get Id() {return Char.ItemsSwordSword5}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_5.fbx") }
 }
 
 export class ItemSwordSword6Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword6}
+    get Id() {return Char.ItemsSwordSword6}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_6.fbx") }
 }
 
 export class ItemSwordSword7Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword7}
+    get Id() {return Char.ItemsSwordSword7}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_7.fbx") }
 }
 
 export class ItemSwordSword8Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword8}
+    get Id() {return Char.ItemsSwordSword8}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_8.fbx") }
 }
 
 export class ItemSwordSword9Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword9}
+    get Id() {return Char.ItemsSwordSword9}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_9.fbx") }
 }
 
 export class ItemSwordSword14Fab extends Sword implements IAsset {
-    get Id() {return Char.ItemSwordSword14}
+    get Id() {return Char.ItemsSwordSword14}
     constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/sword_14.fbx") }
 }

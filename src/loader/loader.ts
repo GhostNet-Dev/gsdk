@@ -755,30 +755,30 @@ this.fabClasses.set(Char.QuaterniusAniCharWorkerMale, QuaterniusAniCharWorkerMal
 this.fabClasses.set(Char.QuaterniusAniCharZombieFemale, QuaterniusAniCharZombieFemaleFab);
 this.fabClasses.set(Char.QuaterniusAniCharZombieMale, QuaterniusAniCharZombieMaleFab);
 
-this.fabClasses.set(Char.ItemSwordSword1, ItemSwordSword1Fab);
-this.fabClasses.set(Char.ItemSwordSword10, ItemSwordSword10Fab);
-this.fabClasses.set(Char.ItemSwordSword11, ItemSwordSword11Fab);
-this.fabClasses.set(Char.ItemSwordSword12, ItemSwordSword12Fab);
-this.fabClasses.set(Char.ItemSwordSword13, ItemSwordSword13Fab);
-this.fabClasses.set(Char.ItemSwordSword15, ItemSwordSword15Fab);
-this.fabClasses.set(Char.ItemSwordSword16, ItemSwordSword16Fab);
-this.fabClasses.set(Char.ItemSwordSword17, ItemSwordSword17Fab);
-this.fabClasses.set(Char.ItemSwordSword18, ItemSwordSword18Fab);
-this.fabClasses.set(Char.ItemSwordSword19, ItemSwordSword19Fab);
-this.fabClasses.set(Char.ItemSwordSword2, ItemSwordSword2Fab);
-this.fabClasses.set(Char.ItemSwordSword20, ItemSwordSword20Fab);
-this.fabClasses.set(Char.ItemSwordSword21, ItemSwordSword21Fab);
-this.fabClasses.set(Char.ItemSwordSword22, ItemSwordSword22Fab);
-this.fabClasses.set(Char.ItemSwordSword23, ItemSwordSword23Fab);
-this.fabClasses.set(Char.ItemSwordSword24, ItemSwordSword24Fab);
-this.fabClasses.set(Char.ItemSwordSword3, ItemSwordSword3Fab);
-this.fabClasses.set(Char.ItemSwordSword4, ItemSwordSword4Fab);
-this.fabClasses.set(Char.ItemSwordSword5, ItemSwordSword5Fab);
-this.fabClasses.set(Char.ItemSwordSword6, ItemSwordSword6Fab);
-this.fabClasses.set(Char.ItemSwordSword7, ItemSwordSword7Fab);
-this.fabClasses.set(Char.ItemSwordSword8, ItemSwordSword8Fab);
-this.fabClasses.set(Char.ItemSwordSword9, ItemSwordSword9Fab);
-this.fabClasses.set(Char.ItemSwordSword14, ItemSwordSword14Fab);
+this.fabClasses.set(Char.ItemsSwordSword1, ItemSwordSword1Fab);
+this.fabClasses.set(Char.ItemsSwordSword10, ItemSwordSword10Fab);
+this.fabClasses.set(Char.ItemsSwordSword11, ItemSwordSword11Fab);
+this.fabClasses.set(Char.ItemsSwordSword12, ItemSwordSword12Fab);
+this.fabClasses.set(Char.ItemsSwordSword13, ItemSwordSword13Fab);
+this.fabClasses.set(Char.ItemsSwordSword15, ItemSwordSword15Fab);
+this.fabClasses.set(Char.ItemsSwordSword16, ItemSwordSword16Fab);
+this.fabClasses.set(Char.ItemsSwordSword17, ItemSwordSword17Fab);
+this.fabClasses.set(Char.ItemsSwordSword18, ItemSwordSword18Fab);
+this.fabClasses.set(Char.ItemsSwordSword19, ItemSwordSword19Fab);
+this.fabClasses.set(Char.ItemsSwordSword2, ItemSwordSword2Fab);
+this.fabClasses.set(Char.ItemsSwordSword20, ItemSwordSword20Fab);
+this.fabClasses.set(Char.ItemsSwordSword21, ItemSwordSword21Fab);
+this.fabClasses.set(Char.ItemsSwordSword22, ItemSwordSword22Fab);
+this.fabClasses.set(Char.ItemsSwordSword23, ItemSwordSword23Fab);
+this.fabClasses.set(Char.ItemsSwordSword24, ItemSwordSword24Fab);
+this.fabClasses.set(Char.ItemsSwordSword3, ItemSwordSword3Fab);
+this.fabClasses.set(Char.ItemsSwordSword4, ItemSwordSword4Fab);
+this.fabClasses.set(Char.ItemsSwordSword5, ItemSwordSword5Fab);
+this.fabClasses.set(Char.ItemsSwordSword6, ItemSwordSword6Fab);
+this.fabClasses.set(Char.ItemsSwordSword7, ItemSwordSword7Fab);
+this.fabClasses.set(Char.ItemsSwordSword8, ItemSwordSword8Fab);
+this.fabClasses.set(Char.ItemsSwordSword9, ItemSwordSword9Fab);
+this.fabClasses.set(Char.ItemsSwordSword14, ItemSwordSword14Fab);
 
 
     }
