@@ -7,7 +7,7 @@ import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 
 class QuaterniusNaturePack extends AssetModel {
     gltf?:GLTF
-    constructor(loader: Loader, path: string) { 
+    constructor(loader: Loader, path: string, custom = () => { }) { 
         super(loader, ModelType.Gltf, path, async (gltf: GLTF) => {
             this.gltf = gltf
             this.meshs = gltf.scene
@@ -19,6 +19,7 @@ class QuaterniusNaturePack extends AssetModel {
             })
             const scale = 1
             this.meshs.children[0].scale.set(scale, scale, scale)
+            custom()
         })
     }
     
@@ -65,7 +66,7 @@ export class QuaterniusNatureClover2Fab extends QuaterniusNaturePack implements 
 
 export class QuaterniusNatureCommontree1Fab extends QuaterniusNaturePack implements IAsset {
     get Id() {return Char.QuaterniusNatureCommontree1}
-    constructor(loader: Loader) { super(loader, "assets/quaterniuspack/stylized_nature_megakit/glTF/CommonTree_1.gltf") }
+    constructor(loader: Loader) { super(loader, "assets/quaterniuspack/stylized_nature_megakit/glTF/CommonTree_1.gltf", () => { this.meshs?.children[0].scale.set(2, 2, 2) }) }
 }
 
 export class QuaterniusNatureCommontree2Fab extends QuaterniusNaturePack implements IAsset {
