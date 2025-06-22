@@ -28,6 +28,7 @@ export enum MapEntryType {
     UltimateModular = "UltimateModular",
     FenceModular = "FenceModular",
     FluffyMaker = "FluffyMaker",
+    Interactive = "Interactive",
 }
 
 export enum MapType {
