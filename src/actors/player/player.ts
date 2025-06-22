@@ -8,8 +8,9 @@ import { EventFlag } from "@Glibs/types/eventtypes";
 import { Effector } from "@Glibs/magical/effects/effector";
 import { Ani, Bind, Char } from "@Glibs/types/assettypes";
 import { IAsset } from "@Glibs/interface/iasset";
-import IInventory from "@Glibs/interface/iinven";
+import IInventory, { IItem } from "@Glibs/interface/iinven";
 import { ActionType } from "./playertypes";
+import { ItemId } from "@Glibs/types/inventypes";
 
 
 
@@ -19,17 +20,18 @@ export class Player extends PhysicsObject {
     currentClip?: THREE.AnimationClip
     currentActionType = ActionType.Idle
 
+    private effector = new Effector(this.game, this.eventCtrl)
     private playerModel: Char = Char.CharHumanMale
-    bindMesh: THREE.Group[] = []
+    bindMesh: Record<string, THREE.Group> = {}
 
     clipMap = new Map<ActionType, THREE.AnimationClip | undefined>()
-    private effector = new Effector(this.game)
     meshs: THREE.Group
     constructor(
         private loader: Loader, 
         asset: IAsset,
         private eventCtrl: IEventController,
-        private game: THREE.Scene
+        private game: THREE.Scene,
+        private inventory: IInventory
     ) {
         super(asset)
         this.meshs = new THREE.Group
@@ -50,43 +52,49 @@ export class Player extends PhysicsObject {
             }
             this.meshs.visible = false
         })
-        this.eventCtrl.RegisterEventListener(EventTypes.Equipment, (inven: IInventory) => {
+        this.eventCtrl.RegisterEventListener(EventTypes.Equipment, (id: ItemId) => {
+            const slot = this.inventory.GetItem(id)
+            if(slot == undefined) throw new Error("item is undefined")
             // right hand
-            this.ReloadBindingItem(inven, Bind.Head)
-            this.ReloadBindingItem(inven, Bind.Hands_L)
-            this.ReloadBindingItem(inven, Bind.Hands_R)
+            this.ReloadBindingItem(slot.item)
         })
     }
     GetItemPosition(target: THREE.Vector3) {
-        const rightId = this.loader.GetAssets(Char.CharHumanMale).GetBodyMeshId(Bind.Hands_R)
+        const rightId = this.asset.GetBodyMeshId(Bind.Hands_R)
         if (rightId == undefined) return
         const mesh = this.meshs.getObjectByName(rightId)
         if (!mesh) return
         mesh.getWorldPosition(target)
     }
-    ReloadBindingItem(inven: IInventory, bind: Bind) {
-        const rightId = this.loader.GetAssets(Char.CharHumanMale).GetBodyMeshId(bind)
+    GetMuzzlePosition(target: THREE.Vector3) {
+        const mesh = this.meshs.getObjectByName("muzzlePoint")
+        if (!mesh) return
+        mesh.getWorldPosition(target)
+    }
+    ReloadBindingItem(item: IItem) {
+        if(item.Bind == undefined) throw new Error("item bind is undefined")
+
+        const rightId = this.asset.GetBodyMeshId(item.Bind)
         if (rightId == undefined) return
 
         const mesh = this.meshs.getObjectByName(rightId)
         if (!mesh) return
-        const prev = this.bindMesh[bind]
+        const prev = this.bindMesh[item.Bind]
 
         if (prev) {
             //mesh.remove(prev)
             prev.visible = false
-            this.bindMesh.splice(this.bindMesh.indexOf(prev), 1)
+            delete this.bindMesh[item.Bind]
         }
 
-        const rItem = inven.GetBindItem(bind)
-        if (rItem && rItem.Mesh != undefined) {
-            const find = mesh.getObjectById(rItem.Mesh.id)
+        if (item && item.Mesh != undefined) {
+            const find = mesh.getObjectById(item.Mesh.id)
             if(find) {
                 find.visible = true
             } else {
-                mesh.add(rItem.Mesh)
+                mesh.add(item.Mesh)
             }
-            this.bindMesh[bind] = rItem.Mesh
+            this.bindMesh[item.Bind] = item.Mesh
         }
     }
 
@@ -115,6 +123,7 @@ export class Player extends PhysicsObject {
     }
 
     async Loader(asset: IAsset, position: THREE.Vector3, name: string) {
+        this.asset = asset
         this.playerModel = asset.Id
         const [meshs, _exist] = await asset.UniqModel(name)
         this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, meshs)
@@ -129,7 +138,8 @@ export class Player extends PhysicsObject {
         this.clipMap.set(ActionType.Jump, asset.GetAnimationClip(Ani.Jump))
         this.clipMap.set(ActionType.Punch, asset.GetAnimationClip(Ani.Punch))
         this.clipMap.set(ActionType.Sword, asset.GetAnimationClip(Ani.Sword))
-        this.clipMap.set(ActionType.Gun, asset.GetAnimationClip(Ani.Shooting))
+        this.clipMap.set(ActionType.OneHandGun, asset.GetAnimationClip(Ani.Shooting))
+        this.clipMap.set(ActionType.TwoHandGun, asset.GetAnimationClip(Ani.Gunplay))
         this.clipMap.set(ActionType.Fight, asset.GetAnimationClip(Ani.FightIdle))
         this.clipMap.set(ActionType.Dance, asset.GetAnimationClip(Ani.Dance0))
         this.clipMap.set(ActionType.MagicH1, asset.GetAnimationClip(Ani.MagicH1))
@@ -185,6 +195,53 @@ export class Player extends PhysicsObject {
         this.changeAnimate(this.clipMap.get(action), speed)
         return clip?.duration
     }
+
+ /**
+ * 사정거리 표시용 점선 원 생성
+ * @param radius 사정거리 (원 반지름)
+ * @param segments 원의 부드러움 (기본: 64)
+ */
+    line?: THREE.Line
+    radius = 0
+    createDashedCircle(
+        radius: number,
+        segments: number = 32
+    ): THREE.Line {
+        if(this.radius == radius && this.line) {
+            this.game.add(this.line)
+            return this.line
+        } else {
+            this.releaseDashsedCircle()
+        }
+        const geometry = new THREE.BufferGeometry();
+        const positions: number[] = [];
+
+        for (let i = 0; i <= segments; i++) {
+            const theta = (i / segments) * Math.PI * 2;
+            const x = Math.cos(theta) * radius;
+            const z = Math.sin(theta) * radius;
+            positions.push(x, 0, z); // Y = 0 평면에 생성
+        }
+
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.computeBoundingSphere();
+
+        const material = new THREE.LineDashedMaterial({
+            color: 0xffffff,
+            dashSize: 0.5,
+            gapSize: 0.3,
+        });
+
+        const line = new THREE.Line(geometry, material);
+        line.computeLineDistances(); // 점선 설정 필수
+        this.game.add(line);
+        this.line = line
+        this.radius = radius
+        return line;
+    }
+    releaseDashsedCircle() {
+        if (this.line) this.game.remove(this.line)
+    }
     DamageEffect(damage: number) {
         this.effector.StartEffector(EffectType.BloodExplosion, this.CenterPos)
         this.effector.StartEffector(EffectType.Status, damage.toString(), "#fff")
@@ -196,5 +253,6 @@ export class Player extends PhysicsObject {
         this.effector.Update(delta)
         this.mixer?.update(delta)
         this.CBoxUpdate()
+        if (this.line) this.line.position.copy(this.Pos)
     }
 }

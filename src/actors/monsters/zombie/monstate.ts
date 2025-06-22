@@ -7,6 +7,7 @@ import { MonsterProperty } from "../monstertypes";
 import { ActionType, AttackType } from "@Glibs/types/playertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { IMonsterAction } from "../imonsters";
+import { BaseSpec } from "@Glibs/actors/battle/basespec";
 
 class State {
     attackDist = 3
@@ -22,7 +23,9 @@ class State {
             return this.zCtrl.RunSt
         }
     }
+    perf = 0
     CheckGravity() {
+        if (this.perf++ % 3 != 0) return
         this.zombie.Meshs.position.y -= 0.5
         if (!this.gphysic.Check(this.zombie)) {
             this.zombie.Meshs.position.y += 0.5
@@ -87,21 +90,23 @@ export class JumpZState implements IMonsterAction {
 }
 export class AttackZState extends State implements IMonsterAction {
     keytimeout?:NodeJS.Timeout
-    attackSpeed = this.property.attackSpeed
     attackProcess = false
     attackTime = 0
-    attackDamageMax = this.property.damageMax
-    attackDamageMin = this.property.damageMin
+    attackSpeed = this.spec.AttackSpeed
+    attackDamageMax = this.spec.AttackDamageMax
+    attackDamageMin = this.spec.AttackDamageMin
 
     constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: IGPhysic,
-        private eventCtrl: IEventController, private property: MonsterProperty
+        private eventCtrl: IEventController, private spec: BaseSpec
     ) {
         super(zCtrl, zombie, gphysic)
     }
     Init(): void {
+        this.attackSpeed = this.spec.AttackSpeed
+        this.attackDamageMax = this.spec.AttackDamageMax
+        this.attackDamageMin = this.spec.AttackDamageMin
         const duration = this.zombie.ChangeAction(ActionType.Punch)
         if (duration != undefined) this.attackSpeed = duration * 0.8
-        this.attackTime = this.attackSpeed
     }
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
@@ -128,6 +133,7 @@ export class AttackZState extends State implements IMonsterAction {
     attack() {
         this.eventCtrl.SendEventMessage(EventTypes.Attack + "player", [{
             type: AttackType.NormalSwing,
+            spec: [this.spec],
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
         }])
 
@@ -183,8 +189,8 @@ export class DyingZState extends State implements IMonsterAction {
     }
 }
 export class RunZState extends State implements IMonsterAction {
-    speed = this.property.speed
-    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: IGPhysic, private property: MonsterProperty) {
+    speed = this.spec.Speed
+    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: IGPhysic, private spec: BaseSpec) {
         super(zCtrl, zombie, gphysic)
     }
     Init(): void {
@@ -213,23 +219,34 @@ export class RunZState extends State implements IMonsterAction {
         }
         v.y = 0
 
-        const movX = v.x * delta * this.speed
-        const movZ = v.z * delta * this.speed
-        this.zombie.Meshs.position.x += movX
-        this.zombie.Meshs.position.z += movZ
+        // const movX = v.x * delta * this.speed
+        // const movZ = v.z * delta * this.speed
+        // this.zombie.Meshs.position.x += movX
+        // this.zombie.Meshs.position.z += movZ
 
         const mx = this.MX.lookAt(v, this.ZeroV, this.YV)
         const qt = this.QT.setFromRotationMatrix(mx)
         this.zombie.Meshs.quaternion.copy(qt)
 
-        if (this.gphysic.Check(this.zombie)){
-            this.zombie.Pos.y += 1 // 계단 체크 
-            if (this.gphysic.Check(this.zombie)) {
-                this.zombie.Pos.x -= movX
-                this.zombie.Pos.z -= movZ
-                this.zombie.Pos.y -= 1
-            }
+        // ✅ 이동 처리
+        const dis = this.gphysic.CheckDirection(this.zombie, v);
+        const moveAmount = v.clone().multiplyScalar(delta * this.speed);
+        const moveDis = moveAmount.length();
+
+        if (moveDis < dis.distance) {
+            this.zombie.Pos.add(moveAmount);
+        } else if (dis.move) {
+            this.zombie.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
         }
+
+        // if (this.gphysic.Check(this.zombie)){
+        //     this.zombie.Pos.y += 1 // 계단 체크 
+        //     if (this.gphysic.Check(this.zombie)) {
+        //         this.zombie.Pos.x -= movX
+        //         this.zombie.Pos.z -= movZ
+        //         this.zombie.Pos.y -= 1
+        //     }
+        // }
         return this
     }
 }

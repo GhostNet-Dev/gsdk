@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { Loader } from "./loader";
 import { Ani, AssetInfo, ModelType } from "./assettypes";
+import { GUI } from "lil-gui"
 
 
 export class AssetModel {
@@ -93,5 +94,10 @@ export class AssetModel {
         const v = mesh.position
         const Y = (this.size)? v.y + this.size.y / 2: v.y
         return new THREE.Vector3(v.x, Y, v.z)
+    }
+    CreateVectorGui(f: GUI, v: THREE.Vector3 | THREE.Euler, name: string, step: number) {
+        f.add(v, "x", -100, 100, step).listen().name(name + "X")
+        f.add(v, "y", -100, 100, step).listen().name(name + "Y")
+        f.add(v, "z", -100, 100, step).listen().name(name + "Z")
     }
 }

@@ -1,3 +1,4 @@
+import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { Char } from "@Glibs/types/assettypes"
 
 export class MonsterId {
@@ -23,12 +24,16 @@ export class MonsterId {
 
     public static DefaultBall = "DefaultBall"
     public static DefaultBullet = "DefaultBullet"
+    public static BulletLine = "BulletL"
     public static List = [
         this.Zombie, this.Minotaur, this.Batpig, this.Bilby, this.Birdmon,
         this.Crab, this.Builder, this.Golem, this.BigGolem, this.KittenMonk,
         this.Skeleton, this.Snake, this.ToadMage, this.Viking, this.WereWolf
     ]
 }
+
+export type MonsterIdType = typeof MonsterId.List[number];
+
 export enum MonsterType {
     Undead, Dragon, Machine, Warrior, Angel, Element,
     Fish, Plant, Insect, Reptile,
@@ -45,11 +50,7 @@ export type MonsterProperty = {
     id: MonsterId
     type: MonsterType
     model: Char
-    health: number
-    speed: number
-    damageMin: number
-    damageMax: number
-    attackSpeed: number
+    stats?: Partial<Record<StatKey, number>>
     drop?: MonDrop[]
 }
 

@@ -17,5 +17,6 @@ export enum EffectType {
     PointTrail,
     BlueParticle,
     Status,
+    Sound,
     Test,
 }

@@ -8,7 +8,7 @@ import { GLTF } from "three/examples/jsm/loaders/GLTFLoader";
 export class WarteringCanFab extends AssetModel implements IAsset {
     gltf?:GLTF
 
-    get Id() {return Char.WateringCan}
+    get Id() {return Char.ItemsWateringCan}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Gltf, "assets/stub/watering_can.glb", async (gltf: GLTF) => {
@@ -52,7 +52,7 @@ export class WarteringCanFab extends AssetModel implements IAsset {
 export class HammerFab extends AssetModel implements IAsset {
     gltf?:GLTF
 
-    get Id() {return Char.Hammer}
+    get Id() {return Char.ItemsHammer}
 
     constructor(loader: Loader) { 
         super(loader, ModelType.Gltf, "assets/weapon/hammer.glb", async (gltf: GLTF) => {

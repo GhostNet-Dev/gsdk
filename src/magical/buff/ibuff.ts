@@ -1,4 +1,4 @@
-import { PlayerStatus } from "@Glibs/types/playertypes"
+import { BaseSpec } from "@Glibs/actors/battle/basespec"
 
 export interface IBuffItem {
     name: string
@@ -9,5 +9,5 @@ export interface IBuffItem {
     GetAttackSpeed(): number
     GetMoveSpeed(): number
     GetDamageMax(): number
-    Update(delta: number, status: PlayerStatus): void
+    Update(delta: number, status: BaseSpec): void
 }

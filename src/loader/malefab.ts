@@ -45,7 +45,8 @@ export class MaleFab extends AssetModel implements IAsset {
             await this.LoadAnimation("assets/male/Standing 2H Magic Attack 01.fbx", Ani.MagicH2)
             await this.LoadAnimation("assets/male/Standing 2H Magic Attack 01_.fbx", Ani.MagicH2)
             await this.LoadAnimation("assets/male/Sword And Shield Slash.fbx", Ani.Sword)
-            await this.LoadAnimation("assets/male/Gunplay.fbx", Ani.Shooting)
+            await this.LoadAnimation("assets/male/Shooting.fbx", Ani.Shooting)
+            await this.LoadAnimation("assets/male/Gunplay.fbx", Ani.Gunplay)
             await this.LoadAnimation("assets/male/Dying Backwards.fbx", Ani.Dying)
             await this.LoadAnimation("assets/male/Bouncing Fight Idle.fbx", Ani.FightIdle)
  

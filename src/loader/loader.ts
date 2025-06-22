@@ -12,7 +12,7 @@ import { PortalFab } from "./portalfab";
 import { TestFab } from "./testfab";
 import { ZombieFab } from "./monster/zombiefab";
 import { BatFab } from "./item/batfab";
-import { GunFab } from "./item/gunfab";
+import { OldGunFab } from "./item/gunfab";
 import { MinataurFab } from "./monster/minataurfab";
 import { CrabFab } from "./monster/crabfab";
 import { StoneFab } from "./stonefab";
@@ -73,6 +73,8 @@ import { QuaterniusZombieCharactersGermanshepherdFab, QuaterniusZombieCharacters
 import { QuaterniusNatureBushCommonFab, QuaterniusNatureBushCommonFlowersFab, QuaterniusNatureClover1Fab, QuaterniusNatureClover2Fab, QuaterniusNatureCommontree1Fab, QuaterniusNatureCommontree2Fab, QuaterniusNatureCommontree3Fab, QuaterniusNatureCommontree4Fab, QuaterniusNatureCommontree5Fab, QuaterniusNatureDeadtree1Fab, QuaterniusNatureDeadtree2Fab, QuaterniusNatureDeadtree3Fab, QuaterniusNatureDeadtree4Fab, QuaterniusNatureDeadtree5Fab, QuaterniusNatureFern1Fab, QuaterniusNatureFlower3GroupFab, QuaterniusNatureFlower3SingleFab, QuaterniusNatureFlower4GroupFab, QuaterniusNatureFlower4SingleFab, QuaterniusNatureGrassCommonShortFab, QuaterniusNatureGrassCommonTallFab, QuaterniusNatureGrassWispyShortFab, QuaterniusNatureGrassWispyTallFab, QuaterniusNatureMushroomCommonFab, QuaterniusNatureMushroomLaetiporusFab, QuaterniusNaturePebbleRound1Fab, QuaterniusNaturePebbleRound2Fab, QuaterniusNaturePebbleRound3Fab, QuaterniusNaturePebbleRound4Fab, QuaterniusNaturePebbleRound5Fab, QuaterniusNaturePebbleSquare1Fab, QuaterniusNaturePebbleSquare2Fab, QuaterniusNaturePebbleSquare3Fab, QuaterniusNaturePebbleSquare4Fab, QuaterniusNaturePebbleSquare5Fab, QuaterniusNaturePebbleSquare6Fab, QuaterniusNaturePetal1Fab, QuaterniusNaturePetal2Fab, QuaterniusNaturePetal3Fab, QuaterniusNaturePetal4Fab, QuaterniusNaturePetal5Fab, QuaterniusNaturePine1Fab, QuaterniusNaturePine2Fab, QuaterniusNaturePine3Fab, QuaterniusNaturePine4Fab, QuaterniusNaturePine5Fab, QuaterniusNaturePlant1Fab, QuaterniusNaturePlant1BigFab, QuaterniusNaturePlant7Fab, QuaterniusNaturePlant7BigFab, QuaterniusNatureRockpathRoundSmall1Fab, QuaterniusNatureRockpathRoundSmall2Fab, QuaterniusNatureRockpathRoundSmall3Fab, QuaterniusNatureRockpathRoundThinFab, QuaterniusNatureRockpathRoundWideFab, QuaterniusNatureRockpathSquareSmall1Fab, QuaterniusNatureRockpathSquareSmall2Fab, QuaterniusNatureRockpathSquareSmall3Fab, QuaterniusNatureRockpathSquareThinFab, QuaterniusNatureRockpathSquareWideFab, QuaterniusNatureRockMedium1Fab, QuaterniusNatureRockMedium2Fab, QuaterniusNatureRockMedium3Fab, QuaterniusNatureTwistedtree1Fab, QuaterniusNatureTwistedtree2Fab, QuaterniusNatureTwistedtree3Fab, QuaterniusNatureTwistedtree4Fab, QuaterniusNatureTwistedtree5Fab, } from "./quaterniuspack/qnaturefab" 
 import { QuaterniusCard0CardBackFab, QuaterniusCard0CardContainerFab, QuaterniusCard0CardFrontFab, QuaterniusCard0CardMaskFab, QuaterniusCard10BeehiveFab, QuaterniusCard11PolinizationFab, QuaterniusCard12MimicFab, QuaterniusCard13SeamonsterFab, QuaterniusCard14CoinFab, QuaterniusCard15CultFab, QuaterniusCard16BelltowersFab, QuaterniusCard17RebirthFab, QuaterniusCard18WaterdragonFab, QuaterniusCard19OceantreasureFab, QuaterniusCard1FireballFab, QuaterniusCard20ElementFireFab, QuaterniusCard21ElementLightningFab, QuaterniusCard22ElementAirFab, QuaterniusCard23ElementWaterFab, QuaterniusCard24ElementDarkFab, QuaterniusCard25ElementEarthFab, QuaterniusCard26BloodringFab, QuaterniusCard27BookFab, QuaterniusCard28RolldiceFab, QuaterniusCard29BlockFab, QuaterniusCard2TrenchcoatmushroomsFab, QuaterniusCard30WizardFab, QuaterniusCard3MonkFab, QuaterniusCard4MarketFab, QuaterniusCard5StealFab, QuaterniusCard6KingFab, QuaterniusCard7StinktrapFab, QuaterniusCard8LightningwizardFab, QuaterniusCard9HypnosisFab,  } from "./quaterniuspack/qcardfab" 
 import { QuaterniusAniCharBasecharacterFab, QuaterniusAniCharBluesoldierFemaleFab, QuaterniusAniCharBluesoldierMaleFab, QuaterniusAniCharCasual2FemaleFab, QuaterniusAniCharCasual2MaleFab, QuaterniusAniCharCasual3FemaleFab, QuaterniusAniCharCasual3MaleFab, QuaterniusAniCharCasualBaldFab, QuaterniusAniCharCasualFemaleFab, QuaterniusAniCharCasualMaleFab, QuaterniusAniCharChefFemaleFab, QuaterniusAniCharChefHatFab, QuaterniusAniCharChefMaleFab, QuaterniusAniCharCowFab, QuaterniusAniCharCowboyFemaleFab, QuaterniusAniCharCowboyHairFab, QuaterniusAniCharCowboyMaleFab, QuaterniusAniCharDoctorFemaleOldFab, QuaterniusAniCharDoctorFemaleYoungFab, QuaterniusAniCharDoctorMaleOldFab, QuaterniusAniCharDoctorMaleYoungFab, QuaterniusAniCharElfFab, QuaterniusAniCharGoblinFemaleFab, QuaterniusAniCharGoblinMaleFab, QuaterniusAniCharKimonoFemaleFab, QuaterniusAniCharKimonoMaleFab, QuaterniusAniCharKnightGoldenFemaleFab, QuaterniusAniCharKnightGoldenMaleFab, QuaterniusAniCharKnightMaleFab, QuaterniusAniCharNinjaFemaleFab, QuaterniusAniCharNinjaMaleFab, QuaterniusAniCharNinjaMaleHairFab, QuaterniusAniCharNinjaSandFab, QuaterniusAniCharNinjaSandFemaleFab, QuaterniusAniCharOldclassyFemaleFab, QuaterniusAniCharOldclassyMaleFab, QuaterniusAniCharPirateFemaleFab, QuaterniusAniCharPirateMaleFab, QuaterniusAniCharPugFab, QuaterniusAniCharSoldierFemaleFab, QuaterniusAniCharSoldierMaleFab, QuaterniusAniCharSuitFemaleFab, QuaterniusAniCharSuitMaleFab, QuaterniusAniCharVikinghelmetFab, QuaterniusAniCharVikingFemaleFab, QuaterniusAniCharVikingMaleFab, QuaterniusAniCharWitchFab, QuaterniusAniCharWizardFab, QuaterniusAniCharWorkerFemaleFab, QuaterniusAniCharWorkerMaleFab, QuaterniusAniCharZombieFemaleFab, QuaterniusAniCharZombieMaleFab,} from "./quaterniuspack/qanimatedcharfab"
+import { M4A1Fab, PistolFab } from "./item/gunfbxfab";
+import { ItemSwordSword1Fab, ItemSwordSword10Fab, ItemSwordSword11Fab, ItemSwordSword12Fab, ItemSwordSword13Fab, ItemSwordSword15Fab, ItemSwordSword16Fab, ItemSwordSword17Fab, ItemSwordSword18Fab, ItemSwordSword19Fab, ItemSwordSword2Fab, ItemSwordSword20Fab, ItemSwordSword21Fab, ItemSwordSword22Fab, ItemSwordSword23Fab, ItemSwordSword24Fab, ItemSwordSword3Fab, ItemSwordSword4Fab, ItemSwordSword5Fab, ItemSwordSword6Fab, ItemSwordSword7Fab, ItemSwordSword8Fab, ItemSwordSword9Fab, ItemSwordSword14Fab, } from "./item/swordsfab";
 
 // Fab 클래스 타입
 type FabConstructor = new (loader: Loader, ...args: any[]) => IAsset;
@@ -351,8 +353,10 @@ export class Loader {
         this.fabClasses.set(Char.CharAniFarmPetZebra, FarmPetZebraFab);
 
         // Stup
-        this.fabClasses.set(Char.Bat, BatFab);
-        this.fabClasses.set(Char.Gun, GunFab);
+        this.fabClasses.set(Char.ItemsBat, BatFab);
+        this.fabClasses.set(Char.ItemsGun, OldGunFab);
+        this.fabClasses.set(Char.ItemsPistol, PistolFab);
+        this.fabClasses.set(Char.ItemsM4A1, M4A1Fab);
         this.fabClasses.set(Char.Stone, StoneFab);
         this.fabClasses.set(Char.Bed, BedFab);
         this.fabClasses.set(Char.Bath, BathFab);
@@ -386,8 +390,8 @@ export class Loader {
 
         this.fabClasses.set(Char.Grass, GrassFab);
 
-        this.fabClasses.set(Char.WateringCan, WarteringCanFab);
-        this.fabClasses.set(Char.Hammer, HammerFab);
+        this.fabClasses.set(Char.ItemsWateringCan, WarteringCanFab);
+        this.fabClasses.set(Char.ItemsHammer, HammerFab);
 
         this.fabClasses.set(Char.Empty, EmptyFab);
 
@@ -750,6 +754,32 @@ this.fabClasses.set(Char.QuaterniusAniCharWorkerFemale, QuaterniusAniCharWorkerF
 this.fabClasses.set(Char.QuaterniusAniCharWorkerMale, QuaterniusAniCharWorkerMaleFab);
 this.fabClasses.set(Char.QuaterniusAniCharZombieFemale, QuaterniusAniCharZombieFemaleFab);
 this.fabClasses.set(Char.QuaterniusAniCharZombieMale, QuaterniusAniCharZombieMaleFab);
+
+this.fabClasses.set(Char.ItemsSwordSword1, ItemSwordSword1Fab);
+this.fabClasses.set(Char.ItemsSwordSword10, ItemSwordSword10Fab);
+this.fabClasses.set(Char.ItemsSwordSword11, ItemSwordSword11Fab);
+this.fabClasses.set(Char.ItemsSwordSword12, ItemSwordSword12Fab);
+this.fabClasses.set(Char.ItemsSwordSword13, ItemSwordSword13Fab);
+this.fabClasses.set(Char.ItemsSwordSword15, ItemSwordSword15Fab);
+this.fabClasses.set(Char.ItemsSwordSword16, ItemSwordSword16Fab);
+this.fabClasses.set(Char.ItemsSwordSword17, ItemSwordSword17Fab);
+this.fabClasses.set(Char.ItemsSwordSword18, ItemSwordSword18Fab);
+this.fabClasses.set(Char.ItemsSwordSword19, ItemSwordSword19Fab);
+this.fabClasses.set(Char.ItemsSwordSword2, ItemSwordSword2Fab);
+this.fabClasses.set(Char.ItemsSwordSword20, ItemSwordSword20Fab);
+this.fabClasses.set(Char.ItemsSwordSword21, ItemSwordSword21Fab);
+this.fabClasses.set(Char.ItemsSwordSword22, ItemSwordSword22Fab);
+this.fabClasses.set(Char.ItemsSwordSword23, ItemSwordSword23Fab);
+this.fabClasses.set(Char.ItemsSwordSword24, ItemSwordSword24Fab);
+this.fabClasses.set(Char.ItemsSwordSword3, ItemSwordSword3Fab);
+this.fabClasses.set(Char.ItemsSwordSword4, ItemSwordSword4Fab);
+this.fabClasses.set(Char.ItemsSwordSword5, ItemSwordSword5Fab);
+this.fabClasses.set(Char.ItemsSwordSword6, ItemSwordSword6Fab);
+this.fabClasses.set(Char.ItemsSwordSword7, ItemSwordSword7Fab);
+this.fabClasses.set(Char.ItemsSwordSword8, ItemSwordSword8Fab);
+this.fabClasses.set(Char.ItemsSwordSword9, ItemSwordSword9Fab);
+this.fabClasses.set(Char.ItemsSwordSword14, ItemSwordSword14Fab);
+
 
     }
 

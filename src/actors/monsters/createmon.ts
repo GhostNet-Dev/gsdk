@@ -9,28 +9,32 @@ import { IGPhysic } from "@Glibs/interface/igphysics";
 import { MonsterId } from "./monstertypes";
 import { Effector } from "@Glibs/magical/effects/effector";
 import { Loader } from "@Glibs/loader/loader";
+import { StatFactory } from "../battle/statfactory";
+import { BaseSpec } from "../battle/basespec";
 
 export class CreateMon {
+    fab = new StatFactory()
     constructor(
         private loader: Loader,
         private eventCtrl: IEventController,
         private player: IPhysicsObject,
-        private instanceBlock: (THREE.InstancedMesh | undefined)[],
-        private meshBlock: THREE.Mesh[],
         private gphysic: IGPhysic,
         private game: THREE.Scene,
         private monDb: MonsterDb,
     ) {
     }
     async Call(monId: MonsterId, id: number, pos?: THREE.Vector3): Promise<MonsterSet> {
+        const stat = this.fab.getDefaultStats(monId as string)
+        const spec = new BaseSpec(stat)
+        
         if(!pos) pos = new THREE.Vector3(10, 0, 15)
         const property = this.monDb.GetItem(monId)
         const asset = this.loader.GetAssets(property.model)
-        const monster = new Zombie(asset, monId, new Effector(this.game))
+        const monster = new Zombie(asset, monId, new Effector(this.game, this.eventCtrl))
         await monster.Loader(pos, monId as string, id)
 
         const zCtrl = new MonsterCtrl(id, this.player, monster, 
-            this.instanceBlock, this.meshBlock, this.gphysic, this.eventCtrl, property)
+            this.gphysic, this.eventCtrl, property, spec)
         const monSet: MonsterSet =  { 
             monModel: monster, monCtrl: zCtrl, live: true, respawn: false, deadtime: new Date().getTime()
         }

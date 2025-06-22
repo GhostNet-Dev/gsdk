@@ -2,16 +2,18 @@ import * as THREE from "three";
 import { Player } from "./player";
 import { DeadState, IPlayerAction, IdleState, JumpState, MagicH1State, MagicH2State, RunState } from "./playerstate";
 import { AttackIdleState, AttackState } from "./attackstate";
-import { PlayerSpec } from "./playerspec";
+import { BaseSpec } from "../battle/basespec";
 import { BuildingState, DeleteState, PickFruitState, PickFruitTreeState, PlantAPlantState, WarteringState } from "./farmstate";
 import { DeckState } from "./deckstate";
 import { IBuffItem } from "@Glibs/interface/ibuff";
 import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
 import IEventController, { IKeyCommand, ILoop } from "@Glibs/interface/ievent";
 import { EventFlag, KeyType } from "@Glibs/types/eventtypes";
-import { AttackOption, AttackType, PlayerStatusParam } from "./playertypes";
+import { AttackOption, AttackType, DefaultStatus, PlayerStatusParam } from "./playertypes";
 import { IGPhysic } from "@Glibs/interface/igphysics";
-import IInventory from "@Glibs/interface/iinven";
+import IInventory, { IItem } from "@Glibs/interface/iinven";
+import { Bind } from "@Glibs/types/assettypes";
+import { ItemId } from "@Glibs/inventory/inventypes";
 
 export class PlayerCtrl implements ILoop {
     LoopId = 0
@@ -26,7 +28,7 @@ export class PlayerCtrl implements ILoop {
     moveDirection = new THREE.Vector3()
     playEnable = false
 
-    spec: PlayerSpec
+    spec: BaseSpec
     keyType: KeyType = KeyType.None
 
     AttackSt: AttackState
@@ -63,48 +65,12 @@ export class PlayerCtrl implements ILoop {
         private gphysic: IGPhysic,
         private camera: THREE.Camera,
         private eventCtrl: IEventController,
-        param: PlayerStatusParam = {}
     ) {
-        this.spec = new PlayerSpec(this.inventory, param)
+        this.spec = new BaseSpec(DefaultStatus.stats)
         this.AttackSt = new AttackState(this, this.player, this.gphysic, this.eventCtrl, this.spec)
 
         this.worker.onmessage = (e: any) => { console.log(e) }
 
-        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
-        eventCtrl.RegisterEventListener(EventTypes.AppMode, (mode: AppMode, e: EventFlag) => {
-            this.mode = mode
-            if (mode == AppMode.EditPlay || mode == AppMode.Weapon) {
-                switch (e) {
-                    case EventFlag.Start:
-                        this.playEnable = true
-                        while (this.gphysic.Check(player)) {
-                            player.Pos.y += 0.2
-                        }
-                        this.currentState = this.IdleSt
-                        this.currentState.Init()
-                        break
-                    case EventFlag.End:
-                        this.playEnable = false
-                        this.currentState.Uninit()
-                        break
-                }
-            }
-            if (mode == AppMode.Play) {
-                switch (e) {
-                    case EventFlag.Start:
-                        this.playEnable = true
-                        this.spec.ResetStatus()
-                        eventCtrl.SendEventMessage(EventTypes.PlayerStatus, this.spec.Status)
-                        this.currentState = this.IdleSt
-                        this.currentState.Init()
-                        break
-                    case EventFlag.End:
-                        this.playEnable = false
-                        this.currentState.Uninit()
-                        break
-                }
-            }
-        })
         eventCtrl.RegisterEventListener(EventTypes.KeyDown, (keyCommand: IKeyCommand) => {
             if (!this.contollerEnable || !this.playEnable) return
             this.keyDownQueue.push(keyCommand)
@@ -124,8 +90,10 @@ export class PlayerCtrl implements ILoop {
                 this.reset()
             }
         })
-        eventCtrl.RegisterEventListener(EventTypes.Equipment, () => {
-            this.spec.ItemUpdate()
+        eventCtrl.RegisterEventListener(EventTypes.Equipment, (id: ItemId) => {
+            const slot = this.inventory.GetItem(id)
+            if(slot == undefined) throw new Error("item is undefined")
+            this.spec.Equip(slot.item)
             if (this.currentState == this.AttackSt) {
                 this.currentState.Init()
             }
@@ -165,6 +133,7 @@ export class PlayerCtrl implements ILoop {
         })
     }
     init() {
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         this.playEnable = true
         this.spec.ResetStatus()
         this.eventCtrl.SendEventMessage(EventTypes.PlayerStatus, this.spec.Status)
@@ -174,6 +143,7 @@ export class PlayerCtrl implements ILoop {
     uninit() {
         this.playEnable = false
         this.currentState.Uninit()
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
     }
     add(...obj: THREE.Object3D[]) {
         this.targets.push(...obj)

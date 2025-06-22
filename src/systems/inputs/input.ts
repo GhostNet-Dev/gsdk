@@ -58,7 +58,7 @@ export default class Input {
     })
     constructor(private eventCtrl: IEventController) {
         this.applyDynamicStyle("joypad_style", css)
-        document.body.insertAdjacentHTML("afterend", html)
+        document.body.insertAdjacentHTML("beforeend", html)
 
         this.left = document.getElementById("goleft") as HTMLDivElement
         this.right = document.getElementById("goright") as HTMLDivElement
@@ -272,7 +272,7 @@ const html =`
                         </span>
                     </div>
                 </div>
-                <div class="col" style="width: 50px;">
+                <div class="col" style="width: 30px;">
                 </div>
             </div>
         </div>
@@ -295,7 +295,7 @@ const css = `
     display: none;
     user-select: none;
     position: absolute;
-    right: 0px;
+    right: 10px;
     bottom: 10px;
 }
 .joypad_arrow {
@@ -317,7 +317,7 @@ const css = `
     vertical-align: middle;
     background-color: rgba(255, 255, 255, 0.5);
     border-radius: 50%;
-    margin: 0 auto;
+    margin: 0 0;
     text-align: center;
 }
 .joypad_inven {

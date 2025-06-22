@@ -129,7 +129,12 @@ export class UltimateLvAndMaHazardCylinderFab extends UltimatePack implements IA
 }
 export class UltimateLvAndMaHazardSawFab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaHazardSaw}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Hazard_Saw.gltf", () => { if (this.meshs) this.meshs.position.y = 1.5 }) }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Hazard_Saw.gltf", () => { 
+        if (this.meshs) {
+            this.meshs.children[0].position.y += 1
+        }
+    })
+    }
 }
 export class UltimateLvAndMaHazardSpikeTrapFab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaHazardSpikeTrap}
@@ -141,43 +146,43 @@ export class UltimateLvAndMaLeverFab extends UltimatePack implements IAsset {
 }
 export class UltimateLvAndMaNumber0Fab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaNumbers0}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_0.gltf", () => { if (this.meshs) this.meshs.position.y = .5 }) }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_0.gltf", () => { if (this.meshs) this.meshs.children[0].position.y = .5 }) }
 }
 export class UltimateLvAndMaNumber1Fab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaNumbers1}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_1.gltf", () => { if (this.meshs) this.meshs.position.y = .5 }) }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_1.gltf", () => { if (this.meshs) this.meshs.children[0].position.y = .5 }) }
 }
 export class UltimateLvAndMaNumber2Fab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaNumbers2}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_2.gltf", () => { if (this.meshs) this.meshs.position.y = .5 }) }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_2.gltf", () => { if (this.meshs) this.meshs.children[0].position.y = .5 }) }
 }
 export class UltimateLvAndMaNumber3Fab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaNumbers3}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_3.gltf", () => { if (this.meshs) this.meshs.position.y = .5 }) }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_3.gltf", () => { if (this.meshs) this.meshs.children[0].position.y = .5 }) }
 }
 export class UltimateLvAndMaNumber4Fab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaNumbers4}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_4.gltf", () => { if (this.meshs) this.meshs.position.y = .5 }) }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_4.gltf", () => { if (this.meshs) this.meshs.children[0].position.y = .5 }) }
 }
 export class UltimateLvAndMaNumber5Fab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaNumbers5}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_5.gltf", () => { if (this.meshs) this.meshs.position.y = .5 }) }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_5.gltf", () => { if (this.meshs) this.meshs.children[0].position.y = .5 }) }
 }
 export class UltimateLvAndMaNumber6Fab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaNumbers6}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_6.gltf", () => { if (this.meshs) this.meshs.position.y = .5 }) }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_6.gltf", () => { if (this.meshs) this.meshs.children[0].position.y = .5 }) }
 }
 export class UltimateLvAndMaNumber7Fab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaNumbers7}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_7.gltf", () => { if (this.meshs) this.meshs.position.y = .5 }) }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_7.gltf", () => { if (this.meshs) this.meshs.children[0].position.y = .5 }) }
 }
 export class UltimateLvAndMaNumber8Fab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaNumbers8}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_8.gltf", () => { if (this.meshs) this.meshs.position.y = .5 }) }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_8.gltf", () => { if (this.meshs) this.meshs.children[0].position.y = .5 }) }
 }
 export class UltimateLvAndMaNumber9Fab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaNumbers9}
-    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_9.gltf", () => { if (this.meshs) this.meshs.position.y = .5 }) }
+    constructor(loader: Loader) { super(loader, "assets/ultimatepack/LevelandMechanics/Numbers_9.gltf", () => { if (this.meshs) this.meshs.children[0].position.y = .5 }) }
 }
 export class UltimateLvAndMaPipe90Fab extends UltimatePack implements IAsset {
     get Id() {return Char.UltimateLvAndMaPipe90}

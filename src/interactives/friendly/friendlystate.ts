@@ -7,6 +7,7 @@ import { IGPhysic } from "@Glibs/interface/igphysics";
 import { ActionType } from "@Glibs/types/playertypes";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { BaseSpec } from "@Glibs/actors/battle/basespec";
 
 
 class State {
@@ -107,12 +108,10 @@ export class AttackFState extends State implements IMonsterAction {
     startPos = new THREE.Vector3()
     targetPos = new THREE.Vector3()
     keytimeout?:NodeJS.Timeout
-    attackSpeed = this.property.attackSpeed
     attackProcess = false
     attackTime = 0
-    speed = this.property.speed
-    attackDamageMax = this.property.damageMax
-    attackDamageMin = this.property.damageMin
+    attackSpeed = this.spec.AttackSpeed
+    speed = this.spec.Speed
     target?: THREE.Mesh
 
     constructor(
@@ -121,7 +120,8 @@ export class AttackFState extends State implements IMonsterAction {
         gphysic: IGPhysic, 
         private targetList: THREE.Object3D[],
         private eventCtrl: IEventController,
-        private property: MonsterProperty
+        private property: MonsterProperty,
+        private spec: BaseSpec
     ) {
         super(zCtrl, fly, gphysic)
     }
@@ -190,7 +190,8 @@ export class AttackFState extends State implements IMonsterAction {
         this.attackDir = this.attackDir.subVectors(this.targetPos, this.startPos).normalize()
         this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
             id: MonsterId.DefaultBall, 
-            damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
+            ownerSpec: this.spec,
+            damage: this.spec.Damage,
             src: this.startPos, 
             dir: this.attackDir
         })
@@ -217,8 +218,8 @@ export class DyingFState extends State implements IMonsterAction {
     }
 }
 export class RunFState extends State implements IMonsterAction {
-    speed = this.property.speed
-    constructor(fCtrl: FlyCtrl, fly: Fly, gphysic: IGPhysic, private property: MonsterProperty) {
+    speed = this.spec.Speed
+    constructor(fCtrl: FlyCtrl, fly: Fly, gphysic: IGPhysic, private property: MonsterProperty, private spec: BaseSpec) {
         super(fCtrl, fly, gphysic)
     }
     Init(): void {

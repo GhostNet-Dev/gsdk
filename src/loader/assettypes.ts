@@ -1,10 +1,10 @@
 export enum Bind {
-    Body, // chainmail, platemail, wizard robe
-    Hands_L, //Gloves
-    Hands_R, //Gloves
-    Head,
-    Legs,
-    Feet,
+    Body = "body", // chainmail, platemail, wizard robe
+    Hands_L = "handl", //Gloves
+    Hands_R = "handr", //Gloves
+    Head = "head", //Helm
+    Legs = "legs",
+    Feet = "feet",
 }
 
 export enum Ani {
@@ -16,6 +16,7 @@ export enum Ani {
     FightIdle,
     Dying,
     Shooting,
+    Gunplay,
     Sword,
     MagicH1,
     MagicH2,
@@ -486,10 +487,13 @@ export enum Char {
     CharAniBee,
     CharAniPetSnake,
 
-    Bat,
-    Gun,
-    WateringCan,
-    Hammer,
+    ItemsBat,
+    ItemsGun,
+    ItemsWateringCan,
+    ItemsHammer,
+    ItemsPistol,
+    ItemsM4A1,
+
     Grass,
     FluffyTree,
     AppleTree,
@@ -692,6 +696,32 @@ export enum Char {
     QuaterniusAniCharWorkerMale,
     QuaterniusAniCharZombieFemale,
     QuaterniusAniCharZombieMale,
+
+    ItemsSwordSword1,
+    ItemsSwordSword10,
+    ItemsSwordSword11,
+    ItemsSwordSword12,
+    ItemsSwordSword13,
+    ItemsSwordSword15,
+    ItemsSwordSword16,
+    ItemsSwordSword17,
+    ItemsSwordSword18,
+    ItemsSwordSword19,
+    ItemsSwordSword2,
+    ItemsSwordSword20,
+    ItemsSwordSword21,
+    ItemsSwordSword22,
+    ItemsSwordSword23,
+    ItemsSwordSword24,
+    ItemsSwordSword3,
+    ItemsSwordSword4,
+    ItemsSwordSword5,
+    ItemsSwordSword6,
+    ItemsSwordSword7,
+    ItemsSwordSword8,
+    ItemsSwordSword9,
+    ItemsSwordSword14,
+
     Empty,
     None,
 }

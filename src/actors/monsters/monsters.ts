@@ -10,6 +10,9 @@ import IEventController from "@Glibs/interface/ievent";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { MonsterDb } from "./monsterdb";
 import { Loader } from "@Glibs/loader/loader";
+import { Effector } from "@Glibs/magical/effects/effector";
+import { calculateCompositeDamage } from "../battle/damagecalc";
+import { BaseSpec } from "../battle/basespec";
 
 export type MonsterSet = {
     monModel: IPhysicsObject,
@@ -20,6 +23,7 @@ export type MonsterSet = {
     initPos?: THREE.Vector3
 }
 export interface IMonsterCtrl {
+    get Spec(): BaseSpec
     get MonsterBox(): MonsterBox
     get Drop(): MonDrop[] | undefined
     Respawning(): void
@@ -41,7 +45,7 @@ export class Monsters {
     respawntimeout?:NodeJS.Timeout
     mode = false
     createMon = new CreateMon(this.loader, this.eventCtrl, this.player,
-        this.instanceBlock, this.meshBlock, this.gphysic, this.game, this.monDb)
+        this.gphysic, this.game, this.monDb)
 
     get Enable() { return this.mode }
     set Enable(flag: boolean) { 
@@ -54,8 +58,6 @@ export class Monsters {
         private eventCtrl: IEventController,
         private game: THREE.Scene,
         private player: IPhysicsObject,
-        private instanceBlock: (THREE.InstancedMesh | undefined)[],
-        private meshBlock: THREE.Mesh[],
         private gphysic: IGPhysic,
         private monDb: MonsterDb
     ) {
@@ -70,8 +72,14 @@ export class Monsters {
                 
                 const z = mon[obj.Id]
                 if (!z.live) return
+                if(opt.spec == undefined) throw new Error("unexpected value");
+                const damage = calculateCompositeDamage({
+                    source: opt.spec,
+                    destination: z.monCtrl.Spec,
+                })
+                console.log(`calc damage: ${damage}, original damage: ${opt.damage}`)
 
-                this.ReceiveDemage(z, opt.damage, opt.effect)
+                this.ReceiveDemage(z, damage, opt.effect)
             })
         })
         eventCtrl.RegisterEventListener(EventTypes.Attack + "monster", (opts: AttackOption[]) => {
@@ -128,24 +136,24 @@ export class Monsters {
             }, 5000)
         }
     }
-    async Resurrection(id: MonsterId) {
+    async Resurrection(id: MonsterId, timer: number) {
         let mon = this.monsters.get(id)
         if(!mon) {
             mon = []
             this.monsters.set(id, mon)
         }
         const now = new Date().getTime()
-        const set = mon.find((e) => e.live == false && now - e.deadtime > 5000)
+        const set = mon.find((e) => e.live == false && now - e.deadtime > timer)
         return set
     }
-    async CreateMonster(id: MonsterId, respawn: boolean, pos?: THREE.Vector3) {
+    async CreateMonster(monId: MonsterId, { respawn = false, timer = 5000 }, pos?: THREE.Vector3) {
         let set
         if (!respawn) {
             // respawn 이 트루면 죽을 때 타이머로 부활이 설정되어 있다.
-            set = await this.Resurrection(id)
+            set = await this.Resurrection(monId, timer)
         }
-        console.log("Create", set, this.monsters.get(id))
-        return this.Spawning(id, respawn, set, pos)
+        console.log("Create", set, this.monsters.get(monId))
+        return this.Spawning(monId, respawn, set, pos)
     }
     ReleaseMonster() {
         this.monsters.forEach((mon) => {
@@ -172,9 +180,10 @@ export class Monsters {
         }
 
         if (!monSet) {
+            // called resurrection
             monSet = await this.createMon.Call(monId, mon.length)
+            mon.push(monSet)
         }
-        mon.push(monSet)
 
         if(!pos) {
             monSet.monModel.Meshs.position.x = this.player.Meshs.position.x + THREE.MathUtils.randInt(-20, 20)
@@ -192,7 +201,7 @@ export class Monsters {
         monSet.monCtrl.Respawning()
 
         monSet.monModel.Visible = true
-        console.log("Spawning", monSet, mon)
+        console.log("Spawning", monSet.monCtrl.MonsterBox.Id, monSet, mon)
 
         this.eventCtrl.SendEventMessage(EventTypes.AddInteractive, monSet.monCtrl.MonsterBox)
         this.game.add(monSet.monModel.Meshs, monSet.monCtrl.MonsterBox)

@@ -9,14 +9,15 @@ import { MonsterProperty } from "../monstertypes";
 import { EffectType } from "@Glibs/types/effecttypes";
 import { IMonsterAction } from "../imonsters";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { BaseSpec } from "@Glibs/actors/battle/basespec";
 
 
 
 export class MonsterCtrl implements ILoop, IMonsterCtrl {
     LoopId = 0
     IdleSt = new IdleZState(this, this.zombie, this.gphysic)
-    AttackSt = new AttackZState(this, this.zombie, this.gphysic, this.eventCtrl, this.property)
-    RunSt = new RunZState(this, this.zombie, this.gphysic, this.property)
+    AttackSt = new AttackZState(this, this.zombie, this.gphysic, this.eventCtrl, this.spec)
+    RunSt = new RunZState(this, this.zombie, this.gphysic, this.spec)
     DyingSt = new DyingZState(this, this.zombie, this.gphysic, this.eventCtrl)
     JumpSt = new JumpZState(this, this.zombie, this.gphysic)
 
@@ -24,20 +25,20 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
     raycast = new THREE.Raycaster()
     dir = new THREE.Vector3(0, 0, 0)
     moveDirection = new THREE.Vector3()
-    health = this.property.health
+    health = this.spec.Health
     private phybox: MonsterBox
     get Drop() { return this.property.drop }
     get MonsterBox() { return this.phybox }
+    get Spec() { return this.spec }
 
     constructor(
         id: number,
         private player: IPhysicsObject, 
         private zombie: Zombie, 
-        private instanceBlock: (THREE.InstancedMesh | undefined)[],
-        private meshBlock: THREE.Mesh[],
         private gphysic: IGPhysic,
         private eventCtrl: IEventController,
-        private property: MonsterProperty
+        private property: MonsterProperty,
+        private spec: BaseSpec,
     ) {
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         const size = zombie.Size
@@ -53,10 +54,11 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
         this.phybox.position.copy(this.zombie.Pos)
     }
     Respawning() {
-        this.health = 10
+        this.health = this.spec.Health
         this.zombie.SetOpacity(1)
         this.currentState = this.IdleSt
         this.currentState.Init()
+        this.MonsterBox.position.copy(this.zombie.Pos)
     }
 
     update(delta: number): void {
@@ -70,10 +72,10 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
 
             let find = false
 
-            this.instanceBlock.forEach((block) => {
-                if (block) find = this.CheckVisible(block, dist)
-            })
-            find = this.CheckVisibleMeshs(this.meshBlock, dist)
+            // this.instanceBlock.forEach((block) => {
+            //     if (block) find = this.CheckVisible(block, dist)
+            // })
+            find = this.CheckVisibleMeshs(this.gphysic.GetObjects(), dist)
             /*
             if (this.legos.instancedBlock != undefined)
                 find = this.CheckVisible(this.legos.instancedBlock, dist)
@@ -91,9 +93,9 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
             } else {
                 this.moveDirection.copy(this.dir)
             }
+            this.currentState = this.currentState.Update(delta, this.moveDirection, dist)
         }
 
-        this.currentState = this.currentState.Update(delta, this.moveDirection, dist)
         this.zombie.update(delta)
 
         this.phybox.position.copy(this.zombie.Pos)
@@ -119,11 +121,37 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
         }
         return false
     }
-    CheckVisibleMeshs(physBox: THREE.Mesh[], dist: number): boolean {
-        const intersects = this.raycast.intersectObjects(physBox, false)
-        if (intersects.length > 0 && intersects[0].distance < dist) {
-            return true //keep searching
+    CheckVisibleMeshs(physBox: THREE.Object3D[], dist: number): boolean {
+        return this.getClosestHit(this.player.CenterPos, this.zombie.CenterPos, physBox, this.zombie.Size.x)
+        // this.raycast.far = dist
+        // const intersects = this.raycast.intersectObjects(physBox, false)
+        // if (intersects.length > 0 && intersects[0].distance < dist) {
+        //     return true //keep searching
+        // }
+        // return false
+    }
+    getClosestHit(
+        p1: THREE.Vector3,
+        p2: THREE.Vector3,
+        targets: THREE.Object3D[],
+        radius = 1
+    ) {
+        for (const target of targets) {
+            const center = target.position;
+            const seg = new THREE.Vector3().subVectors(p2, p1);
+            const segDir = seg.clone().normalize();
+            const toCenter = new THREE.Vector3().subVectors(center, p1);
+            const projLen = toCenter.dot(segDir);
+
+            // 충돌 지점 계산
+            const closestPoint = p1.clone().add(segDir.clone().multiplyScalar(projLen));
+            const distToCenter = closestPoint.distanceTo(center);
+
+            if (distToCenter <= radius) {
+                return true
+            }
         }
-        return false
+
+        return false;
     }
 }

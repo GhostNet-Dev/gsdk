@@ -137,19 +137,30 @@ export class Zombie extends PhysicsObject {
     clock = new THREE.Clock()
     flag = false
 
+    stunEffect() {
+        // 타격 시 애니메이션 일시 정지
+        if (this.currentAni) {
+            this.currentAni.paused = true
+
+            // 예: 0.5초 후 다시 재생
+            setTimeout(() => {
+                this.currentAni!.paused = false
+            }, 500)
+        }
+    }
     DamageEffect(damage: number, effect?: EffectType) {
         switch(effect) {
             case EffectType.Damage:
             default:
                 //this.effector.StartEffector(EffectType.Lightning)
-                this.effector.StartEffector(EffectType.BloodExplosion)
+                this.effector.StartEffector(EffectType.BloodExplosion, this.CenterPos)
                 break;
             case EffectType.LightningStrike:
                 this.effector.StartEffector(EffectType.Damage)
                 //this.effector.StartEffector(EffectType.Lightning)
                 break;
         }
-        this.effector.StartEffector(EffectType.Status, damage.toString(), "#fff")
+        this.effector.StartEffector(EffectType.Status, (damage > 0) ? damage.toString() : "miss", "#fff")
     }
 
     update(delta: number) {

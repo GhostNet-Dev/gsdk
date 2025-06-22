@@ -6,9 +6,12 @@ import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { EventFlag } from "@Glibs/types/eventtypes";
 import { MonsterDb } from "@Glibs/types/monsterdb";
+import { BulletLine } from "./bulletline";
+import { StatFactory } from "../battle/statfactory";
+import { BaseSpec } from "../battle/basespec";
 
 export interface IProjectileModel {
-    get Meshs(): THREE.Mesh | THREE.Points | undefined
+    get Meshs(): THREE.Mesh | THREE.Points | THREE.Line | undefined
     create(position: THREE.Vector3): void
     update(position:THREE.Vector3): void
     release(): void
@@ -16,9 +19,11 @@ export interface IProjectileModel {
 
 export type ProjectileMsg = {
     id: MonsterId // TODO: Change Id Type
+    ownerSpec: BaseSpec
     damage: number
     src: THREE.Vector3
     dir: THREE.Vector3
+    range: number
 }
 
 export type ProjectileSet = {
@@ -29,7 +34,7 @@ export type ProjectileSet = {
 export class Projectile implements ILoop {
     LoopId = 0
     projectiles = new Map<MonsterId, ProjectileSet[]>()
-    processing = false
+    fab = new StatFactory()
 
     constructor(
         private eventCtrl: IEventController,
@@ -38,20 +43,8 @@ export class Projectile implements ILoop {
         private monDb: MonsterDb,
     ) {
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
-        eventCtrl.RegisterEventListener(EventTypes.PlayMode, (e: EventFlag) => {
-            switch (e) {
-                case EventFlag.Start:
-                    this.processing = true
-                    //this.InitMonster()
-                    break
-                case EventFlag.End:
-                    this.processing = false
-                    this.ReleaseAllProjPool()
-                    break
-            }
-        })
         eventCtrl.RegisterEventListener(EventTypes.Projectile, (opt: ProjectileMsg) => {
-                this.AllocateProjPool(opt.id, opt.src, opt.dir, opt.damage)
+            this.AllocateProjPool(opt.id, opt.src, opt.dir, opt.damage, opt.ownerSpec, opt.range)
         })
     }
     
@@ -59,16 +52,21 @@ export class Projectile implements ILoop {
         switch(id) {
             case MonsterId.DefaultBullet:
                 return new Bullet3()
+            case MonsterId.BulletLine:
+                return new BulletLine()
             case MonsterId.DefaultBall:
             default:
                 return new DefaultBall(.1)
         }
     }
-    CreateProjectile(id: MonsterId, src: THREE.Vector3, dir: THREE.Vector3, damage: number) {
-        const property = this.monDb.GetItem(id)
+    CreateProjectile(id: MonsterId, src: THREE.Vector3, dir: THREE.Vector3, damage: number
+        , ownerSpec: BaseSpec, range: number
+    ) {
         const ball = this.GetModel(id)
-        const ctrl = new ProjectileCtrl(ball, this.targetList, this.eventCtrl, property)
-        ctrl.start(src, dir, damage)
+        const stat = this.fab.getDefaultStats(id as string)
+        const spec = new BaseSpec(stat)
+        const ctrl = new ProjectileCtrl(ball, this.targetList, this.eventCtrl, range, spec)
+        ctrl.start(src, dir, damage, ownerSpec)
 
         const set: ProjectileSet = {
             model: ball, ctrl: ctrl
@@ -76,7 +74,6 @@ export class Projectile implements ILoop {
         return set
     }
     update(delta: number): void {
-        if (!this.processing) return
         this.projectiles.forEach(a => {
             a.forEach(s => {
                 s.ctrl.update(delta)
@@ -89,18 +86,18 @@ export class Projectile implements ILoop {
     resize(): void { }
 
     Release(entry: ProjectileSet) {
-        entry.ctrl.Release()
         if (entry.model.Meshs) this.game.remove(entry.model.Meshs)
+        entry.ctrl.Release()
     }
-    AllocateProjPool(id: MonsterId, src: THREE.Vector3, dir: THREE.Vector3, damage: number) {
+    AllocateProjPool(id: MonsterId, src: THREE.Vector3, dir: THREE.Vector3, damage: number, ownerSpec: BaseSpec, range: number) {
         let pool = this.projectiles.get(id)
         if(!pool) pool = []
         let set = pool.find((e) => e.ctrl.Live == false)
         if (!set) {
-            set = this.CreateProjectile(id, src, dir, damage)
+            set = this.CreateProjectile(id, src, dir, damage, ownerSpec, range)
             pool.push(set)
         } else {
-            set.ctrl.start(src, dir, damage)
+            set.ctrl.start(src, dir, damage, ownerSpec)
         }
         this.projectiles.set(id, pool)
         if (set.model.Meshs) this.game.add(set.model.Meshs)

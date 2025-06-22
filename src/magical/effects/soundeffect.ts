@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { IEffect } from "./ieffector";
 
-export class Sounds implements IEffect {
+export class SoundEffect implements IEffect {
     private processFlag = false
     private audioLoader = new THREE.AudioLoader()
     private sound: THREE.PositionalAudio
