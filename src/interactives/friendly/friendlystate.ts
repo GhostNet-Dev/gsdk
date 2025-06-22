@@ -190,6 +190,7 @@ export class AttackFState extends State implements IMonsterAction {
         this.attackDir = this.attackDir.subVectors(this.targetPos, this.startPos).normalize()
         this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
             id: MonsterId.DefaultBall, 
+            ownerSpec: this.spec,
             damage: this.spec.Damage,
             src: this.startPos, 
             dir: this.attackDir

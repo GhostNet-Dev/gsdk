@@ -19,6 +19,7 @@ export interface IProjectileModel {
 
 export type ProjectileMsg = {
     id: MonsterId // TODO: Change Id Type
+    ownerSpec: BaseSpec
     damage: number
     src: THREE.Vector3
     dir: THREE.Vector3
@@ -43,7 +44,7 @@ export class Projectile implements ILoop {
     ) {
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         eventCtrl.RegisterEventListener(EventTypes.Projectile, (opt: ProjectileMsg) => {
-            this.AllocateProjPool(opt.id, opt.src, opt.dir, opt.damage, opt.range)
+            this.AllocateProjPool(opt.id, opt.src, opt.dir, opt.damage, opt.ownerSpec, opt.range)
         })
     }
     
@@ -58,12 +59,14 @@ export class Projectile implements ILoop {
                 return new DefaultBall(.1)
         }
     }
-    CreateProjectile(id: MonsterId, src: THREE.Vector3, dir: THREE.Vector3, damage: number, range: number) {
+    CreateProjectile(id: MonsterId, src: THREE.Vector3, dir: THREE.Vector3, damage: number
+        , ownerSpec: BaseSpec, range: number
+    ) {
         const ball = this.GetModel(id)
         const stat = this.fab.getDefaultStats(id as string)
         const spec = new BaseSpec(stat)
         const ctrl = new ProjectileCtrl(ball, this.targetList, this.eventCtrl, range, spec)
-        ctrl.start(src, dir, damage)
+        ctrl.start(src, dir, damage, ownerSpec)
 
         const set: ProjectileSet = {
             model: ball, ctrl: ctrl
@@ -86,15 +89,15 @@ export class Projectile implements ILoop {
         if (entry.model.Meshs) this.game.remove(entry.model.Meshs)
         entry.ctrl.Release()
     }
-    AllocateProjPool(id: MonsterId, src: THREE.Vector3, dir: THREE.Vector3, damage: number, range: number) {
+    AllocateProjPool(id: MonsterId, src: THREE.Vector3, dir: THREE.Vector3, damage: number, ownerSpec: BaseSpec, range: number) {
         let pool = this.projectiles.get(id)
         if(!pool) pool = []
         let set = pool.find((e) => e.ctrl.Live == false)
         if (!set) {
-            set = this.CreateProjectile(id, src, dir, damage, range)
+            set = this.CreateProjectile(id, src, dir, damage, ownerSpec, range)
             pool.push(set)
         } else {
-            set.ctrl.start(src, dir, damage)
+            set.ctrl.start(src, dir, damage, ownerSpec)
         }
         this.projectiles.set(id, pool)
         if (set.model.Meshs) this.game.add(set.model.Meshs)

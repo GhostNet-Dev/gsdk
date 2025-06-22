@@ -57,7 +57,7 @@ export class AttackState extends State implements IPlayerAction {
                     this.meleeAttackMode = false
                     break;
                 case AttackItemType.TwoHandGun:
-                    this.player.ChangeAction(ActionType.OneHandGun, this.attackSpeed)
+                    this.player.ChangeAction(ActionType.TwoHandGun, this.attackSpeed)
                     this.meleeAttackMode = false
                     break;
                 case AttackItemType.Bow:
@@ -132,6 +132,7 @@ export class AttackState extends State implements IPlayerAction {
         this.player.GetMuzzlePosition(startPos)
         this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
             id: MonsterId.BulletLine, 
+            ownerSpec: this.spec,
             damage: this.spec.Damage,
             src: startPos, 
             dir: this.attackDir,
@@ -147,6 +148,7 @@ export class AttackState extends State implements IPlayerAction {
         const msg = {
             type: AttackType.NormalSwing,
             damage: this.spec.Damage,
+            spec: this.spec,
             obj: closestTarget
         };
 
@@ -167,6 +169,7 @@ export class AttackState extends State implements IPlayerAction {
                 const msg = {
                     type: AttackType.NormalSwing,
                     damage: this.spec.Damage,
+                    spec: [this.spec],
                     obj: obj.object
                 }
                 if (mons == undefined) {

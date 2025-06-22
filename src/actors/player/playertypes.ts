@@ -1,3 +1,4 @@
+import { BaseSpec } from "@Glibs/actors/battle/basespec"
 import { CharacterStatus } from "@Glibs/actors/battle/charstatus"
 import { EffectType } from "@Glibs/types/effecttypes"
 
@@ -49,6 +50,7 @@ export type AttackOption = {
     type: AttackType,
     effect?: EffectType,
     damage: number
+    spec?: BaseSpec[],
     distance?: number
     obj?: THREE.Object3D
     targetPoint?: THREE.Vector3

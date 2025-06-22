@@ -29,6 +29,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
     private phybox: MonsterBox
     get Drop() { return this.property.drop }
     get MonsterBox() { return this.phybox }
+    get Spec() { return this.spec }
 
     constructor(
         id: number,

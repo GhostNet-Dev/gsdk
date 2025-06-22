@@ -160,7 +160,7 @@ export class Zombie extends PhysicsObject {
                 //this.effector.StartEffector(EffectType.Lightning)
                 break;
         }
-        this.effector.StartEffector(EffectType.Status, damage.toString(), "#fff")
+        this.effector.StartEffector(EffectType.Status, (damage > 0) ? damage.toString() : "miss", "#fff")
     }
 
     update(delta: number) {

@@ -133,6 +133,7 @@ export class AttackZState extends State implements IMonsterAction {
     attack() {
         this.eventCtrl.SendEventMessage(EventTypes.Attack + "player", [{
             type: AttackType.NormalSwing,
+            spec: [this.spec],
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
         }])
 

@@ -11,6 +11,8 @@ import { IGPhysic } from "@Glibs/interface/igphysics";
 import { MonsterDb } from "./monsterdb";
 import { Loader } from "@Glibs/loader/loader";
 import { Effector } from "@Glibs/magical/effects/effector";
+import { calculateCompositeDamage } from "../battle/damagecalc";
+import { BaseSpec } from "../battle/basespec";
 
 export type MonsterSet = {
     monModel: IPhysicsObject,
@@ -21,6 +23,7 @@ export type MonsterSet = {
     initPos?: THREE.Vector3
 }
 export interface IMonsterCtrl {
+    get Spec(): BaseSpec
     get MonsterBox(): MonsterBox
     get Drop(): MonDrop[] | undefined
     Respawning(): void
@@ -69,8 +72,14 @@ export class Monsters {
                 
                 const z = mon[obj.Id]
                 if (!z.live) return
+                if(opt.spec == undefined) throw new Error("unexpected value");
+                const damage = calculateCompositeDamage({
+                    source: opt.spec,
+                    destination: z.monCtrl.Spec,
+                })
+                console.log(`calc damage: ${damage}, original damage: ${opt.damage}`)
 
-                this.ReceiveDemage(z, opt.damage, opt.effect)
+                this.ReceiveDemage(z, damage, opt.effect)
             })
         })
         eventCtrl.RegisterEventListener(EventTypes.Attack + "monster", (opts: AttackOption[]) => {

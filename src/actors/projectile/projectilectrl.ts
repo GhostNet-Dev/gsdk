@@ -19,6 +19,7 @@ export class ProjectileCtrl {
     live = false
     damage = 1
     moving = 0
+    creatorSpec?: BaseSpec
     get Live() { return this.live }
     
     constructor(
@@ -34,7 +35,7 @@ export class ProjectileCtrl {
         this.live = false
         this.moving = 0
     }
-    start(src: THREE.Vector3, dir: THREE.Vector3, damage: number) {
+    start(src: THREE.Vector3, dir: THREE.Vector3, damage: number, spec: BaseSpec) {
         this.position.copy(src)
         this.prevPosition.copy(src)
         this.moveDirection.copy(dir)
@@ -43,6 +44,7 @@ export class ProjectileCtrl {
         this.currenttime = 0
         this.damage = damage
         this.moving = 0
+        this.creatorSpec = spec
     }
     checkLifeTime(): boolean {
         return this.moving < this.range
@@ -66,6 +68,7 @@ export class ProjectileCtrl {
                 const k = obj.target.name
                 const v = {
                     type: AttackType.NormalSwing,
+                    spec: [this.creatorSpec, this.spec],
                     damage: this.damage,
                     obj: obj.target
                 }
@@ -92,6 +95,7 @@ export class ProjectileCtrl {
             const mons = msgs.get(obj.name)
             const msg = {
                 type: AttackType.NormalSwing,
+                spec: [this.creatorSpec, this.spec],
                 damage: this.damage,
                 obj: obj
             }

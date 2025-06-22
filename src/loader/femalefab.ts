@@ -35,7 +35,7 @@ export class FemaleFab extends AssetModel implements IAsset {
             this.clips.set(Ani.Dying, gltf.animations.find((clip) => clip.name == "Dying"))
             this.clips.set(Ani.Sword, gltf.animations.find((clip) => clip.name == "Sword"))
             // this.clips.set(Ani.Shooting, gltf.animations.find((clip) => clip.name == "Gunplay"))
-            await this.LoadAnimation("assets/male/Shooting.fbx", Ani.Shooting)
+            await this.LoadAnimation("assets/female/Shooting.fbx", Ani.Shooting)
             this.clips.set(Ani.Gunplay, gltf.animations.find((clip) => clip.name == "Gunplay"))
             this.clips.set(Ani.MagicH1, gltf.animations.find((clip) => clip.name == "1HMagic"))
             this.clips.set(Ani.MagicH2, gltf.animations.find((clip) => clip.name == "2HMagic_1"))

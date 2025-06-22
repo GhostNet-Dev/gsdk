@@ -115,17 +115,17 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
   },
   'DefaultBall': {
     'hp': 1,
-    'attack': 5,
+    'attack': 1,
     'speed': 5.0
   },
   'DefaultBullet': {
     'hp': 1,
-    'attack': 5,
+    'attack': 1,
     'speed': 10.0
   },
   'BulletL': {
     'hp': 1,
-    'attack': 5,
+    'attack': 2,
     'speed': 10.0
   },
 };

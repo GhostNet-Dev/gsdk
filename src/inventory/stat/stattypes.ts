@@ -109,7 +109,7 @@ export const StatDescriptions: Record<StatKey, string> = {
 | 확장      | `add`              | 강화 수치/슬롯 등                     |
 
 */
-export type ModifierType = 'add' | 'mul';
+export type ModifierType = 'add' | 'mul' | 'max';
 
 export const StatApplyMode: Record<StatKey, ModifierType> = {
   // ⚔️ 전투 기본 스탯
