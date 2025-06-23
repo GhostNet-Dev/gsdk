@@ -79,6 +79,7 @@ export class ItemId {
     public static DefaultGun = "DefaultGun"//Symbol("DefaultGun")
     public static Pistol = "Pistol"//Symbol("DefaultGun")
     public static M4A1 = "M4A1"//Symbol("DefaultGun")
+    public static M16 = "M16"//Symbol("DefaultGun")
     public static Leather = "Leather"//Symbol("Leather")
     public static Logs = "Logs"//Symbol("Logs")
     public static Rocks = "Rocks"//Symbol("Rocks")

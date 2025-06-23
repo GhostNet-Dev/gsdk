@@ -67,6 +67,22 @@ export class ItemDb {
                 magicAttack: 9, attack: 3, attackSpeed: .2, speed: 1, attackRange: 10 
             },
         })
+        this.itemDb.set(ItemId.M16, {
+            id: ItemId.M16,
+            type: ItemType.Attack,
+            levelRequirement: 0,
+            weapon: AttackItemType.TwoHandGun,
+            bind: Bind.Hands_R,
+            asset: this.loader.GetAssets(Char.ItemsGunsM16),
+            level: Level.Common,
+            name: "M16",
+            icon: "WeaponTool/Bow.png",
+            sound: SoundType.NATO556,
+            stackable: false, binding: true, autoAttack: true,
+            stats: { 
+                magicAttack: 9, attack: 3, attackSpeed: .1, speed: 1, attackRange: 10 
+            },
+        })
         this.itemDb.set(ItemId.WarterCan, {
             id: ItemId.WarterCan,
             type: ItemType.Farm,

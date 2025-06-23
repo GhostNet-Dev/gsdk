@@ -18,6 +18,9 @@ class GunFbxFab extends AssetModel {
             this.meshs.scale.set(scale, scale, scale)
             this.meshs.position.set(0, 0.1, 0)
             this.meshs.rotation.set(3.5, -0.1, -1.6)
+
+            this.muzzlePointObject.name = "muzzlePoint"
+            this.muzzlePointObject.position.set(68, 8.5, 0)
             customFn?.()
         })
     }
@@ -59,7 +62,6 @@ export class PistolFab extends GunFbxFab implements IAsset {
             // this.meshs.position.set(0, 0.1, 0)
             // this.meshs.rotation.set(3.5, -0.1, -1.6)
 
-            this.muzzlePointObject.name = "muzzlePoint"
             this.muzzlePointObject.position.set(20, 8, 0)
             this.meshs.add(this.muzzlePointObject)
 
@@ -87,63 +89,63 @@ export class M4A1Fab extends GunFbxFab implements IAsset {
             // this.meshs.position.set(0, 0.1, 0)
             // this.meshs.rotation.set(3.5, -0.1, -1.6)
 
-            this.muzzlePointObject.name = "muzzlePoint"
             this.muzzlePointObject.position.set(68, 8.5, 0)
             this.meshs.add(this.muzzlePointObject)
         })
     }
 }
+const g_scale = 0.003
 export class ItemGunsBulletlite01Fab extends GunFbxFab implements IAsset {
-    get Id() {return Char.ItemsGunsBulletlite01}
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/BulletLite_01.fbx") }
+    get Id() { return Char.ItemsGunsBulletlite01 }
+    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/BulletLite_01.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
 }
 
 export class ItemGunsBulletlite02Fab extends GunFbxFab implements IAsset {
-    get Id() {return Char.ItemsGunsBulletlite02}
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/BulletLite_02.fbx") }
+    get Id() { return Char.ItemsGunsBulletlite02 }
+    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/BulletLite_02.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
 }
 
 export class ItemGunsM16Fab extends GunFbxFab implements IAsset {
-    get Id() {return Char.ItemsGunsM16}
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/M16.fbx") }
+    get Id() { return Char.ItemsGunsM16 }
+    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/M16.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
 }
 
 export class ItemGunsM1911Fab extends GunFbxFab implements IAsset {
-    get Id() {return Char.ItemsGunsM1911}
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/M1911.fbx") }
+    get Id() { return Char.ItemsGunsM1911 }
+    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/M1911.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
 }
 
 export class ItemGunsM1911tacticalFab extends GunFbxFab implements IAsset {
-    get Id() {return Char.ItemsGunsM1911tactical}
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/M1911Tactical.fbx") }
+    get Id() { return Char.ItemsGunsM1911tactical }
+    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/M1911Tactical.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
 }
 
 export class ItemGunsM4a1Fab extends GunFbxFab implements IAsset {
-    get Id() {return Char.ItemsGunsM4a1}
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/M4A1_.fbx") }
+    get Id() { return Char.ItemsGunsM4a1 }
+    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/M4A1_.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
 }
 
 export class ItemGunsMp5Fab extends GunFbxFab implements IAsset {
-    get Id() {return Char.ItemsGunsMp5}
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/MP5.fbx") }
+    get Id() { return Char.ItemsGunsMp5 }
+    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/MP5.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
 }
 
 export class ItemGunsMp7Fab extends GunFbxFab implements IAsset {
-    get Id() {return Char.ItemsGunsMp7}
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/MP7.fbx") }
+    get Id() { return Char.ItemsGunsMp7 }
+    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/MP7.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
 }
 
 export class ItemGunsScarFab extends GunFbxFab implements IAsset {
-    get Id() {return Char.ItemsGunsScar}
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/SCAR.fbx") }
+    get Id() { return Char.ItemsGunsScar }
+    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/SCAR.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
 }
 
 export class ItemGunsM4A1Fab extends GunFbxFab implements IAsset {
-    get Id() {return Char.ItemsGunsM4A1}
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/m4a1.fbx") }
+    get Id() { return Char.ItemsGunsM4A1 }
+    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/m4a1.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
 }
 
 export class ItemGunsPistolFab extends GunFbxFab implements IAsset {
-    get Id() {return Char.ItemsGunsPistol}
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/pistol.fbx") }
+    get Id() { return Char.ItemsGunsPistol }
+    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/pistol.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
 }
