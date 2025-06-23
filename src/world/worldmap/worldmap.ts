@@ -19,6 +19,7 @@ import ProduceTerrain3 from '../ground/prodterrain3';
 import FenceModular from './fencemodular';
 import GeometryGround from '../ground/defaultgeo';
 import FluffyMaker from '../fluffynature/fluffymaker';
+import InteractiveManager from '@Glibs/interactives/interactable/intermgr';
 
 
 export default class WorldMap {
@@ -45,6 +46,7 @@ export default class WorldMap {
         FenceModular: FenceModular,
         EventBoxManager: EventBoxManager,
         FluffyMaker: FluffyMaker,
+        InteractiveManager: InteractiveManager,
     };
     private worldMapTypes: Record<string, any> = {
         CustomGround: { scene: this.scene },
@@ -58,7 +60,8 @@ export default class WorldMap {
         UltimateModular: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl },
         FenceModular: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl },
         EventBoxManager: { loader: this.loader, eventCtrl: this.eventCtrl },
-        FluffyMaker: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl  }
+        FluffyMaker: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl  },
+        InteractiveManager: { loader: this.loader, eventCtrl: this.eventCtrl },
     }
 
     constructor(
