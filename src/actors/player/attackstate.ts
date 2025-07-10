@@ -37,7 +37,7 @@ export class AttackState extends State implements IPlayerAction {
         this.attackProcess = false
         this.attackSpeed = this.spec.AttackSpeed
         this.attackDist = this.spec.AttackRange
-        const handItem = this.playerCtrl.spec.GetBindItem(Bind.Hands_R)
+        const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
         if(handItem == undefined) {
             this.player.ChangeAction(ActionType.Punch, this.attackSpeed)
         } else {
@@ -211,7 +211,7 @@ export class AttackState extends State implements IPlayerAction {
         }
         this.attackProcess = true
         this.keytimeout = setTimeout(() => {
-            const handItem = this.playerCtrl.spec.GetBindItem(Bind.Hands_R)
+            const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
             if(handItem == undefined) return
             if (this.meleeAttackMode) {
                 if(handItem.AutoAttack) this.meleeAutoAttack()

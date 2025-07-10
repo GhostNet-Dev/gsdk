@@ -6,26 +6,29 @@ import { IAsset } from "@Glibs/interface/iasset";
 import { EventTypes } from "@Glibs/types/globaltypes";
 
 // export abstract class InteractableObject extends THREE.Object3D {
-export class InteractableObject extends THREE.Object3D {
+export abstract class InteractableObject extends THREE.Object3D {
     interactId: string;
     isActive = true;
     components: Map<string, IInteractiveComponent> = new Map();
 
     constructor(
         id: string,
-        private asset: IAsset,
-        private eventCtrl: IEventController
+        protected asset: IAsset,
+        protected eventCtrl: IEventController
     ) {
         super();
         this.interactId = id;
     }
-    async Loader(position: THREE.Vector3, name: string) {
+    async Loader(position: THREE.Vector3, rotation: THREE.Euler, scale: number, name: string) {
         this.position.copy(position);
+        this.rotation.copy(rotation);
+        this.scale.set(scale, scale, scale);
         this.name = name;
         const [meshs, _exist] = await this.asset.UniqModel(name)
         this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, meshs)
         this.add(meshs)
     }
+    abstract tryInteract(actor: IPhysicsObject): void;
 
     interact(actor: IPhysicsObject): void {
         this.components.forEach((comp) => comp.onInteract?.(actor));

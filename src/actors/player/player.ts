@@ -10,7 +10,7 @@ import { Ani, Bind, Char } from "@Glibs/types/assettypes";
 import { IAsset } from "@Glibs/interface/iasset";
 import IInventory, { IItem } from "@Glibs/interface/iinven";
 import { ActionType } from "./playertypes";
-import { ItemId } from "@Glibs/types/inventypes";
+import { ItemId } from "@Glibs/inventory/items/itemdefs";
 
 
 

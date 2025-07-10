@@ -3,9 +3,10 @@ import { PlayerCtrl } from "./playerctrl";
 import { Player } from "./player";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { KeyType } from "@Glibs/types/eventtypes";
-import { AppMode } from "@Glibs/types/globaltypes";
+import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
 import { ActionType } from "./playertypes";
 import { Bind } from "@Glibs/types/assettypes";
+import IEventController from "@Glibs/interface/ievent";
 
 export interface IPlayerAction {
     Init(): void
@@ -97,7 +98,7 @@ export class State {
         } 
     }
     CheckEnermyInRange() {
-        const attackRange = this.playerCtrl.spec.stats.getStat("attackRange")
+        const attackRange = this.playerCtrl.baseSpec.stats.getStat("attackRange")
         for (const v of this.playerCtrl.targets) {
             const dis = this.player.Pos.distanceTo(v.position)
             if(attackRange > dis) {
@@ -215,13 +216,22 @@ export class IdleState extends State implements IPlayerAction {
 export class RunState extends State implements IPlayerAction {
     speed = 7
     previous: IPlayerAction = this.playerCtrl.IdleSt
-    constructor(playerPhy: PlayerCtrl, player: Player, private camera: THREE.Camera, gphysic: IGPhysic) {
+    constructor(
+        playerPhy: PlayerCtrl, 
+        player: Player, 
+        private camera: THREE.Camera, 
+        gphysic: IGPhysic, 
+        private eventCtrl: IEventController
+    ) {
         super(playerPhy, player, gphysic)
     }
     Init(): void {
         this.player.ChangeAction(ActionType.Run)
     }
     Uninit(): void { }
+    CheckInteraction() {
+        this.eventCtrl.SendEventMessage(EventTypes.CheckInteraction, this.player)
+    }
 
     PreviousState(state: IPlayerAction) {
         this.previous = state
@@ -242,6 +252,8 @@ export class RunState extends State implements IPlayerAction {
 
         const checkGravity = this.CheckGravity()
         if (checkGravity != undefined) return checkGravity
+
+        this.CheckInteraction()
 
         if (v.x == 0 && v.z == 0) {
             this.previous.Init();

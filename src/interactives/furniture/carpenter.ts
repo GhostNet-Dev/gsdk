@@ -14,6 +14,7 @@ import { FurnBox, FurnEntry, FurnProperty, FurnState } from "./furntypes";
 import { InventorySlot } from "@Glibs/types/inventypes";
 import { AttackOption, AttackType } from "@Glibs/types/playertypes";
 import { Char } from "@Glibs/types/assettypes";
+import { ItemId } from "@Glibs/inventory/items/itemdefs";
 
 export type FurnSet = {
     id: FurnId
@@ -157,11 +158,11 @@ export class Carpenter implements ILoop {
         const slots: InventorySlot[] = []
         const ret = items.some((e) => {
             // search inventory and store
-            const slot = this.inven.GetItem(e.itemId)
+            const slot = this.inven.GetItem(e.itemId as ItemId)
             if (slot && slot.count >= e.count) slots.push(slot)
             else {
-                const info = this.inven.GetItemInfo(e.itemId)
-                const name = info.namekr ?? info.name
+                const info = this.inven.GetItemInfo(e.itemId as ItemId)
+                const name = ("namekr" in info) ? info.namekr : info.name
                 this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, name + "이 부족합니다.")
                 return true
             }

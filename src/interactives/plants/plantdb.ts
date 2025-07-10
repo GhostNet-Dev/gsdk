@@ -1,5 +1,5 @@
+import { itemDefs } from "@Glibs/inventory/items/itemdefs"
 import { Char } from "@Glibs/types/assettypes"
-import { ItemId } from "@Glibs/types/inventypes"
 import { PlantId, PlantProperty, PlantType } from "@Glibs/types/planttypes"
 
 export class PlantDb {
@@ -16,7 +16,7 @@ export class PlantDb {
             levelUpTime: 1000 * 10, //* 60 * 60 * 24, // a day
             warteringTime: 1000 * 60 * 60, // an hour
             drop: [
-                { itemId: ItemId.Apple, ratio: 1 }
+                { itemId: itemDefs.Apple.id, ratio: 1 }
             ],
         })
         this.plantDb.set(PlantId.CoconutTree, {
@@ -29,7 +29,7 @@ export class PlantDb {
             levelUpTime: 1000 * 10, //* 60 * 60 * 24, // a day
             warteringTime: 1000 * 60 * 60, // an hour
             drop: [
-                { itemId: ItemId.Coconut, ratio: 1 }
+                { itemId: itemDefs.Coconut.id, ratio: 1 }
             ],
         })
         this.plantDb.set(PlantId.Tomato, {
@@ -42,7 +42,7 @@ export class PlantDb {
             levelUpTime: 1000 * 10, //* 60 * 60 * 24, // a day
             warteringTime: 1000 * 60 * 60, // an hour
             drop: [
-                { itemId: ItemId.Tomato, ratio: 1 }
+                { itemId: itemDefs.Tomato.id, ratio: 1 }
             ],
         })
         this.plantDb.set(PlantId.Potato, {
@@ -55,7 +55,7 @@ export class PlantDb {
             levelUpTime: 1000 * 60 * 60 * 24, // a day
             warteringTime: 1000 * 60 * 60, // an hour
             drop: [
-                { itemId: ItemId.Potato, ratio: 1 }
+                { itemId: itemDefs.Potato.id, ratio: 1 }
             ],
         })
         this.plantDb.set(PlantId.Carrot, {
@@ -68,7 +68,7 @@ export class PlantDb {
             levelUpTime: 1000 * 60 * 60 * 24, // a day
             warteringTime: 1000 * 60 * 60, // an hour
             drop: [
-                { itemId: ItemId.Carrot, ratio: 1 }
+                { itemId: itemDefs.Carrot.id, ratio: 1 }
             ],
         })
     }

@@ -56,9 +56,12 @@ export enum EventTypes {
     Toast = "toast",
     Spinner = "spin",
 
-    // player와 상호작용하는 객체 로
+    // player와 상호작용하는 객체 Attackable
     AddInteractive = "addinter",
     DelInteractive = "delinter",
+
+    // player와 상호작용하는 객체 interatable
+    CheckInteraction = "checkinter",
 
     RegisterLoop = "regloop",
     DeregisterLoop = "deregloop",

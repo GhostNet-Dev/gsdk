@@ -3,12 +3,13 @@ import { IProjectileModel } from "./projectile";
 import { AttackType } from "@Glibs/types/playertypes";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
-import { MonsterProperty } from "@Glibs/types/monstertypes";
 import { BaseSpec } from "../battle/basespec";
+import { StatKey } from "@Glibs/types/stattypes";
+import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
 
 
 
-export class ProjectileCtrl {
+export class ProjectileCtrl implements IActionUser{
     raycast = new THREE.Raycaster()
     moveDirection = new THREE.Vector3()
     prevPosition = new THREE.Vector3()
@@ -20,15 +21,21 @@ export class ProjectileCtrl {
     damage = 1
     moving = 0
     creatorSpec?: BaseSpec
+    baseSpec: BaseSpec = new BaseSpec(this.stats, this)
     get Live() { return this.live }
+    get objs() { return this.projectile.Meshs as THREE.Mesh }
     
     constructor(
         private projectile: IProjectileModel,
         private targetList: THREE.Object3D[],
         private eventCtrl: IEventController,
         private range: number,
-        private spec: BaseSpec
+        private stats: Partial<Record<StatKey, number>>,
     ){
+    }
+    applyAction(action: IActionComponent, ctx?: ActionContext) {
+        action.apply?.(this, ctx)
+        action.activate?.(this, ctx)
     }
     Release () {
         this.projectile.release()
@@ -51,7 +58,7 @@ export class ProjectileCtrl {
     }
     update(delta: number): void {
         if (!this.live) return
-        const mov = this.spec.Speed * delta
+        const mov = this.baseSpec.Speed * delta
         this.currenttime += delta
         this.moving += mov
         this.prevPosition.copy(this.position)
@@ -68,7 +75,7 @@ export class ProjectileCtrl {
                 const k = obj.target.name
                 const v = {
                     type: AttackType.NormalSwing,
-                    spec: [this.creatorSpec, this.spec],
+                    spec: [this.creatorSpec, this.baseSpec],
                     damage: this.damage,
                     obj: obj.target
                 }
@@ -95,7 +102,7 @@ export class ProjectileCtrl {
             const mons = msgs.get(obj.name)
             const msg = {
                 type: AttackType.NormalSwing,
-                spec: [this.creatorSpec, this.spec],
+                spec: [this.creatorSpec, this.baseSpec],
                 damage: this.damage,
                 obj: obj
             }

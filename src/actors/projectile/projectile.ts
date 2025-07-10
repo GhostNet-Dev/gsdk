@@ -34,7 +34,6 @@ export type ProjectileSet = {
 export class Projectile implements ILoop {
     LoopId = 0
     projectiles = new Map<MonsterId, ProjectileSet[]>()
-    fab = new StatFactory()
 
     constructor(
         private eventCtrl: IEventController,
@@ -63,9 +62,8 @@ export class Projectile implements ILoop {
         , ownerSpec: BaseSpec, range: number
     ) {
         const ball = this.GetModel(id)
-        const stat = this.fab.getDefaultStats(id as string)
-        const spec = new BaseSpec(stat)
-        const ctrl = new ProjectileCtrl(ball, this.targetList, this.eventCtrl, range, spec)
+        const stat = StatFactory.getDefaultStats(id as string)
+        const ctrl = new ProjectileCtrl(ball, this.targetList, this.eventCtrl, range, stat)
         ctrl.start(src, dir, damage, ownerSpec)
 
         const set: ProjectileSet = {

@@ -8,14 +8,14 @@ import { DeckState } from "./deckstate";
 import { IBuffItem } from "@Glibs/interface/ibuff";
 import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
 import IEventController, { IKeyCommand, ILoop } from "@Glibs/interface/ievent";
-import { EventFlag, KeyType } from "@Glibs/types/eventtypes";
-import { AttackOption, AttackType, DefaultStatus, PlayerStatusParam } from "./playertypes";
+import { KeyType } from "@Glibs/types/eventtypes";
+import { AttackOption, AttackType, DefaultStatus } from "./playertypes";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import IInventory, { IItem } from "@Glibs/interface/iinven";
-import { Bind } from "@Glibs/types/assettypes";
-import { ItemId } from "@Glibs/inventory/inventypes";
+import { ItemId } from "@Glibs/inventory/items/itemdefs";
+import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
 
-export class PlayerCtrl implements ILoop {
+export class PlayerCtrl implements ILoop, IActionUser {
     LoopId = 0
     mode: AppMode = AppMode.Play
     keyDownQueue: IKeyCommand[] = []
@@ -28,14 +28,14 @@ export class PlayerCtrl implements ILoop {
     moveDirection = new THREE.Vector3()
     playEnable = false
 
-    spec: BaseSpec
+    baseSpec: BaseSpec
     keyType: KeyType = KeyType.None
 
     AttackSt: AttackState
     MagicH1St = new MagicH1State(this, this.player, this.gphysic)
     MagicH2St = new MagicH2State(this, this.player, this.gphysic)
     AttackIdleSt = new AttackIdleState(this, this.player, this.gphysic)
-    RunSt = new RunState(this, this.player, this.camera, this.gphysic)
+    RunSt = new RunState(this, this.player, this.camera, this.gphysic, this.eventCtrl)
     JumpSt = new JumpState(this, this.player, this.camera, this.gphysic)
     IdleSt = new IdleState(this, this.player, this.gphysic)
     DyingSt = new DeadState(this, this.player, this.gphysic)
@@ -50,14 +50,15 @@ export class PlayerCtrl implements ILoop {
 
     worker = new Worker(new URL('./player.worker.ts', import.meta.url))
 
-    set Immortal(enable: boolean) { this.spec.status.immortal = enable }
-    get Health() { return this.spec.Health }
+    set Immortal(enable: boolean) { this.baseSpec.status.immortal = enable }
+    get Health() { return this.baseSpec.Health }
     set Enable(mode: boolean) { 
         this.playEnable = mode 
         this.currentState.Uninit()
         this.currentState = this.IdleSt
         if (mode) this.currentState.Init()
     }
+    get objs() { return this.player.Meshs }
 
     constructor(
         private player: Player,
@@ -66,8 +67,8 @@ export class PlayerCtrl implements ILoop {
         private camera: THREE.Camera,
         private eventCtrl: IEventController,
     ) {
-        this.spec = new BaseSpec(DefaultStatus.stats)
-        this.AttackSt = new AttackState(this, this.player, this.gphysic, this.eventCtrl, this.spec)
+        this.baseSpec = new BaseSpec(DefaultStatus.stats, this)
+        this.AttackSt = new AttackState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
 
         this.worker.onmessage = (e: any) => { console.log(e) }
 
@@ -93,13 +94,13 @@ export class PlayerCtrl implements ILoop {
         eventCtrl.RegisterEventListener(EventTypes.Equipment, (id: ItemId) => {
             const slot = this.inventory.GetItem(id)
             if(slot == undefined) throw new Error("item is undefined")
-            this.spec.Equip(slot.item)
+            this.baseSpec.Equip(slot.item)
             if (this.currentState == this.AttackSt) {
                 this.currentState.Init()
             }
         })
         eventCtrl.RegisterEventListener(EventTypes.Attack + "player", (opts: AttackOption[]) => {
-            if (this.currentState != this.DyingSt && this.spec.CheckDie()) {
+            if (this.currentState != this.DyingSt && this.baseSpec.CheckDie()) {
                 this.currentState = this.DyingSt
                 this.currentState.Init()
             }
@@ -108,19 +109,19 @@ export class PlayerCtrl implements ILoop {
                 switch(opt.type) {
                     case AttackType.NormalSwing:
                     case AttackType.Magic0:
-                        this.spec.ReceiveCalcDamage(opt.damage)
+                        this.baseSpec.ReceiveCalcDamage(opt.damage)
                         this.player.DamageEffect(opt.damage)
                         break;
                     case AttackType.Exp:
-                        this.spec.ReceiveExp(opt.damage)
+                        this.baseSpec.ReceiveExp(opt.damage)
                         break;
                     case AttackType.Heal:
                         this.player.HealEffect(opt.damage)
-                        this.spec.ReceiveCalcHeal(opt.damage)
+                        this.baseSpec.ReceiveCalcHeal(opt.damage)
                         break;
                 }
             })
-            eventCtrl.SendEventMessage(EventTypes.PlayerStatus, this.spec.Status)
+            eventCtrl.SendEventMessage(EventTypes.PlayerStatus, this.baseSpec.Status)
         })
         eventCtrl.RegisterEventListener(EventTypes.AddInteractive, (...obj: THREE.Object3D[]) => {
             this.add(...obj)
@@ -135,8 +136,8 @@ export class PlayerCtrl implements ILoop {
     init() {
         this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         this.playEnable = true
-        this.spec.ResetStatus()
-        this.eventCtrl.SendEventMessage(EventTypes.PlayerStatus, this.spec.Status)
+        this.baseSpec.ResetStatus()
+        this.eventCtrl.SendEventMessage(EventTypes.PlayerStatus, this.baseSpec.Status)
         this.currentState = this.IdleSt
         this.currentState.Init()
     }
@@ -152,6 +153,10 @@ export class PlayerCtrl implements ILoop {
         const idx = this.targets.indexOf(obj)
         if(idx < 0) return
         this.targets.splice(idx, 1)
+    }
+    applyAction(action: IActionComponent, ctx?: ActionContext) {
+        action.apply?.(this)
+        action.activate?.(this, ctx)
     }
     updateInputVector() {
         const cmd = this.inputVQueue.shift()
@@ -181,7 +186,6 @@ export class PlayerCtrl implements ILoop {
 
         this.currentState = this.currentState.Update(delta, this.moveDirection)
         this.player.Update(delta)
-        this.spec.Update(delta)
         this.actionReset()
     }
     actionReset() {
@@ -223,7 +227,6 @@ export class PlayerCtrl implements ILoop {
         if (position.z == this.moveDirection.z) { this.moveDirection.z = 0 }
     }
     UpdateBuff(buff: IBuffItem[]) {
-        this.spec.SetBuff(buff)
         console.log(buff)
     }
 }

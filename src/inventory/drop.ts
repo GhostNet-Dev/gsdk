@@ -5,11 +5,12 @@ import { EventFlag } from "@Glibs/types/eventtypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { MonDrop } from "@Glibs/types/monstertypes";
 import * as THREE from "three";
+import { ItemId } from "./items/itemdefs";
 
 type DropBox = {
     id: number
     droped: boolean
-    items?: string[]
+    items?: ItemId[]
 }
 
 export class Drop implements ILoop {
@@ -90,7 +91,7 @@ export class Drop implements ILoop {
 
     dropPoint(pos: THREE.Vector3, drop: MonDrop[] | undefined) {
         if (this.pointsGeometry == undefined) return
-        const itemIds: string[] = []
+        const itemIds: ItemId[] = []
         if (drop != undefined) {
             const ticket = Math.random()
             drop.forEach((item) => {

@@ -1,18 +1,12 @@
 import { IAsset } from "@Glibs/interface/iasset"
 import { IItem } from "@Glibs/interface/iinven"
+import { EffectDef } from "@Glibs/actions/itemactions/itemeffectdef"
 import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { Bind } from "@Glibs/types/assettypes"
 import { MonsterId } from "@Glibs/types/monstertypes"
 
-export enum ItemType {
-    Attack,
-    Shield,
-    Armor,
-    Potion,
-    Material,
-    Farm,
-    Deck,
-}
+
+export type ItemType = "attack" | "shield" | "armor" | "potion" | "material" | "farm" | "deck"
 
 export enum AttackItemType {
     Blunt, //둔기 
@@ -67,61 +61,63 @@ export type ItemProperty = {
     sockets?: number;
     setBonus?: number;
 
+    // item 효과 
+    effects?: EffectDef[]
     // 접두사/접미사 이름
     prefix?: string;
     suffix?: string;
 }
 
-export class ItemId {
-    public static Hanhwasbat = "Hanhwasbat"//Symbol("Hanhwa's Bat")
-    public static WarterCan = "WarterCan"//Symbol("Warter Can")
-    public static Hammer = "Hammer"//Symbol("Hammer H3")
-    public static DefaultGun = "DefaultGun"//Symbol("DefaultGun")
-    public static Pistol = "Pistol"//Symbol("DefaultGun")
-    public static M4A1 = "M4A1"//Symbol("DefaultGun")
-    public static M16 = "M16"//Symbol("DefaultGun")
-    public static Leather = "Leather"//Symbol("Leather")
-    public static Logs = "Logs"//Symbol("Logs")
-    public static Rocks = "Rocks"//Symbol("Rocks")
+// export class ItemId {
+//     public static Hanhwasbat = "Hanhwasbat"//Symbol("Hanhwa's Bat")
+//     public static WarterCan = "WarterCan"//Symbol("Warter Can")
+//     public static Hammer = "Hammer"//Symbol("Hammer H3")
+//     public static DefaultGun = "DefaultGun"//Symbol("DefaultGun")
+//     public static Pistol = "Pistol"//Symbol("DefaultGun")
+//     public static M4A1 = "M4A1"//Symbol("DefaultGun")
+//     public static M16 = "M16"//Symbol("DefaultGun")
+//     public static Leather = "Leather"//Symbol("Leather")
+//     public static Logs = "Logs"//Symbol("Logs")
+//     public static Rocks = "Rocks"//Symbol("Rocks")
 
-    public static ZombieDeck = "ZombieDeck"
-    public static MinataurDeck = "MinataurDeck"
-    public static BatPigDeck = "BatPigDeck"
-    public static BilbyDeck = "BilbyDeck"
-    public static BirdmonDeck = "BirdmonDeck"
-    public static CrabDeck = "CrabDeck"
-    public static BuilderDeck = "BuilderDeck"
-    public static GolemDeck = "GolemDeck"
-    public static BigGolemDeck = "BigGolemDeck"
-    public static KittenMonkDeck = "KittenMonkDeck"
-    public static SkeletonDeck = "SkeletonDeck"
-    public static SnakeDeck = "SnakeDeck"
-    public static ToadMageDeck = "GolemDeck"
-    public static VikingDeck = "VikingDeck"
-    public static WereWolfDeck = "WerewolfDeck"
+//     public static ZombieDeck = "ZombieDeck"
+//     public static MinataurDeck = "MinataurDeck"
+//     public static BatPigDeck = "BatPigDeck"
+//     public static BilbyDeck = "BilbyDeck"
+//     public static BirdmonDeck = "BirdmonDeck"
+//     public static CrabDeck = "CrabDeck"
+//     public static BuilderDeck = "BuilderDeck"
+//     public static GolemDeck = "GolemDeck"
+//     public static BigGolemDeck = "BigGolemDeck"
+//     public static KittenMonkDeck = "KittenMonkDeck"
+//     public static SkeletonDeck = "SkeletonDeck"
+//     public static SnakeDeck = "SnakeDeck"
+//     public static ToadMageDeck = "GolemDeck"
+//     public static VikingDeck = "VikingDeck"
+//     public static WereWolfDeck = "WerewolfDeck"
 
-    public static Apple = "Apple"
-    public static Coconut = "Coconut"
-    public static Tomato = "Tomato"
-    public static Potato = "Potato"
-    public static Carrot = "Carrot"
+//     public static Apple = "Apple"
+//     public static Coconut = "Coconut"
+//     public static Tomato = "Tomato"
+//     public static Potato = "Potato"
+//     public static Carrot = "Carrot"
 
-    public static DeckList: string[] = [
-        this.ZombieDeck, this.MinataurDeck, this.BatPigDeck, this.BilbyDeck,
-        this.BirdmonDeck, this.CrabDeck, this.SkeletonDeck, this.GolemDeck,
-        this.BigGolemDeck, this.KittenMonkDeck, this.SnakeDeck, this.BuilderDeck,
-        this.ToadMageDeck, this.VikingDeck, this.WereWolfDeck
-    ]
-    public static DropList: string[] = [
-        this.Leather, this.Logs, this.Rocks
-    ]
-    public static HavestList: string[] = [
-        this.Apple, this.Coconut, this.Tomato, this.Potato, this.Carrot
-    ]
-    public static ItemCategory: string[][] = [
-        this.DeckList, this.DropList, this.HavestList
-    ]
-}
+//     public static DeckList: string[] = [
+//         this.ZombieDeck, this.MinataurDeck, this.BatPigDeck, this.BilbyDeck,
+//         this.BirdmonDeck, this.CrabDeck, this.SkeletonDeck, this.GolemDeck,
+//         this.BigGolemDeck, this.KittenMonkDeck, this.SnakeDeck, this.BuilderDeck,
+//         this.ToadMageDeck, this.VikingDeck, this.WereWolfDeck
+//     ]
+//     public static DropList: string[] = [
+//         this.Leather, this.Logs, this.Rocks
+//     ]
+//     public static HavestList: string[] = [
+//         this.Apple, this.Coconut, this.Tomato, this.Potato, this.Carrot
+//     ]
+//     public static ItemCategory: string[][] = [
+//         this.DeckList, this.DropList, this.HavestList
+//     ]
+// }
 
 export class DeckId {
     public static Zombie ="ZombieDeck"

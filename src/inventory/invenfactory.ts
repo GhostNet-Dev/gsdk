@@ -1,16 +1,15 @@
 import { Loader } from "@Glibs/loader/loader";
 import { Inventory } from "./inventory";
 import { Item } from "./items/item";
-import { ItemDb } from "./items/itemdb";
 import IEventController from "@Glibs/interface/ievent";
+import { itemDefs } from "./items/itemdefs";
 
 
 export class InvenFactory {
-    itemDb = new ItemDb(this.loader)
-    inven = new Inventory(this.itemDb, this.event)
-    invenHouse = new Inventory(this.itemDb, this.event)
+    inven = new Inventory(this.event, this.loader)
+    invenHouse = new Inventory(this.event, this.loader)
 
-    get ItemDb() { return this.itemDb }
+    get ItemDb() { return itemDefs }
     constructor(private loader: Loader, private event: IEventController) { }
 
     LoadItems(load: Inventory) {
@@ -28,10 +27,5 @@ export class InvenFactory {
             }
             d.inventroySlot.push(e)
         }
-    }
-    async GetNewItem(key: string) {
-        const item = new Item(this.itemDb.GetItem(key))
-        await item.Loader()
-        return item
     }
 }

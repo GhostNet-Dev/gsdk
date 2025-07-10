@@ -1,3 +1,4 @@
+import { ItemId } from "@Glibs/inventory/items/itemdefs"
 import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { Char } from "@Glibs/types/assettypes"
 
@@ -42,7 +43,7 @@ export enum MonsterType {
 }
 
 export type MonDrop = {
-    itemId: string,
+    itemId: ItemId,
     ratio: number
 }
 

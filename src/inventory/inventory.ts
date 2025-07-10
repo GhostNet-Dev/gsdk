@@ -1,9 +1,10 @@
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
-import { InvenData, InventorySlot, ItemId } from "@Glibs/inventory/inventypes";
-import { ItemDb } from "./items/itemdb";
+import { InvenData, InventorySlot } from "@Glibs/inventory/inventypes";
 import { Item } from "./items/item";
 import IInventory, { IItem } from "@Glibs/interface/iinven";
+import { ItemId, itemDefs } from "./items/itemdefs";
+import { Loader } from "@Glibs/loader/loader";
 
 const maxSlot = 15
 
@@ -12,8 +13,14 @@ export class Inventory implements IInventory {
         bodySlot: [],
         inventroySlot: []
     }
+    maxSlot = 0
 
-    constructor(private itemDb: ItemDb, private event: IEventController) {
+    constructor(
+        private event: IEventController,
+        private loader: Loader,
+        { maxSlot = 15 } = {},
+    ) {
+        this.maxSlot = maxSlot
     }
     InsertInventory(item: IItem) {
         const find = this.data.inventroySlot.find((slot) => slot.item.Id == item.Id)
@@ -31,7 +38,7 @@ export class Inventory implements IInventory {
             this.event.SendEventMessage(EventTypes.AlarmWarning, "인벤토리가 가득찼습니다.")
             return 
         }
-        const item = new Item(this.itemDb.GetItem(key))
+        const item = new Item(itemDefs[key])
         await item.Loader()
 
         const find = this.data.inventroySlot.find((slot) => slot.item.Id == item.Id)
@@ -67,10 +74,10 @@ export class Inventory implements IInventory {
     //     return this.data.bodySlot[pos]
     // }
     GetItemInfo(key: ItemId) {
-        return this.itemDb.GetItem(key)
+        return itemDefs[key]
     }
-    async GetNewItem(key: string) {
-        const item = new Item(this.itemDb.GetItem(key))
+    async GetNewItem(key: ItemId) {
+        const item = new Item(itemDefs[key])
         await item.Loader()
         return item
     }
@@ -88,7 +95,7 @@ export class Inventory implements IInventory {
                     inven.inventroySlot.splice(index, 1)
                 } else {
                     data.inventroySlot.push({
-                        item: new Item(this.itemDb.GetItem(id)),
+                        item: new Item(itemDefs[id]),
                         count: slot.count
                     })
                 }

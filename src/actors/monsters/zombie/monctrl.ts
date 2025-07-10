@@ -10,14 +10,17 @@ import { EffectType } from "@Glibs/types/effecttypes";
 import { IMonsterAction } from "../imonsters";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
+import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
+import { StatKey } from "@Glibs/types/stattypes";
 
 
 
-export class MonsterCtrl implements ILoop, IMonsterCtrl {
+export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     LoopId = 0
+    baseSpec: BaseSpec = new BaseSpec(this.stats, this)
     IdleSt = new IdleZState(this, this.zombie, this.gphysic)
-    AttackSt = new AttackZState(this, this.zombie, this.gphysic, this.eventCtrl, this.spec)
-    RunSt = new RunZState(this, this.zombie, this.gphysic, this.spec)
+    AttackSt = new AttackZState(this, this.zombie, this.gphysic, this.eventCtrl, this.baseSpec)
+    RunSt = new RunZState(this, this.zombie, this.gphysic, this.baseSpec)
     DyingSt = new DyingZState(this, this.zombie, this.gphysic, this.eventCtrl)
     JumpSt = new JumpZState(this, this.zombie, this.gphysic)
 
@@ -25,11 +28,12 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
     raycast = new THREE.Raycaster()
     dir = new THREE.Vector3(0, 0, 0)
     moveDirection = new THREE.Vector3()
-    health = this.spec.Health
+    health = this.baseSpec.Health
     private phybox: MonsterBox
     get Drop() { return this.property.drop }
     get MonsterBox() { return this.phybox }
-    get Spec() { return this.spec }
+    get Spec() { return this.baseSpec }
+    get objs() { return this.zombie.Meshs }
 
     constructor(
         id: number,
@@ -38,7 +42,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
         private gphysic: IGPhysic,
         private eventCtrl: IEventController,
         private property: MonsterProperty,
-        private spec: BaseSpec,
+        private stats: Partial<Record<StatKey, number>>,
     ) {
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         const size = zombie.Size
@@ -53,8 +57,12 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl {
         }
         this.phybox.position.copy(this.zombie.Pos)
     }
+    applyAction(action: IActionComponent, ctx?: ActionContext) {
+        action.apply?.(this, ctx)
+        action.activate?.(this, ctx)
+    }
     Respawning() {
-        this.health = this.spec.Health
+        this.health = this.baseSpec.Health
         this.zombie.SetOpacity(1)
         this.currentState = this.IdleSt
         this.currentState.Init()

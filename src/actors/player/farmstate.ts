@@ -7,7 +7,6 @@ import { ActionType } from "./playertypes";
 import { Player } from "./player";
 import IInventory, { IItem } from "@Glibs/interface/iinven";
 import { Bind } from "@Glibs/types/assettypes";
-import { ItemId } from "@Glibs/types/inventypes";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { FurnBox, FurnState } from "@Glibs/types/furntypes";
@@ -285,7 +284,7 @@ export class WarteringState extends State implements IPlayerAction {
         if (id == undefined) return
         const mesh = this.player.Meshs.getObjectByName(id)
         if (!mesh) return 
-        const item = await this.inven.GetNewItem(ItemId.WarterCan)
+        const item = await this.inven.GetNewItem("WarterCan")
         if (item && item.Mesh != undefined) {
             const find = mesh.getObjectById(item.Mesh.id)
             if(find) {
@@ -448,7 +447,7 @@ export class BuildingState extends State implements IPlayerAction {
         if (id == undefined) return
         const mesh = this.player.Meshs.getObjectByName(id)
         if (!mesh) return 
-        const item = await this.inven.GetNewItem(ItemId.Hammer)
+        const item = await this.inven.GetNewItem("Hammer")
         if (item && item.Mesh != undefined) {
             const find = mesh.getObjectById(item.Mesh.id)
             if(find) {

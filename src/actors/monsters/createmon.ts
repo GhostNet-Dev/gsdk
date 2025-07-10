@@ -10,10 +10,8 @@ import { MonsterId } from "./monstertypes";
 import { Effector } from "@Glibs/magical/effects/effector";
 import { Loader } from "@Glibs/loader/loader";
 import { StatFactory } from "../battle/statfactory";
-import { BaseSpec } from "../battle/basespec";
 
 export class CreateMon {
-    fab = new StatFactory()
     constructor(
         private loader: Loader,
         private eventCtrl: IEventController,
@@ -24,8 +22,7 @@ export class CreateMon {
     ) {
     }
     async Call(monId: MonsterId, id: number, pos?: THREE.Vector3): Promise<MonsterSet> {
-        const stat = this.fab.getDefaultStats(monId as string)
-        const spec = new BaseSpec(stat)
+        const stat = StatFactory.getDefaultStats(monId as string)
         
         if(!pos) pos = new THREE.Vector3(10, 0, 15)
         const property = this.monDb.GetItem(monId)
@@ -34,7 +31,7 @@ export class CreateMon {
         await monster.Loader(pos, monId as string, id)
 
         const zCtrl = new MonsterCtrl(id, this.player, monster, 
-            this.gphysic, this.eventCtrl, property, spec)
+            this.gphysic, this.eventCtrl, property, stat)
         const monSet: MonsterSet =  { 
             monModel: monster, monCtrl: zCtrl, live: true, respawn: false, deadtime: new Date().getTime()
         }

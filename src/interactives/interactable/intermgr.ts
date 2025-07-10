@@ -6,13 +6,36 @@ import { Loader } from "@Glibs/loader/loader";
 import IEventController from "@Glibs/interface/ievent";
 import { ComponentRecord, interactableDefs } from "@Glibs/types/interactivetypes";
 import { CooldownComponent, DurabilityComponent, IInteractiveComponent, RewardComponent, TrapComponent } from "./intcomponent";
+import { EventTypes } from "@Glibs/types/globaltypes";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { InterTree } from "./intertree";
+import { IAsset } from "@Glibs/interface/iasset";
 
 export default class InteractiveManager implements IWorldMapObject {
+    objs: InteractableObject[] = []
     get Type() { return MapEntryType.Interactive }
     constructor(
         private loader: Loader,
         private eventCtrl: IEventController
-    ) { }
+    ) { 
+        eventCtrl.RegisterEventListener(EventTypes.CheckInteraction, (obj: IPhysicsObject) => {
+            obj.Meshs.updateMatrixWorld(true); // 월드 행렬 업데이트
+            const myDirection = new THREE.Vector3(0, 0, 1); // Mesh의 로컬 Z축
+            obj.Meshs.getWorldDirection(myDirection); // 월드 좌표계에서의 앞 방향을 얻음 (자동 정규화됨)
+            // 4. 시야각 설정 (Degrees)
+            const fovDegrees = 90; // 90도 시야각
+            const halfFovRadians = THREE.MathUtils.degToRad(fovDegrees / 2); // 라디안으로 변환
+
+            this.objs.forEach(inter => {
+                if (obj.Pos.distanceTo(inter.position) > 5) return
+
+                const result = this.isLookingAt(obj.Pos, myDirection, inter.position, halfFovRadians)
+                if (result ) {
+                    inter.tryInteract(obj)
+                }
+            })
+        })
+    }
     async Create({
         type = Char.None,
         position = new THREE.Vector3(),
@@ -22,14 +45,21 @@ export default class InteractiveManager implements IWorldMapObject {
     }) {
         const asset = this.loader.GetAssets(type)
         const name = type.toString() + position.x + position.y + position.z
-        const inter = new InteractableObject(name, asset, this.eventCtrl)
+        const inter = this.createByType(boxType, name, asset, this.eventCtrl)
         this.applyComponents(inter, interactableDefs[boxType])
-        await inter.Loader(position, name)
+        await inter.Loader(position, rotation, scale, name)
+        this.objs.push(inter)
         return inter
     }
-    
+    createByType(type: string, id: string, asset: IAsset, eventCtrl: IEventController): InteractableObject {
+        switch (type) {
+            case "tree":
+                return new InterTree(id, asset, eventCtrl);
+            default:
+                return new InterTree(id, asset, eventCtrl);
+        }
+    }
     Delete(...param: any) {
-        
     }
     applyComponents(obj: InteractableObject, defs: ComponentRecord) {
         Object.entries(defs).forEach(([name, def]) => {
@@ -56,5 +86,23 @@ export default class InteractiveManager implements IWorldMapObject {
                 obj.addComponent(component);
             }
         });
+    }
+    isLookingAt(myPosition: THREE.Vector3, myDirection: THREE.Vector3, targetPosition: THREE.Vector3, halfFovRadians: number) {
+        // 1. 나에게서 상대방을 향하는 벡터 계산
+        const toTargetVector = new THREE.Vector3().subVectors(targetPosition, myPosition);
+
+        // 2. 벡터 정규화 (방향만 필요하므로)
+        toTargetVector.normalize();
+
+        // 3. 나의 방향 벡터와 상대방을 향하는 벡터 간의 내적 계산
+        const dotProduct = myDirection.dot(toTargetVector);
+
+        // 4. 내적 값을 이용하여 각도 계산 (코사인 역함수)
+        // dotProduct는 -1 (완전히 반대) ~ 1 (완전히 같은 방향) 사이의 값을 가집니다.
+        // clamp를 사용하여 부동 소수점 오차로 인한 acos( > 1 또는 < -1 ) 에러 방지
+        const angleRadians = Math.acos(THREE.MathUtils.clamp(dotProduct, -1, 1));
+
+        // 5. 계산된 각도가 시야각의 절반보다 작은지 확인
+        return angleRadians < halfFovRadians;
     }
 }

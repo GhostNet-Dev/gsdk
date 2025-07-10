@@ -1,12 +1,13 @@
-import { AttackItemType, DeckType, InventorySlot, ItemId, ItemProperty, ItemType } from "@Glibs/inventory/inventypes";
-import { StatKey } from "@Glibs/inventory/stat/stattypes";
+import { AttackItemType, DeckType, InventorySlot, ItemType } from "@Glibs/inventory/inventypes";
+import { ItemId, ItemProperty } from "@Glibs/inventory/items/itemdefs";
+import { IActionComponent } from "@Glibs/types/actiontypes";
 import { Bind } from "@Glibs/types/assettypes";
 
 export default interface IInventory {
     GetItem(id: ItemId): InventorySlot | undefined
     GetItemInfo(key: ItemId): ItemProperty
     NewItem(key: ItemId): Promise<IItem | undefined>
-    GetNewItem(key: string): Promise<IItem>
+    GetNewItem(key: ItemId): Promise<IItem>
 }
 
 export interface IItem {
@@ -19,9 +20,9 @@ export interface IItem {
     get Bindable(): boolean
     get Bind(): Bind | undefined
     get Mesh(): THREE.Group | undefined
+    get Actions(): readonly IActionComponent[] | undefined
     get AttackType(): AttackItemType | undefined
     get Stackable(): boolean
-    get Deck(): DeckType | undefined
     get Stats(): Partial<Record<string, number>> | undefined
     get Enchantments(): Partial<Record<string, number>> | undefined
 }

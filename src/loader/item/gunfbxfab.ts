@@ -94,7 +94,7 @@ export class M4A1Fab extends GunFbxFab implements IAsset {
         })
     }
 }
-const g_scale = 0.003
+const g_scale = 0.002
 export class ItemGunsBulletlite01Fab extends GunFbxFab implements IAsset {
     get Id() { return Char.ItemsGunsBulletlite01 }
     constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/BulletLite_01.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }

@@ -1,5 +1,5 @@
 import { baseStatPresets } from "@Glibs/actors/battle/stats"
-import { ItemId } from "@Glibs/inventory/inventypes"
+import { itemDefs } from "@Glibs/inventory/items/itemdefs"
 import { Char } from "@Glibs/types/assettypes"
 import { MonsterId, MonsterProperty, MonsterType } from "@Glibs/types/monstertypes"
 
@@ -18,8 +18,8 @@ export class MonsterDb {
             type: MonsterType.Undead,
             model: Char.CharMonZombie,
             drop: [
-                { itemId: ItemId.Leather, ratio: 0.5 },
-                { itemId: ItemId.ZombieDeck, ratio: 0.1 }
+                { itemId: itemDefs.Leather.id, ratio: 0.5 },
+                { itemId: itemDefs.ZombieDeck.id, ratio: 0.1 }
             ],
             stats: baseStatPresets[MonsterId.Zombie]
         })
@@ -28,8 +28,8 @@ export class MonsterDb {
             type: MonsterType.Beast,
             model: Char.CharMonMinataur,
             drop: [
-                { itemId: ItemId.Leather, ratio: 0.5 },
-                { itemId: ItemId.MinataurDeck, ratio: 0.05 }
+                { itemId: itemDefs.Leather.id, ratio: 0.5 },
+                { itemId: itemDefs.MinataurDeck.id, ratio: 0.05 }
             ],
             stats: baseStatPresets[MonsterId.Minotaur]
         })
@@ -38,8 +38,8 @@ export class MonsterDb {
             type: MonsterType.Beast,
             model: Char.CharMonBatPig,
             drop: [
-                { itemId: ItemId.Leather, ratio: 0.5 },
-                { itemId: ItemId.BatPigDeck, ratio: 0.05 }
+                { itemId: itemDefs.Leather.id, ratio: 0.5 },
+                { itemId: itemDefs.BatPigDeck.id, ratio: 0.05 }
             ],
             stats: baseStatPresets[MonsterId.Batpig]
         })
@@ -48,8 +48,8 @@ export class MonsterDb {
             type: MonsterType.Beast,
             model: Char.CharAniBilby,
             drop: [
-                { itemId: ItemId.Leather, ratio: 0.5 },
-                { itemId: ItemId.BilbyDeck, ratio: 0.05 }
+                { itemId: itemDefs.Leather.id, ratio: 0.5 },
+                { itemId: itemDefs.BilbyDeck.id, ratio: 0.05 }
             ]
         })
         this.monDb.set(MonsterId.Birdmon, {
@@ -57,8 +57,8 @@ export class MonsterDb {
             type: MonsterType.Beast,
             model: Char.CharMonBird,
             drop: [
-                { itemId: ItemId.Leather, ratio: 0.5 },
-                { itemId: ItemId.BirdmonDeck, ratio: 0.05 }
+                { itemId: itemDefs.Leather.id, ratio: 0.5 },
+                { itemId: itemDefs.BirdmonDeck.id, ratio: 0.05 }
             ]
         })
         this.monDb.set(MonsterId.Crab, {
@@ -66,8 +66,8 @@ export class MonsterDb {
             type: MonsterType.Beast,
             model: Char.CharMonCrab,
             drop: [
-                { itemId: ItemId.Leather, ratio: 0.5 },
-                { itemId: ItemId.CrabDeck, ratio: 0.05 }
+                { itemId: itemDefs.Leather.id, ratio: 0.5 },
+                { itemId: itemDefs.CrabDeck.id, ratio: 0.05 }
             ]
         })
         this.monDb.set(MonsterId.Builder, {
@@ -75,8 +75,8 @@ export class MonsterDb {
             type: MonsterType.Warrior,
             model: Char.CharHumanBuilder,
             drop: [
-                { itemId: ItemId.Leather, ratio: 0.5 },
-                { itemId: ItemId.BuilderDeck, ratio: 0.05 }
+                { itemId: itemDefs.Leather.id, ratio: 0.5 },
+                { itemId: itemDefs.BuilderDeck.id, ratio: 0.05 }
             ]
         })
         this.monDb.set(MonsterId.Golem, {
@@ -84,8 +84,8 @@ export class MonsterDb {
             type: MonsterType.Element,
             model: Char.CharMonGolem,
             drop: [
-                { itemId: ItemId.Rocks, ratio: 0.5 },
-                { itemId: ItemId.GolemDeck, ratio: 0.05 }
+                { itemId: itemDefs.Rocks.id, ratio: 0.5 },
+                { itemId: itemDefs.GolemDeck.id, ratio: 0.05 }
             ]
         })
         this.monDb.set(MonsterId.BigGolem, {
@@ -93,8 +93,8 @@ export class MonsterDb {
             type: MonsterType.Element,
             model: Char.CharMonBigGolem,
             drop: [
-                { itemId: ItemId.Rocks, ratio: 0.5 },
-                { itemId: ItemId.BigGolemDeck, ratio: 0.05 }
+                { itemId: itemDefs.Rocks.id, ratio: 0.5 },
+                { itemId: itemDefs.BigGolemDeck.id, ratio: 0.05 }
             ]
         })
         this.monDb.set(MonsterId.KittenMonk, {
@@ -102,8 +102,8 @@ export class MonsterDb {
             type: MonsterType.Beast,
             model: Char.CharMonKittenMonk,
             drop: [
-                { itemId: ItemId.Leather, ratio: 0.5 },
-                { itemId: ItemId.KittenMonkDeck, ratio: 0.05 }
+                { itemId: itemDefs.Leather.id, ratio: 0.5 },
+                { itemId: itemDefs.KittenMonkDeck.id, ratio: 0.05 }
             ]
         })
         this.monDb.set(MonsterId.Skeleton, {
@@ -111,7 +111,7 @@ export class MonsterDb {
             type: MonsterType.Undead,
             model: Char.CharMonSkeleton,
             drop: [
-                { itemId: ItemId.SkeletonDeck, ratio: 0.05 }
+                { itemId: itemDefs.SkeletonDeck.id, ratio: 0.05 }
             ]
         })
         this.monDb.set(MonsterId.Snake, {
@@ -119,7 +119,7 @@ export class MonsterDb {
             type: MonsterType.Beast,
             model: Char.CharMonSnake,
             drop: [
-                { itemId: ItemId.SnakeDeck, ratio: 0.05 }
+                { itemId: itemDefs.SnakeDeck.id, ratio: 0.05 }
             ]
         })
         this.monDb.set(MonsterId.ToadMage, {
@@ -127,8 +127,8 @@ export class MonsterDb {
             type: MonsterType.Beast,
             model: Char.CharMonToadMage,
             drop: [
-                { itemId: ItemId.Leather, ratio: 0.5 },
-                { itemId: ItemId.ToadMageDeck, ratio: 0.05 }
+                { itemId: itemDefs.Leather.id, ratio: 0.5 },
+                { itemId: itemDefs.ToadMageDeck.id, ratio: 0.05 }
             ]
         })
         this.monDb.set(MonsterId.Viking, {
@@ -136,7 +136,7 @@ export class MonsterDb {
             type: MonsterType.Warrior,
             model: Char.CharHumanViking,
             drop: [
-                { itemId: ItemId.VikingDeck, ratio: 0.05 }
+                { itemId: itemDefs.VikingDeck.id, ratio: 0.05 }
             ]
         })
         this.monDb.set(MonsterId.WereWolf, {
@@ -144,8 +144,8 @@ export class MonsterDb {
             type: MonsterType.Beast,
             model: Char.CharMonWereWolf,
             drop: [
-                { itemId: ItemId.Leather, ratio: 0.5 },
-                { itemId: ItemId.WereWolfDeck, ratio: 0.05 }
+                { itemId: itemDefs.Leather.id, ratio: 0.5 },
+                { itemId: itemDefs.WereWolfDeck.id, ratio: 0.05 }
             ]
         })
         this.monDb.set(MonsterId.Stone, {
@@ -153,7 +153,7 @@ export class MonsterDb {
             type: MonsterType.Rock,
             model: Char.Stone,
             drop: [
-                { itemId: ItemId.Rocks, ratio: 1 }
+                { itemId: itemDefs.Rocks.id, ratio: 1 }
             ]
         })
         this.monDb.set(MonsterId.Tree, {
@@ -161,7 +161,7 @@ export class MonsterDb {
             type: MonsterType.Plant,
             model: Char.Tree,
             drop: [
-                { itemId: ItemId.Logs, ratio: 1 }
+                { itemId: itemDefs.Logs.id, ratio: 1 }
             ]
         })
         this.monDb.set(MonsterId.DefaultBall, {

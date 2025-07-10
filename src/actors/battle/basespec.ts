@@ -1,10 +1,10 @@
-import { IBuffItem } from "@Glibs/interface/ibuff"
 import { IItem } from "@Glibs/interface/iinven"
 import { Bind } from "@Glibs/types/assettypes"
 import { Modifier } from "@Glibs/inventory/stat/modifier"
 import { StatApplyMode, StatKey } from "@Glibs/inventory/stat/stattypes"
 import { StatSystem } from "@Glibs/inventory/stat/statsystem"
 import { CharacterStatus } from "./charstatus"
+import { IActionUser } from "@Glibs/types/actiontypes"
 
 
 
@@ -12,11 +12,10 @@ export class BaseSpec {
     attackDamageMax = 1
     attackDamageMin = 1
 
-    defence = 1
+    defence = 2
 
 
     stats: StatSystem
-    buff?:IBuffItem[]
     equipment: Record<string, IItem | null> = {};
     attack = 1
     strength = 1
@@ -32,11 +31,6 @@ export class BaseSpec {
 
     get AttackDamageMax() {
         let ret = this.attackDamageMax
-        if(this.buff != undefined) {
-            this.buff.forEach((b) => {
-                ret *= b.GetDamageMax()
-            })
-        }
         return ret
     }
     get AttackDamageMin() {
@@ -45,7 +39,10 @@ export class BaseSpec {
     get Status() { return this.status}
     get Health() { return this.status.health }
 
-    constructor( stats: Partial<Record<StatKey, number>>) {
+    constructor( 
+        stats: Partial<Record<StatKey, number>>,
+        private owner: IActionUser,
+    ) {
         this.stats = new StatSystem(stats);
         this.status = {
             level: 1,
@@ -60,10 +57,6 @@ export class BaseSpec {
         this.ResetStatus()
     }
 
-    SetBuff(buff: IBuffItem[]) {
-        this.buff = buff
-    }
-    
     ResetStatus() {
         this.status.level = 1
         this.status.health = this.stats.getStat("hp")
@@ -93,6 +86,13 @@ export class BaseSpec {
         const prevItem = this.equipment[item.Bind];
         if (prevItem) {
             this.removeItemModifiers(prevItem);
+        }
+        // 🔥 핵심: ActionComponent 실행
+        if (item.Actions) {
+            for (const action of item.Actions) {
+                // ❗ baseSpec은 IActionUser가 아님 → 위임 필요
+                this.owner?.applyAction(action, { via: "item", source: item })
+            }
         }
 
         this.equipment[item.Bind] = item;
@@ -155,10 +155,5 @@ export class BaseSpec {
     }
     CheckDie(): boolean {
         return (this.status.immortal == false && this.status.health <= 0)
-    }
-    Update(delta: number) {
-        this.buff?.forEach((b) => {
-            b.Update(delta, this)
-        })
     }
 }

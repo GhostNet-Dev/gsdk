@@ -2,10 +2,10 @@ import { StatKey } from "@Glibs/types/stattypes";
 import { MonsterGrade, baseStatPresets } from "./stats";
 
 export class StatFactory {
-    getDefaultStats(monId: string): Partial<Record<StatKey, number>> {
+    static getDefaultStats(monId: string): Partial<Record<StatKey, number>> {
         return baseStatPresets[monId]
     }
-    getScaledStats(
+    static getScaledStats(
         base: Partial<Record<StatKey, number>>,
         level: number = 1,
         grade: MonsterGrade = 'normal'
@@ -34,7 +34,7 @@ export class StatFactory {
         return scaled;
     };
 
-    compareStats(
+    static compareStats(
         base: Partial<Record<StatKey, number>>,
         scaled: Partial<Record<StatKey, number>>
     ): { stat: StatKey; base?: number; scaled: number; diff?: number }[] {
@@ -66,7 +66,7 @@ export class StatFactory {
         return result.sort((a, b) => (a.stat > b.stat ? 1 : -1));
     }
 
-    getPowerRating(stats: Partial<Record<StatKey, number>>): number {
+    static getPowerRating(stats: Partial<Record<StatKey, number>>): number {
         // 단순 예시: 가중치 없는 합산
         const importantStats: StatKey[] = ['hp', 'attack', 'defense', 'magicAttack', 'speed'];
         let total = 0;
