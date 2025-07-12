@@ -1,8 +1,9 @@
 import { IItem } from "@Glibs/interface/iinven"
-import { IActionComponent } from "@Glibs/types/actiontypes"
+import { ActionContext, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes"
 import { ActionRegistry } from "@Glibs/actions/actionregistry"
 import type { ItemProperty } from "./itemdefs"
 import { IAsset } from "@Glibs/interface/iasset"
+import { BaseSpec } from "@Glibs/actors/battle/basespec"
 
 
 export class ItemAbstract implements IItem {
@@ -27,13 +28,15 @@ export class ItemAbstract implements IItem {
   constructor(public property: ItemProperty) { }
 }
 
-export class Item extends ItemAbstract {
+export class Item extends ItemAbstract implements IActionUser{
   id: string
   name: string
   icon: string
   type: string
   stats?: any
   actions: IActionComponent[] = []
+  baseSpec: BaseSpec
+  get objs() { return this.meshs }
 
   constructor(
     public def: ItemProperty,
@@ -45,25 +48,40 @@ export class Item extends ItemAbstract {
     this.icon = def.icon
     this.type = def.type
     this.stats = ("stats" in def) ? def.stats : undefined
+    this.baseSpec = new BaseSpec(this.stats, this)
 
     if ("actions" in def) {
       this.actions = def.actions.map((a: any) => ActionRegistry.create(a))
     }
   }
+  applyAction(action: IActionComponent, ctx?: ActionContext) {
+    action.apply?.(this, ctx)
+    action.activate?.(this, ctx)
+  }
+  activate(context?: ActionContext) {
+    for (const action of this.actions) {
+      action.activate?.(this, context)
+    }
+  }
+  trigger(triggerType: TriggerType, context?: ActionContext) {
+    for (const action of this.actions) {
+      action.trigger?.(this, triggerType, context)
+    }
+  }
 
-  onEquip(player: any) {
+  onEquip(player: IActionUser) {
     for (const action of this.actions) {
       action.apply?.(player)
     }
   }
 
-  onUnequip(player: any) {
+  onUnequip(player: IActionUser) {
     for (const action of this.actions) {
       action.remove?.(player)
     }
   }
 
-  use(target: any) {
+  use(target: IActionUser) {
     for (const action of this.actions) {
       if (action.isAvailable?.()) {
         action.activate?.(target)

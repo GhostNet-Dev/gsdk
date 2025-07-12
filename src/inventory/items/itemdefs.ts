@@ -1,3 +1,4 @@
+import { ActionDefs } from "@Glibs/actions/actiontypes";
 import { Char } from "@Glibs/loader/assettypes";
 import { Bind } from "@Glibs/types/assettypes";
 import { AttackItemType } from "@Glibs/types/inventypes";
@@ -57,7 +58,8 @@ export const itemDefs = {
     icon: "WeaponTool/Bow.png",
     sound: SoundType.Pistol9mm,
     stackable: false, binding: true, autoAttack: true,
-    stats: { "magicAttack": 9, "attack": 3, "attackSpeed": 1, "speed": 1, "attackRange": 7 },
+    stats: { "magicAttack": 9, "attack": 1, "attackSpeed": 1, "speed": 1, "attackRange": 7 },
+    actions: [ActionDefs.MuzzleFlash],
   },
   M4A1: {
     id: "M4A1",
@@ -74,6 +76,7 @@ export const itemDefs = {
     stats: {
       "magicAttack": 9, "attack": 3, "attackSpeed": .2, "speed": 1, "attackRange": 10
     },
+    actions: [ActionDefs.MuzzleFlash],
   },
   M16: {
     id: "M16",

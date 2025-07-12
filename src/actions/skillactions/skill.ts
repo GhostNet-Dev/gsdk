@@ -1,5 +1,6 @@
-import { ActionContext, ActionDef, IActionComponent, IActionUser, sampleActionDefs } from "@Glibs/types/actiontypes"
+import { ActionContext, ActionDef, IActionComponent, IActionUser } from "@Glibs/types/actiontypes"
 import { ActionRegistry } from "../actionregistry"
+import { ActionDefs } from "../actiontypes"
 
 export class Skill {
   constructor(
@@ -21,21 +22,21 @@ export class Skill {
   }
 }
 
-export function createSkillFromActionDefs(
-  skillId: string,
-  level: number
-): Skill | null {
-  const def = sampleActionDefs.find(d => d.id === skillId)
-  if (!def) return null
+// export function createSkillFromActionDefs(
+//   skillId: string,
+//   level: number
+// ): Skill | null {
+//   const def = ActionDefs.find(d => d.id === skillId)
+//   if (!def) return null
 
-  const levelData = def.levels?.[level - 1]
-  if (!levelData) return null
+//   const levelData = def.levels?.[level - 1]
+//   if (!levelData) return null
 
-  const mergedDef = {
-    ...def,
-    ...levelData
-  } as ActionDef
+//   const mergedDef = {
+//     ...def,
+//     ...levelData
+//   } as ActionDef
 
-  const action = ActionRegistry.create(mergedDef)
-  return new Skill(skillId, [action], [mergedDef], level)
-}
+//   const action = ActionRegistry.create(mergedDef)
+//   return new Skill(skillId, [action], [mergedDef], level)
+// }

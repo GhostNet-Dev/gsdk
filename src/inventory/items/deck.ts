@@ -8,8 +8,6 @@ import { DeckId, DeckType } from "../inventypes"
 - 일꾼으로 활용가능하다.
 - Player에게 debuff를 한다. 
 */
-
-
 export class Deck {
     static DeckDb = new Map<DeckId, DeckType>()
     static Zombie: DeckType = {

@@ -1,11 +1,9 @@
-import { BaseSpec } from "@Glibs/actors/battle/basespec"
 import { CharacterStatus } from "@Glibs/actors/battle/charstatus"
-import { IPhysicsObject } from "@Glibs/interface/iobject"
 import { StatSystem } from "@Glibs/inventory/stat/statsystem"
 
 export interface IActionUser {
   name?: string
-  objs: THREE.Group | THREE.Mesh
+  objs?: THREE.Group | THREE.Mesh
 
   baseSpec: {
     stats: StatSystem
@@ -33,6 +31,7 @@ export type TriggerType =
   | "onEnterArea"
   | "onAttackHit"
   | "onUse"
+  | "onFire"
 
 
 export interface ActionDef {
@@ -48,6 +47,7 @@ export interface ActionContext {
   level?: number
   skillId?: string
   via?: "item" | "skill" | "buff"
+  direction?: THREE.Vector3
 }
 
 
@@ -60,6 +60,8 @@ export interface IActionComponent {
   // 지속 적용 (예: 장비 착용, 버프 적용)
   apply?(target: IActionUser, context?: ActionContext): void
 
+  trigger?(target: IActionUser, triggerType: TriggerType, context?: ActionContext): void
+
   // 해제 (예: 장비 해제, 버프 제거)
   remove?(target: IActionUser): void
 
@@ -67,33 +69,37 @@ export interface IActionComponent {
   isAvailable?(context?: ActionContext): boolean
 }
 
-export const sampleActionDefs = [
-  {
+export const ActionDefs = {
+  MuzzleFlash: {
+      type: "muzzleFlash",
+      trigger: "onFire",
+      texture: "https://hons.ghostwebservice.com/assets/texture/particlepack/muzzle_02.png",
+      socket: "muzzlePoint",
+      size: 1,
+      duration: 0.1
+    },
+  StatBoost: {
     type: "statBoost",
     trigger: "onBuffApply",
     stats: { defense: 5, maxHp: 20 }
   },
-  {
+  Regen: {
     type: "regen",
     trigger: "onBuffTick",
     amount: 2
   },
-  {
-    type: "fireball",
-    trigger: "onCast"
-  },
-  {
+  Bleed: {
     type: "bleed",
     trigger: "onHit",
     chance: 0.3,
     dps: 5
   },
-  {
+  Knockback: {
     type: "knockback",
     trigger: "onHit",
     force: 1.5
   },
-  {
+  FireBall: {
     id: "fireball",
     name: "Fireball",
     trigger: "onCast",
@@ -105,7 +111,7 @@ export const sampleActionDefs = [
       { damage: 20, radius: 1.5, speed: 10 }
     ]
   },
-  {
+  Heal: {
     id: "heal",
     name: "Heal",
     trigger: "onCast",
@@ -117,4 +123,4 @@ export const sampleActionDefs = [
       { amount: 50 }
     ]
   }
-]
+}

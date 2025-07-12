@@ -12,6 +12,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { Bind } from "@Glibs/types/assettypes";
 import { ActionType } from "./playertypes";
 import { IItem } from "@Glibs/interface/iinven";
+import { Item } from "@Glibs/inventory/items/item";
 
 export class AttackState extends State implements IPlayerAction {
     raycast = new THREE.Raycaster()
@@ -41,34 +42,9 @@ export class AttackState extends State implements IPlayerAction {
         if(handItem == undefined) {
             this.player.ChangeAction(ActionType.Punch, this.attackSpeed)
         } else {
-            switch(handItem.AttackType) {
-                case AttackItemType.Blunt:
-                case AttackItemType.Axe:
-                case AttackItemType.Sword:
-                    this.player.ChangeAction(ActionType.Sword, this.attackSpeed)
-                    this.meleeAttackMode = true
-                    break;
-                case AttackItemType.Knife:
-                    this.player.ChangeAction(ActionType.Sword, this.attackSpeed)
-                    this.meleeAttackMode = true
-                    break;
-                case AttackItemType.OneHandGun:
-                    this.player.ChangeAction(ActionType.OneHandGun, this.attackSpeed)
-                    this.meleeAttackMode = false
-                    break;
-                case AttackItemType.TwoHandGun:
-                    this.player.ChangeAction(ActionType.TwoHandGun, this.attackSpeed)
-                    this.meleeAttackMode = false
-                    break;
-                case AttackItemType.Bow:
-                    this.player.ChangeAction(ActionType.Bow, this.attackSpeed)
-                    this.meleeAttackMode = false
-                    break;
-                case AttackItemType.Wand:
-                    this.player.ChangeAction(ActionType.Wand, this.attackSpeed)
-                    this.meleeAttackMode = false
-                    break;
-            }
+            const anim = this.getAnimationForItem(handItem)
+            this.player.ChangeAction(anim, this.attackSpeed)
+            if (handItem.AttackType) this.meleeAttackMode = this.isMeleeWeapon(handItem.AttackType)
             if (handItem.AutoAttack) this.autoDirection()
             this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, handItem.Mesh, handItem.Sound)
         }
@@ -77,6 +53,24 @@ export class AttackState extends State implements IPlayerAction {
         this.attackTime = this.attackSpeed
         this.clock = new THREE.Clock()
         this.player.createDashedCircle(this.attackDist)
+    }
+    getAnimationForItem(item: IItem): ActionType {
+        switch (item.AttackType) {
+            case AttackItemType.Sword:
+            case AttackItemType.Axe:
+            case AttackItemType.Blunt:
+                return ActionType.Sword
+            case AttackItemType.OneHandGun:
+                return ActionType.OneHandGun
+            case AttackItemType.TwoHandGun:
+                return ActionType.TwoHandGun
+            default:
+                return ActionType.Punch
+        }
+    }
+
+    isMeleeWeapon(type: AttackItemType): boolean {
+        return [AttackItemType.Sword, AttackItemType.Axe, AttackItemType.Blunt, AttackItemType.Knife].includes(type)
     }
     /**
      * 해제
@@ -129,7 +123,10 @@ export class AttackState extends State implements IPlayerAction {
         }
         const startPos = new THREE.Vector3()
         this.player.Meshs.getWorldDirection(this.attackDir)
-        this.player.GetMuzzlePosition(startPos)
+        this.player.GetMuzzlePosition(startPos);
+
+        (itemInfo as Item).trigger("onFire", { direction: this.attackDir })
+
         this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
             id: MonsterId.BulletLine, 
             ownerSpec: this.spec,

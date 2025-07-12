@@ -33,12 +33,16 @@ export class Inventory implements IInventory {
     GetItem(id: ItemId) {
         return this.data.inventroySlot.find(e => e.item.Id == id)
     }
+    private getAsset(key: ItemId) {
+        const itemProperty = itemDefs[key]
+        return ("assetKey" in itemProperty) ? this.loader.GetAssets(itemProperty.assetKey) : undefined
+    }
     async NewItem(key: ItemId) {
         if(this.data.inventroySlot.length == maxSlot) {
             this.event.SendEventMessage(EventTypes.AlarmWarning, "인벤토리가 가득찼습니다.")
             return 
         }
-        const item = new Item(itemDefs[key])
+        const item = new Item(itemDefs[key], this.getAsset(key))
         await item.Loader()
 
         const find = this.data.inventroySlot.find((slot) => slot.item.Id == item.Id)
@@ -77,7 +81,7 @@ export class Inventory implements IInventory {
         return itemDefs[key]
     }
     async GetNewItem(key: ItemId) {
-        const item = new Item(itemDefs[key])
+        const item = new Item(itemDefs[key], this.getAsset(key))
         await item.Loader()
         return item
     }
