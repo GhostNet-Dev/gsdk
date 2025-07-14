@@ -9,6 +9,8 @@ import { gui } from "@Glibs/helper/helper";
 class GunFbxFab extends AssetModel {
     gltf?:GLTF
     muzzlePointObject = new THREE.Object3D(); // 총구 위치를 나타낼 Object3D
+    casingPointObject = new THREE.Object3D();
+
     constructor(loader: Loader, path: string, customFn = () => { }) { 
         super(loader, ModelType.Fbx, path, async (meshs: THREE.Group) => {
             this.meshs = meshs
@@ -21,7 +23,19 @@ class GunFbxFab extends AssetModel {
 
             this.muzzlePointObject.name = "muzzlePoint"
             this.muzzlePointObject.position.set(68, 8.5, 0)
+
+            this.casingPointObject.name = "casingEjectionPoint"
             customFn?.()
+
+
+            // const axesHelper = new THREE.AxesHelper(20); // 축의 길이 (조절 가능)
+            // this.casingPointObject.add(axesHelper);
+            // const fp = gui.addFolder("tools")
+
+            // const debugMesh = this.casingPointObject
+            // this.CreateVectorGui(fp, debugMesh.position, "Pos", 0.1)
+            // this.CreateVectorGui(fp, debugMesh.rotation, "Rot", 0.1)
+            // this.CreateVectorGui(fp, debugMesh.scale, "Scale", 0.01)
         })
     }
     GetBox(mesh: THREE.Group) {
@@ -65,16 +79,9 @@ export class PistolFab extends GunFbxFab implements IAsset {
             this.muzzlePointObject.position.set(20, 8, 0)
             this.meshs.add(this.muzzlePointObject)
 
-            // const debugGeometry = new THREE.SphereGeometry(1, 8, 8); // 아주 작은 구
-            // const debugMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // 녹색 와이어프레임
-            // const debugMesh = new THREE.Mesh(debugGeometry, debugMaterial);
-            // debugMesh.position.set(20, 8, 0)
-            // const fp = gui.addFolder("tools")
-
-            // this.CreateVectorGui(fp, debugMesh.position, "Pos", 0.1)
-            // this.CreateVectorGui(fp, debugMesh.rotation, "Rot", 0.1)
-            // this.CreateVectorGui(fp, debugMesh.scale, "Scale", 0.01)
-            // this.meshs.add(debugMesh)
+            this.casingPointObject.position.set(7, 10, 1)
+            this.casingPointObject.rotation.set(-1, 0, 0)
+            this.meshs.add(this.casingPointObject)
         })
     }
 }
@@ -91,6 +98,10 @@ export class M4A1Fab extends GunFbxFab implements IAsset {
 
             this.muzzlePointObject.position.set(68, 8.5, 0)
             this.meshs.add(this.muzzlePointObject)
+            
+            this.casingPointObject.position.set(7, 10, 1)
+            this.casingPointObject.rotation.set(-1, 0, 0)
+            this.meshs.add(this.casingPointObject)
         })
     }
 }
