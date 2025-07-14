@@ -44,6 +44,7 @@ export interface ActionDef {
 
 export interface ActionContext {
   source?: any
+  destination?: any
   level?: number
   skillId?: string
   via?: "item" | "skill" | "buff"
@@ -77,6 +78,11 @@ export const ActionDefs = {
       socket: "muzzlePoint",
       size: 1,
       duration: 0.1
+    },
+  Casing: {
+      type: "casing",
+      trigger: "onFire",
+      socket: "casingEjectionPoint",
     },
   StatBoost: {
     type: "statBoost",

@@ -59,7 +59,7 @@ export const itemDefs = {
     sound: SoundType.Pistol9mm,
     stackable: false, binding: true, autoAttack: true,
     stats: { "magicAttack": 9, "attack": 1, "attackSpeed": 1, "speed": 1, "attackRange": 7 },
-    actions: [ActionDefs.MuzzleFlash],
+    actions: [ActionDefs.MuzzleFlash, ActionDefs.Casing],
   },
   M4A1: {
     id: "M4A1",
@@ -76,7 +76,7 @@ export const itemDefs = {
     stats: {
       "magicAttack": 9, "attack": 3, "attackSpeed": .2, "speed": 1, "attackRange": 10
     },
-    actions: [ActionDefs.MuzzleFlash],
+    actions: [ActionDefs.MuzzleFlash, ActionDefs.Casing],
   },
   M16: {
     id: "M16",

@@ -31,7 +31,8 @@ export class Player extends PhysicsObject {
         asset: IAsset,
         private eventCtrl: IEventController,
         private game: THREE.Scene,
-        private inventory: IInventory
+        private inventory: IInventory,
+        private audioListener?: THREE.AudioListener,
     ) {
         super(asset)
         this.meshs = new THREE.Group
@@ -130,6 +131,8 @@ export class Player extends PhysicsObject {
         
         this.meshs = meshs
         this.meshs.position.copy(position)
+
+        if(this.audioListener) this.meshs.add(this.audioListener)
 
         this.mixer = asset.GetMixer(name)
 

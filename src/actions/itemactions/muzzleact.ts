@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { ActionContext, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes"
-import gsap from "gsap";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 
@@ -20,7 +19,7 @@ export class MuzzleAction implements IActionComponent {
   });
   flash1 = new THREE.Mesh(new THREE.PlaneGeometry(this.size, this.size), this.mat);
   flash2 = new THREE.Mesh(new THREE.PlaneGeometry(this.size, this.size), this.mat);
-  flashLight = new THREE.PointLight(0xffaa66, 2, 2);
+  flashLight = new THREE.PointLight(0xffaa66, 2, 4);
   scale = .5
 
   constructor(

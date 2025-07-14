@@ -42,10 +42,12 @@ export class AttackState extends State implements IPlayerAction {
         if(handItem == undefined) {
             this.player.ChangeAction(ActionType.Punch, this.attackSpeed)
         } else {
+            (handItem as Item).activate()
             const anim = this.getAnimationForItem(handItem)
             this.player.ChangeAction(anim, this.attackSpeed)
             if (handItem.AttackType) this.meleeAttackMode = this.isMeleeWeapon(handItem.AttackType)
             if (handItem.AutoAttack) this.autoDirection()
+
             this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, handItem.Mesh, handItem.Sound)
         }
         

@@ -1,6 +1,4 @@
 import { ActionContext, ActionDef, IActionComponent, IActionUser } from "@Glibs/types/actiontypes"
-import { ActionRegistry } from "../actionregistry"
-import { ActionDefs } from "../actiontypes"
 
 export class Skill {
   constructor(
