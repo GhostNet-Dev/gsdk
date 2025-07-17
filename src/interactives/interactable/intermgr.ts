@@ -5,10 +5,10 @@ import { InteractableObject } from "./interactable";
 import { Loader } from "@Glibs/loader/loader";
 import IEventController from "@Glibs/interface/ievent";
 import { ComponentRecord, interactableDefs } from "@Glibs/types/interactivetypes";
-import { CooldownComponent, DurabilityComponent, IInteractiveComponent, RewardComponent, TrapComponent } from "./intcomponent";
+import { CooldownComponent, DurabilityComponent, IInteractiveComponent, RewardComponent, TrapComponent } from "./interobjs/intcomponent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
-import { InterTree } from "./intertree";
+import { InterTree } from "./interobjs/intertree";
 import { IAsset } from "@Glibs/interface/iasset";
 
 export default class InteractiveManager implements IWorldMapObject {
@@ -45,18 +45,17 @@ export default class InteractiveManager implements IWorldMapObject {
     }) {
         const asset = this.loader.GetAssets(type)
         const name = type.toString() + position.x + position.y + position.z
-        const inter = this.createByType(boxType, name, asset, this.eventCtrl)
-        this.applyComponents(inter, interactableDefs[boxType])
+        const inter = this.createByType(boxType, name, asset)
         await inter.Loader(position, rotation, scale, name)
         this.objs.push(inter)
         return inter
     }
-    createByType(type: string, id: string, asset: IAsset, eventCtrl: IEventController): InteractableObject {
+    createByType(type: string, name: string, asset: IAsset): InteractableObject {
         switch (type) {
             case "tree":
-                return new InterTree(id, asset, eventCtrl);
+                return new InterTree(name, interactableDefs.Tree, asset, this.eventCtrl);
             default:
-                return new InterTree(id, asset, eventCtrl);
+                return new InterTree(name, interactableDefs.Tree, asset, this.eventCtrl);
         }
     }
     Delete(...param: any) {

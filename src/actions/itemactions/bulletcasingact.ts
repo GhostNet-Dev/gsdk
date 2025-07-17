@@ -20,6 +20,8 @@ export class BulletCasingAct implements IActionComponent, ILoop {
     ) {
     }
     activate(target: IActionUser, context?: ActionContext | undefined): void {
+        const obj = target.objs
+        if (!obj || !obj.getObjectByName(this.socket)) return
         this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
     }
     trigger(user: IActionUser, triggerType: TriggerType, ctx?: ActionContext) {

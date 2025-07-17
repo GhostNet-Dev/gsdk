@@ -1,4 +1,7 @@
 import { InteractableObject } from "@Glibs/interactives/interactable/interactable";
+import { itemDefs } from "@Glibs/inventory/items/itemdefs";
+import { ActionDefs } from "@Glibs/types/actiontypes";
+import { Char } from "@Glibs/types/assettypes";
 
 export type InteractiveType =
     "none" | "tree" | "ore" | "trap" | "chest" | "switch"; // 오브젝트 분류
@@ -21,10 +24,21 @@ type InteractableObjectDefinition = {
 };
 type InteractableObjectDefinitions = Record<string, ComponentRecord>;
 
-export const interactableDefs: InteractableObjectDefinitions = {
-  tree: {
-      reward: { type: "reward", reward: "wood" },
-      durability: { type: "durability", durability: 3 },
-      cooldown: { type: "cooldown", cooldownTime: 2000 },
-    }
-}
+export const interactableDefs = {
+  Tree: {
+    id: "tree",
+    type: "tree",
+    level: "common",
+    assetKey: Char.Tree,
+    name: "tree",
+    stats: { "hp": 10 },
+    actions: [ActionDefs.Shaker, ActionDefs.Fluffy],
+    drop: [
+      { itemId: itemDefs.Logs.id, ratio: 1 }
+    ]
+  }
+} as const
+
+export type InteractableDefs = typeof interactableDefs
+export type InterId = keyof InteractableDefs
+export type InteractableProperty = InteractableDefs[InterId]

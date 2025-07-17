@@ -30,13 +30,13 @@ export class AssetModel {
         return this.clips.get(id)
     }
 
-    async UniqModel(id: string): Promise<[THREE.Group, boolean]> {
+    async UniqModel(id: string, external?: Function): Promise<[THREE.Group, boolean]> {
         const has = this.models.get(id)
         if (has != undefined) {
             return [has, true]
         }
 
-        const ret = await this.NewModel()
+        const ret = await this.NewModel(external)
         this.models.set(id, ret)
         return [ret, false]
     }
@@ -56,12 +56,13 @@ export class AssetModel {
         this.mixers.set(id, ret)
         return ret
     }
-    async NewModel(): Promise<THREE.Group> {
+    async NewModel(external?: Function): Promise<THREE.Group> {
         if (this.loaderType == ModelType.Gltf) {
             return await new Promise(async (resolve) => {
                 await this.loader.Load.load(this.loader.rootPath + this.path, async (gltf) => {
                     this.meshs = gltf.scene
                     await this.afterLoad(gltf)
+                    await external?.(gltf)
                     resolve(gltf.scene)
                 })
             })
@@ -85,6 +86,7 @@ export class AssetModel {
             const clone = this.meshs.clone()
             this.meshs.userData = backupUserdata
             clone.userData = backupUserdata
+            console.log("clone model")
             return clone
         }
         return await this.NewModel()

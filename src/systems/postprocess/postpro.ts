@@ -111,7 +111,10 @@ export class Postpro implements IPostPro {
   setNonGlow(target: THREE.Mesh | THREE.Group) {
     target.traverse((child: any) => {
       if(child.isMesh) {
+        const originalOnBeforeCompile = child.material.onBeforeCompile;
         child.material.onBeforeCompile = (shader: any) => {
+          if (originalOnBeforeCompile) originalOnBeforeCompile(shader)
+
           shader.uniforms.globalBloom = this.gu.globalBloom
           shader.fragmentShader = `
             uniform float globalBloom;

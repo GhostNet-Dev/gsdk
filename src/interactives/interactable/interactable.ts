@@ -1,32 +1,66 @@
 import * as THREE from "three";
 import IEventController from "@Glibs/interface/ievent";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
-import { IInteractiveComponent } from "./intcomponent";
+import { IInteractiveComponent } from "./interobjs/intcomponent";
 import { IAsset } from "@Glibs/interface/iasset";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { ActionContext, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes";
+import { CharacterStatus } from "@Glibs/actors/battle/charstatus";
+import { StatSystem } from "@Glibs/inventory/stat/statsystem";
+import { BaseSpec } from "@Glibs/actors/battle/basespec";
+import { InterId, InteractableProperty, interactableDefs } from "@Glibs/types/interactivetypes";
+import { ActionRegistry } from "@Glibs/actions/actionregistry";
 
 // export abstract class InteractableObject extends THREE.Object3D {
-export abstract class InteractableObject extends THREE.Object3D {
+export abstract class InteractableObject extends THREE.Group implements IActionUser {
+    baseSpec: BaseSpec
     interactId: string;
     isActive = true;
+    actions: IActionComponent[] = []
     components: Map<string, IInteractiveComponent> = new Map();
+    meshs?: THREE.Group
+    get objs() { return this.meshs }
 
     constructor(
-        id: string,
+        name: string,
+        def: InteractableProperty,
         protected asset: IAsset,
         protected eventCtrl: IEventController
     ) {
         super();
-        this.interactId = id;
+        this.interactId = name;
+        const stats = def.stats
+        this.baseSpec = new BaseSpec(stats, this)
+
+        if ("actions" in def) {
+            this.actions = def.actions.map((a: any) => ActionRegistry.create(a))
+        }
     }
     async Loader(position: THREE.Vector3, rotation: THREE.Euler, scale: number, name: string) {
         this.position.copy(position);
         this.rotation.copy(rotation);
         this.scale.set(scale, scale, scale);
         this.name = name;
-        const [meshs, _exist] = await this.asset.UniqModel(name)
-        this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, meshs)
+        // const meshs = await this.asset.CloneModel()
+        const [meshs, _] = await this.asset.UniqModel(name)
+        // this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, meshs)
+        this.meshs = meshs
+        this.actions.forEach(a => this.applyAction(a))
         this.add(meshs)
+    }
+    applyAction(action: IActionComponent, ctx?: ActionContext) {
+        action.apply?.(this, ctx)
+        action.activate?.(this, ctx)
+    }
+    activate(context?: ActionContext) {
+        for (const action of this.actions) {
+            action.activate?.(this, context)
+        }
+    }
+    trigger(triggerType: TriggerType, context?: ActionContext) {
+        for (const action of this.actions) {
+            action.trigger?.(this, triggerType, context)
+        }
     }
     abstract tryInteract(actor: IPhysicsObject): void;
 

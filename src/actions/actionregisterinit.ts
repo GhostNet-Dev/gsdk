@@ -5,6 +5,8 @@ import { FireballAction } from "./skillactions/fireballact"
 import { MuzzleAction } from "./itemactions/muzzleact";
 import { EventController } from "@Glibs/systems/event/eventctrl";
 import { BulletCasingAct } from "./itemactions/bulletcasingact";
+import { ShakerAction } from "./itemactions/shakeract";
+import { FluffyAction } from "./itemactions/fluffyact";
 
 export function InitActionRegistry(eventCtrl: EventController, scean: THREE.Scene) {
     ActionRegistry.register("statBoost", def => new StatBoostAction(def.stats))
@@ -14,5 +16,7 @@ export function InitActionRegistry(eventCtrl: EventController, scean: THREE.Scen
         const texture = new THREE.TextureLoader().load(def.texture)
         return new MuzzleAction(eventCtrl, scean, texture, def.socket, def.size, def.duration)
     })
+    ActionRegistry.register("shaker", def => new ShakerAction())
+    ActionRegistry.register("fluffy", def => new FluffyAction(eventCtrl))
 }
 

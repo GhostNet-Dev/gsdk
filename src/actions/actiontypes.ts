@@ -3,7 +3,7 @@ import { StatSystem } from "@Glibs/inventory/stat/statsystem"
 
 export interface IActionUser {
   name?: string
-  objs?: THREE.Group | THREE.Mesh
+  objs?: THREE.Group | THREE.Mesh | THREE.Object3D
 
   baseSpec: {
     stats: StatSystem
@@ -32,6 +32,8 @@ export type TriggerType =
   | "onAttackHit"
   | "onUse"
   | "onFire"
+  | "onHit"
+  | "onActivate"
 
 
 export interface ActionDef {
@@ -83,6 +85,14 @@ export const ActionDefs = {
       type: "casing",
       trigger: "onFire",
       socket: "casingEjectionPoint",
+    },
+  Shaker: {
+      type: "shaker",
+      trigger: "onHit",
+    },
+  Fluffy: {
+      type: "fluffy",
+      trigger: "onActivate",
     },
   StatBoost: {
     type: "statBoost",

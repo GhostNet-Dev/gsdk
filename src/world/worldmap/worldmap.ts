@@ -96,7 +96,8 @@ export default class WorldMap {
 
         this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, map)
 
-        if(mapType != MapEntryType.Tree && mapType != MapEntryType.FluffyMaker)
+        if(mapType != MapEntryType.Tree && mapType != MapEntryType.FluffyMaker
+            && mapType != MapEntryType.Interactive)
             this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, map)
 
         if (mapType != MapEntryType.UltimateModular &&

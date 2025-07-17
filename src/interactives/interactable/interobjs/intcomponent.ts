@@ -1,5 +1,5 @@
 import { IPhysicsObject } from "@Glibs/interface/iobject";
-import { InteractableObject } from "./interactable";
+import { InteractableObject } from "../interactable";
 
 export interface IInteractiveComponent {
   name: string;
