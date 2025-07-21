@@ -3,19 +3,17 @@ import IEventController from "@Glibs/interface/ievent";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { IInteractiveComponent } from "./interobjs/intcomponent";
 import { IAsset } from "@Glibs/interface/iasset";
-import { EventTypes } from "@Glibs/types/globaltypes";
 import { ActionContext, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes";
-import { CharacterStatus } from "@Glibs/actors/battle/charstatus";
-import { StatSystem } from "@Glibs/inventory/stat/statsystem";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
-import { InterId, InteractableProperty, interactableDefs } from "@Glibs/types/interactivetypes";
+import { InteractableProperty } from "@Glibs/types/interactivetypes";
 import { ActionRegistry } from "@Glibs/actions/actionregistry";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
 // export abstract class InteractableObject extends THREE.Object3D {
 export abstract class InteractableObject extends THREE.Group implements IActionUser {
     baseSpec: BaseSpec
     interactId: string;
-    isActive = true;
+    isActive = false;
     actions: IActionComponent[] = []
     components: Map<string, IInteractiveComponent> = new Map();
     meshs?: THREE.Group
@@ -70,6 +68,11 @@ export abstract class InteractableObject extends THREE.Group implements IActionU
 
     update(delta: number) {
         this.components.forEach((comp) => comp.onUpdate?.(delta));
+    }
+
+    disable() {
+        this.isActive = false
+        this.eventCtrl.SendEventMessage(EventTypes.AlarmInteractiveOff)
     }
 
     addComponent(comp: IInteractiveComponent) {

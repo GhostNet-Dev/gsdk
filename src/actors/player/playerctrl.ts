@@ -1,10 +1,10 @@
 import * as THREE from "three";
 import { Player } from "./player";
-import { DeadState, IPlayerAction, IdleState, JumpState, MagicH1State, MagicH2State, RunState } from "./playerstate";
-import { AttackIdleState, AttackState } from "./attackstate";
+import { DeadState, IPlayerAction, IdleState, JumpState, MagicH1State, MagicH2State, RunState } from "./states/playerstate";
+import { AttackIdleState, AttackState } from "./states/attackstate";
 import { BaseSpec } from "../battle/basespec";
-import { BuildingState, DeleteState, PickFruitState, PickFruitTreeState, PlantAPlantState, WarteringState } from "./farmstate";
-import { DeckState } from "./deckstate";
+import { BuildingState, DeleteState, PickFruitState, PickFruitTreeState, PlantAPlantState, WarteringState } from "./states/farmstate";
+import { DeckState } from "./states/deckstate";
 import { IBuffItem } from "@Glibs/interface/ibuff";
 import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
 import IEventController, { IKeyCommand, ILoop } from "@Glibs/interface/ievent";
@@ -173,9 +173,6 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.currentState.Uninit()
         this.currentState = this.IdleSt
         this.IdleSt.Init()
-    }
-    checkPlayerMode() {
-
     }
     update(delta: number) {
         this.updateInputVector()

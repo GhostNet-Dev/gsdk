@@ -21,6 +21,7 @@ export enum AttackType {
 
 export enum ActionType {
     Idle,
+    TreeIdle,
     Run,
     Jump,
     Punch,

@@ -1,10 +1,10 @@
 import * as THREE from "three";
-import { PlayerCtrl } from "./playerctrl";
-import { Player } from "./player";
+import { PlayerCtrl } from "../playerctrl";
+import { Player } from "../player";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { KeyType } from "@Glibs/types/eventtypes";
 import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
-import { ActionType } from "./playertypes";
+import { ActionType } from "../playertypes";
 import { Bind } from "@Glibs/types/assettypes";
 import IEventController from "@Glibs/interface/ievent";
 

@@ -1,17 +1,19 @@
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { InteractableObject } from "../interactable";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { KeyType } from "@Glibs/types/eventtypes";
 
 export class InterTree extends InteractableObject {
-  activation = false
+
   tryInteract(actor: IPhysicsObject): void {
     // EventBus.emit("gatherWood", { actor, tree: this });
-    if (actor.Pos.distanceTo(this.position) < 4 && !this.activation) {
-      this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, "나무을 수집하고 싶습니다.")
+    if (actor.Pos.distanceTo(this.position) < 5 && !this.isActive) {
+      this.eventCtrl.SendEventMessage(EventTypes.AlarmInteractiveOn, {
+        [KeyType.Action1]: "나무 베기"
+      })
+      this.eventCtrl.SendEventMessage(EventTypes.ChangePlayerMode)
       this.trigger("onHit")
-      this.activation = true
-    } else {
-      this.activation = false
-    }
+      this.isActive = true
+    } 
   }
 }

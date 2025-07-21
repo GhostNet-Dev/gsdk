@@ -1,10 +1,10 @@
 import * as THREE from "three";
 import { IPlayerAction, State } from "./playerstate"
 import { AttackOption, AttackType } from "@Glibs/types/playertypes";
-import { PlayerCtrl } from "./playerctrl";
+import { PlayerCtrl } from "../playerctrl";
 import { IGPhysic } from "@Glibs/interface/igphysics";
-import { ActionType } from "./playertypes";
-import { Player } from "./player";
+import { ActionType } from "../playertypes";
+import { Player } from "../player";
 import IInventory, { IItem } from "@Glibs/interface/iinven";
 import { Bind } from "@Glibs/types/assettypes";
 import IEventController from "@Glibs/interface/ievent";

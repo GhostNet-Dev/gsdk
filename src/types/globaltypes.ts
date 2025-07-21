@@ -29,9 +29,11 @@ export enum EventTypes {
     Input = "input",
     CtrlObj = "ctrlObj",
     CtrlObjOff = "ctrlObjOff",
+    // bloom효과를 제거해야하는 객체를 등록
     SetNonGlow = "nonglow",
 
     Equipment = "Equip",
+    // item이 drop 해야될 때 
     Drop = "drop",
     DirectDrop = "directdrop",
 
@@ -53,23 +55,32 @@ export enum EventTypes {
 
     AlarmWarning = "alarmwarning",
     AlarmNormal = "alarmnormal",
+    AlarmInteractiveOn = "alarminton",
+    AlarmInteractiveOff = "alarmintoff",
     Toast = "toast",
     Spinner = "spin",
 
-    // player와 상호작용하는 객체 Attackable
+    // player와 상호작용하는 객체 Attackable, Interatable
     AddInteractive = "addinter",
     DelInteractive = "delinter",
 
     // player와 상호작용하는 객체 interatable
     CheckInteraction = "checkinter",
 
+    // 상호작용에 의해 Player 모드 변경 
+    ChangePlayerMode = "chgplayermod",
+
+    // 주기적으로 호출되는 함수 등록
     RegisterLoop = "regloop",
     DeregisterLoop = "deregloop",
+    // resize가 필요한 요소
     RegisterViewer = "regviewer",
 
+    // 물리적인 충돌 검사가 필요한 객체 
     RegisterPhysic = "regphysic",
     DeregisterPhysic = "deregphysic",
 
+    // AI를 제어하는 함수들
     AgentEpisode = "agentep",
     AgentSave = "agentsv",
     AgentLoad = "agentld",

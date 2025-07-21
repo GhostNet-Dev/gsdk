@@ -1,16 +1,16 @@
 import * as THREE from "three";
 import { IPlayerAction, State } from "./playerstate"
-import { Player } from "./player";
-import { BaseSpec } from "../battle/basespec";
+import { Player } from "../player";
+import { BaseSpec } from "../../battle/basespec";
 import { AttackItemType } from "@Glibs/types/inventypes";
-import { PlayerCtrl } from "./playerctrl";
+import { PlayerCtrl } from "../playerctrl";
 import { MonsterId } from "@Glibs/types/monstertypes";
 import { AttackType } from "@Glibs/types/playertypes";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { Bind } from "@Glibs/types/assettypes";
-import { ActionType } from "./playertypes";
+import { ActionType } from "../playertypes";
 import { IItem } from "@Glibs/interface/iinven";
 import { Item } from "@Glibs/inventory/items/item";
 

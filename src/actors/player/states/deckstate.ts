@@ -1,10 +1,10 @@
 import * as THREE from "three";
 import { IPlayerAction, State } from "./playerstate"
-import { PlayerCtrl } from "./playerctrl";
-import { Player } from "./player";
+import { PlayerCtrl } from "../playerctrl";
+import { Player } from "../player";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import IEventController from "@Glibs/interface/ievent";
-import { ActionType, AttackType } from "./playertypes";
+import { ActionType, AttackType } from "../playertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 
 export class DeckState extends State implements IPlayerAction {

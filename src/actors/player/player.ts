@@ -137,6 +137,7 @@ export class Player extends PhysicsObject {
         this.mixer = asset.GetMixer(name)
 
         this.clipMap.set(ActionType.Idle, asset.GetAnimationClip(Ani.Idle))
+        this.clipMap.set(ActionType.TreeIdle, asset.GetAnimationClip(Ani.FightIdle))
         this.clipMap.set(ActionType.Run, asset.GetAnimationClip(Ani.Run))
         this.clipMap.set(ActionType.Jump, asset.GetAnimationClip(Ani.Jump))
         this.clipMap.set(ActionType.Punch, asset.GetAnimationClip(Ani.Punch))

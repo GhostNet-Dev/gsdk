@@ -27,12 +27,15 @@ export default class InteractiveManager implements IWorldMapObject {
             const halfFovRadians = THREE.MathUtils.degToRad(fovDegrees / 2); // 라디안으로 변환
 
             this.objs.forEach(inter => {
-                if (obj.Pos.distanceTo(inter.position) > 5) return
+                if (obj.Pos.distanceTo(inter.position) > 6) {
+                    if(inter.isActive) inter.disable()
+                    return
+                }
 
                 const result = this.isLookingAt(obj.Pos, myDirection, inter.position, halfFovRadians)
-                if (result ) {
+                if (result) {
                     inter.tryInteract(obj)
-                }
+                } 
             })
         })
     }
