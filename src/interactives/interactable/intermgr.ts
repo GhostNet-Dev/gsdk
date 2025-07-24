@@ -10,6 +10,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { InterTree } from "./interobjs/intertree";
 import { IAsset } from "@Glibs/interface/iasset";
+import { TriggerType } from "@Glibs/types/actiontypes";
 
 export default class InteractiveManager implements IWorldMapObject {
     objs: InteractableObject[] = []
@@ -18,6 +19,12 @@ export default class InteractiveManager implements IWorldMapObject {
         private loader: Loader,
         private eventCtrl: IEventController
     ) { 
+        eventCtrl.RegisterEventListener(EventTypes.DoInteraction, (id: string, type: TriggerType) => {
+            this.objs.forEach(inter => {
+                if(inter.interactId == id) inter.trigger(type)
+            })
+            
+        })
         eventCtrl.RegisterEventListener(EventTypes.CheckInteraction, (obj: IPhysicsObject) => {
             obj.Meshs.updateMatrixWorld(true); // 월드 행렬 업데이트
             const myDirection = new THREE.Vector3(0, 0, 1); // Mesh의 로컬 Z축
@@ -35,7 +42,9 @@ export default class InteractiveManager implements IWorldMapObject {
                 const result = this.isLookingAt(obj.Pos, myDirection, inter.position, halfFovRadians)
                 if (result) {
                     inter.tryInteract(obj)
-                } 
+                } else {
+                    if(inter.isActive) inter.disable()
+                }
             })
         })
     }
@@ -47,18 +56,18 @@ export default class InteractiveManager implements IWorldMapObject {
         boxType = "none",
     }) {
         const asset = this.loader.GetAssets(type)
-        const name = type.toString() + position.x + position.y + position.z
-        const inter = this.createByType(boxType, name, asset)
-        await inter.Loader(position, rotation, scale, name)
+        const uniqId = type.toString() + position.x + position.y + position.z
+        const inter = this.createByType(boxType, uniqId, asset)
+        await inter.Loader(position, rotation, scale, uniqId)
         this.objs.push(inter)
         return inter
     }
-    createByType(type: string, name: string, asset: IAsset): InteractableObject {
+    createByType(type: string, uniqId: string, asset: IAsset): InteractableObject {
         switch (type) {
             case "tree":
-                return new InterTree(name, interactableDefs.Tree, asset, this.eventCtrl);
+                return new InterTree(uniqId, interactableDefs.Tree, asset, this.eventCtrl);
             default:
-                return new InterTree(name, interactableDefs.Tree, asset, this.eventCtrl);
+                return new InterTree(uniqId, interactableDefs.Tree, asset, this.eventCtrl);
         }
     }
     Delete(...param: any) {

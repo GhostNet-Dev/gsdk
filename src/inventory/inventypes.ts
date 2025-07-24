@@ -165,3 +165,17 @@ export type InvenData = {
     inventroySlot: InventorySlot []
 }
 
+/**
+ * 아이템이 플레이어를 추적할 수 있는지 여부를 결정하는 옵션입니다.
+ */
+export interface ItemDropOptions {
+    canTrack?: boolean; // 플레이어 추적 가능 여부 (기본값: true)
+    explosionDuration?: number; // 폭발 단계 지속 시간 (초)
+    initialTrackingSpeed?: number; // 추적 시작 시 최소 속도
+    maxTrackingSpeed?: number; // 최대 추적 속도
+    trackingAccelerationFactor?: number; // 거리에 비례한 가속 계수
+    trackingStartDelay?: number; // 아이템별 추적 시작 딜레이
+    restitution?: number; // 탄성 계수 (바운스)
+    friction?: number; // 바닥 마찰
+    maxBounces?: number; // 최대 바운스 횟수
+}

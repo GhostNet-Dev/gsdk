@@ -45,7 +45,11 @@ export enum ActionType {
     Hammering,
     Watering,
     Building,
+    CutDownTree,
 }
+export type PlayMode =
+  | "default"
+  | "tree"
 
 export type AttackOption = {
     type: AttackType,

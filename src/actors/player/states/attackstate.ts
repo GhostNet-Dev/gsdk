@@ -51,7 +51,6 @@ export class AttackState extends State implements IPlayerAction {
             this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, handItem.Mesh, handItem.Sound)
         }
         
-        this.playerCtrl.RunSt.PreviousState(this)
         this.attackTime = this.attackSpeed
         this.clock = new THREE.Clock()
         this.player.createDashedCircle(this.attackDist)
@@ -206,7 +205,7 @@ export class AttackState extends State implements IPlayerAction {
         this.attackTime -= this.attackSpeed
 
         if (!this.meleeAttackMode && !this.detectEnermy) {
-            return this.ChangeMode(this.playerCtrl.IdleSt)
+            return this.ChangeMode(this.playerCtrl.currentIdleState)
         }
         this.attackProcess = true
         this.keytimeout = setTimeout(() => {

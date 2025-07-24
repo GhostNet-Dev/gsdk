@@ -11,8 +11,9 @@ export class InterTree extends InteractableObject {
       this.eventCtrl.SendEventMessage(EventTypes.AlarmInteractiveOn, {
         [KeyType.Action1]: "나무 베기"
       })
-      this.eventCtrl.SendEventMessage(EventTypes.ChangePlayerMode)
-      this.trigger("onHit")
+      this.eventCtrl.SendEventMessage(EventTypes.ChangePlayerMode, 
+        this.def.type, this.interactId, "onHit")
+      // this.trigger("onHit")
       this.isActive = true
     } 
   }

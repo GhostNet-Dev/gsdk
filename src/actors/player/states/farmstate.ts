@@ -29,7 +29,6 @@ export class PickFruitState extends State implements IPlayerAction {
         console.log("Pick!!")
         this.next = this
         this.player.ChangeAction(ActionType.PickFruit) ?? 2
-        this.playerCtrl.RunSt.PreviousState(this.playerCtrl.IdleSt)
         const p = this.havest()
         if (p != undefined) {
             this.Uninit()
@@ -57,8 +56,8 @@ export class PickFruitState extends State implements IPlayerAction {
                         return this.playerCtrl.PickFruitTreeSt
                     }
                     if(!ctrl.NeedHavest) {
-                        this.playerCtrl.IdleSt.Init()
-                        return this.playerCtrl.IdleSt
+                        this.playerCtrl.currentIdleState.Init()
+                        return this.playerCtrl.currentIdleState
                     }
                 }
                 const msg = {
@@ -71,8 +70,8 @@ export class PickFruitState extends State implements IPlayerAction {
                 this.targetMsg = msg
             }
         } else {
-            this.playerCtrl.IdleSt.Init()
-            return this.playerCtrl.IdleSt
+            this.playerCtrl.currentIdleState.Init()
+            return this.playerCtrl.currentIdleState
         }
     }
     Update(delta: number): IPlayerAction {
@@ -113,7 +112,6 @@ export class PickFruitTreeState extends State implements IPlayerAction {
         console.log("Pick Tree!!")
         this.next = this
         this.player.ChangeAction(ActionType.PickFruitTree) ?? 2
-        this.playerCtrl.RunSt.PreviousState(this.playerCtrl.IdleSt)
         const p = this.havest()
         if (p != undefined) {
             this.Uninit()
@@ -141,8 +139,8 @@ export class PickFruitTreeState extends State implements IPlayerAction {
                         return this.playerCtrl.PickFruitSt
                     }
                     if(!ctrl.NeedHavest) {
-                        this.playerCtrl.IdleSt.Init()
-                        return this.playerCtrl.IdleSt
+                        this.playerCtrl.currentIdleState.Init()
+                        return this.playerCtrl.currentIdleState
                     }
                 }
                 const msg = {
@@ -155,8 +153,8 @@ export class PickFruitTreeState extends State implements IPlayerAction {
                 this.targetMsg = msg
             }
         } else {
-            this.playerCtrl.IdleSt.Init()
-            return this.playerCtrl.IdleSt
+            this.playerCtrl.currentIdleState.Init()
+            return this.playerCtrl.currentIdleState
         }
     }
     Update(delta: number): IPlayerAction {
@@ -194,7 +192,6 @@ export class PlantAPlantState extends State implements IPlayerAction {
     Init(): void {
         console.log("Plant a Plant!!")
         this.player.ChangeAction(ActionType.PlantAPlant) ?? 2
-        this.playerCtrl.RunSt.PreviousState(this.playerCtrl.IdleSt)
         this.trigger = true
     }
     plant() {
@@ -233,8 +230,8 @@ export class PlantAPlantState extends State implements IPlayerAction {
                 this.targetMsg = msg
             }
         } else {
-            this.playerCtrl.IdleSt.Init()
-            return this.playerCtrl.IdleSt
+            this.playerCtrl.currentIdleState.Init()
+            return this.playerCtrl.currentIdleState
         }
     }
     Uninit(): void {
@@ -279,7 +276,6 @@ export class WarteringState extends State implements IPlayerAction {
     async Init() {
         console.log("Wartering!!")
         this.player.ChangeAction(ActionType.Watering) ?? 2
-        this.playerCtrl.RunSt.PreviousState(this.playerCtrl.IdleSt)
         const id = this.player.Asset.GetBodyMeshId(Bind.Hands_R)
         if (id == undefined) return
         const mesh = this.player.Meshs.getObjectByName(id)
@@ -322,8 +318,8 @@ export class WarteringState extends State implements IPlayerAction {
                 this.targetMsg = msg
             })
         } else {
-            this.playerCtrl.IdleSt.Init()
-            return this.playerCtrl.IdleSt
+            this.playerCtrl.currentIdleState.Init()
+            return this.playerCtrl.currentIdleState
         }
     }
     Update(): IPlayerAction {
@@ -370,7 +366,6 @@ export class DeleteState extends State implements IPlayerAction {
     Init(): void {
         console.log("Delete!!")
         this.player.ChangeAction(ActionType.Hammering, this.attackSpeed) 
-        this.playerCtrl.RunSt.PreviousState(this.playerCtrl.IdleSt)
     }
     delete() {
         this.player.Meshs.getWorldDirection(this.attackDir)
@@ -392,8 +387,8 @@ export class DeleteState extends State implements IPlayerAction {
             }
         } else {
             this.Uninit()
-            this.playerCtrl.IdleSt.Init()
-            return this.playerCtrl.IdleSt
+            this.playerCtrl.currentIdleState.Init()
+            return this.playerCtrl.currentIdleState
         }
         return this
     }
@@ -442,7 +437,6 @@ export class BuildingState extends State implements IPlayerAction {
     async Init() {
         console.log("Building!!")
         this.player.ChangeAction(ActionType.Building) ?? 2
-        this.playerCtrl.RunSt.PreviousState(this.playerCtrl.IdleSt)
         const id = this.player.Asset.GetBodyMeshId(Bind.Hands_R)
         if (id == undefined) return
         const mesh = this.player.Meshs.getObjectByName(id)
@@ -492,8 +486,8 @@ export class BuildingState extends State implements IPlayerAction {
             }
         } else {
             this.Uninit()
-            this.playerCtrl.IdleSt.Init()
-            return this.playerCtrl.IdleSt
+            this.playerCtrl.currentIdleState.Init()
+            return this.playerCtrl.currentIdleState
         }
     }
     Update(): IPlayerAction {

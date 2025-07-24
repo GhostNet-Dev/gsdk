@@ -9,11 +9,12 @@ import { IBuffItem } from "@Glibs/interface/ibuff";
 import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
 import IEventController, { IKeyCommand, ILoop } from "@Glibs/interface/ievent";
 import { KeyType } from "@Glibs/types/eventtypes";
-import { AttackOption, AttackType, DefaultStatus } from "./playertypes";
+import { AttackOption, AttackType, DefaultStatus, PlayMode } from "./playertypes";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import IInventory, { IItem } from "@Glibs/interface/iinven";
 import { ItemId } from "@Glibs/inventory/items/itemdefs";
-import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
+import { ActionContext, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes";
+import { CutDownTreeState, TreeIdleState } from "./states/treestates";
 
 export class PlayerCtrl implements ILoop, IActionUser {
     LoopId = 0
@@ -27,6 +28,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     inputMode = false
     moveDirection = new THREE.Vector3()
     playEnable = false
+    playMode: PlayMode = "default"
 
     baseSpec: BaseSpec
     keyType: KeyType = KeyType.None
@@ -46,7 +48,12 @@ export class PlayerCtrl implements ILoop, IActionUser {
     WarteringSt = new WarteringState(this, this.player, this.gphysic, this.inventory, this.eventCtrl)
     BuildingSt = new BuildingState(this, this.player, this.gphysic, this.inventory, this.eventCtrl)
     DeleteSt = new DeleteState(this, this.player, this.gphysic, this.eventCtrl)
+
     currentState: IPlayerAction = this.IdleSt
+    currentIdleState: IPlayerAction = this.IdleSt
+
+    TreeIdleSt = new TreeIdleState(this, this.player, this.gphysic)
+    CutDownTreeSt = new CutDownTreeState(this, this.player, this.gphysic, this.eventCtrl)
 
     worker = new Worker(new URL('./player.worker.ts', import.meta.url))
 
@@ -71,6 +78,22 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.AttackSt = new AttackState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
 
         this.worker.onmessage = (e: any) => { console.log(e) }
+        
+        eventCtrl.RegisterEventListener(EventTypes.ChangePlayerMode, (
+            mode: PlayMode, interId: string, triggerType: TriggerType
+        ) => {
+            if(this.playMode == mode) return
+            switch(mode) {
+                case "tree":
+                    this.TreeIdleSt.TargetIntId = interId
+                    this.TreeIdleSt.triggerType = triggerType
+                    this.currentIdleState = this.TreeIdleSt
+                    break;
+                default:
+                    this.currentIdleState = this.IdleSt
+            }
+            this.playMode = mode
+        })
 
         eventCtrl.RegisterEventListener(EventTypes.KeyDown, (keyCommand: IKeyCommand) => {
             if (!this.contollerEnable || !this.playEnable) return
@@ -171,8 +194,8 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.moveDirection.z = 0
         this.inputVQueue.length = 0
         this.currentState.Uninit()
-        this.currentState = this.IdleSt
-        this.IdleSt.Init()
+        this.currentState = this.currentIdleState
+        this.currentState.Init()
     }
     update(delta: number) {
         this.updateInputVector()

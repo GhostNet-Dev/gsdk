@@ -21,20 +21,20 @@ export class State {
         protected gphysic: IGPhysic
     ) { }
 
-    DefaultCheck(): IPlayerAction | undefined {
-        const checkRun = this.CheckRun()
+    DefaultCheck({ run = true, attack = true, jump = true, magic = true } = {}): IPlayerAction | undefined {
+        const checkRun = (run) ? this.CheckRun() : undefined
         if (checkRun != undefined) return checkRun
 
-        const checkAtt = this.CheckAttack()
+        const checkAtt = (attack) ? this.CheckAttack(): undefined
         if (checkAtt != undefined) return checkAtt
 
-        const checkJump = this.CheckJump()
+        const checkJump = (jump) ? this.CheckJump() : undefined
         if (checkJump != undefined) return checkJump
 
-        const checkMagic = this.CheckMagic()
+        const checkMagic = (magic) ? this.CheckMagic() : undefined
         if (checkMagic != undefined) return checkMagic
 
-        const checkMagic2 = this.CheckMagic2()
+        const checkMagic2 = (magic) ? this.CheckMagic2() : undefined
         if (checkMagic2 != undefined) return checkMagic2
     }
 
@@ -125,7 +125,6 @@ export class MagicH2State extends State implements IPlayerAction {
             this.playerCtrl.AttackIdleSt.Init()
             this.next = this.playerCtrl.AttackIdleSt
         }, duration * 1000)
-        this.playerCtrl.RunSt.PreviousState(this.playerCtrl.AttackIdleSt)
     }
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
@@ -156,7 +155,6 @@ export class MagicH1State extends State implements IPlayerAction {
             this.playerCtrl.AttackIdleSt.Init()
             this.next = this.playerCtrl.AttackIdleSt
         }, duration * 1000)
-        this.playerCtrl.RunSt.PreviousState(this.playerCtrl.AttackIdleSt)
     }
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
@@ -194,7 +192,6 @@ export class IdleState extends State implements IPlayerAction {
     }
     Init(): void {
         this.player.ChangeAction(ActionType.Idle)
-        this.playerCtrl.RunSt.PreviousState(this)
         console.log("Idle!!")
     }
     Uninit(): void {
@@ -215,7 +212,6 @@ export class IdleState extends State implements IPlayerAction {
 }
 export class RunState extends State implements IPlayerAction {
     speed = 7
-    previous: IPlayerAction = this.playerCtrl.IdleSt
     constructor(
         playerPhy: PlayerCtrl, 
         player: Player, 
@@ -231,10 +227,6 @@ export class RunState extends State implements IPlayerAction {
     Uninit(): void { }
     CheckInteraction() {
         this.eventCtrl.SendEventMessage(EventTypes.CheckInteraction, this.player)
-    }
-
-    PreviousState(state: IPlayerAction) {
-        this.previous = state
     }
 
     ZeroV = new THREE.Vector3(0, 0, 0)
@@ -256,8 +248,8 @@ export class RunState extends State implements IPlayerAction {
         this.CheckInteraction()
 
         if (v.x == 0 && v.z == 0) {
-            this.previous.Init();
-            return this.previous;
+            this.playerCtrl.currentIdleState.Init();
+            return this.playerCtrl.currentIdleState;
         }
 
         // ✅ 카메라 기준 방향으로 변환
@@ -321,7 +313,6 @@ export class JumpState implements IPlayerAction {
         console.log("Jump Init!!")
         this.player.ChangeAction(ActionType.Jump)
         this.velocity_y = 16
-        this.playerCtrl.RunSt.PreviousState(this.playerCtrl.IdleSt)
     }
     Uninit(): void {
         this.velocity_y = 16
@@ -374,8 +365,8 @@ export class JumpState implements IPlayerAction {
             this.player.Meshs.position.y += -dis;
 
             this.Uninit();
-            this.playerCtrl.IdleSt.Init();
-            return this.playerCtrl.IdleSt;
+            this.playerCtrl.currentIdleState.Init();
+            return this.playerCtrl.currentIdleState;
         }
 
         // ✅ 중력 적용

@@ -21,7 +21,7 @@ export abstract class InteractableObject extends THREE.Group implements IActionU
 
     constructor(
         name: string,
-        def: InteractableProperty,
+        protected def: InteractableProperty,
         protected asset: IAsset,
         protected eventCtrl: IEventController
     ) {
@@ -72,6 +72,7 @@ export abstract class InteractableObject extends THREE.Group implements IActionU
 
     disable() {
         this.isActive = false
+        this.eventCtrl.SendEventMessage(EventTypes.ChangePlayerMode)
         this.eventCtrl.SendEventMessage(EventTypes.AlarmInteractiveOff)
     }
 

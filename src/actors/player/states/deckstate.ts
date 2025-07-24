@@ -19,7 +19,6 @@ export class DeckState extends State implements IPlayerAction {
     Init(): void {
         console.log("deck!!")
         this.player.ChangeAction(ActionType.MagicH1) ?? 2
-        this.playerCtrl.RunSt.PreviousState(this.playerCtrl.IdleSt)
     }
     deckBuilding() {
         this.player.Meshs.getWorldDirection(this.attackDir)
@@ -38,8 +37,8 @@ export class DeckState extends State implements IPlayerAction {
                 this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [msg])
             }
         } else {
-            this.playerCtrl.IdleSt.Init()
-            return this.playerCtrl.IdleSt
+            this.playerCtrl.currentIdleState.Init()
+            return this.playerCtrl.currentIdleState
         }
     }
     Uninit(): void {

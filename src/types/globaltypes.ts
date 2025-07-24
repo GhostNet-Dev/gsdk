@@ -66,6 +66,7 @@ export enum EventTypes {
 
     // player와 상호작용하는 객체 interatable
     CheckInteraction = "checkinter",
+    DoInteraction = "dointer",
 
     // 상호작용에 의해 Player 모드 변경 
     ChangePlayerMode = "chgplayermod",
