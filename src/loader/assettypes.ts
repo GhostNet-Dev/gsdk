@@ -514,8 +514,6 @@ export enum Char {
     ItemsGunsMp5,
     ItemsGunsMp7,
     ItemsGunsScar,
-    ItemsGunsM4A1,
-    ItemsGunsPistol,
 
     Grass,
     FluffyTree,

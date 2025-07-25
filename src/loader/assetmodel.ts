@@ -98,8 +98,8 @@ export class AssetModel {
         return new THREE.Vector3(v.x, Y, v.z)
     }
     CreateVectorGui(f: GUI, v: THREE.Vector3 | THREE.Euler, name: string, step: number) {
-        f.add(v, "x", -100, 100, step).listen().name(name + "X")
-        f.add(v, "y", -100, 100, step).listen().name(name + "Y")
-        f.add(v, "z", -100, 100, step).listen().name(name + "Z")
+        f.add(v, "x", -1000, 1000, step).listen().name(name + "X")
+        f.add(v, "y", -1000, 1000, step).listen().name(name + "Y")
+        f.add(v, "z", -1000, 1000, step).listen().name(name + "Z")
     }
 }

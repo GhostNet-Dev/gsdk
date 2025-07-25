@@ -28,14 +28,22 @@ class GunFbxFab extends AssetModel {
             customFn?.()
 
 
-            // const axesHelper = new THREE.AxesHelper(20); // 축의 길이 (조절 가능)
-            // this.casingPointObject.add(axesHelper);
-            // const fp = gui.addFolder("tools")
+            const axesHelper = new THREE.AxesHelper(20); // 축의 길이 (조절 가능)
+            this.casingPointObject.add(axesHelper);
+            const fp = gui.addFolder("tools")
 
-            // const debugMesh = this.casingPointObject
-            // this.CreateVectorGui(fp, debugMesh.position, "Pos", 0.1)
-            // this.CreateVectorGui(fp, debugMesh.rotation, "Rot", 0.1)
-            // this.CreateVectorGui(fp, debugMesh.scale, "Scale", 0.01)
+            let debugMesh = this.casingPointObject
+            this.CreateVectorGui(fp, debugMesh.position, "Pos", 0.1)
+            this.CreateVectorGui(fp, debugMesh.rotation, "Rot", 0.1)
+            this.CreateVectorGui(fp, debugMesh.scale, "Scale", 0.01)
+
+            const axesHelper2 = new THREE.AxesHelper(20); // 축의 길이 (조절 가능)
+            this.muzzlePointObject.add(axesHelper2);
+
+            debugMesh = this.muzzlePointObject
+            this.CreateVectorGui(fp, debugMesh.position, "_Pos", 0.1)
+            this.CreateVectorGui(fp, debugMesh.rotation, "_Rot", 0.1)
+            this.CreateVectorGui(fp, debugMesh.scale, "_Scale", 0.01)
         })
     }
     GetBox(mesh: THREE.Group) {
@@ -63,6 +71,11 @@ class GunFbxFab extends AssetModel {
         return this.size 
     }
     GetBodyMeshId() { return "mixamorigRightHand" }
+    m16series(meshs: THREE.Group) {
+        meshs.scale.set(g_scale, g_scale, g_scale) 
+        meshs.position.set(0, 0.1, 0)
+        meshs.rotation.set(3.5, -0.1, -1.6)
+    }
 }
 
 export class PistolFab extends GunFbxFab implements IAsset {
@@ -96,11 +109,11 @@ export class M4A1Fab extends GunFbxFab implements IAsset {
             // this.meshs.position.set(0, 0.1, 0)
             // this.meshs.rotation.set(3.5, -0.1, -1.6)
 
-            this.muzzlePointObject.position.set(68, 8.5, 0)
+            this.muzzlePointObject.position.set(-730, 0, 65)
             this.meshs.add(this.muzzlePointObject)
             
-            this.casingPointObject.position.set(7, 10, 1)
-            this.casingPointObject.rotation.set(-1, 0, 0)
+            this.casingPointObject.position.set(200, 50, 100)
+            this.casingPointObject.rotation.set(0, 0, 0)
             this.meshs.add(this.casingPointObject)
         })
     }
@@ -118,22 +131,44 @@ export class ItemGunsBulletlite02Fab extends GunFbxFab implements IAsset {
 
 export class ItemGunsM16Fab extends GunFbxFab implements IAsset {
     get Id() { return Char.ItemsGunsM16 }
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/M16.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
+    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/M16.fbx", () => { 
+        if (!this.meshs) return 
+
+        this.m16series(this.meshs)
+        this.muzzlePointObject.position.set(20, 8, 0)
+        this.meshs.add(this.muzzlePointObject)
+
+        this.casingPointObject.position.set(7, 10, 1)
+        this.casingPointObject.rotation.set(-1, 0, 0)
+        this.meshs.add(this.casingPointObject)
+    })}
 }
 
 export class ItemGunsM1911Fab extends GunFbxFab implements IAsset {
     get Id() { return Char.ItemsGunsM1911 }
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/M1911.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
+    constructor(loader: Loader) {
+        super(loader, "assets/weapon/guns/fbx/M1911.fbx", () => {
+            if (this.meshs) this.m16series(this.meshs)
+        })
+    }
 }
 
 export class ItemGunsM1911tacticalFab extends GunFbxFab implements IAsset {
     get Id() { return Char.ItemsGunsM1911tactical }
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/M1911Tactical.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
+    constructor(loader: Loader) {
+        super(loader, "assets/weapon/guns/fbx/M1911Tactical.fbx", () => {
+            if (this.meshs) this.m16series(this.meshs)
+        })
+    }
 }
 
 export class ItemGunsM4a1Fab extends GunFbxFab implements IAsset {
     get Id() { return Char.ItemsGunsM4a1 }
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/M4A1_.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
+    constructor(loader: Loader) {
+        super(loader, "assets/weapon/guns/fbx/M4A1_.fbx", () => {
+            if (this.meshs) this.m16series(this.meshs)
+        })
+    }
 }
 
 export class ItemGunsMp5Fab extends GunFbxFab implements IAsset {
@@ -148,15 +183,12 @@ export class ItemGunsMp7Fab extends GunFbxFab implements IAsset {
 
 export class ItemGunsScarFab extends GunFbxFab implements IAsset {
     get Id() { return Char.ItemsGunsScar }
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/SCAR.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
-}
-
-export class ItemGunsM4A1Fab extends GunFbxFab implements IAsset {
-    get Id() { return Char.ItemsGunsM4A1 }
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/m4a1.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
-}
-
-export class ItemGunsPistolFab extends GunFbxFab implements IAsset {
-    get Id() { return Char.ItemsGunsPistol }
-    constructor(loader: Loader) { super(loader, "assets/weapon/guns/fbx/pistol.fbx", () => { if (this.meshs) this.meshs.scale.set(g_scale, g_scale, g_scale) }) }
+    constructor(loader: Loader) {
+        super(loader, "assets/weapon/guns/fbx/SCAR.fbx", () => {
+            if (this.meshs) {
+                this.m16series(this.meshs)
+                this.meshs.rotation.z = -1
+            }
+        })
+    }
 }
