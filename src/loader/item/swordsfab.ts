@@ -5,13 +5,36 @@ import { Loader } from "../loader";
 import { Char, ModelType } from "../assettypes";
 import { Bind } from "@Glibs/types/assettypes";
 import { IAsset } from "@Glibs/interface/iasset";
+import { gui } from "@Glibs/helper/helper";
 
 class Sword extends AssetModel {
     gltf?:GLTF
-    constructor(loader: Loader, path: string) { 
+    localTipAOffset = new THREE.Object3D()
+    localTipBOffset = new THREE.Object3D()
+    constructor(loader: Loader, path: string, customFn = () => { }) { 
         super(loader, ModelType.Fbx, path, async (meshs: THREE.Group) => {
-        this.meshs = meshs
+            this.meshs = meshs
+            this.localTipAOffset.name = "localTipAOffset"
+            this.localTipBOffset.name = "localTipBOffset"
             this.InitMesh(meshs)
+            customFn?.()
+
+            // const axesHelper = new THREE.AxesHelper(20); // 축의 길이 (조절 가능)
+            // this.localTipAOffset.add(axesHelper);
+            // let fp = gui.addFolder("tools")
+
+            // let debugMesh = this.localTipAOffset
+            // this.CreateVectorGui(fp, debugMesh.position, "Pos", 0.1)
+            // this.CreateVectorGui(fp, debugMesh.rotation, "Rot", 0.1)
+            // this.CreateVectorGui(fp, debugMesh.scale, "Scale", 0.01)
+
+            // const axesHelper2 = new THREE.AxesHelper(20); // 축의 길이 (조절 가능)
+            // this.localTipBOffset.add(axesHelper2);
+
+            // debugMesh = this.localTipBOffset
+            // this.CreateVectorGui(fp, debugMesh.position, "PosB", 0.1)
+            // this.CreateVectorGui(fp, debugMesh.rotation, "RotB", 0.1)
+            // this.CreateVectorGui(fp, debugMesh.scale, "ScaleB", 0.01)
         })
     }
     GetBodyMeshId(bind: Bind) {
@@ -61,12 +84,26 @@ class Sword extends AssetModel {
         })
         const scale = 0.03
         meshs.scale.set(scale, scale, scale)
+        meshs.position.set(-0.5, 0.1, 0.1)
+        meshs.rotation.set(3.5, -0.1, -1.6)
     }
 }
 
 export class ItemSwordSword1Fab extends Sword implements IAsset {
     get Id() {return Char.ItemsSwordSword1}
-    constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_1.fbx") }
+    constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_1.fbx", () => {
+            if (!this.meshs) return
+
+            // const scale = 0.025
+            // this.meshs.scale.set(scale, scale, scale)
+            // this.meshs.position.set(0, 0.1, 0)
+            // this.meshs.rotation.set(3.5, -0.1, -1.6)
+            this.localTipAOffset.position.set(0, 80, 0)
+            this.meshs.add(this.localTipAOffset)
+
+            this.localTipBOffset.position.set(0, 25, 0)
+            this.meshs.add(this.localTipBOffset)
+        }) }
 }
 
 export class ItemSwordSword10Fab extends Sword implements IAsset {

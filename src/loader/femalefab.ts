@@ -51,7 +51,7 @@ export class FemaleFab extends AssetModel implements IAsset {
             /*
             const right = this.meshs.getObjectByName("mixamorigRightHand")
             //const right = this.meshs
-            const bat = await this.loader.FBXLoader.loadAsync("assets/weapon/guns/m4a1.fbx")
+            const bat = await this.loader.FBXLoader.loadAsync("assets/weapon/swords/fbx/_sword_1.fbx")
             const meshs = bat
 
             const scale = 0.025
