@@ -56,22 +56,22 @@ export class FemaleFab extends AssetModel implements IAsset {
 
             this.meshs.children[0].children[0].position.y = 0
 
-            const right = this.meshs.getObjectByName("mixamorigRightHand")
-            //const right = this.meshs
-            const bat = await this.loader.FBXLoader.loadAsync("assets/weapon/guns/fbx/SCAR.fbx")
-            const meshs = bat
+            // const right = this.meshs.getObjectByName("mixamorigRightHand")
+            // //const right = this.meshs
+            // const bat = await this.loader.FBXLoader.loadAsync("assets/weapon/guns/fbx/SCAR.fbx")
+            // const meshs = bat
 
-            const scale = 0.002
-            meshs.scale.set(scale, scale, scale)
-            meshs.position.set(0, 0.71, 0.2)
-            meshs.rotation.set(2.95, 1.77, 2)
-            const fp = gui.addFolder("tools")
-            fp.close()
+            // const scale = 0.002
+            // meshs.scale.set(scale, scale, scale)
+            // meshs.position.set(0, 0.71, 0.2)
+            // meshs.rotation.set(2.95, 1.77, 2)
+            // const fp = gui.addFolder("tools")
+            // fp.close()
 
-            this.CreateVectorGui(fp, meshs.position, "Pos", 0.01)
-            this.CreateVectorGui(fp, meshs.rotation, "Rot", 0.01)
-            this.CreateVectorGui(fp, meshs.scale, "Scale", 0.001)
-            right?.add(meshs)
+            // this.CreateVectorGui(fp, meshs.position, "Pos", 0.01)
+            // this.CreateVectorGui(fp, meshs.rotation, "Rot", 0.01)
+            // this.CreateVectorGui(fp, meshs.scale, "Scale", 0.001)
+            // right?.add(meshs)
         })
     }
     

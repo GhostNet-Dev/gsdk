@@ -28,22 +28,22 @@ class GunFbxFab extends AssetModel {
             customFn?.()
 
 
-            const axesHelper = new THREE.AxesHelper(20); // 축의 길이 (조절 가능)
-            this.casingPointObject.add(axesHelper);
-            const fp = gui.addFolder("tools")
+            // const axesHelper = new THREE.AxesHelper(20); // 축의 길이 (조절 가능)
+            // this.casingPointObject.add(axesHelper);
+            // const fp = gui.addFolder("tools")
 
-            let debugMesh = this.casingPointObject
-            this.CreateVectorGui(fp, debugMesh.position, "Pos", 0.1)
-            this.CreateVectorGui(fp, debugMesh.rotation, "Rot", 0.1)
-            this.CreateVectorGui(fp, debugMesh.scale, "Scale", 0.01)
+            // let debugMesh = this.casingPointObject
+            // this.CreateVectorGui(fp, debugMesh.position, "Pos", 0.1)
+            // this.CreateVectorGui(fp, debugMesh.rotation, "Rot", 0.1)
+            // this.CreateVectorGui(fp, debugMesh.scale, "Scale", 0.01)
 
-            const axesHelper2 = new THREE.AxesHelper(20); // 축의 길이 (조절 가능)
-            this.muzzlePointObject.add(axesHelper2);
+            // const axesHelper2 = new THREE.AxesHelper(20); // 축의 길이 (조절 가능)
+            // this.muzzlePointObject.add(axesHelper2);
 
-            debugMesh = this.muzzlePointObject
-            this.CreateVectorGui(fp, debugMesh.position, "_Pos", 0.1)
-            this.CreateVectorGui(fp, debugMesh.rotation, "_Rot", 0.1)
-            this.CreateVectorGui(fp, debugMesh.scale, "_Scale", 0.01)
+            // debugMesh = this.muzzlePointObject
+            // this.CreateVectorGui(fp, debugMesh.position, "_Pos", 0.1)
+            // this.CreateVectorGui(fp, debugMesh.rotation, "_Rot", 0.1)
+            // this.CreateVectorGui(fp, debugMesh.scale, "_Scale", 0.01)
         })
     }
     GetBox(mesh: THREE.Group) {
@@ -73,8 +73,8 @@ class GunFbxFab extends AssetModel {
     GetBodyMeshId() { return "mixamorigRightHand" }
     m16series(meshs: THREE.Group) {
         meshs.scale.set(g_scale, g_scale, g_scale) 
-        meshs.position.set(0, 0.1, 0)
-        meshs.rotation.set(3.5, -0.1, -1.6)
+        meshs.position.set(0, 0.71, 0.2)
+        meshs.rotation.set(2.95, 1.77, 2)
     }
 }
 
@@ -135,10 +135,10 @@ export class ItemGunsM16Fab extends GunFbxFab implements IAsset {
         if (!this.meshs) return 
 
         this.m16series(this.meshs)
-        this.muzzlePointObject.position.set(20, 8, 0)
+        this.muzzlePointObject.position.set(-730, 0, 65)
         this.meshs.add(this.muzzlePointObject)
 
-        this.casingPointObject.position.set(7, 10, 1)
+        this.casingPointObject.position.set(200, 50, 60)
         this.casingPointObject.rotation.set(-1, 0, 0)
         this.meshs.add(this.casingPointObject)
     })}
