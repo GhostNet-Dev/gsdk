@@ -114,9 +114,11 @@ export class Postpro implements IPostPro {
         const originalOnBeforeCompile = child.material.onBeforeCompile;
         child.material.onBeforeCompile = (shader: any) => {
           if (originalOnBeforeCompile) originalOnBeforeCompile(shader)
+          if(shader.fragmentShader.includes('// alreadyhasapply')) return
 
           shader.uniforms.globalBloom = this.gu.globalBloom
           shader.fragmentShader = `
+            // alreadyhasapply
             uniform float globalBloom;
             ${shader.fragmentShader}
             `.replace(
