@@ -155,6 +155,16 @@ export class Player extends PhysicsObject {
         this.clipMap.set(ActionType.Watering, asset.GetAnimationClip(Ani.Wartering))
         this.clipMap.set(ActionType.Hammering, asset.GetAnimationClip(Ani.Hammering))
         this.clipMap.set(ActionType.Building, asset.GetAnimationClip(Ani.Hammering))
+
+        this.clipMap.set(ActionType.CutDownTree, asset.GetAnimationClip(Ani.AxeAttack))
+        this.clipMap.set(ActionType.AxeAttack, asset.GetAnimationClip(Ani.AxeAttack))
+        this.clipMap.set(ActionType.AxeAttack360, asset.GetAnimationClip(Ani.AxeAttack360))
+        this.clipMap.set(ActionType.AxeRun, asset.GetAnimationClip(Ani.AxeRun))
+
+        this.clipMap.set(ActionType.SwordRun, asset.GetAnimationClip(Ani.SwordRun))
+        this.clipMap.set(ActionType.PistolRun, asset.GetAnimationClip(Ani.PistolRun))
+        this.clipMap.set(ActionType.RifleIdle, asset.GetAnimationClip(Ani.RifleIdle))
+        this.clipMap.set(ActionType.RifleRun, asset.GetAnimationClip(Ani.RifleRun))
         
         this.changeAnimate(this.clipMap.get(this.currentActionType))
 

@@ -15,6 +15,7 @@ import IInventory, { IItem } from "@Glibs/interface/iinven";
 import { ItemId } from "@Glibs/inventory/items/itemdefs";
 import { ActionContext, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes";
 import { CutDownTreeState, TreeIdleState } from "./states/treestates";
+import { Item } from "@Glibs/inventory/items/item";
 
 export class PlayerCtrl implements ILoop, IActionUser {
     LoopId = 0
@@ -34,33 +35,33 @@ export class PlayerCtrl implements ILoop, IActionUser {
     keyType: KeyType = KeyType.None
 
     AttackSt: AttackState
-    MagicH1St = new MagicH1State(this, this.player, this.gphysic)
-    MagicH2St = new MagicH2State(this, this.player, this.gphysic)
-    AttackIdleSt = new AttackIdleState(this, this.player, this.gphysic)
-    RunSt = new RunState(this, this.player, this.camera, this.gphysic, this.eventCtrl)
-    JumpSt = new JumpState(this, this.player, this.camera, this.gphysic)
-    IdleSt = new IdleState(this, this.player, this.gphysic)
-    DyingSt = new DeadState(this, this.player, this.gphysic)
-    PickFruitSt = new PickFruitState(this, this.player, this.gphysic, this.eventCtrl)
-    PickFruitTreeSt = new PickFruitTreeState(this, this.player, this.gphysic, this.eventCtrl)
-    PlantASt = new PlantAPlantState(this, this.player, this.gphysic, this.eventCtrl)
-    DeckSt = new DeckState(this, this.player, this.gphysic, this.eventCtrl)
-    WarteringSt = new WarteringState(this, this.player, this.gphysic, this.inventory, this.eventCtrl)
-    BuildingSt = new BuildingState(this, this.player, this.gphysic, this.inventory, this.eventCtrl)
-    DeleteSt = new DeleteState(this, this.player, this.gphysic, this.eventCtrl)
+    MagicH1St: MagicH1State
+    MagicH2St: MagicH2State
+    AttackIdleSt: AttackIdleState
+    RunSt: RunState
+    JumpSt: JumpState
+    IdleSt: IdleState
+    DyingSt: DeadState
+    PickFruitSt: PickFruitState
+    PickFruitTreeSt: PickFruitTreeState
+    PlantASt: PlantAPlantState
+    DeckSt: DeckState
+    WarteringSt: WarteringState
+    BuildingSt: BuildingState
+    DeleteSt: DeleteState
 
-    currentState: IPlayerAction = this.IdleSt
-    currentIdleState: IPlayerAction = this.IdleSt
+    currentState: IPlayerAction
+    currentIdleState: IPlayerAction
 
-    TreeIdleSt = new TreeIdleState(this, this.player, this.gphysic)
-    CutDownTreeSt = new CutDownTreeState(this, this.player, this.gphysic, this.eventCtrl)
+    TreeIdleSt: TreeIdleState
+    CutDownTreeSt: CutDownTreeState
 
     worker = new Worker(new URL('./player.worker.ts', import.meta.url))
 
     set Immortal(enable: boolean) { this.baseSpec.status.immortal = enable }
     get Health() { return this.baseSpec.Health }
-    set Enable(mode: boolean) { 
-        this.playEnable = mode 
+    set Enable(mode: boolean) {
+        this.playEnable = mode
         this.currentState.Uninit()
         this.currentState = this.IdleSt
         if (mode) this.currentState.Init()
@@ -76,14 +77,33 @@ export class PlayerCtrl implements ILoop, IActionUser {
     ) {
         this.baseSpec = new BaseSpec(DefaultStatus.stats, this)
         this.AttackSt = new AttackState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
+        this.MagicH1St = new MagicH1State(this, this.player, this.gphysic, this.baseSpec)
+        this.MagicH2St = new MagicH2State(this, this.player, this.gphysic, this.baseSpec)
+        this.AttackIdleSt = new AttackIdleState(this, this.player, this.gphysic, this.baseSpec)
+        this.RunSt = new RunState(this, this.player, this.camera, this.gphysic, this.eventCtrl, this.baseSpec)
+        this.JumpSt = new JumpState(this, this.player, this.camera, this.gphysic)
+        this.IdleSt = new IdleState(this, this.player, this.gphysic, this.baseSpec)
+        this.DyingSt = new DeadState(this, this.player, this.gphysic, this.baseSpec)
+        this.PickFruitSt = new PickFruitState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
+        this.PickFruitTreeSt = new PickFruitTreeState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
+        this.PlantASt = new PlantAPlantState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
+        this.DeckSt = new DeckState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
+        this.WarteringSt = new WarteringState(this, this.player, this.gphysic, this.inventory, this.eventCtrl, this.baseSpec)
+        this.BuildingSt = new BuildingState(this, this.player, this.gphysic, this.inventory, this.eventCtrl, this.baseSpec)
+        this.DeleteSt = new DeleteState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
 
+        this.TreeIdleSt = new TreeIdleState(this, this.player, this.gphysic, this.baseSpec)
+        this.CutDownTreeSt = new CutDownTreeState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
+
+        this.currentState = this.IdleSt
+        this.currentIdleState = this.IdleSt
         this.worker.onmessage = (e: any) => { console.log(e) }
-        
+
         eventCtrl.RegisterEventListener(EventTypes.ChangePlayerMode, (
             mode: PlayMode, interId: string, triggerType: TriggerType
         ) => {
-            if(this.playMode == mode) return
-            switch(mode) {
+            if (this.playMode == mode) return
+            switch (mode) {
                 case "tree":
                     this.TreeIdleSt.TargetIntId = interId
                     this.TreeIdleSt.triggerType = triggerType
@@ -104,7 +124,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
             this.keyUpQueue.push(keyCommand)
         })
 
-        eventCtrl.RegisterEventListener(EventTypes.Input, (e: any, real: THREE.Vector3) => { 
+        eventCtrl.RegisterEventListener(EventTypes.Input, (e: any, real: THREE.Vector3) => {
             if (!this.contollerEnable || !this.playEnable) return
             if (e.type == "move") {
                 this.inputVQueue.push(new THREE.Vector3().copy(real))
@@ -116,11 +136,14 @@ export class PlayerCtrl implements ILoop, IActionUser {
         })
         eventCtrl.RegisterEventListener(EventTypes.Equipment, (id: ItemId) => {
             const slot = this.inventory.GetItem(id)
-            if(slot == undefined) throw new Error("item is undefined")
-            this.baseSpec.Equip(slot.item)
-            if (this.currentState == this.AttackSt) {
-                this.currentState.Init()
+            if (slot == undefined) throw new Error("item is undefined")
+            if (slot.item.Bind) {
+                const prevItem = this.baseSpec.GetBindItem(slot.item.Bind);
+                if (prevItem) (prevItem as Item).deactivate()
             }
+            this.baseSpec.Equip(slot.item);
+            (slot.item as Item).activate()
+            this.currentState.Init()
         })
         eventCtrl.RegisterEventListener(EventTypes.Attack + "player", (opts: AttackOption[]) => {
             if (this.currentState != this.DyingSt && this.baseSpec.CheckDie()) {
@@ -129,7 +152,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
             }
             if (!this.playEnable) return
             opts.forEach((opt) => {
-                switch(opt.type) {
+                switch (opt.type) {
                     case AttackType.NormalSwing:
                     case AttackType.Magic0:
                         this.baseSpec.ReceiveCalcDamage(opt.damage)
@@ -174,7 +197,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     }
     remove(obj: THREE.Object3D) {
         const idx = this.targets.indexOf(obj)
-        if(idx < 0) return
+        if (idx < 0) return
         this.targets.splice(idx, 1)
     }
     applyAction(action: IActionComponent, ctx?: ActionContext) {
@@ -209,13 +232,13 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.actionReset()
     }
     actionReset() {
-        for(let i = KeyType.Action0; i < KeyType.Count; i++) {
+        for (let i = KeyType.Action0; i < KeyType.Count; i++) {
             this.KeyState[i] = false
         }
     }
 
     KeyState = new Array<boolean>(KeyType.Count)
-    keytimeout?:NodeJS.Timeout
+    keytimeout?: NodeJS.Timeout
 
     updateDownKey() {
         let cmd = this.keyDownQueue.shift()

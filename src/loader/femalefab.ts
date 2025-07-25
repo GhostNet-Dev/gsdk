@@ -46,6 +46,14 @@ export class FemaleFab extends AssetModel implements IAsset {
             this.clips.set(Ani.Hammering, gltf.animations.find((clip) => clip.name == "StandingMeleeAttackDownward"))
             this.clips.set(Ani.Wartering, gltf.animations.find((clip) => clip.name == "Watering"))
 
+            await this.LoadAnimation("assets/female/Pistol_Run.fbx", Ani.PistolRun)
+            await this.LoadAnimation("assets/female/Rifle_Idle.fbx", Ani.RifleIdle)
+            await this.LoadAnimation("assets/female/Rifle_Run.fbx", Ani.RifleRun)
+            await this.LoadAnimation("assets/female/Great_Sword_Run.fbx", Ani.SwordRun)
+            await this.LoadAnimation("assets/female/axe_attack.fbx", Ani.AxeAttack)
+            await this.LoadAnimation("assets/female/axe_attack360.fbx", Ani.AxeAttack360)
+            await this.LoadAnimation("assets/female/axe_run.fbx", Ani.AxeRun)
+
             this.meshs.children[0].children[0].position.y = 0
 
             /*

@@ -6,6 +6,7 @@ import { IGPhysic } from "@Glibs/interface/igphysics";
 import IEventController from "@Glibs/interface/ievent";
 import { ActionType, AttackType } from "../playertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { BaseSpec } from "@Glibs/actors/battle/basespec";
 
 export class DeckState extends State implements IPlayerAction {
     next: IPlayerAction = this
@@ -13,8 +14,8 @@ export class DeckState extends State implements IPlayerAction {
     attackDir = new THREE.Vector3()
     raycast = new THREE.Raycaster()
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController) {
-        super(playerPhy, player, gphysic)
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController, baseSpec: BaseSpec) {
+        super(playerPhy, player, gphysic, baseSpec)
     }
     Init(): void {
         console.log("deck!!")

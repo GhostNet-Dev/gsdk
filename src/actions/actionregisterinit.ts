@@ -7,6 +7,7 @@ import { EventController } from "@Glibs/systems/event/eventctrl";
 import { BulletCasingAct } from "./itemactions/bulletcasingact";
 import { ShakerAction } from "./itemactions/shakeract";
 import { FluffyAction } from "./itemactions/fluffyact";
+import SwingEffectAction from "./itemactions/swingeffact";
 
 export function InitActionRegistry(eventCtrl: EventController, scean: THREE.Scene) {
     ActionRegistry.register("statBoost", def => new StatBoostAction(def.stats))
@@ -18,5 +19,6 @@ export function InitActionRegistry(eventCtrl: EventController, scean: THREE.Scen
     })
     ActionRegistry.register("shaker", def => new ShakerAction())
     ActionRegistry.register("fluffy", def => new FluffyAction(eventCtrl))
+    ActionRegistry.register("swing", def => new SwingEffectAction(eventCtrl, scean, def.socketA, def.socketB, ))
 }
 

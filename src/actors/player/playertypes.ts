@@ -25,9 +25,17 @@ export enum ActionType {
     Run,
     Jump,
     Punch,
+
     Sword,
+    SwordRun,
+
     OneHandGun,
+    PistolRun,
+
     TwoHandGun,
+    RifleRun,
+    RifleIdle,
+
     Bow,
     Wand,
     Fight,
@@ -46,6 +54,10 @@ export enum ActionType {
     Watering,
     Building,
     CutDownTree,
+    
+    AxeAttack,
+    AxeAttack360,
+    AxeRun,
 }
 export type PlayMode =
   | "default"

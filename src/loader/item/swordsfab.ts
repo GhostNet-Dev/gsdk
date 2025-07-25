@@ -91,7 +91,7 @@ class Sword extends AssetModel {
 
 export class ItemSwordSword1Fab extends Sword implements IAsset {
     get Id() {return Char.ItemsSwordSword1}
-    constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/_sword_1.fbx", () => {
+    constructor(loader: Loader) { super(loader, "assets/weapon/swords/fbx/sword_1.fbx", () => {
             if (!this.meshs) return
 
             // const scale = 0.025

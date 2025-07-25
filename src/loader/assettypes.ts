@@ -15,14 +15,26 @@ export enum Ani {
     Punch,
     FightIdle,
     Dying,
-    Shooting,
-    Gunplay,
+
     Sword,
+    SwordRun,
+
     MagicH1,
     MagicH2,
     Spellcasting,
     Dance0,
     Hit,
+
+    Shooting, // pistol
+    PistolRun,
+
+    Gunplay, // rifle
+    RifleRun,
+    RifleIdle,
+
+    AxeAttack,
+    AxeAttack360,
+    AxeRun,
 
     Wartering,
     Hammering,

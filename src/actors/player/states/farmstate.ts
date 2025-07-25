@@ -11,6 +11,7 @@ import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { FurnBox, FurnState } from "@Glibs/types/furntypes";
 import { PlantBox, PlantState, PlantType } from "@Glibs/types/planttypes";
+import { BaseSpec } from "@Glibs/actors/battle/basespec";
 
 export class PickFruitState extends State implements IPlayerAction {
     next: IPlayerAction = this
@@ -22,8 +23,8 @@ export class PickFruitState extends State implements IPlayerAction {
     target?: string
     targetMsg?: AttackOption
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController) {
-        super(playerPhy, player, gphysic)
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController, baseSpec: BaseSpec) {
+        super(playerPhy, player, gphysic, baseSpec)
     }
     Init(): void {
         console.log("Pick!!")
@@ -105,8 +106,8 @@ export class PickFruitTreeState extends State implements IPlayerAction {
     target?: string
     targetMsg?: AttackOption
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController) {
-        super(playerPhy, player, gphysic)
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController, baseSpec: BaseSpec) {
+        super(playerPhy, player, gphysic, baseSpec)
     }
     Init(): void {
         console.log("Pick Tree!!")
@@ -186,8 +187,8 @@ export class PlantAPlantState extends State implements IPlayerAction {
     targetMsg?: AttackOption
     trigger = false
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController) {
-        super(playerPhy, player, gphysic)
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController, baseSpec: BaseSpec) {
+        super(playerPhy, player, gphysic, baseSpec)
     }
     Init(): void {
         console.log("Plant a Plant!!")
@@ -269,9 +270,10 @@ export class WarteringState extends State implements IPlayerAction {
         player: Player, 
         gphysic: IGPhysic, 
         private inven: IInventory, 
-        private eventCtrl: IEventController
+        private eventCtrl: IEventController,
+        baseSpec: BaseSpec
     ) {
-        super(playerPhy, player, gphysic)
+        super(playerPhy, player, gphysic, baseSpec)
     }
     async Init() {
         console.log("Wartering!!")
@@ -348,8 +350,8 @@ export class DeleteState extends State implements IPlayerAction {
     attackSpeed = 2
     keytimeout?:NodeJS.Timeout
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController) {
-        super(playerPhy, player, gphysic)
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, private eventCtrl: IEventController, baseSpec: BaseSpec) {
+        super(playerPhy, player, gphysic, baseSpec)
     }
     InitWithObj(obj: THREE.Intersection) {
         const k = obj.object.name
@@ -430,9 +432,10 @@ export class BuildingState extends State implements IPlayerAction {
         player: Player, 
         gphysic: IGPhysic, 
         private inven: IInventory, 
-        private eventCtrl: IEventController
+        private eventCtrl: IEventController,
+        baseSpec: BaseSpec
     ) {
-        super(playerPhy, player, gphysic)
+        super(playerPhy, player, gphysic, baseSpec)
     }
     async Init() {
         console.log("Building!!")

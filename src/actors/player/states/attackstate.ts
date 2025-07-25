@@ -27,22 +27,21 @@ export class AttackState extends State implements IPlayerAction {
     detectEnermy = false
 
     constructor(playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic, 
-        private eventCtrl: IEventController, private spec: BaseSpec
+        private eventCtrl: IEventController, spec: BaseSpec
     ) {
-        super(playerCtrl, player, gphysic)
+        super(playerCtrl, player, gphysic, spec)
         this.raycast.params.Points.threshold = 20
     }
 
     Init(): void {
         console.log("Attack!!")
         this.attackProcess = false
-        this.attackSpeed = this.spec.AttackSpeed
-        this.attackDist = this.spec.AttackRange
+        this.attackSpeed = this.baseSpec.AttackSpeed
+        this.attackDist = this.baseSpec.AttackRange
         const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
         if(handItem == undefined) {
             this.player.ChangeAction(ActionType.Punch, this.attackSpeed)
         } else {
-            (handItem as Item).activate()
             const anim = this.getAnimationForItem(handItem)
             this.player.ChangeAction(anim, this.attackSpeed)
             if (handItem.AttackType) this.meleeAttackMode = this.isMeleeWeapon(handItem.AttackType)
@@ -130,8 +129,8 @@ export class AttackState extends State implements IPlayerAction {
 
         this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
             id: MonsterId.BulletLine, 
-            ownerSpec: this.spec,
-            damage: this.spec.Damage,
+            ownerSpec: this.baseSpec,
+            damage: this.baseSpec.Damage,
             src: startPos, 
             dir: this.attackDir,
             range: this.attackDist
@@ -145,8 +144,8 @@ export class AttackState extends State implements IPlayerAction {
         // 💥 4. 공격 메시지 전송
         const msg = {
             type: AttackType.NormalSwing,
-            damage: this.spec.Damage,
-            spec: this.spec,
+            damage: this.baseSpec.Damage,
+            spec: this.baseSpec,
             obj: closestTarget
         };
 
@@ -166,8 +165,8 @@ export class AttackState extends State implements IPlayerAction {
                 const mons = msgs.get(obj.object.name)
                 const msg = {
                     type: AttackType.NormalSwing,
-                    damage: this.spec.Damage,
-                    spec: [this.spec],
+                    damage: this.baseSpec.Damage,
+                    spec: [this.baseSpec],
                     obj: obj.object
                 }
                 if (mons == undefined) {
@@ -221,8 +220,8 @@ export class AttackState extends State implements IPlayerAction {
 }
 
 export class AttackIdleState extends State implements IPlayerAction {
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic) {
-        super(playerPhy, player, gphysic)
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
+        super(playerPhy, player, gphysic, baseSpec)
     }
     Init(): void {
         this.player.ChangeAction(ActionType.Fight)

@@ -8,6 +8,7 @@ import { Vector3 } from "three"
 import IEventController from "@Glibs/interface/ievent"
 import { EventTypes } from "@Glibs/types/globaltypes"
 import { TriggerType } from "@Glibs/types/actiontypes"
+import { BaseSpec } from "@Glibs/actors/battle/basespec"
 
 export class CutDownTreeState extends State implements IPlayerAction {
     TargetIntId: string =""
@@ -15,9 +16,9 @@ export class CutDownTreeState extends State implements IPlayerAction {
 
     constructor(
         playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, 
-        private eventCtrl: IEventController
+        private eventCtrl: IEventController, baseSpec: BaseSpec
     ) {
-        super(playerPhy, player, gphysic)
+        super(playerPhy, player, gphysic, baseSpec)
     }
     Init(): void {
         this.player.ChangeAction(ActionType.CutDownTree)
@@ -39,8 +40,8 @@ export class TreeIdleState extends State implements IPlayerAction {
     TargetIntId: string =""
     triggerType: TriggerType = "onInteract"
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic) {
-        super(playerPhy, player, gphysic)
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
+        super(playerPhy, player, gphysic, baseSpec)
         this.Init()
     }
     Init(): void {

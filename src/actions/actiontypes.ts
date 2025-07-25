@@ -60,6 +60,8 @@ export interface IActionComponent {
   // 즉시 발동 (예: 스킬 사용, 아이템 사용)
   activate?(target: IActionUser, context?: ActionContext): void
 
+  deactivate?(target: IActionUser, context?: ActionContext): void
+
   // 지속 적용 (예: 장비 착용, 버프 적용)
   apply?(target: IActionUser, context?: ActionContext): void
 
@@ -74,26 +76,32 @@ export interface IActionComponent {
 
 export const ActionDefs = {
   MuzzleFlash: {
-      type: "muzzleFlash",
-      trigger: "onFire",
-      texture: "https://hons.ghostwebservice.com/assets/texture/particlepack/muzzle_02.png",
-      socket: "muzzlePoint",
-      size: 1,
-      duration: 0.1
-    },
+    type: "muzzleFlash",
+    trigger: "onFire",
+    texture: "https://hons.ghostwebservice.com/assets/texture/particlepack/muzzle_02.png",
+    socket: "muzzlePoint",
+    size: 1,
+    duration: 0.1
+  },
   Casing: {
-      type: "casing",
-      trigger: "onFire",
-      socket: "casingEjectionPoint",
-    },
+    type: "casing",
+    trigger: "onFire",
+    socket: "casingEjectionPoint",
+  },
   Shaker: {
-      type: "shaker",
-      trigger: "onHit",
-    },
+    type: "shaker",
+    trigger: "onHit",
+  },
   Fluffy: {
-      type: "fluffy",
-      trigger: "onActivate",
-    },
+    type: "fluffy",
+    trigger: "onActivate",
+  },
+  Swing: {
+    type: "swing",
+    trigger: "onActivate",
+    socketA: "localTipAOffset",
+    socketB: "localTipBOffset",
+  },
   StatBoost: {
     type: "statBoost",
     trigger: "onBuffApply",

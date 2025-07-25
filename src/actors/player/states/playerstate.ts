@@ -7,6 +7,9 @@ import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
 import { ActionType } from "../playertypes";
 import { Bind } from "@Glibs/types/assettypes";
 import IEventController from "@Glibs/interface/ievent";
+import { IItem } from "@Glibs/interface/iinven";
+import { AttackItemType } from "@Glibs/types/inventypes";
+import { BaseSpec } from "@Glibs/actors/battle/basespec";
 
 export interface IPlayerAction {
     Init(): void
@@ -18,7 +21,8 @@ export class State {
     constructor(
         protected playerCtrl: PlayerCtrl,
         protected player: Player,
-        protected gphysic: IGPhysic
+        protected gphysic: IGPhysic,
+        protected baseSpec: BaseSpec
     ) { }
 
     DefaultCheck({ run = true, attack = true, jump = true, magic = true } = {}): IPlayerAction | undefined {
@@ -113,8 +117,8 @@ export class MagicH2State extends State implements IPlayerAction {
     keytimeout?:NodeJS.Timeout
     next: IPlayerAction = this
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic) {
-        super(playerPhy, player, gphysic)
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
+        super(playerPhy, player, gphysic, baseSpec)
     }
     Init(): void {
         console.log("Magic2!!")
@@ -143,8 +147,8 @@ export class MagicH1State extends State implements IPlayerAction {
     keytimeout?:NodeJS.Timeout
     next: IPlayerAction = this
 
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic) {
-        super(playerPhy, player, gphysic)
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
+        super(playerPhy, player, gphysic, baseSpec)
     }
     Init(): void {
         console.log("Magic!!")
@@ -171,8 +175,8 @@ export class MagicH1State extends State implements IPlayerAction {
 }
 
 export class DeadState extends State implements IPlayerAction {
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic) {
-        super(playerPhy, player, gphysic)
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
+        super(playerPhy, player, gphysic, baseSpec)
         //this.Init()
     }
     Init(): void {
@@ -186,12 +190,14 @@ export class DeadState extends State implements IPlayerAction {
     }
 }
 export class IdleState extends State implements IPlayerAction {
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic) {
-        super(playerPhy, player, gphysic)
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
+        super(playerPhy, player, gphysic, baseSpec)
         this.Init()
     }
     Init(): void {
-        this.player.ChangeAction(ActionType.Idle)
+        const handItem = this.baseSpec.GetBindItem(Bind.Hands_R)
+        const action = (!handItem) ? ActionType.Idle : this.getAnimationForItem(handItem)
+        this.player.ChangeAction(action)
         console.log("Idle!!")
     }
     Uninit(): void {
@@ -209,6 +215,19 @@ export class IdleState extends State implements IPlayerAction {
 
         return this
     }
+    getAnimationForItem(item: IItem): ActionType {
+        switch (item.AttackType) {
+            case AttackItemType.Sword:
+            case AttackItemType.Axe:
+            case AttackItemType.Blunt:
+            case AttackItemType.OneHandGun:
+                return ActionType.Idle
+            case AttackItemType.TwoHandGun:
+                return ActionType.RifleIdle
+            default:
+                return ActionType.Idle
+        }
+    }
 }
 export class RunState extends State implements IPlayerAction {
     speed = 7
@@ -217,12 +236,15 @@ export class RunState extends State implements IPlayerAction {
         player: Player, 
         private camera: THREE.Camera, 
         gphysic: IGPhysic, 
-        private eventCtrl: IEventController
+        private eventCtrl: IEventController,
+        baseSpec: BaseSpec,
     ) {
-        super(playerPhy, player, gphysic)
+        super(playerPhy, player, gphysic, baseSpec)
     }
     Init(): void {
-        this.player.ChangeAction(ActionType.Run)
+        const handItem = this.baseSpec.GetBindItem(Bind.Hands_R)
+        const action = (!handItem) ? ActionType.Run : this.getAnimationForItem(handItem)
+        this.player.ChangeAction(action)
     }
     Uninit(): void { }
     CheckInteraction() {
@@ -296,6 +318,18 @@ export class RunState extends State implements IPlayerAction {
             // }
         }
         return this
+    }
+    getAnimationForItem(item: IItem): ActionType {
+        switch (item.AttackType) {
+            case AttackItemType.Sword:
+                return ActionType.SwordRun
+            case AttackItemType.Axe:
+                return ActionType.AxeRun
+            case AttackItemType.TwoHandGun:
+                return ActionType.RifleRun
+            default:
+                return ActionType.Run
+        }
     }
 }
 export class JumpState implements IPlayerAction {

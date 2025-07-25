@@ -63,6 +63,11 @@ export class Item extends ItemAbstract implements IActionUser{
       action.activate?.(this, context)
     }
   }
+  deactivate(context?: ActionContext) {
+    for (const action of this.actions) {
+      action.deactivate?.(this, context)
+    }
+  }
   trigger(triggerType: TriggerType, context?: ActionContext) {
     for (const action of this.actions) {
       action.trigger?.(this, triggerType, context)
