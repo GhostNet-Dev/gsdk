@@ -109,11 +109,11 @@ export class M4A1Fab extends GunFbxFab implements IAsset {
             // this.meshs.position.set(0, 0.1, 0)
             // this.meshs.rotation.set(3.5, -0.1, -1.6)
 
-            this.muzzlePointObject.position.set(-730, 0, 65)
+            this.muzzlePointObject.position.set(68, 8.5, 0)
             this.meshs.add(this.muzzlePointObject)
             
-            this.casingPointObject.position.set(200, 50, 100)
-            this.casingPointObject.rotation.set(0, 0, 0)
+            this.casingPointObject.position.set(7, 10, 1)
+            this.casingPointObject.rotation.set(-1, 0, 0)
             this.meshs.add(this.casingPointObject)
         })
     }
