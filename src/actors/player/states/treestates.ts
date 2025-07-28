@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { IGPhysic } from "@Glibs/interface/igphysics"
 import { Player } from "../player"
 import { PlayerCtrl } from "../playerctrl"
@@ -9,10 +10,15 @@ import IEventController from "@Glibs/interface/ievent"
 import { EventTypes } from "@Glibs/types/globaltypes"
 import { TriggerType } from "@Glibs/types/actiontypes"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
+import { Bind } from "@Glibs/types/assettypes";
 
 export class CutDownTreeState extends State implements IPlayerAction {
     TargetIntId: string =""
     triggerType: TriggerType = "onInteract"
+    attackProcess = false
+    attackTime = 0
+    attackSpeed = 2
+    keytimeout?:NodeJS.Timeout
 
     constructor(
         playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, 
@@ -21,16 +27,30 @@ export class CutDownTreeState extends State implements IPlayerAction {
         super(playerPhy, player, gphysic, baseSpec)
     }
     Init(): void {
-        this.player.ChangeAction(ActionType.CutDownTree)
+        this.attackSpeed = this.baseSpec.AttackSpeed
+        this.attackTime = this.attackSpeed
+        this.player.ChangeAction(ActionType.CutDownTree, this.attackSpeed)
     }
     Uninit(): void {
-        
+        if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
     }
     Update(delta: number, v: Vector3): IPlayerAction {
         const d = this.DefaultCheck({ attack: false, magic: false })
         if(d != undefined) return d
 
-        this.eventCtrl.SendEventMessage(EventTypes.DoInteraction, this.TargetIntId, this.triggerType)
+        this.attackTime += delta
+        if(this.attackProcess) return this
+        if(this.attackTime / this.attackSpeed < 1) {
+            return this
+        }
+        this.attackTime -= this.attackSpeed
+
+        this.attackProcess = true
+        this.keytimeout = setTimeout(() => {
+            this.eventCtrl.SendEventMessage(EventTypes.DoInteraction, this.TargetIntId, this.triggerType)
+            this.eventCtrl.SendEventMessage(EventTypes.Attack + this.TargetIntId)
+            this.attackProcess = false
+        }, this.attackSpeed * 1000 * 0.5)
         
         return this
     }

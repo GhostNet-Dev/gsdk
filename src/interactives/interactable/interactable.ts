@@ -12,7 +12,6 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 // export abstract class InteractableObject extends THREE.Object3D {
 export abstract class InteractableObject extends THREE.Group implements IActionUser {
     baseSpec: BaseSpec
-    interactId: string;
     isActive = false;
     actions: IActionComponent[] = []
     components: Map<string, IInteractiveComponent> = new Map();
@@ -20,13 +19,12 @@ export abstract class InteractableObject extends THREE.Group implements IActionU
     get objs() { return this.meshs }
 
     constructor(
-        name: string,
+        public interactId: string,
         protected def: InteractableProperty,
         protected asset: IAsset,
         protected eventCtrl: IEventController
     ) {
         super();
-        this.interactId = name;
         const stats = def.stats
         this.baseSpec = new BaseSpec(stats, this)
 

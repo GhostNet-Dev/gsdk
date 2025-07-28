@@ -1,10 +1,10 @@
 import os
 
 # 설정: 파일이 있는 디렉토리 및 출력 파일
-input_directory = "assets/weapon/guns/fbx"
+input_directory = "assets/kaykit/resources/fbx"
 output_file = "generated_classes.ghost"
-pack_name = "GunFbxFab"
-front_name = "ItemGuns"
+pack_name = "KayKitResourceFbxFab"
+front_name = "KayKitResource"
 exe_name = ".fbx"
 
 # 파일 리스트 가져오기 및 정렬

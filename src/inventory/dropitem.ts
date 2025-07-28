@@ -5,7 +5,6 @@ import * as THREE from 'three';
 
 
 export class DropItem {
-    public mesh: THREE.Mesh;
     private velocity: THREE.Vector3;
     private acceleration: THREE.Vector3;
     private player: IPhysicsObject; // 플레이어 오브젝트 참조
@@ -28,16 +27,14 @@ export class DropItem {
     private maxBounces: number;
 
     // 아이템 획득 범위
-    private readonly ACQUISITION_RANGE = 1.5; // 플레이어 반지름 고려 (0.8) + 아이템 반지름 (0.2) + 여유분
+    private readonly ACQUISITION_RANGE = 2; // 플레이어 반지름 고려 (0.8) + 아이템 반지름 (0.2) + 여유분
 
     constructor(
-        geometry: THREE.BufferGeometry,
-        material: THREE.Material,
+        public mesh: THREE.Mesh,
         monsterPosition: THREE.Vector3,
         playerObject: IPhysicsObject,
         options?: ItemDropOptions
     ) {
-        this.mesh = new THREE.Mesh(geometry, material);
         this.mesh.position.copy(monsterPosition);
 
         this.velocity = new THREE.Vector3();
@@ -51,7 +48,7 @@ export class DropItem {
         this.canTrack = options?.canTrack ?? true;
         this.isTracking = false;
         this.initialTrackingSpeed = options?.initialTrackingSpeed ?? 2;
-        this.maxTrackingSpeed = options?.maxTrackingSpeed ?? 20;
+        this.maxTrackingSpeed = options?.maxTrackingSpeed ?? 10;
         this.trackingAccelerationFactor = options?.trackingAccelerationFactor ?? 0.8;
         this.trackingStartDelay = options?.trackingStartDelay ?? (Math.random() * 0.2); // 기본 딜레이
         this.trackingDelayTimer = 0;
@@ -63,7 +60,7 @@ export class DropItem {
 
         // 초기 폭발 방향 및 속도 설정
         const angle = Math.random() * Math.PI * 2;
-        const speed = 5 + Math.random() * 5; // 5 ~ 10 사이의 초기 속도
+        const speed = 1 + Math.random() * 5; // 5 ~ 10 사이의 초기 속도
         this.velocity.x = Math.cos(angle) * speed;
         this.velocity.z = Math.sin(angle) * speed;
         this.velocity.y = 2 + Math.random() * 3; // 위로 튀어 오르는 느낌
@@ -131,7 +128,7 @@ export class DropItem {
         this.velocity.y -= 9.8 * deltaTime; // 중력 적용
         this.mesh.position.addScaledVector(this.velocity, deltaTime);
 
-        const groundLevel = 0.1; // 아이템의 반지름 고려 (지표면)
+        const groundLevel = 0.5; // 아이템의 반지름 고려 (지표면)
         if (this.mesh.position.y <= groundLevel) {
             this.mesh.position.y = groundLevel;
             
