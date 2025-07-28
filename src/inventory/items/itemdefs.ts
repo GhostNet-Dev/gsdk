@@ -178,6 +178,7 @@ export const itemDefs = {
     type: "material",
     stackable: true,
     binding: false,
+    assetDrop: Char.KayKitResourceWoodLogA,
     actions: [
       {
         "type": "statBoost",

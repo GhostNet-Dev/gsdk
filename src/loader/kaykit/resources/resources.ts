@@ -51,7 +51,7 @@ class KayKitResourceFbxFab extends AssetModel {
             child.castShadow = true
             child.receiveShadow = true
         })
-        const scale = 1
+        const scale = 0.01
         meshs.scale.set(scale, scale, scale)
     }
 }

@@ -15,7 +15,9 @@ export class InterTree extends InteractableObject {
   ) {
     super(uniqId, def, asset, eventCtrl)
     eventCtrl.RegisterEventListener(EventTypes.Attack + uniqId, () => {
-      eventCtrl.SendEventMessage(EventTypes.Drop, this.position, )
+      eventCtrl.SendEventMessage(EventTypes.Drop, this.position, [{
+        itemId: "Logs", ratio: 1
+      }])
     })
   }
 

@@ -27,10 +27,11 @@ export class DropItem {
     private maxBounces: number;
 
     // 아이템 획득 범위
-    private readonly ACQUISITION_RANGE = 2; // 플레이어 반지름 고려 (0.8) + 아이템 반지름 (0.2) + 여유분
+    private readonly ACQUISITION_RANGE = 1; // 플레이어 반지름 고려 (0.8) + 아이템 반지름 (0.2) + 여유분
+    private readonly MaxTrackingDistance = 5; // 아이템이 가속되는 최대 거리
 
     constructor(
-        public mesh: THREE.Mesh,
+        public mesh: THREE.Mesh | THREE.Group,
         monsterPosition: THREE.Vector3,
         playerObject: IPhysicsObject,
         options?: ItemDropOptions
@@ -88,17 +89,19 @@ export class DropItem {
         }
         // 추적 단계 (canTrack이 true일 경우에만)
         else if (this.isTracking && this.canTrack) {
-            const playerPosition = this.player.Pos;
+            const playerPosition = this.player.CenterPos;
             const distance = this.mesh.position.distanceTo(playerPosition);
 
             // 플레이어 방향으로 가속
             const directionToPlayer = playerPosition.clone().sub(this.mesh.position).normalize();
 
-            const maxTrackingDistance = 15; // 아이템이 가속되는 최대 거리
             let currentSpeed = this.initialTrackingSpeed;
-            if (distance < maxTrackingDistance) {
-                const speedFactor = 1 - (distance / maxTrackingDistance);
+            if (distance < this.MaxTrackingDistance) {
+                const speedFactor = 1 - (distance / this.MaxTrackingDistance);
                 currentSpeed = this.initialTrackingSpeed + (this.maxTrackingSpeed - this.initialTrackingSpeed) * speedFactor * this.trackingAccelerationFactor;
+            } else {
+                this.isTracking = false
+                return false
             }
             currentSpeed = Math.min(currentSpeed, this.maxTrackingSpeed);
 
@@ -115,6 +118,10 @@ export class DropItem {
         else {
             this.applyPhysics(deltaTime);
             // 바닥에 닿아 완전히 멈춘 아이템은 더 이상 업데이트할 필요 없음
+            const distance = this.mesh.position.distanceTo(this.player.CenterPos);
+            if (distance < this.MaxTrackingDistance && this.canTrack) this.isTracking = true
+            if (distance < this.ACQUISITION_RANGE) return true
+
             if (this.bounces >= this.maxBounces && this.mesh.position.y <= 0.1 && this.velocity.lengthSq() < 0.01) {
                 this.velocity.set(0,0,0); // 완전히 멈춤
                 return false; // 획득되지 않음
