@@ -28,7 +28,8 @@ export class DropItem {
 
     // 아이템 획득 범위
     private readonly ACQUISITION_RANGE = 1; // 플레이어 반지름 고려 (0.8) + 아이템 반지름 (0.2) + 여유분
-    private readonly MaxTrackingDistance = 5; // 아이템이 가속되는 최대 거리
+    private readonly MaxTrackingDistance = 8; // 아이템이 가속되는 최대 거리
+    private readonly GroundLevel = 0.5
 
     constructor(
         public mesh: THREE.Mesh | THREE.Group,
@@ -36,6 +37,7 @@ export class DropItem {
         playerObject: IPhysicsObject,
         options?: ItemDropOptions
     ) {
+        monsterPosition.y = (monsterPosition.y < this.GroundLevel) ? this.GroundLevel : monsterPosition.y
         this.mesh.position.copy(monsterPosition);
 
         this.velocity = new THREE.Vector3();
@@ -48,23 +50,23 @@ export class DropItem {
 
         this.canTrack = options?.canTrack ?? true;
         this.isTracking = false;
-        this.initialTrackingSpeed = options?.initialTrackingSpeed ?? 2;
+        this.initialTrackingSpeed = options?.initialTrackingSpeed ?? 3;
         this.maxTrackingSpeed = options?.maxTrackingSpeed ?? 10;
         this.trackingAccelerationFactor = options?.trackingAccelerationFactor ?? 0.8;
-        this.trackingStartDelay = options?.trackingStartDelay ?? (Math.random() * 0.2); // 기본 딜레이
+        this.trackingStartDelay = options?.trackingStartDelay ?? (Math.random() * 1); // 기본 딜레이
         this.trackingDelayTimer = 0;
 
         this.restitution = options?.restitution ?? 0.6;
-        this.friction = options?.friction ?? 0.8;
+        this.friction = options?.friction ?? 0.5;
         this.bounces = 0;
-        this.maxBounces = options?.maxBounces ?? 3;
+        this.maxBounces = options?.maxBounces ?? 5;
 
         // 초기 폭발 방향 및 속도 설정
         const angle = Math.random() * Math.PI * 2;
         const speed = 1 + Math.random() * 5; // 5 ~ 10 사이의 초기 속도
         this.velocity.x = Math.cos(angle) * speed;
         this.velocity.z = Math.sin(angle) * speed;
-        this.velocity.y = 2 + Math.random() * 3; // 위로 튀어 오르는 느낌
+        this.velocity.y = 5 + Math.random() * 5; // 수직 초기 속도 증가 (5~8 -> 8~13)
     }
 
     public update(deltaTime: number): boolean {
@@ -77,6 +79,7 @@ export class DropItem {
 
         // 폭발 단계
         if (this.isExploding) {
+            console.log("exploding")
             this.explosionTimer += deltaTime;
             if (this.explosionTimer < this.explosionDuration) {
                 this.applyPhysics(deltaTime);
@@ -89,6 +92,7 @@ export class DropItem {
         }
         // 추적 단계 (canTrack이 true일 경우에만)
         else if (this.isTracking && this.canTrack) {
+            console.log("tracking")
             const playerPosition = this.player.CenterPos;
             const distance = this.mesh.position.distanceTo(playerPosition);
 
@@ -116,6 +120,7 @@ export class DropItem {
         }
         // 추적 불가능한 아이템이거나, 추적 단계가 아닌 아이템에 대한 물리 처리
         else {
+            console.log("none")
             this.applyPhysics(deltaTime);
             // 바닥에 닿아 완전히 멈춘 아이템은 더 이상 업데이트할 필요 없음
             const distance = this.mesh.position.distanceTo(this.player.CenterPos);
@@ -135,8 +140,8 @@ export class DropItem {
         this.velocity.y -= 9.8 * deltaTime; // 중력 적용
         this.mesh.position.addScaledVector(this.velocity, deltaTime);
 
-        const groundLevel = 0.5; // 아이템의 반지름 고려 (지표면)
-        if (this.mesh.position.y <= groundLevel) {
+        const groundLevel = this.GroundLevel; // 아이템의 반지름 고려 (지표면)
+        if (this.mesh.position.y < groundLevel) {
             this.mesh.position.y = groundLevel;
             
             if (this.velocity.y < -0.01) { // 아래로 움직이고 있을 때만 바운스 처리

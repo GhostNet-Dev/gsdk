@@ -40,7 +40,7 @@ export class Drops implements ILoop {
     }
     update(delta: number): void {
         this.items = this.items.filter((item) => {
-            if(item.update((delta))) {
+            if(item.update(delta)) {
                 this.scene.remove(item.mesh);
                 return false
             }
@@ -61,7 +61,7 @@ export class Drops implements ILoop {
         }
 
         const item = new DropItem(mesh, monsterPosition,
-            this.player, { ...this.options });
+            this.player);
         this.scene.add(item.mesh);
         this.items.push(item);
     }
