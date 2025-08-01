@@ -1,12 +1,13 @@
 import * as THREE from "three";
 import IEventController, { ILoop } from "@Glibs/interface/ievent"
-import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes"
+import { ActionContext, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes"
 import { EventTypes } from "@Glibs/types/globaltypes";
 
 export default class SwingEffectAction implements IActionComponent, ILoop {
     LoopId: number = 0
     id = 'swing'
     trail?: WeaponTrail
+    keytimeout?:NodeJS.Timeout
     constructor(
         private eventCtrl: IEventController,
         private scene: THREE.Scene,
@@ -23,8 +24,14 @@ export default class SwingEffectAction implements IActionComponent, ILoop {
         const objB = obj.getObjectByName(this.socketB)!
 
         this.trail = new WeaponTrail(this.scene, objA, objB)
-        this.trail.startTrail()
         this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+    }
+    trigger(target: IActionUser, triggerType: TriggerType, context?: ActionContext | undefined): void {
+        this.trail!.startTrail()
+        if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
+        this.keytimeout = setTimeout(() => {
+            this.trail!.stopTrail()
+        }, 1000)
     }
     deactivate(target: IActionUser, context?: ActionContext | undefined): void {
         this.trail!.stopTrail()
@@ -94,6 +101,7 @@ class WeaponTrail {
 
         this.trailMesh = new THREE.Mesh(this.geometry, this.material);
         this.scene.add(this.trailMesh);
+        this.trailMesh.visible = false
 
         this.maxPoints = 60; // 궤적을 구성할 최대 점의 수
         this.minDistance = 0.05; // 새 점을 추가할 최소 거리 (팁 A의 이동 거리 기준)
@@ -109,6 +117,7 @@ class WeaponTrail {
     // updateTrailMesh에서 p1a, p1b, p2a, p2b 계산 시 강제 너비를 적용하는 로직이 필요합니다.
 
     update(deltaTime: number) {
+        if (!this.trailMesh.visible) return
         // 두 Object3D의 현재 월드 포지션을 가져옴
         this.tipAObject.getWorldPosition(this._worldPositionA);
         this.tipBObject.getWorldPosition(this._worldPositionB);

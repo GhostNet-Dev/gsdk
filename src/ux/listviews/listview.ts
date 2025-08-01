@@ -1,19 +1,20 @@
-import { IUiItem } from "@Glibs/interface/idialog"
+import { GUX, IGUX } from "../gux"
 
 
-export default class ListView implements IUiItem {
-    dom = document.createElement("div")
+export default class ListView extends GUX {
+    Dom = document.createElement("div")
     row = document.createElement("div")
     padding = ""
-    child: IUiItem[] = []
+    child: IGUX[] = []
 
     constructor({ height = "300px", bgColor = "#141827", padding = "p-0" } = {}) {
+        super()
         this.padding = padding
-        this.dom.classList.add("container", "rounded", "overflow-auto")
-        this.dom.style.backgroundColor = bgColor
-        this.dom.style.height = height
+        this.Dom.classList.add("container", "rounded", "overflow-auto")
+        this.Dom.style.backgroundColor = bgColor
+        this.Dom.style.height = height
         this.row.classList.add("row")
-        this.dom.appendChild(this.row)
+        this.Dom.appendChild(this.row)
 
         const observer = new IntersectionObserver((e) => {
             e.forEach(element => {
@@ -23,23 +24,29 @@ export default class ListView implements IUiItem {
                 }
             });
         })
-        observer.observe(this.dom)
+        observer.observe(this.Dom)
         window.addEventListener("resize", () => { 
-            this.SendEvent(this.dom.getBoundingClientRect().width) 
+            this.SendEvent(this.Dom.getBoundingClientRect().width) 
         })
     }
-    render(width: number): void {
-       this.SendEvent(this.dom.getBoundingClientRect().width) 
+    Show(): void {
+        
+    }
+    Hide(): void {
+        
+    }
+    RenderHTML(): void {
+       this.SendEvent(this.Dom.getBoundingClientRect().width) 
     }
     SendEvent(width: number) {
         this.child.forEach((e) => {
-            e.render(width)
+            e.RenderHTML(width)
         })
     }
-    addChild(dom: IUiItem) {
+    AddChild(dom: IGUX) {
         const col = document.createElement("div")
         col.classList.add("col", this.padding)
-        col.appendChild(dom.dom)
+        col.appendChild(dom.Dom)
         this.row.appendChild(col)
         this.child.push(dom)
     }

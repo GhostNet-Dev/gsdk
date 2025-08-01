@@ -1,11 +1,12 @@
 import { gsap } from "gsap";
-import IDialog, { IUiItem } from "./idialog"
+import IDialog from "./idialog"
+import { IGUX } from "../gux";
 
 export default class WoodModal implements IDialog {
     dom = document.createElement("div")
     container = document.createElement("div")
     titleDom = document.createElement("div");
-    child: IUiItem[] = []
+    child: IGUX[] = []
     constructor({ width = "90%", height = "fit-content" } = {}) {
         this.applyDynamicStyle("woodmodal", getCSS())
         this.dom.classList.add("woodmodal", "gfont")
@@ -20,11 +21,14 @@ export default class WoodModal implements IDialog {
     GetContentElement() {
         return this.dom
     }
-    addChildUi(ui: IUiItem) {
-        this.addChild(ui.dom)
+    addChildUi(ui: IGUX) {
+        this.AddChild(ui)
         this.child.push(ui)
     }
-    addChild(dom: HTMLElement) {
+    AddChild(dom: IGUX) {
+        this.AddChildDom(dom.Dom)
+    }
+    AddChildDom(dom: HTMLElement) {
         const row = document.createElement("div")
         row.classList.add("row", "pb-1")
         const col = document.createElement("div")
@@ -40,21 +44,21 @@ export default class WoodModal implements IDialog {
         if (typeof content == "string") {
             const textDom = document.createElement("span")
             textDom.innerHTML = content
-            this.addChild(textDom)
+            this.AddChildDom(textDom)
         } else if (content) {
-            this.addChild(content)
+            this.AddChildDom(content)
         }
-        if (visible) this.show()
+        if (visible) this.Show()
     }
-    show(): void {
+    Show(): void {
         gsap.fromTo(this.dom, { scale: 0, opacity: 0 }, 
             { scale: 1, opacity: 1, duration: 0.4, ease: "bounce.out",
                 onComplete: () => { 
-                    this.child.forEach((e) => e.render(this.dom.getBoundingClientRect().width)) 
+                    this.child.forEach((e) => e.RenderHTML(this.dom.getBoundingClientRect().width)) 
                 }
             })
     }
-    async hide() {
+    async Hide() {
         return await new Promise((resolve) => {
             gsap.to(this.dom, {
                 scale: 0, opacity: 0, duration: 0.3, ease: "power2.in",

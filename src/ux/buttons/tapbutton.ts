@@ -1,7 +1,8 @@
 import { gsap } from "gsap"
+import { GUX, IGUX } from "../gux"
 
-export default class TapButton {
-    dom = document.createElement("div")
+export default class TapButton extends GUX{
+    Dom = document.createElement("div")
     textDom = document.createElement("div")
     contentCol = document.createElement("div")
     open: Function
@@ -13,20 +14,21 @@ export default class TapButton {
             opacity = "0.5", content = "Tap to continue", fullScreen = false,
             open = () => { }, close = () => { }, click = () => { } } = {}
     ) {
+        super()
         this.open = open
         this.close = close
-        this.dom.style.position = "absolute"
-        this.dom.style.backgroundColor = `rgba(0, 0, 0, ${opacity})`
-        this.dom.style.top = "0"
-        this.dom.style.left = "0"
-        this.dom.style.width = "100%"
-        this.dom.style.height = "100%"
+        this.Dom.style.position = "absolute"
+        this.Dom.style.backgroundColor = `rgba(0, 0, 0, ${opacity})`
+        this.Dom.style.top = "0"
+        this.Dom.style.left = "0"
+        this.Dom.style.width = "100%"
+        this.Dom.style.height = "100%"
         // if(topDom) {
         //     const index = Number(topDom.style.zIndex)
         //     this.dom.style.zIndex = ((index > 0) ? index - 1 : 0).toString()
         // }
-        this.dom.onclick = () => { if (fullScreen) this.toggleFullScreen(); click(); this.hide() }
-        this.dom.addEventListener("click", (e) => { e.stopPropagation() })
+        this.Dom.onclick = () => { if (fullScreen) this.toggleFullScreen(); click(); this.Hide() }
+        this.Dom.addEventListener("click", (e) => { e.stopPropagation() })
 
         this.textDom.style.position = "relative"
         this.textDom.style.left = "50%"
@@ -54,22 +56,28 @@ export default class TapButton {
         container.appendChild(row1)
         container.appendChild(row2)
 
-        this.dom.appendChild(container)
+        this.Dom.appendChild(container)
     }
-    addChild(dom: HTMLElement) {
+    RenderHTML(...param: any): void {
+        
+    }
+    AddChild(dom: IGUX): void {
+        this.AddChildDom(dom.Dom)
+    }
+    AddChildDom(dom: HTMLElement) {
         dom.addEventListener("click", (e) => { e.stopPropagation() })
         this.contentCol.appendChild(dom)
     }
     ani?: gsap.core.Tween
-    show() {
-        this.parent.appendChild(this.dom)
+    Show() {
+        this.parent.appendChild(this.Dom)
         this.open()
         this.ani = gsap.fromTo(this.textDom, { opacity: 0 }, { opacity: 1, duration: 0.6, repeat: -1, yoyo: true, ease: "power2.out" })
     }
-    async hide() {
+    async Hide() {
         await this.close()
         this.ani?.kill()
-        if (this.parent.contains(this.dom)) this.parent.removeChild(this.dom)
+        if (this.parent.contains(this.Dom)) this.parent.removeChild(this.Dom)
     }
     toggleFullScreen(): void {
         const doc = document.documentElement;

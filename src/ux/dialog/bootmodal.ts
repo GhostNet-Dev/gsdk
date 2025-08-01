@@ -43,7 +43,7 @@ export default class BootModal implements IDialog {
         }
         this.removeEvent = close
     }
-    show() {
+    Show() {
         this.modal.show()
     }
 }

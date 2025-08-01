@@ -30,6 +30,7 @@ export type TriggerType =
   | "onInteract"
   | "onEnterArea"
   | "onAttackHit"
+  | "onAttack"
   | "onUse"
   | "onFire"
   | "onHit"
@@ -98,7 +99,7 @@ export const ActionDefs = {
   },
   Swing: {
     type: "swing",
-    trigger: "onActivate",
+    trigger: "onAttack",
     socketA: "localTipAOffset",
     socketB: "localTipBOffset",
   },
