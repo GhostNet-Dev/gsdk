@@ -38,10 +38,12 @@ export default class CharMiniRenderer implements IViewer, ILoop {
         // 렌더러 초기화
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(container.clientWidth, container.clientHeight);
+        console.log(container.clientWidth, container.clientHeight)
         this.renderer.setPixelRatio(window.devicePixelRatio);
         // 렌더러 생성 시 또는 생성 후
         this.renderer.setClearColor(0x87CEEB, 1); // 하늘색 (투명도 1 = 불투명)
-
+        this.renderer.domElement.width = container.clientWidth;
+        this.renderer.domElement.classList.add('rounded')
         // 렌더러 DOM 요소를 컨테이너에 추가
         container.appendChild(this.renderer.domElement);
         // 카메라 설정
@@ -69,6 +71,20 @@ export default class CharMiniRenderer implements IViewer, ILoop {
         // ctrl.rotateSpeed = 0.1
         // ctrl.enablePan = false;              // 팬 비활성화
         // ctrl.enableZoom = false;             // 줌 비활성화 (선택)
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    this.renderer.domElement.style.width = container.clientWidth + "px"
+                    observer.unobserve(entry.target);
+                } 
+            });
+        }, {
+            root: null, // 뷰포트를 기준으로 관찰 (기본값)
+            threshold: 1 // 요소의 100%가 보일 때 콜백 실행
+        });
+
+        observer.observe(container);
     }
     currentObj?: THREE.Object3D
     async Init(asset: IAsset) {
@@ -98,7 +114,6 @@ export default class CharMiniRenderer implements IViewer, ILoop {
     }
     public resize() {
         // 컨테이너 크기에 맞춰 카메라와 렌더러 업데이트
-
         const newAspect = this.container.clientWidth / this.container.clientHeight;
         this.camera.left = -this.frustumSize * newAspect / 2;
         this.camera.right = this.frustumSize * newAspect / 2;
