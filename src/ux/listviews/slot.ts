@@ -8,7 +8,7 @@ export default class Slot extends GUX {
     icons = GetIconDb()
 
     Dom = document.createElement("div")
-    constructor({ width = "50px", icon = Icons.Star, click = () => { } } = {}) {
+    constructor({ width = "50px", icon = Icons.Star, iconPath = "", click = () => { } } = {}) {
         super()
         this.Dom.style.width = width
         this.Dom.style.height = width
@@ -22,10 +22,13 @@ export default class Slot extends GUX {
         this.Dom.classList.add("m-1", "mb-0")
         this.Dom.onclick = () => { click() }
 
-        // Icon set
-        const iconDom = document.createElement('img') as HTMLImageElement
-        iconDom.src = this.icons.get(icon)!
-        iconDom.classList.add("h-100")
+        const path = (iconPath.length > 0) ? iconPath : this.icons.get(icon)
+        if (path) {
+            const iconDom = document.createElement('img') as HTMLImageElement
+            iconDom.src = path
+            iconDom.classList.add("h-100")
+            this.Dom.appendChild(iconDom)
+        }
     }
     RenderHTML(width: number): void {
         const maxPerRow = Math.floor((width * 0.8) / 40)

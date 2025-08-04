@@ -28,11 +28,18 @@ export abstract class GUX implements IGUX {
 export class SimpleGux extends GUX {
     Dom: HTMLElement
     child: IGUX[] = []
-    constructor({ dom = document.createElement("div"), param = ["container"], widthSync = true } = {}) {
-       super() 
-       dom.classList.add(...param)
-       this.Dom = dom
-       if(widthSync) {
+    constructor({
+        dom = document.createElement("div"),
+        param = ["container"],
+        backgroundColor = "",
+        widthSync = true
+    } = {}) {
+        super()
+        dom.classList.add(...param)
+        if (backgroundColor.length > 0) dom.style.backgroundColor = backgroundColor
+
+        this.Dom = dom
+        if (widthSync) {
             const observer = new IntersectionObserver((entries, observer) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {

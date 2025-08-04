@@ -3,13 +3,14 @@ import { Char } from "@Glibs/loader/assettypes";
 import { Bind } from "@Glibs/types/assettypes";
 import { AttackItemType } from "@Glibs/types/inventypes";
 import { SoundType } from "@Glibs/types/soundtypes";
+import { itemIcons } from "./itemicons";
 
 export const itemDefs = {
   Hanhwasbat: {
     id: "Hanhwasbat",
     name: "Hanhwa's Bat",
     nameKr: "한호의 배타",
-    icon: "WeaponTool/TopazStaff.png",
+    icon: itemIcons.Topazstaff,
     type: "attack",
     levelRequirement: 0,
     weapon: AttackItemType.Sword,
@@ -32,7 +33,7 @@ export const itemDefs = {
     id: "Sword",
     name: "Starter Sword",
     nameKr: "시작용 소드",
-    icon: "WeaponTool/TopazStaff.png",
+    icon: itemIcons.Topazstaff,
     type: "attack",
     levelRequirement: 0,
     weapon: AttackItemType.Sword,
@@ -47,7 +48,7 @@ export const itemDefs = {
   DefaultGun: {
     id: "DefaultGun",
     name: "Legacy Gun",
-    icon: "WeaponTool/Bow.png",
+    icon: itemIcons.Bow,
     type: "attack",
     levelRequirement: 0,
     weapon: AttackItemType.OneHandGun,
@@ -75,7 +76,7 @@ export const itemDefs = {
     assetKey: Char.ItemsPistol,
     level: "common",
     name: "Pistol",
-    icon: "WeaponTool/Bow.png",
+    icon: itemIcons.Bow,
     sound: SoundType.Pistol9mm,
     stackable: false, binding: true, autoAttack: true,
     stats: { "magicAttack": 9, "attack": 1, "attackSpeed": 1, "speed": 1, "attackRange": 7 },
@@ -90,7 +91,7 @@ export const itemDefs = {
     assetKey: Char.ItemsM4A1,
     level: "common",
     name: "M4A1",
-    icon: "WeaponTool/Bow.png",
+    icon: itemIcons.Bow,
     sound: SoundType.NATO556,
     stackable: false, binding: true, autoAttack: true,
     stats: {
@@ -107,7 +108,7 @@ export const itemDefs = {
     assetKey: Char.ItemsGunsM16,
     level: "common",
     name: "M16",
-    icon: "WeaponTool/Bow.png",
+    icon: itemIcons.Bow,
     sound: SoundType.NATO556,
     stackable: false, binding: true, autoAttack: true,
     stats: {
@@ -117,7 +118,7 @@ export const itemDefs = {
   WarterCan: {
     id: "WarterCan",
     name: "Wartering Can",
-    icon: "Misc/Lantern.png",
+    icon: itemIcons.Lantern,
     type: "farm",
     bind: Bind.Hands_R,
     assetKey: Char.ItemsWateringCan,
@@ -138,7 +139,7 @@ export const itemDefs = {
   Hammer: {
     id: "Hammer",
     name: "Hammer H3",
-    icon: "WeaponTool/Hammer.png",
+    icon: itemIcons.Hammer,
     type: "attack",
     bind: Bind.Hands_R,
     assetKey: Char.ItemsHammer,
@@ -158,7 +159,7 @@ export const itemDefs = {
   Leather: {
     id: "Leather",
     name: "Leather",
-    icon: "Material/Leather.png",
+    icon: itemIcons.Leather,
     type: "material",
     stackable: true,
     binding: false,
@@ -174,7 +175,7 @@ export const itemDefs = {
   Logs: {
     id: "Logs",
     name: "WoodLog",
-    icon: "Material/WoodLog.png",
+    icon: itemIcons.Woodlog,
     type: "material",
     stackable: true,
     binding: false,
@@ -191,7 +192,7 @@ export const itemDefs = {
   Rocks: {
     id: "Rocks",
     name: "Rocks",
-    icon: "OreGem/SilverNugget.png",
+    icon: itemIcons.Silvernugget,
     type: "material",
     stackable: true,
     binding: false,
@@ -207,7 +208,7 @@ export const itemDefs = {
   ZombieDeck: {
     id: "ZombieDeck",
     name: "Zombie Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -223,7 +224,7 @@ export const itemDefs = {
   MinataurDeck: {
     id: "MinataurDeck",
     name: "Minataur Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -239,7 +240,7 @@ export const itemDefs = {
   BatPigDeck: {
     id: "BatPigDeck",
     name: "BatPig Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -255,7 +256,7 @@ export const itemDefs = {
   CrabDeck: {
     id: "CrabDeck",
     name: "Crab Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -271,7 +272,7 @@ export const itemDefs = {
   BuilderDeck: {
     id: "BuilderDeck",
     name: "Builder Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -287,7 +288,7 @@ export const itemDefs = {
   BirdmonDeck: {
     id: "BirdmonDeck",
     name: "Birdmon Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -303,7 +304,7 @@ export const itemDefs = {
   BilbyDeck: {
     id: "BilbyDeck",
     name: "Bilby Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -319,7 +320,7 @@ export const itemDefs = {
   GolemDeck: {
     id: "GolemDeck",
     name: "Golem Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -335,7 +336,7 @@ export const itemDefs = {
   BigGolemDeck: {
     id: "BigGolemDeck",
     name: "BigGolem Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -351,7 +352,7 @@ export const itemDefs = {
   KittenMonkDeck: {
     id: "KittenMonkDeck",
     name: "KittenMonk Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -367,7 +368,7 @@ export const itemDefs = {
   SkeletonDeck: {
     id: "SkeletonDeck",
     name: "Skeleton Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -383,7 +384,7 @@ export const itemDefs = {
   SnakeDeck: {
     id: "SnakeDeck",
     name: "Snake Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -399,7 +400,7 @@ export const itemDefs = {
   ToadMageDeck: {
     id: "ToadMageDeck",
     name: "ToadMage Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -415,7 +416,7 @@ export const itemDefs = {
   VikingDeck: {
     id: "VikingDeck",
     name: "Viking Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -431,7 +432,7 @@ export const itemDefs = {
   WereWolfDeck: {
     id: "WereWolfDeck",
     name: "WereWolf Deck",
-    icon: "Misc/Book.png",
+    icon: itemIcons.Book,
     type: "deck",
     stackable: false,
     binding: false,
@@ -447,7 +448,7 @@ export const itemDefs = {
   Apple: {
     id: "Apple",
     name: "Apple",
-    icon: "Food/Apple.png",
+    icon: itemIcons.Apple,
     type: "farm",
     stackable: true,
     binding: false,
@@ -463,7 +464,7 @@ export const itemDefs = {
   Coconut: {
     id: "Coconut",
     name: "Coconut",
-    icon: "Food/GreenApple.png",
+    icon: itemIcons.Greenapple,
     type: "farm",
     stackable: true,
     binding: false,
@@ -479,7 +480,7 @@ export const itemDefs = {
   Tomato: {
     id: "Tomato",
     name: "Tomato",
-    icon: "Food/Wine2.png",
+    icon: itemIcons.Wine2,
     type: "farm",
     stackable: true,
     binding: false,
@@ -495,7 +496,7 @@ export const itemDefs = {
   Potato: {
     id: "Potato",
     name: "Potato",
-    icon: "Food/GreenApple.png",
+    icon: itemIcons.Greenapple,
     type: "farm",
     stackable: true,
     binding: false,
@@ -511,7 +512,7 @@ export const itemDefs = {
   Carrot: {
     id: "Carrot",
     name: "Carrot",
-    icon: "Food/GreenApple.png",
+    icon: itemIcons.Greenapple,
     type: "farm",
     stackable: true,
     binding: false,
