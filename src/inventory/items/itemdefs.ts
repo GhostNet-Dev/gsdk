@@ -125,7 +125,7 @@ export const itemDefs = {
     assetKey: Char.ItemsGunsScar,
     level: "common",
     name: "SCAR",
-    icon: "WeaponTool/Bow.png",
+    icon: itemIcons.Bow,
     sound: SoundType.NATO556,
     stackable: false, binding: true, autoAttack: true,
     stats: {
