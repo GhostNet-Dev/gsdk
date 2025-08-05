@@ -4,7 +4,7 @@ export default interface IDialog {
     RenderHtml(title: string, content: string | HTMLElement, options?: {
         btnText?: string, close?: ()=> void
     }): void
-    show(): void
+    Show(): void
 }
 
 export interface IUiItem {

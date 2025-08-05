@@ -1,44 +1,59 @@
 import { IUiItem } from "@Glibs/interface/idialog"
 import { GetIconDb } from "../menuicons/preicons"
 import { Icons } from "@Glibs/types/icontypes"
+import { GUX, IGUX } from "../gux"
 
 
-export default class Slot implements IUiItem {
+export default class Slot extends GUX {
     icons = GetIconDb()
 
-    dom = document.createElement("div")
-    constructor({ width = "50px", icon = Icons.Star } = {}) {
-        this.dom.style.width = width
-        this.dom.style.height = width
-        this.dom.style.borderRadius = "8px"
-        this.dom.style.justifyContent = "center"
-        this.dom.style.alignItems = "center"
-        this.dom.style.transition = "transform 0.2s, box-shadow 0.2s"
+    Dom = document.createElement("div")
+    constructor({ width = "50px", icon = Icons.Star, iconPath = "", click = () => { } } = {}) {
+        super()
+        this.Dom.style.width = width
+        this.Dom.style.height = width
+        this.Dom.style.borderRadius = "8px"
+        this.Dom.style.justifyContent = "center"
+        this.Dom.style.alignItems = "center"
+        this.Dom.style.transition = "transform 0.2s, box-shadow 0.2s"
 
-        this.dom.style.background = "linear-gradient(145deg, #0b3d91, #1e90ff)"
-        this.dom.style.border = "3px solid rgba(135, 206, 250, 0.8)"
-        this.dom.classList.add("m-1", "mb-0")
+        this.Dom.style.background = "linear-gradient(145deg, #0b3d91, #1e90ff)"
+        this.Dom.style.border = "3px solid rgba(135, 206, 250, 0.8)"
+        this.Dom.classList.add("m-1", "mb-0")
+        this.Dom.onclick = () => { click() }
 
-        // Icon set
-        const iconDom = document.createElement('img') as HTMLImageElement
-        iconDom.src = this.icons.get(icon)!
-        iconDom.classList.add("h-100")
+        const path = (iconPath.length > 0) ? iconPath : this.icons.get(icon)
+        if (path) {
+            const iconDom = document.createElement('img') as HTMLImageElement
+            iconDom.src = path
+            iconDom.classList.add("h-100")
+            this.Dom.appendChild(iconDom)
+        }
     }
-    render(width: number): void {
+    RenderHTML(width: number): void {
         const maxPerRow = Math.floor((width * 0.8) / 40)
         const size = Math.max(40, Math.min(60, (width / maxPerRow) * 0.85))
-        console.log(width, maxPerRow, size, this.dom.offsetLeft, this.dom.offsetTop)
-        if(this.dom.offsetLeft >= width - size) {
-            this.dom.classList.remove("me-0")
-            this.dom.classList.add("me-1")
-            console.log("me-1", width - size, this.dom.offsetLeft)
+        console.log(width, maxPerRow, size, this.Dom.offsetLeft, this.Dom.offsetTop)
+        if(this.Dom.offsetLeft >= width - size) {
+            this.Dom.classList.remove("me-0")
+            this.Dom.classList.add("me-1")
+            console.log("me-1", width - size, this.Dom.offsetLeft)
         } else {
-            this.dom.classList.remove("me-1")
-            this.dom.classList.add("me-0")
-            console.log("me-0", width - size, this.dom.offsetLeft)
+            this.Dom.classList.remove("me-1")
+            this.Dom.classList.add("me-0")
+            console.log("me-0", width - size, this.Dom.offsetLeft)
         }
-        this.dom.style.width = size + "px"
-        this.dom.style.height = size + "px"
+        this.Dom.style.width = size + "px"
+        this.Dom.style.height = size + "px"
+    }
+    Show(): void {
+        
+    }
+    Hide(): void {
+        
+    }
+    AddChild(dom: IGUX): void {
+        
     }
 }
 

@@ -1,23 +1,25 @@
 import { IUiItem } from "@Glibs/interface/idialog";
 import { Icons } from "../menuicons/icontypes";
 import { GetIconDb } from "../menuicons/preicons";
+import { GUX, IGUX } from "../gux";
 
-export default class ListItem implements IUiItem {
-    dom = document.createElement("div")
+export default class ListItem extends GUX {
+    Dom = document.createElement("div")
     icons = GetIconDb()
 
     constructor({ 
         icon = Icons.Star, customIcon = "", fontSize = "16px", 
         text = "list test", height = "40px", click = () => { }
     } = {}, btnDom?: HTMLButtonElement) {
-        this.dom.classList.add("container", "rounded", "gfont")
-        this.dom.style.cursor = "pointer"
-        this.dom.style.background = "linear-gradient(to bottom, #4caf50, #388e3c)"
-        this.dom.style.fontSize = fontSize
+        super()
+        this.Dom.classList.add("container", "rounded", "gfont")
+        this.Dom.style.cursor = "pointer"
+        this.Dom.style.background = "linear-gradient(to bottom, #4caf50, #388e3c)"
+        this.Dom.style.fontSize = fontSize
         //this.dom.style.borderRadius = "8px"
-        this.dom.style.boxShadow = "0 4px #2e7d32, 0 1px 4px rgba(0, 0, 0, 0.2)"
-        this.dom.style.height = height
-        this.dom.onclick = () => { click() }
+        this.Dom.style.boxShadow = "0 4px #2e7d32, 0 1px 4px rgba(0, 0, 0, 0.2)"
+        this.Dom.style.height = height
+        this.Dom.onclick = () => { click() }
 
         // Icon set
         const iconDom = document.createElement('img') as HTMLImageElement
@@ -36,7 +38,7 @@ export default class ListItem implements IUiItem {
         // Make Container
         const row = document.createElement('div')
         row.classList.add("row", "p-0", "flex-nowrap", "h-100")
-        this.dom.appendChild(row)
+        this.Dom.appendChild(row)
 
         content.forEach((item) => {
             const col = document.createElement('div')
@@ -45,7 +47,16 @@ export default class ListItem implements IUiItem {
             row.appendChild(col)
         })
     }
-    render(width: number): void {
+    RenderHTML(width: number): void {
+        
+    }
+    Show(): void {
+        
+    }
+    Hide(): void {
+        
+    }
+    AddChild(dom: IGUX): void {
         
     }
 }

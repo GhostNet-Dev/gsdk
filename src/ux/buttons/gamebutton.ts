@@ -1,31 +1,32 @@
+import { GUX, IGUX } from "../gux"
 
-export class GameButton {
-    dom = document.createElement("div")
-    constructor(options?: { color: "orange" | "green" | "red" }) {
-        this.applyDynamicStyle("gamebutton", getCSS())
-        this.dom.classList.add("game-button", (options) ? options.color : "green", "m-1")
-    }
-    GetContentElement() {
-        return this.dom
-    }
-    RenderHtml({ title = "OK", click = () => { } } = {}): void {
-        this.dom.innerHTML = title
-        this.dom.onclick = () => { click() }
-    }
-    applyDynamicStyle(styleId: string, css: string) {
-        if (!document.getElementById(styleId)) {
-            const style = document.createElement("style");
-            style.id = styleId;
-            style.textContent = css;
-            document.head.appendChild(style); // <head>에 스타일 추가
-        } else {
-            console.log("Style already applied.");
-        }
-    }
+export class GameButton extends GUX {
+  Dom = document.createElement("div")
+  constructor(options?: { color: "orange" | "green" | "red" }) {
+    super()
+    this.applyDynamicStyle("gamebutton", getCSS())
+    this.Dom.classList.add("game-button", (options) ? options.color : "green", "m-1")
+  }
+  GetContentElement() {
+    return this.Dom
+  }
+  RenderHTML({ title = "OK", click = () => { } } = {}): void {
+    this.Dom.innerHTML = title
+    this.Dom.onclick = () => { click() }
+  }
+  Show(): void {
+    
+  }
+  Hide(): void {
+    
+  }
+  AddChild(dom: IGUX): void {
+    
+  }
 }
 
 function getCSS() {
-    return `
+  return `
 
 /* 
 GAME BUTTONS  

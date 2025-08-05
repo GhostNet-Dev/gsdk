@@ -4,6 +4,7 @@ import { ActionRegistry } from "@Glibs/actions/actionregistry"
 import type { ItemProperty } from "./itemdefs"
 import { IAsset } from "@Glibs/interface/iasset"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
+import { ItemIconProperty } from "./itemicons"
 
 
 export class ItemAbstract implements IItem {
@@ -11,7 +12,7 @@ export class ItemAbstract implements IItem {
 
   get Id() { return this.property.id }
   get ItemType() { return this.property.type }
-  get IconPath() { return this.property.icon }
+  get IconPath() { return this.property.icon.path }
   get Bindable() { return this.property.binding }
   get Bind() { return ("bind" in this.property) ? this.property.bind : undefined }
   get Mesh() { return this.meshs }
@@ -31,7 +32,7 @@ export class ItemAbstract implements IItem {
 export class Item extends ItemAbstract implements IActionUser{
   id: string
   name: string
-  icon: string
+  icon: ItemIconProperty
   type: string
   stats?: any
   actions: IActionComponent[] = []

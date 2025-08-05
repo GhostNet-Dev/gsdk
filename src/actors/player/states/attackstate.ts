@@ -153,10 +153,12 @@ export class AttackState extends State implements IPlayerAction {
         this.attackProcess = false;
     }
     
-    meleeAttack() {
+    meleeAttack(itemInfo: IItem) {
         this.player.Meshs.getWorldDirection(this.attackDir)
-        this.raycast.set(this.player.CenterPos, this.attackDir.normalize())
+        this.raycast.set(this.player.CenterPos, this.attackDir.normalize());
     
+        (itemInfo as Item).trigger("onAttack", { direction: this.attackDir })
+
         const intersects = this.raycast.intersectObjects(this.playerCtrl.targets)
         if (intersects.length > 0 && intersects[0].distance < this.attackDist) {
             const msgs = new Map()
@@ -212,7 +214,7 @@ export class AttackState extends State implements IPlayerAction {
             if(handItem == undefined) return
             if (this.meleeAttackMode) {
                 if(handItem.AutoAttack) this.meleeAutoAttack()
-                else this.meleeAttack()
+                else this.meleeAttack(handItem)
             } else this.rangedAttack(handItem)
         }, this.attackSpeed * 1000 * 0.6)
         return this
