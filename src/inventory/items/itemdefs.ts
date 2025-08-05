@@ -113,6 +113,24 @@ export const itemDefs = {
     stats: {
       "magicAttack": 9, "attack": 3, "attackSpeed": .1, "speed": 1, "attackRange": 10
     },
+    actions: [ActionDefs.MuzzleFlash, ActionDefs.Casing],
+  },
+  SCAR: {
+    id: "SCAR",
+    type: "attack",
+    levelRequirement: 0,
+    weapon: AttackItemType.TwoHandGun,
+    bind: Bind.Hands_R,
+    assetKey: Char.ItemsGunsScar,
+    level: "common",
+    name: "SCAR",
+    icon: "WeaponTool/Bow.png",
+    sound: SoundType.NATO556,
+    stackable: false, binding: true, autoAttack: true,
+    stats: {
+      "magicAttack": 9, "attack": 3, "attackSpeed": .1, "speed": 1, "attackRange": 10
+    },
+    actions: [ActionDefs.MuzzleFlash, ActionDefs.Casing],
   },
   WarterCan: {
     id: "WarterCan",
