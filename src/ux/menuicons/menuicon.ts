@@ -1,5 +1,5 @@
 import { Icons, IconsColor } from "./icontypes";
-import { GetIconColorDb, GetIconDb } from "./preicons"
+import { GetIconColorDb, GetIconDb } from "../icons/preicons"
 
 /*
 yellow: startColor = "#FFC107", endColor = "#FFF176"

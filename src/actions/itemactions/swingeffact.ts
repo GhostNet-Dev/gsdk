@@ -24,14 +24,8 @@ export default class SwingEffectAction implements IActionComponent, ILoop {
         const objB = obj.getObjectByName(this.socketB)!
 
         this.trail = new WeaponTrail(this.scene, objA, objB)
-        this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
-    }
-    trigger(target: IActionUser, triggerType: TriggerType, context?: ActionContext | undefined): void {
         this.trail!.startTrail()
-        if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
-        this.keytimeout = setTimeout(() => {
-            this.trail!.stopTrail()
-        }, 1000)
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
     }
     deactivate(target: IActionUser, context?: ActionContext | undefined): void {
         this.trail!.stopTrail()

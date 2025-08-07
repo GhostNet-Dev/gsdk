@@ -1,6 +1,6 @@
 import { IUiItem } from "@Glibs/interface/idialog";
 import { Icons } from "../menuicons/icontypes";
-import { GetIconDb } from "../menuicons/preicons";
+import { GetIconDb } from "../icons/preicons";
 import { GUX, IGUX } from "../gux";
 
 export default class ListItem extends GUX {

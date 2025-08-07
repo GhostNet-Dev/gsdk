@@ -36,6 +36,7 @@ export enum EventTypes {
     // item이 drop 해야될 때 
     Drop = "drop",
     DirectDrop = "directdrop",
+    Pickup = "pickup",
 
     BrickInfo = "bsize",
     TerrainInfo = "tsize",

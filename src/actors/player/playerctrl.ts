@@ -145,6 +145,11 @@ export class PlayerCtrl implements ILoop, IActionUser {
             (slot.item as Item).activate()
             this.currentState.Init()
         })
+        eventCtrl.RegisterEventListener(EventTypes.Pickup, (id: ItemId) => {
+            const info = this.inventory.GetItemInfo(id)
+            this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `${info.name}을 얻었습니다.`)
+            this.inventory.NewItem(id)
+        })
         eventCtrl.RegisterEventListener(EventTypes.Attack + "player", (opts: AttackOption[]) => {
             if (this.currentState != this.DyingSt && this.baseSpec.CheckDie()) {
                 this.currentState = this.DyingSt

@@ -81,7 +81,7 @@ export default class CharMiniRenderer implements IViewer, ILoop {
             });
         }, {
             root: null, // 뷰포트를 기준으로 관찰 (기본값)
-            threshold: 1 // 요소의 100%가 보일 때 콜백 실행
+            threshold: 0.1 // 요소의 100%가 보일 때 콜백 실행
         });
 
         observer.observe(container);

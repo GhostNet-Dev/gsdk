@@ -1,6 +1,6 @@
 import LolliBar from "../progress/lollibar"
 import { Icons } from "./icontypes"
-import { GetIconColorDb, GetIconDb } from "./preicons"
+import { GetIconColorDb, GetIconDb } from "../icons/preicons"
 
 export default class StatusBar {
     dom = document.createElement("div")

@@ -3,7 +3,7 @@ import { Char } from "@Glibs/loader/assettypes";
 import { Bind } from "@Glibs/types/assettypes";
 import { AttackItemType } from "@Glibs/types/inventypes";
 import { SoundType } from "@Glibs/types/soundtypes";
-import { itemIcons } from "./itemicons";
+import { itemIcons } from "@Glibs/ux/icons/itemicons";
 
 export const itemDefs = {
   Hanhwasbat: {

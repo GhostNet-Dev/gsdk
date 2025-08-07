@@ -4,7 +4,7 @@ import { ActionRegistry } from "@Glibs/actions/actionregistry"
 import type { ItemProperty } from "./itemdefs"
 import { IAsset } from "@Glibs/interface/iasset"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
-import { ItemIconProperty } from "./itemicons"
+import { ItemIconProperty } from "../../ux/icons/itemicons"
 
 
 export class ItemAbstract implements IItem {

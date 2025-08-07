@@ -30,7 +30,7 @@ export class SimpleGux extends GUX {
     child: IGUX[] = []
     constructor({
         dom = document.createElement("div"),
-        param = ["container"],
+        param = ["container", "w-100", "h-100"],
         backgroundColor = "",
         widthSync = true
     } = {}) {

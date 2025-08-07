@@ -2,6 +2,7 @@
 import { IPhysicsObject } from '@Glibs/interface/iobject';
 import { ItemDropOptions } from '@Glibs/types/inventypes';
 import * as THREE from 'three';
+import { ItemId } from './items/itemdefs';
 
 
 export class DropItem {
@@ -35,6 +36,7 @@ export class DropItem {
         public mesh: THREE.Mesh | THREE.Group,
         monsterPosition: THREE.Vector3,
         playerObject: IPhysicsObject,
+        public ItemId: ItemId,
         options?: ItemDropOptions
     ) {
         monsterPosition.y = (monsterPosition.y < this.GroundLevel) ? this.GroundLevel : monsterPosition.y

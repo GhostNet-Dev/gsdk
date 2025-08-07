@@ -45,8 +45,9 @@ export class AttackState extends State implements IPlayerAction {
             const anim = this.getAnimationForItem(handItem)
             this.player.ChangeAction(anim, this.attackSpeed)
             if (handItem.AttackType) this.meleeAttackMode = this.isMeleeWeapon(handItem.AttackType)
-            if (handItem.AutoAttack) this.autoDirection()
+            if (handItem.AutoAttack) this.autoDirection();
 
+            (handItem as Item).activate()
             this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, handItem.Mesh, handItem.Sound)
         }
         
@@ -79,6 +80,8 @@ export class AttackState extends State implements IPlayerAction {
      */
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
+        const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
+        if (handItem) (handItem as Item).deactivate()
         this.player.releaseDashsedCircle()
     }
     autoDirection() {

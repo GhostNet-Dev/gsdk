@@ -1,5 +1,6 @@
 
 export enum Icons {
+    None,
     Load,
     Save,
     Download,

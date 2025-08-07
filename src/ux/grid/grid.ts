@@ -43,7 +43,7 @@ export class Grid extends GUX {
         })
         this.Dom.appendChild(row)
     }
-    AddChild(dom: IGUX, classList?: string[]): void {
+    AddChild(dom: IGUX, classList: string[] = ["p-0", "m-0"]): void {
         this.child.push({ ui: dom, classList })
     }
     AddChildDom(dom: HTMLElement) {

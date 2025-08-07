@@ -70,14 +70,13 @@ export class Alarm {
     textQueue: string[] = []
 
     NotifyInfo(text: string, type: AlarmType) {
-
         switch(type) {
             case AlarmType.Normal:
                 if (this.textQueue.length > 3) this.textQueue.shift()
                 this.textQueue.push(text)
 
                 this.dom.style.display = "block"
-                this.dom.insertAdjacentHTML("beforeend", this.textQueue.join("<br>"))
+                this.dom.innerText = this.textQueue.join("\n")
                 gsap.killTweensOf('.playalarm')
                 gsap.fromTo('.playalarm', 3, { opacity: 1 }, {
                     opacity: 0, ease: "power1.inOut", onComplete: () => {

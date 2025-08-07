@@ -34,7 +34,6 @@ export type TriggerType =
   | "onUse"
   | "onFire"
   | "onHit"
-  | "onActivate"
 
 
 export interface ActionDef {
@@ -99,7 +98,7 @@ export const ActionDefs = {
   },
   Swing: {
     type: "swing",
-    trigger: "onAttack",
+    trigger: "onActivate",
     socketA: "localTipAOffset",
     socketB: "localTipBOffset",
   },

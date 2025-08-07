@@ -1,5 +1,5 @@
 import { IUiItem } from "@Glibs/interface/idialog"
-import { GetIconDb } from "../menuicons/preicons"
+import { GetIconDb } from "../icons/preicons"
 import { Icons } from "@Glibs/types/icontypes"
 import { GUX, IGUX } from "../gux"
 
@@ -8,7 +8,7 @@ export default class Slot extends GUX {
     icons = GetIconDb()
 
     Dom = document.createElement("div")
-    constructor({ width = "50px", icon = Icons.Star, iconPath = "", click = () => { } } = {}) {
+    constructor({ width = "50px", icon = Icons.None, iconPath = "", click = () => { } } = {}) {
         super()
         this.Dom.style.width = width
         this.Dom.style.height = width
@@ -22,7 +22,7 @@ export default class Slot extends GUX {
         this.Dom.classList.add("m-1", "mb-0")
         this.Dom.onclick = () => { click() }
 
-        const path = (iconPath.length > 0) ? iconPath : this.icons.get(icon)
+        const path = (iconPath.length > 0) ? iconPath : this.icons.get(icon) 
         if (path) {
             const iconDom = document.createElement('img') as HTMLImageElement
             iconDom.src = path

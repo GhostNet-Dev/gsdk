@@ -1,8 +1,7 @@
-import { Icons, IconsColor } from "./icontypes"
+import { Icons, IconsColor } from "../menuicons/icontypes"
 
 const rootPath = 'https://hons.ghostwebservice.com/assets/'
 const uiPath = 'ui/Icons/'
-const uiPath2 = 'ui/Icons/SVG/'
 const uiButton = 'ui/ButtonsText/'
 const pack1Path = 'ui/pack1/'
 const pack2Path = 'ui/pack2/'

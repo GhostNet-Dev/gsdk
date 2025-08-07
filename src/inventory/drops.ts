@@ -5,7 +5,7 @@ import { DropItem } from './dropitem';
 import { ItemDropOptions } from '@Glibs/types/inventypes';
 import { EventTypes } from '@Glibs/types/globaltypes';
 import { MonDrop } from '@Glibs/types/monstertypes';
-import { Itemdefs, itemDefs } from './items/itemdefs';
+import { ItemId, itemDefs } from './items/itemdefs';
 import { Loader } from '@Glibs/loader/loader';
 import { Char } from '@Glibs/types/assettypes';
 
@@ -20,7 +20,7 @@ export class Drops implements ILoop {
     constructor(
         private loader: Loader,
         private scene: THREE.Scene,
-        eventCtrl: IEventController,
+        private eventCtrl: IEventController,
         private player: IPhysicsObject,
         private options?: ItemDropOptions
     ) {
@@ -29,10 +29,13 @@ export class Drops implements ILoop {
         ) => {
             if (drop && drop.length > 0) {
                 drop.forEach(async (item) => {
+                    const ticket = Math.random()
+                    if (item.ratio < ticket) return
+
                     const itemPros = itemDefs[item.itemId]
                     console.log("drop =>", drop)
                     const modelKey = ("assetDrop" in itemPros) ? itemPros.assetDrop : undefined
-                    await this.onMonsterDeath(pos, modelKey)
+                    await this.onMonsterDeath(pos, item.itemId, modelKey)
                 })
             }
         })
@@ -41,6 +44,7 @@ export class Drops implements ILoop {
     update(delta: number): void {
         this.items = this.items.filter((item) => {
             if(item.update(delta)) {
+                this.eventCtrl.SendEventMessage(EventTypes.Pickup, item.ItemId)
                 this.scene.remove(item.mesh);
                 return false
             }
@@ -48,7 +52,7 @@ export class Drops implements ILoop {
         })
     }
 
-    async onMonsterDeath(monsterPosition: THREE.Vector3, assetKey?: Char) {
+    async onMonsterDeath(monsterPosition: THREE.Vector3, itemId: ItemId, assetKey?: Char) {
         let mesh: THREE.Mesh | THREE.Group
 
         if (assetKey) {
@@ -61,7 +65,7 @@ export class Drops implements ILoop {
         }
 
         const item = new DropItem(mesh, monsterPosition,
-            this.player);
+            this.player, itemId, this.options);
         this.scene.add(item.mesh);
         this.items.push(item);
     }

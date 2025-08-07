@@ -1,12 +1,11 @@
 import * as THREE from "three";
-import { IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes"
+import { IActionComponent, IActionUser } from "@Glibs/types/actiontypes"
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 
 export class FluffyAction implements IActionComponent, ILoop {
     LoopId: number = 0
     id = "fluffy"
-    triggerType: TriggerType = "onActivate"
     shader: any[] = []
 
     constructor(private eventCtrl: IEventController) { }
