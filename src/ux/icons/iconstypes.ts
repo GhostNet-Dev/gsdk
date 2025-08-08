@@ -1,5 +1,5 @@
-import { itemIcons } from './itemicons'
-import { uxIcons } from './uxicons'
+import { itemIcons } from '@Glibs/ux/icons/itemicons'
+import { uxIcons } from '@Glibs/ux/icons/uxicons'
 
 export const allIcons = {
   ...itemIcons,

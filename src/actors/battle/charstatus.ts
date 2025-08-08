@@ -1,5 +1,12 @@
 import { StatKey } from "@Glibs/types/stattypes"
 
+export const StatNamesKr: { [key: string]: string } = {
+  speed: "속도",
+  attackRange: "공격 범위",
+  attack: "공격력",
+  magicAttack: "마법 공격력",
+  attackSpeed: "공격 속도",
+};
 
 export type CharacterStatus = {
 /*

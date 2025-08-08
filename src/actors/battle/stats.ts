@@ -1,6 +1,8 @@
 import { MonsterId, MonsterIdType } from "@Glibs/types/monstertypes";
 import { StatKey } from "@Glibs/types/stattypes";
 
+export type StatPreset = Partial<Record<StatKey, number>>
+
 export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, number>>> = {
   [MonsterId.Zombie]: {
     hp: 10,

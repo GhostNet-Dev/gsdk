@@ -301,12 +301,17 @@ export class RunState extends State implements IPlayerAction {
         const moveAmount = worldDir.clone().multiplyScalar(delta * this.speed);
         const moveDis = moveAmount.length();
 
-        if (moveDis < dis.distance) {
-            this.player.Pos.add(moveAmount);
-        } else if (dis.move) {
+        if (dis.move) {
             this.player.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
         } else {
-            // this.player.Meshs.position.y += 1 // 계단 체크
+            this.player.Pos.add(moveAmount);
+        }
+        // if (moveDis < dis.distance) {
+        //     this.player.Pos.add(moveAmount);
+        // } else if (dis.move) {
+        //     this.player.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
+        // } else {
+        //     // this.player.Meshs.position.y += 1 // 계단 체크
             // const dis = this.gphysic.CheckDirection(this.player, this.dir.set(v.x, 0, v.z))
             // if (moveDis > dis.distance) {
             //     this.player.Pos.add(moveAmount)
@@ -316,7 +321,7 @@ export class RunState extends State implements IPlayerAction {
             // } else {
             //     this.player.Meshs.position.y -= 1
             // }
-        }
+        // }
         return this
     }
     getAnimationForItem(item: IItem): ActionType {

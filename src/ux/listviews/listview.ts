@@ -94,4 +94,10 @@ export default class ListView extends GUX {
         this.row.appendChild(col)
         this.child.push(dom)
     }
+    RemoveChild() {
+        while (this.row.firstChild) {
+            this.row.removeChild(this.row.firstChild);
+        }
+        this.child = []
+    }
 }

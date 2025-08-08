@@ -6,21 +6,20 @@ import IInventory, { IItem } from "@Glibs/interface/iinven";
 import { ItemId, itemDefs } from "./items/itemdefs";
 import { Loader } from "@Glibs/loader/loader";
 
-const maxSlot = 15
 
 export class Inventory implements IInventory {
     data: InvenData = {
         bodySlot: [],
         inventroySlot: []
     }
-    maxSlot = 0
+    MaxSlot = 0
 
     constructor(
         private event: IEventController,
         private loader: Loader,
         { maxSlot = 15 } = {},
     ) {
-        this.maxSlot = maxSlot
+        this.MaxSlot = maxSlot
     }
     InsertInventory(item: IItem) {
         const find = this.data.inventroySlot.find((slot) => slot.item.Id == item.Id)
@@ -38,7 +37,7 @@ export class Inventory implements IInventory {
         return ("assetKey" in itemProperty) ? this.loader.GetAssets(itemProperty.assetKey) : undefined
     }
     async NewItem(key: ItemId) {
-        if(this.data.inventroySlot.length == maxSlot) {
+        if(this.data.inventroySlot.length == this.MaxSlot) {
             this.event.SendEventMessage(EventTypes.AlarmWarning, "인벤토리가 가득찼습니다.")
             return 
         }
@@ -72,6 +71,9 @@ export class Inventory implements IInventory {
     // }
     GetInventory(i: number): InventorySlot {
         return this.data.inventroySlot[i]
+    }
+    GetInventories(): InventorySlot[] {
+        return this.data.inventroySlot
     }
 
     // GetBindItem(pos: Bind) {

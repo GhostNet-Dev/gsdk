@@ -4,10 +4,11 @@ import re
 from collections import defaultdict
 
 # 설정
-ROOT_PATH = 'https://hons.ghostwebservice.com/assets/'
+ROOT_PATH = 'https://hons.ghostwebservice.com/'
 # ICONS_DIR = './assets/icons'
-ICONS_DIR = './assets/ui'
-OUTPUT_FILE = './src/gsdk/src/ux/icons/uxicons.ts'
+ICONS_DIR = 'assets/ui'
+OUTPUT_FILE = 'src/gsdk/src/ux/icons/uxicons.ts'
+NAME = 'uxIcons'
 
 
 
@@ -35,7 +36,7 @@ def parse_all_icons():
             rel_path = os.path.relpath(abs_path, ICONS_DIR).replace('\\', '/')
             parts = rel_path.split('/')  # e.g. ['Equipment', 'Heavy', 'Helmet.png']
             category = '_'.join(parts[:-1])
-            path_url = f"{ROOT_PATH}icons/{'/'.join(parts)}".replace(' ', '%20')
+            path_url = f"{ROOT_PATH}{ICONS_DIR}/{'/'.join(parts)}".replace(' ', '%20')
             base_name = to_pascal_case(file)
             folder_keywords = [to_pascal_case(p) for p in parts[:-1]]
             icons_by_name[base_name].append({
@@ -83,14 +84,12 @@ def collect_icons():
 def generate_ts_file(icons):
     header = f"""const rootPath = '{ROOT_PATH}'
 
-export const itemIcons = {{
+export const {uxIcons} = {{
 """
     body = '\n'.join(sorted(icons))
     footer = """
 } as const
 
-export type ItemIconKey = keyof typeof itemIcons
-export type IconCategory = typeof itemIcons[ItemIconKey]['category']
 """
     return header + body + footer
 

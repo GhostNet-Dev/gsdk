@@ -204,6 +204,7 @@ export class RunZState extends State implements IMonsterAction {
     YV = new THREE.Vector3(0, 1, 0)
     MX = new THREE.Matrix4()
     QT = new THREE.Quaternion()
+    dir = new THREE.Vector3()
 
     Update(delta: number, v: THREE.Vector3, dist: number): IMonsterAction {
         const checkGravity = this.CheckGravity()
@@ -229,15 +230,21 @@ export class RunZState extends State implements IMonsterAction {
         this.zombie.Meshs.quaternion.copy(qt)
 
         // ✅ 이동 처리
-        const dis = this.gphysic.CheckDirection(this.zombie, v);
+        const dis = this.gphysic.CheckDirection(this.zombie, this.dir.copy(v));
         const moveAmount = v.clone().multiplyScalar(delta * this.speed);
         const moveDis = moveAmount.length();
+        console.log(moveDis, " / ", dis.distance, " / ", dis.move)
 
-        if (moveDis < dis.distance) {
-            this.zombie.Pos.add(moveAmount);
-        } else if (dis.move) {
+        if (dis.move) {
             this.zombie.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
+        } else {
+            this.zombie.Pos.add(moveAmount);
         }
+        // if (moveDis < dis.distance) {
+        //     this.zombie.Pos.add(moveAmount);
+        // } else if (dis.move) {
+        //     this.zombie.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
+        // }
 
         // if (this.gphysic.Check(this.zombie)){
         //     this.zombie.Pos.y += 1 // 계단 체크 

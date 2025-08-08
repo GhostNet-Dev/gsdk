@@ -12,7 +12,7 @@ export default class MenuIcon {
   dom = document.createElement("div");
 
   constructor({
-    text = "", icon = Icons.Save,
+    text = "", icon = Icons.None, iconPath = "",
     iconEnable = true, iconWidth = "60%",
     boxEnable = false, circleEnable = false, boxWidth = "50px", boxheight = "50px",
     width = "50px", height = "50px", rounded = "10px",
@@ -51,8 +51,9 @@ export default class MenuIcon {
     
     let textPosition = ""
     if (iconEnable) {
+      const path = (iconPath.length > 0) ? iconPath : this.icons.get(icon) 
       iconHtml = `<div class="icon-img">
-          <img src="${this.icons.get(icon)}" style="position:relative;left:50%;width:${iconWidth};${(!text.length)?
+          <img src="${path}" style="position:relative;left:50%;width:${iconWidth};${(!text.length)?
             "top:50%;transform: translate(-50%, -50%);":"transform: translate(-50%, 0%);"}">
           </div>`
       textPosition = `style="bottom:0px"`

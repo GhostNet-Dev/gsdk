@@ -79,6 +79,7 @@ export enum EventTypes {
     RegisterViewer = "regviewer",
 
     // 물리적인 충돌 검사가 필요한 객체 
+    RegisterLandPhysic = "reglphysic",
     RegisterPhysic = "regphysic",
     DeregisterPhysic = "deregphysic",
 

@@ -94,7 +94,7 @@ export default class WorldMap {
 
         if(!map) throw new Error("not defined");
 
-        this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, map)
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterLandPhysic, map)
 
         if(mapType != MapEntryType.Tree && mapType != MapEntryType.FluffyMaker
             && mapType != MapEntryType.Interactive)

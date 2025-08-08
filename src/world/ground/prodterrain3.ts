@@ -28,10 +28,12 @@ export default class ProduceTerrain3 implements IWorldMapObject{
             vertexColors: true,
         });
     }
-    Create(scale = 50) {
+    Create(scale = 50, debug = false) {
         const mesh = this.CreateTerrain(scale)
-        this.SetupGUI()
-        this.Show()
+        if (debug) {
+            this.SetupGUI()
+            this.Show()
+        }
         return mesh
     }
     CreateDone() {

@@ -2,12 +2,14 @@ import { IUiItem } from "@Glibs/interface/idialog"
 import { GetIconDb } from "../icons/preicons"
 import { Icons } from "@Glibs/types/icontypes"
 import { GUX, IGUX } from "../gux"
+import { IconProperty } from "@Glibs/types/iconstypes"
 
 
 export default class Slot extends GUX {
     icons = GetIconDb()
 
     Dom = document.createElement("div")
+    iconDom = document.createElement('img') as HTMLImageElement
     constructor({ width = "50px", icon = Icons.None, iconPath = "", click = () => { } } = {}) {
         super()
         this.Dom.style.width = width
@@ -24,11 +26,13 @@ export default class Slot extends GUX {
 
         const path = (iconPath.length > 0) ? iconPath : this.icons.get(icon) 
         if (path) {
-            const iconDom = document.createElement('img') as HTMLImageElement
-            iconDom.src = path
-            iconDom.classList.add("h-100")
-            this.Dom.appendChild(iconDom)
+            this.iconDom.src = path
+            this.iconDom.classList.add("h-100")
         }
+        this.Dom.appendChild(this.iconDom)
+    }
+    ChangeIcon(icon: IconProperty): void {
+        this.iconDom.src = icon.path
     }
     RenderHTML(width: number): void {
         const maxPerRow = Math.floor((width * 0.8) / 40)
