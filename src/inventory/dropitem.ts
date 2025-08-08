@@ -122,7 +122,6 @@ export class DropItem {
         }
         // 추적 불가능한 아이템이거나, 추적 단계가 아닌 아이템에 대한 물리 처리
         else {
-            console.log("none")
             this.applyPhysics(deltaTime);
             // 바닥에 닿아 완전히 멈춘 아이템은 더 이상 업데이트할 필요 없음
             const distance = this.mesh.position.distanceTo(this.player.CenterPos);

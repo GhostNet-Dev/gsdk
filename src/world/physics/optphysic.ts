@@ -4,6 +4,7 @@ import { IGPhysic } from "./igphysics";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import IEventController from "@Glibs/interface/ievent";
 import { PhysicBox } from "@Glibs/types/physicstypes";
+import { OctreeNode, SpatialObject } from "./octreenode";
 
 export default class OptPhysics implements IGPhysic {
     player?: IPhysicsObject
@@ -16,21 +17,44 @@ export default class OptPhysics implements IGPhysic {
     downDir = new THREE.Vector3(0, -1, 0)
     raycast = new THREE.Raycaster()
     planeHeightMap?: PlaneHeightMap
+    octreenode?: OctreeNode
+    marker = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+    );
 
     constructor(private scene: THREE.Scene, eventCtrl: IEventController) {
+        this.raycast.far = 2
+        this.scene.add(this.marker)
         eventCtrl.RegisterEventListener(EventTypes.TimeCtrl, (scale: number) => {
             this.timeScale = scale
         })
         eventCtrl.RegisterEventListener(EventTypes.RegisterLandPhysic, (obj: THREE.Mesh<THREE.PlaneGeometry>) => {
             this.planeHeightMap = new PlaneHeightMap(obj)
+            this.octreenode = new OctreeNode(OctreeNode.computeWorldBounds(obj, 100))
         })
         eventCtrl.RegisterEventListener(EventTypes.RegisterPhysic, (obj: THREE.Object3D) => {
             this.targetObjs.push(obj)
+            const spatialObj: SpatialObject = {
+                id: obj.uuid, object3d:obj, box: new THREE.Box3().setFromObject(obj)
+            }
+            this.visualizeBox3(spatialObj.box)
+            this.octreenode!.insert(spatialObj)
+            obj.userData.spatialObj = spatialObj
         })
         eventCtrl.RegisterEventListener(EventTypes.DeregisterPhysic, (obj: THREE.Object3D) => {
+            const spatialObj = obj.userData.spatialObj
+            this.octreenode!.remove(spatialObj)
             this.targetObjs.splice(this.targetObjs.findIndex(o => o.uuid == obj.uuid), 1)
         })
     }
+    visualizeBox3(box: THREE.Box3, color: number = 0xff0000) {
+        // three/examples/jsm/helpers/Box3Helper 사용
+        const helper = new THREE.Box3Helper(box, color);
+        this.scene.add(helper);
+        return helper;
+    }
+
     addPlayer(model: IPhysicsObject): void {
         this.player = model
     }
@@ -42,6 +66,8 @@ export default class OptPhysics implements IGPhysic {
         return this.targetObjs
     }
     CheckDirection(obj: IPhysicsObject, dir: THREE.Vector3) {
+        const ret = this.checkRayBox(obj, obj.Meshs.getWorldDirection(new THREE.Vector3()))
+        if(ret.obj) return ret
         return {obj:undefined, ...this.planeHeightMap!.checkDirection(obj, dir)}
     }
     Check(obj: IPhysicsObject): boolean {
@@ -49,14 +75,18 @@ export default class OptPhysics implements IGPhysic {
         return this.CheckBoxs(obj)
     }
     CheckDown(obj: IPhysicsObject): number {
+        const ret = this.checkRayBox(obj, this.downDir)
         // 중력 처리 전/후 등에 호출
         const x = obj.Pos.x;
         const z = obj.Pos.z;
         const terrainY = this.planeHeightMap!.getHeightAt(x, z);
         // console.log("Player:" + obj.Pos.y + " - " + terrainY + " = " + (obj.Pos.y - terrainY ))
-
+        const dis = obj.Pos.y - terrainY - 0.01
+        if(!ret.obj) {
+            return dis
+        }
         // 플레이어 발이 terrainY 위에 있어야 한다고 가정
-        return  obj.Pos.y - terrainY
+        return  (dis > ret.distance) ? ret.distance : dis
     }
 
     CheckDownAABB(obj: IPhysicsObject): number {
@@ -85,12 +115,54 @@ export default class OptPhysics implements IGPhysic {
 
         return (minDist < Infinity) ? minDist : 5; // 5는 raycast.far과 동일한 fallback
     }
+    checkRayBox(obj: IPhysicsObject, dir: THREE.Vector3) {
+        obj.Box.getCenter(this.center)
+        // 3) 브로드페이즈: AABB 교차로 후보 수집
+        const candidates = this.octreenode!.queryRange(obj.Box);
+        if(candidates.length == 0) return { obj: undefined, distance: this.raycast.far }
+
+        // 4) 내로페이즈: Raycaster로 정밀 충돌
+        const height = (Math.floor(obj.Size.y * 100) / 100) / 2 - 0.2
+        this.center.y -= height
+        this.raycast.set(this.center, dir)
+        const intersects = this.raycast.intersectObjects( candidates.map(o => o.object3d), false); 
+        let adjustedMoveVector
+
+        const candidatePoint = obj.Pos.clone().add(dir.clone().multiplyScalar(2));
+        this.marker.position.copy(candidatePoint);
+
+        if (intersects.length > 0) {
+            const width = (Math.floor(obj.Size.z * 100) / 100) / 2
+            const intersect = intersects[0];
+            const ret = intersect.distance - width
+
+            if(ret < width && intersect.face) {
+                const normal = intersect.face.normal.clone().normalize(); // 충돌 면의 법선 벡터
+                const slopeAngle = Math.acos(normal.dot(new THREE.Vector3(0, 1, 0))) * (180 / Math.PI); // 경사 각도 계산
+
+                console.log(`경사면 감지! 각도: ${slopeAngle.toFixed(2)}도`);
+
+                // 가파른 경사(예: 45도 이상)에서는 이동 불가
+                if (slopeAngle > 45) {
+                    console.log("경사가 너무 가파름! 이동 제한");
+                    return { obj: undefined, distance: -1}
+                }
+
+                // 경사면을 따라 이동하도록 벡터 조정
+                adjustedMoveVector = dir.projectOnPlane(normal); // 경사면에 투영
+            }
+            console.log("move", ret, width, this.center)
+            return { obj: intersects[0].object, distance: (ret < 0) ? -1 : ret, move: adjustedMoveVector }
+        }
+        return { obj: undefined, distance: this.raycast.far }
+    }
 
     CheckBox(pos: THREE.Vector3, box: THREE.Box3): boolean {
         return false
     }
     CheckBoxs(obj: IPhysicsObject): boolean {
-        return false
+        const ret = this.checkRayBox(obj, obj.Meshs.getWorldDirection(new THREE.Vector3()))
+        return ret.obj ? true : false
     }
     addBuilding(model: IBuildingObject, pos: THREE.Vector3, size: THREE.Vector3, rotation?: THREE.Euler | undefined): void {
     }

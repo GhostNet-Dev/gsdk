@@ -62,6 +62,7 @@ export class Drops implements ILoop {
             const itemGeometry = new THREE.SphereGeometry(0.2, 16, 16);
             const itemMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
             mesh = new THREE.Mesh(itemGeometry, itemMaterial);
+            mesh.receiveShadow = true
         }
 
         const item = new DropItem(mesh, monsterPosition,

@@ -59,16 +59,19 @@ export default class InteractiveManager implements IWorldMapObject {
         const uniqId = type.toString() + position.x + position.y + position.z
         const inter = this.createByType(boxType, uniqId, asset)
         await inter.Loader(position, rotation, scale, uniqId)
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, inter.meshs)
         this.objs.push(inter)
         return inter
     }
     createByType(type: string, uniqId: string, asset: IAsset): InteractableObject {
+        let ret: InteractableObject
         switch (type) {
             case "tree":
-                return new InterTree(uniqId, interactableDefs.Tree, asset, this.eventCtrl);
+                ret = new InterTree(uniqId, interactableDefs.Tree, asset, this.eventCtrl);
             default:
-                return new InterTree(uniqId, interactableDefs.Tree, asset, this.eventCtrl);
+                ret = new InterTree(uniqId, interactableDefs.Tree, asset, this.eventCtrl);
         }
+        return ret
     }
     Delete(...param: any) {
     }

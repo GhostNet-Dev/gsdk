@@ -49,9 +49,9 @@ export default class WorldMap {
         InteractiveManager: InteractiveManager,
     };
     private worldMapTypes: Record<string, any> = {
-        CustomGround: { scene: this.scene },
+        CustomGround: { scene: this.scene, eventCtrl: this.eventCtrl },
         GeometryGround: { scene: this.scene, eventCtrl: this.eventCtrl },
-        ProduceTerrain3: { scene: this.scene },
+        ProduceTerrain3: { scene: this.scene, eventCtrl: this.eventCtrl  },
         Ground: { width: 1024 * 3, height: 1024 * 3, planeSize: 256 },
         GrassMaker: { scene: this.scene, eventCtrl: this.eventCtrl },
         TreeMaker: { loader: this.loader, eventCtrl: this.eventCtrl, scene: this.scene },
@@ -73,11 +73,6 @@ export default class WorldMap {
        initDB() 
     }
     GetMapObject(mapType = MapEntryType.CustomGround) {
-        // if(typeof mapType == "number") {
-        //     const t = MapEntryType[mapType]
-        //     if(!t) throw new Error("there is not types = " + mapType);
-        //     mapType = t
-        // }
         let obj = this.mapObj.get(mapType)
         if (!obj) {
             const params = this.worldMapTypes[mapType]
@@ -93,8 +88,6 @@ export default class WorldMap {
         const map = await obj.Create(...param)
 
         if(!map) throw new Error("not defined");
-
-        this.eventCtrl.SendEventMessage(EventTypes.RegisterLandPhysic, map)
 
         if(mapType != MapEntryType.Tree && mapType != MapEntryType.FluffyMaker
             && mapType != MapEntryType.Interactive)

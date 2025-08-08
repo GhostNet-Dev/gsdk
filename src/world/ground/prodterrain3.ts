@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js';
 import { gui } from '@Glibs/helper/helper';
 import { IWorldMapObject, MapEntryType, ProductGroundData } from '@Glibs/types/worldmaptypes';
+import { EventTypes } from '@Glibs/types/globaltypes';
+import IEventController from '@Glibs/interface/ievent';
 
 export default class ProduceTerrain3 implements IWorldMapObject{
     Type: MapEntryType = MapEntryType.ProductGround
@@ -20,7 +22,7 @@ export default class ProduceTerrain3 implements IWorldMapObject{
         colorSnow: '#ffffff',
     };
 
-    constructor(private scene: THREE.Scene) {
+    constructor(private scene: THREE.Scene, private eventCtrl: IEventController) {
     }
     
     private createMaterial(): THREE.MeshStandardMaterial {
@@ -30,6 +32,7 @@ export default class ProduceTerrain3 implements IWorldMapObject{
     }
     Create(scale = 50, debug = false) {
         const mesh = this.CreateTerrain(scale)
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterLandPhysic, mesh)
         if (debug) {
             this.SetupGUI()
             this.Show()

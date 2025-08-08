@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise'; // Three.js의 ImprovedNoise 사용
 import { IWorldMapObject, MapEntryType } from '../worldmap/worldmaptypes';
 import { CustomGroundData } from '@Glibs/types/worldmaptypes';
+import IEventController from '@Glibs/interface/ievent';
+import { EventTypes } from '@Glibs/types/globaltypes';
 
 export default class CustomGround implements IWorldMapObject {
     Type: MapEntryType = MapEntryType.CustomGround
@@ -19,10 +21,12 @@ export default class CustomGround implements IWorldMapObject {
     scale = .5
     radius = 30 / this.scale
     geometry!: THREE.PlaneGeometry
-    constructor(private scene: THREE.Scene, {
-        color = new THREE.Color(0xA6C954),
-        width = 1024 * 3, height = 1024 * 3, planeSize = 256, 
-    } = {}) {
+    constructor(private scene: THREE.Scene, private eventCtrl: IEventController, 
+        {
+            color = new THREE.Color(0xA6C954),
+            width = 1024 * 3, height = 1024 * 3, planeSize = 256,
+        } = {}
+    ) {
         this.Create({ color: color, width: width, height: height, planeSize: planeSize })
     }
     Create({ color = new THREE.Color(0xA6C954), width = 1024 * 3, height = 1024 * 3, planeSize = 256 } = {}) {
@@ -58,6 +62,8 @@ export default class CustomGround implements IWorldMapObject {
         ground.scale.set(this.scale, this.scale, this.scale)
         ground.userData.mapObj = this
         this.obj = ground
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterLandPhysic, this.obj)
+
         return ground
     }
     Delete(...param: any) {
