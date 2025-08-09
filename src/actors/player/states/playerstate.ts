@@ -387,7 +387,7 @@ export class JumpState implements IPlayerAction {
         const moveAmount = worldDir.clone().multiplyScalar(delta * this.speed);
         const moveDis = moveAmount.length();
 
-        console.log("jump movedis ", moveDis, ", dist", dirdis.distance);
+        // console.log("jump movedis ", moveDis, ", dist", dirdis.distance);
 
         if (moveDis < dirdis.distance) {
             this.player.Pos.add(moveAmount);

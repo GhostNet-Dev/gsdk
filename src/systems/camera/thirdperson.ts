@@ -41,16 +41,16 @@ export default class ThirdPersonCameraStrategy implements ICameraStrategy {
         : player.CenterPos.clone().add(this.offset);
 
     // ✅ Raycaster로 충돌 감지
-    const direction = intendedCameraPos.clone().sub(player.CenterPos).normalize();
-    this.raycaster.set(player.CenterPos, direction);
-    this.raycaster.far = player.CenterPos.distanceTo(intendedCameraPos);
+    // const direction = intendedCameraPos.clone().sub(player.CenterPos).normalize();
+    // this.raycaster.set(player.CenterPos, direction);
+    // this.raycaster.far = player.CenterPos.distanceTo(intendedCameraPos);
 
-    const hits = this.raycaster.intersectObjects(this.obstacles, true);
-    if (hits.length > 0) {
-        this.targetPosition.copy(hits[0].point);
-    } else {
+    // const hits = this.raycaster.intersectObjects(this.obstacles, true);
+    // if (hits.length > 0) {
+    //     this.targetPosition.copy(hits[0].point);
+    // } else {
         this.targetPosition.copy(intendedCameraPos);
-    }
+    // }
 
     // ✅ 카메라 위치 적용 (보간 or 직접)
     if (this.isFreeView) {

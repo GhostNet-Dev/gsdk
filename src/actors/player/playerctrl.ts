@@ -186,6 +186,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     }
     init() {
         this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+        this.eventCtrl.SendEventMessage(EventTypes.Outline, this.player.Meshs)
         this.playEnable = true
         this.baseSpec.ResetStatus()
         this.eventCtrl.SendEventMessage(EventTypes.PlayerStatus, this.baseSpec.Status)
