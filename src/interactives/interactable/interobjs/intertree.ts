@@ -15,10 +15,14 @@ export class InterTree extends InteractableObject {
   ) {
     super(uniqId, def, asset, eventCtrl)
     eventCtrl.RegisterEventListener(EventTypes.Attack + uniqId, () => {
+      console.log("tree attack!!", this.position)
       eventCtrl.SendEventMessage(EventTypes.Drop, this.position.clone(), [{
         itemId: "Logs", ratio: 1
       }])
     })
+  }
+  afterLoad(): void {
+    this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, this, true)
   }
 
   tryInteract(actor: IPhysicsObject): void {

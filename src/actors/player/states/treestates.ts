@@ -10,7 +10,6 @@ import IEventController from "@Glibs/interface/ievent"
 import { EventTypes } from "@Glibs/types/globaltypes"
 import { TriggerType } from "@Glibs/types/actiontypes"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
-import { Bind } from "@Glibs/types/assettypes";
 
 export class CutDownTreeState extends State implements IPlayerAction {
     TargetIntId: string =""
@@ -36,7 +35,10 @@ export class CutDownTreeState extends State implements IPlayerAction {
     }
     Update(delta: number, v: Vector3): IPlayerAction {
         const d = this.DefaultCheck({ attack: false, magic: false })
-        if(d != undefined) return d
+        if(d != undefined) {
+            this.Uninit()
+            return d
+        }
 
         this.attackTime += delta
         if(this.attackProcess) return this
@@ -47,6 +49,7 @@ export class CutDownTreeState extends State implements IPlayerAction {
 
         this.attackProcess = true
         this.keytimeout = setTimeout(() => {
+            console.log("Attack!! from character")
             this.eventCtrl.SendEventMessage(EventTypes.DoInteraction, this.TargetIntId, this.triggerType)
             this.eventCtrl.SendEventMessage(EventTypes.Attack + this.TargetIntId)
             this.attackProcess = false

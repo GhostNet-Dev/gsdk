@@ -81,7 +81,6 @@ export class DropItem {
 
         // 폭발 단계
         if (this.isExploding) {
-            console.log("exploding")
             this.explosionTimer += deltaTime;
             if (this.explosionTimer < this.explosionDuration) {
                 this.applyPhysics(deltaTime);
@@ -94,7 +93,6 @@ export class DropItem {
         }
         // 추적 단계 (canTrack이 true일 경우에만)
         else if (this.isTracking && this.canTrack) {
-            console.log("tracking")
             const playerPosition = this.player.CenterPos;
             const distance = this.mesh.position.distanceTo(playerPosition);
 
@@ -112,7 +110,7 @@ export class DropItem {
             currentSpeed = Math.min(currentSpeed, this.maxTrackingSpeed);
 
             this.acceleration.copy(directionToPlayer).multiplyScalar(currentSpeed);
-            this.velocity.lerp(this.acceleration, 0.1); // 부드러운 방향 전환
+            this.velocity.lerp(this.acceleration, 0.2); // 부드러운 방향 전환
             this.mesh.position.addScaledVector(this.velocity, deltaTime);
 
             // 아이템 획득 로직

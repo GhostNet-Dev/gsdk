@@ -43,6 +43,7 @@ export abstract class InteractableObject extends THREE.Group implements IActionU
         this.meshs = meshs
         this.actions.forEach(a => this.applyAction(a))
         this.add(meshs)
+        this.afterLoad()
     }
     applyAction(action: IActionComponent, ctx?: ActionContext) {
         action.apply?.(this, ctx)
@@ -59,6 +60,7 @@ export abstract class InteractableObject extends THREE.Group implements IActionU
         }
     }
     abstract tryInteract(actor: IPhysicsObject): void;
+    abstract afterLoad(): void;
 
     interact(actor: IPhysicsObject): void {
         this.components.forEach((comp) => comp.onInteract?.(actor));

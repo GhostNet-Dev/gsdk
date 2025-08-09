@@ -9,6 +9,8 @@ export class StatSystem {
   private isDirty = true;
 
   constructor(base: Partial<Record<StatKey, number>>) {
+    if(!base) return;
+
     Object.keys(base).forEach(k => {
       this.baseStats[k as StatKey] = base[k as StatKey]!;
     });

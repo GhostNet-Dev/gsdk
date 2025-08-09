@@ -303,7 +303,7 @@ export class RunState extends State implements IPlayerAction {
 
         if (dis.move) {
             this.player.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
-        } else {
+        } else if (moveDis < dis.distance) {
             this.player.Pos.add(moveAmount);
         }
         // if (moveDis < dis.distance) {

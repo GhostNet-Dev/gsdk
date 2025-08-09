@@ -11,6 +11,7 @@ import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { InterTree } from "./interobjs/intertree";
 import { IAsset } from "@Glibs/interface/iasset";
 import { TriggerType } from "@Glibs/types/actiontypes";
+import { Obstacles } from "./interobjs/obstacle";
 
 export default class InteractiveManager implements IWorldMapObject {
     objs: InteractableObject[] = []
@@ -59,7 +60,6 @@ export default class InteractiveManager implements IWorldMapObject {
         const uniqId = type.toString() + position.x + position.y + position.z
         const inter = this.createByType(boxType, uniqId, asset)
         await inter.Loader(position, rotation, scale, uniqId)
-        this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, inter.meshs)
         this.objs.push(inter)
         return inter
     }
@@ -68,8 +68,13 @@ export default class InteractiveManager implements IWorldMapObject {
         switch (type) {
             case "tree":
                 ret = new InterTree(uniqId, interactableDefs.Tree, asset, this.eventCtrl);
+                break;
+            case "obstacle":
+                ret = new Obstacles(uniqId, interactableDefs.Obstacle, asset, this.eventCtrl)
+                break
             default:
                 ret = new InterTree(uniqId, interactableDefs.Tree, asset, this.eventCtrl);
+                break;
         }
         return ret
     }

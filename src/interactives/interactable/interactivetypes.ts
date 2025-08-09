@@ -36,6 +36,14 @@ export const interactableDefs = {
     drop: [
       { itemId: itemDefs.Logs.id, ratio: 1 }
     ]
+  },
+  Obstacle: {
+    id: "obstacle",
+    type: "obstacle",
+    level: "common",
+    assetKey: Char.UltimateCubeBricks,
+    name: "obstacle",
+    stats: { },
   }
 } as const
 

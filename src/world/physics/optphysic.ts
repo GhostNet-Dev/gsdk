@@ -33,10 +33,10 @@ export default class OptPhysics implements IGPhysic {
             this.planeHeightMap = new PlaneHeightMap(obj)
             this.octreenode = new OctreeNode(OctreeNode.computeWorldBounds(obj, 100))
         })
-        eventCtrl.RegisterEventListener(EventTypes.RegisterPhysic, (obj: THREE.Object3D) => {
+        eventCtrl.RegisterEventListener(EventTypes.RegisterPhysic, (obj: THREE.Object3D, raycastOn = false) => {
             this.targetObjs.push(obj)
             const spatialObj: SpatialObject = {
-                id: obj.uuid, object3d:obj, box: new THREE.Box3().setFromObject(obj)
+                id: obj.uuid, object3d:obj, box: new THREE.Box3().setFromObject(obj), raycastOn
             }
             this.visualizeBox3(spatialObj.box)
             this.octreenode!.insert(spatialObj)
@@ -76,6 +76,7 @@ export default class OptPhysics implements IGPhysic {
     }
     CheckDown(obj: IPhysicsObject): number {
         const ret = this.checkRayBox(obj, this.downDir)
+        if(ret.distance < 0) return 0
         // 중력 처리 전/후 등에 호출
         const x = obj.Pos.x;
         const z = obj.Pos.z;
@@ -118,14 +119,25 @@ export default class OptPhysics implements IGPhysic {
     checkRayBox(obj: IPhysicsObject, dir: THREE.Vector3) {
         obj.Box.getCenter(this.center)
         // 3) 브로드페이즈: AABB 교차로 후보 수집
-        const candidates = this.octreenode!.queryRange(obj.Box);
+        const candidates = this.octreenode!.getCandidatesInBox(obj.Box, { 
+            origin: this.center, dir: dir, maxDist: 8
+        });
+
         if(candidates.length == 0) return { obj: undefined, distance: this.raycast.far }
+
+        const rayObj = candidates.filter(o => o.raycastOn).map(o => o.object3d)
+        if(rayObj.length == 0) {
+            if(candidates.length > 0) {
+                return { obj: candidates[0].object3d, distance: 0 }
+            }
+            return { obj: undefined, distance: this.raycast.far }
+        }
 
         // 4) 내로페이즈: Raycaster로 정밀 충돌
         const height = (Math.floor(obj.Size.y * 100) / 100) / 2 - 0.2
         this.center.y -= height
         this.raycast.set(this.center, dir)
-        const intersects = this.raycast.intersectObjects( candidates.map(o => o.object3d), false); 
+        const intersects = this.raycast.intersectObjects( rayObj, true); 
         let adjustedMoveVector
 
         const candidatePoint = obj.Pos.clone().add(dir.clone().multiplyScalar(2));
@@ -145,11 +157,11 @@ export default class OptPhysics implements IGPhysic {
                 // 가파른 경사(예: 45도 이상)에서는 이동 불가
                 if (slopeAngle > 45) {
                     console.log("경사가 너무 가파름! 이동 제한");
-                    return { obj: undefined, distance: -1}
+                    return { obj: intersects[0].object, distance: -1}
                 }
 
                 // 경사면을 따라 이동하도록 벡터 조정
-                adjustedMoveVector = dir.projectOnPlane(normal); // 경사면에 투영
+                adjustedMoveVector = dir.clone().projectOnPlane(normal); // 경사면에 투영
             }
             console.log("move", ret, width, this.center)
             return { obj: intersects[0].object, distance: (ret < 0) ? -1 : ret, move: adjustedMoveVector }

@@ -4,6 +4,7 @@ export interface SpatialObject {
   id: string;
   object3d: THREE.Object3D;
   box: THREE.Box3;   // object3d에 대한 AABB
+  raycastOn: boolean
 }
 
 export class OctreeNode {
@@ -35,7 +36,7 @@ export class OctreeNode {
 
     return bounds;
   }
- /** 객체 삽입 (AABB 교차 검사) */
+
   insert(obj: SpatialObject): boolean {
     if (!this.boundary.intersectsBox(obj.box)) return false;
     if (this.objects.length < this.capacity) {
@@ -46,25 +47,21 @@ export class OctreeNode {
     for (const child of this.children!) {
       if (child.insert(obj)) return true;
     }
-    // 모두 실패 시 이 노드에 남김
     this.objects.push(obj);
     return true;
   }
 
-  /** 객체 제거 */
   remove(obj: SpatialObject): boolean {
-    // 1) 이 노드에 직접 있으면 제거
     const idx = this.objects.findIndex(o => o.id === obj.id);
     if (idx !== -1) {
       this.objects.splice(idx, 1);
-      this._tryMerge();
+      this.tryMerge();
       return true;
     }
-    // 2) 자식이 있으면 재귀 제거
     if (this.children) {
-      for (const child of this.children) {
-        if (child.remove(obj)) {
-          this._tryMerge();
+      for (const c of this.children) {
+        if (c.remove(obj)) {
+          this.tryMerge();
           return true;
         }
       }
@@ -72,65 +69,132 @@ export class OctreeNode {
     return false;
   }
 
-  /** 자식 8개로 분할 */
   private subdivide() {
     this.children = [];
     const { min, max } = this.boundary;
-    const center = this.boundary.getCenter(new THREE.Vector3());
-
+    const c = this.boundary.getCenter(new THREE.Vector3());
     for (let ix = 0; ix < 2; ix++) {
       for (let iy = 0; iy < 2; iy++) {
         for (let iz = 0; iz < 2; iz++) {
-          const boxMin = new THREE.Vector3(
-            ix === 0 ? min.x : center.x,
-            iy === 0 ? min.y : center.y,
-            iz === 0 ? min.z : center.z
-          );
-          const boxMax = new THREE.Vector3(
-            ix === 0 ? center.x : max.x,
-            iy === 0 ? center.y : max.y,
-            iz === 0 ? center.z : max.z
-          );
-          this.children.push(
-            new OctreeNode(new THREE.Box3(boxMin, boxMax), this.capacity)
-          );
+          const bmin = new THREE.Vector3(ix === 0 ? min.x : c.x, iy === 0 ? min.y : c.y, iz === 0 ? min.z : c.z);
+          const bmax = new THREE.Vector3(ix === 0 ? c.x : max.x, iy === 0 ? c.y : max.y, iz === 0 ? c.z : max.z);
+          this.children.push(new OctreeNode(new THREE.Box3(bmin, bmax), this.capacity));
         }
       }
     }
-
-    // 기존 객체 재분배
-    const old = this.objects;
-    this.objects = [];
+    const old = this.objects; this.objects = [];
     for (const o of old) this.insert(o);
   }
 
-  /** 자식 노드 병합 시도 */
-  private _tryMerge() {
+  private tryMerge() {
     if (!this.children) return;
-    // 자식 중 하나라도 객체나 자식 노드를 갖고 있으면 병합 불가
-    const anyNonEmpty = this.children.some(c =>
-      c.objects.length > 0 || c.children !== null
-    );
-    if (!anyNonEmpty) {
-      this.children = null;
+    const anyNonEmpty = this.children.some(ch => ch.objects.length > 0 || ch.children !== null);
+    if (!anyNonEmpty) this.children = null;
+  }
+
+  queryRange(range: THREE.Box3, out: SpatialObject[] = []): SpatialObject[] {
+    if (!this.boundary.intersectsBox(range)) return out;
+    for (const o of this.objects) {
+      if (o.box.intersectsBox(range)) out.push(o);
     }
+    if (this.children) for (const c of this.children) c.queryRange(range, out);
+    return out;
   }
 
   /**
-   * 범위(Box3)에 겹치는 모든 객체 수집 (AABB VS AABB)
+   * 방향을 고려한 브로드페이즈:
+   * - origin에서 dir로 maxDist 이동하는 "회랑 AABB"를 만들고
+   * - 그 안의 객체만 후보로 수집
+   * - (옵션) FOV 각도 필터
+   * - Ray vs AABB 슬랩 테스트로 실제 레이 경로와 교차하는 것만 반환
+   *
+   * @param origin 레이 시작점(플레이어 위치/눈높이)
+   * @param dir    정규화된 진행 방향
+   * @param maxDist 검사 최대 거리
+   * @param halfThickness 회랑의 반두께(측면 여유; 기본 0.5~1 정도 추천)
+   * @param fovDeg   시야 반각(옵션; null이면 생략)
    */
-  queryRange(range: THREE.Box3, found: SpatialObject[] = []): SpatialObject[] {
-    if (!this.boundary.intersectsBox(range)) return found;
-    for (const obj of this.objects) {
-      if (obj.box.intersectsBox(range)) {
-        found.push(obj);
-      }
+  getCandidatesAlongDirection(
+    origin: THREE.Vector3,
+    dir: THREE.Vector3,
+    maxDist: number,
+    halfThickness: number = 0.75,
+    fovDeg: number | null = 60
+  ): SpatialObject[] {
+    // 1) 이동 회랑 AABB 구성
+    const end = origin.clone().add(dir.clone().multiplyScalar(maxDist));
+    const min = origin.clone().min(end).addScalar(-halfThickness);
+    const max = origin.clone().max(end).addScalar(+halfThickness);
+    const corridor = new THREE.Box3(min, max);
+
+    // 2) 회랑과 교차하는 후보 수집
+    const broad = this.queryRange(corridor);
+
+    // 3) (옵션) FOV 필터
+    let filtered = broad;
+    if (typeof fovDeg === 'number') {
+      const cosLimit = Math.cos(THREE.MathUtils.degToRad(fovDeg));
+      filtered = broad.filter(o => {
+        const to = o.object3d.getWorldPosition(new THREE.Vector3()).sub(origin);
+        if (to.lengthSq() === 0) return true;
+        to.normalize();
+        return to.dot(dir) >= cosLimit;
+      });
     }
-    if (this.children) {
-      for (const child of this.children) {
-        child.queryRange(range, found);
-      }
-    }
-    return found;
+
+    // 4) Ray vs AABB 슬랩 테스트로 최종 필터
+    return filtered.filter(o => {
+      const t = rayAabbHitT(origin, dir, o.box, 0, maxDist);
+      return t !== null; // 교차하면 후보 유지
+    });
   }
+  getCandidatesInBox(
+    corridor: THREE.Box3,
+    ray?: { origin: THREE.Vector3; dir: THREE.Vector3; maxDist?: number }
+  ): SpatialObject[] {
+    // 1) 브로드페이즈: 박스와 교차하는 객체만 수집
+    const broad = this.queryRange(corridor);
+
+    // 2) ray가 주어지면 Ray vs AABB 슬랩 테스트로 최종 필터링
+    if (!ray) return broad;
+
+    const origin = ray.origin;
+    const dir = ray.dir.clone().normalize();
+    const maxD = ray.maxDist ?? Number.POSITIVE_INFINITY;
+
+    return broad.filter(o => rayAabbHitT(origin, dir, o.box, 0, maxD) !== null);
+  }
+}
+
+/** Ray vs AABB 슬랩 테스트: 교차 시 [tmin..tmax] 중 시작 t 반환, 없으면 null */
+function rayAabbHitT(
+  origin: THREE.Vector3,
+  dir: THREE.Vector3,      // normalized
+  box: THREE.Box3,
+  tMinLimit = 0,
+  tMaxLimit = Number.POSITIVE_INFINITY
+): number | null {
+  let tmin = tMinLimit;
+  let tmax = tMaxLimit;
+
+  // 각 축에 대한 slab
+  for (const axis of ['x', 'y', 'z'] as const) {
+    const o = origin[axis];
+    const d = dir[axis];
+    const min = box.min[axis];
+    const max = box.max[axis];
+
+    if (Math.abs(d) < 1e-8) {
+      // 레이가 이 축으로 평행 → 박스 범위 밖이면 교차 없음
+      if (o < min || o > max) return null;
+    } else {
+      let t1 = (min - o) / d;
+      let t2 = (max - o) / d;
+      if (t1 > t2) [t1, t2] = [t2, t1];
+      tmin = Math.max(tmin, t1);
+      tmax = Math.min(tmax, t2);
+      if (tmin > tmax) return null;
+    }
+  }
+  return tmin >= tMinLimit && tmin <= tMaxLimit ? tmin : null;
 }
