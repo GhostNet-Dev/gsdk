@@ -14,10 +14,10 @@ export default class ListView extends GUX {
         super()
         this.padding = padding
         this.margin = margin
-        this.Dom.classList.add("container", "rounded", "overflow-auto")
+        this.Dom.classList.add("container", "rounded", "overflow-auto", "p-0")
         this.Dom.style.backgroundColor = bgColor
         this.Dom.style.height = height
-        this.row.classList.add("row", "justify-content-start")
+        this.row.classList.add("d-flex", "flex-wrap", "justify-content-start")
         this.Dom.appendChild(this.row)
 
         const observer = new IntersectionObserver((e) => {
@@ -89,7 +89,7 @@ export default class ListView extends GUX {
     }
     AddChild(dom: IGUX) {
         const col = document.createElement("div")
-        col.classList.add("col", this.padding, this.margin)
+        col.classList.add(this.padding, this.margin)
         col.appendChild(dom.Dom)
         this.row.appendChild(col)
         this.child.push(dom)

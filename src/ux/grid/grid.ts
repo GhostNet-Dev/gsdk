@@ -6,7 +6,8 @@ export class Grid extends GUX {
     vertical = false
     child: {
         ui: IGUX
-        classList?: string[]
+        rowClassList?: string[]
+        colClassList?: string[]
     }[] = []
     padding = "p-0"
     margin = "m-0"
@@ -28,13 +29,13 @@ export class Grid extends GUX {
         row.classList.add("row", "m-0", "flex-nowrap")
         this.child.forEach(element => {
             const dom = document.createElement("div")
-            dom.classList.add("col", ...element.classList ?? "")
+            dom.classList.add("col", ...element.colClassList ?? "")
             dom.appendChild(element.ui.Dom)
             element.ui.RenderHTML()
 
             if (this.vertical) {
                 const vrow = document.createElement("div")
-                vrow.classList.add("row", "m-0")
+                vrow.classList.add("row", ...element.rowClassList ?? "")
                 vrow.appendChild(dom)
                 this.Dom.appendChild(vrow)
             } else {
@@ -43,8 +44,8 @@ export class Grid extends GUX {
         })
         this.Dom.appendChild(row)
     }
-    AddChild(dom: IGUX, classList: string[] = ["p-0", "m-0"]): void {
-        this.child.push({ ui: dom, classList })
+    AddChild(dom: IGUX, { rowClassList = ["p-0", "m-0"], colClassList = ["p-0", "m-0"] } = {}): void {
+        this.child.push({ ui: dom, rowClassList, colClassList })
     }
     AddChildDom(dom: HTMLElement) {
         const col = document.createElement("div")

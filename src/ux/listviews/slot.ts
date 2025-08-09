@@ -1,4 +1,3 @@
-import { IUiItem } from "@Glibs/interface/idialog"
 import { GetIconDb } from "../icons/preicons"
 import { Icons } from "@Glibs/types/icontypes"
 import { GUX, IGUX } from "../gux"
@@ -33,6 +32,7 @@ export default class Slot extends GUX {
     }
     ChangeIcon(icon: IconProperty): void {
         this.iconDom.src = icon.path
+        this.iconDom.classList.add("h-100")
     }
     RenderHTML(width: number): void {
         const maxPerRow = Math.floor((width * 0.8) / 40)

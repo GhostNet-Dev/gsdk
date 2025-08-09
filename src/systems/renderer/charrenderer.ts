@@ -13,6 +13,8 @@ import { ActionType } from '@Glibs/types/playertypes';
 import IInventory from '@Glibs/interface/iinven';
 import { Effector } from '@Glibs/magical/effects/effector';
 import { IPhysicsObject } from '@Glibs/interface/iobject';
+import { Npc } from '@Glibs/actors/npc/npc';
+import { InvenFactory } from '@Glibs/inventory/invenfactory';
 
 export default class CharMiniRenderer implements IViewer, ILoop {
     LoopId = 0
@@ -23,7 +25,7 @@ export default class CharMiniRenderer implements IViewer, ILoop {
     private directlight = new THREE.DirectionalLight(0xffffff, 3);
     private grass = new ZeldaGrass(this.eventCtrl)
     private sky = new SkyBoxAllTime(this.directlight, { daytime: 0 })
-    private player = new Player(this.loader, this.loader.GetAssets(Char.CharHumanMale),
+    private player = new Npc(this.loader, this.loader.GetAssets(Char.CharHumanMale),
         this.eventCtrl, this.scene, this.inventory)
 
     frustumSize = 5; // 뷰포트의 전체 높이 (또는 너비)를 결정하는 값. 이 값을 조절하여 캐릭터의 크기를 조절합니다.
@@ -32,7 +34,7 @@ export default class CharMiniRenderer implements IViewer, ILoop {
         private loader: Loader,
         private eventCtrl: IEventController,
         private container: HTMLDivElement,
-        private inventory: IInventory,
+        private inventory: InvenFactory,
     ) {
         this.eventCtrl.SendEventMessage(EventTypes.RegisterViewer, this)
         // 렌더러 초기화

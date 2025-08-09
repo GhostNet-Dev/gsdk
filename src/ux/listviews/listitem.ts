@@ -48,7 +48,7 @@ export default class ListItem extends GUX {
         })
     }
     RenderHTML(width: number): void {
-        
+        this.Dom.style.width = width + "px"
     }
     Show(): void {
         
