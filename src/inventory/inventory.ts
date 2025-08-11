@@ -5,6 +5,8 @@ import { Item } from "./items/item";
 import IInventory, { IItem } from "@Glibs/interface/iinven";
 import { ItemId, itemDefs } from "./items/itemdefs";
 import { Loader } from "@Glibs/loader/loader";
+import { Bind } from "@Glibs/types/assettypes";
+import { ItemFactory } from "./itemfactory";
 
 
 export class Inventory implements IInventory {
@@ -13,6 +15,7 @@ export class Inventory implements IInventory {
         inventroySlot: []
     }
     MaxSlot = 0
+    bodySlot = new Map<string, IItem>()
 
     constructor(
         private event: IEventController,
@@ -21,11 +24,26 @@ export class Inventory implements IInventory {
     ) {
         this.MaxSlot = maxSlot
     }
+    EquipItem(item: IItem) {
+        const bind = item.Bind
+        if (!bind) throw new Error("item bind is undefined")
+        const prevItem = this.bodySlot.get(bind)
+        if (prevItem) this.InsertInventory(prevItem)
+
+        const index = this.data.inventroySlot.findIndex(slot => slot.item.UniqId === item.UniqId);
+        if (index > -1) {
+            this.data.inventroySlot.splice(index, 1);
+        }
+        this.bodySlot.set(bind, item)
+    }
+    GetBindingItem(bind: Bind) {
+        return this.bodySlot.get(bind)
+    }
     InsertInventory(item: IItem) {
         const find = this.data.inventroySlot.find((slot) => slot.item.Id == item.Id)
         if (find && item.Stackable) {
-           find.count++ 
-           return
+            find.count++
+            return
         }
         this.data.inventroySlot.push({ item: item, count: 1 })
     }
@@ -37,17 +55,17 @@ export class Inventory implements IInventory {
         return ("assetKey" in itemProperty) ? this.loader.GetAssets(itemProperty.assetKey) : undefined
     }
     async NewItem(key: ItemId) {
-        if(this.data.inventroySlot.length == this.MaxSlot) {
+        if (this.data.inventroySlot.length == this.MaxSlot) {
             this.event.SendEventMessage(EventTypes.AlarmWarning, "인벤토리가 가득찼습니다.")
-            return 
+            return
         }
-        const item = new Item(itemDefs[key], this.getAsset(key))
+        const item = new Item(ItemFactory.generateUniqueId(), itemDefs[key], this.getAsset(key))
         await item.Loader()
 
         const find = this.data.inventroySlot.find((slot) => slot.item.Id == item.Id)
         if (find && find.item.Stackable) {
-           find.count++ 
-           return item
+            find.count++
+            return item
         }
 
         this.data.inventroySlot.push({ item: item, count: 1 })
@@ -66,7 +84,7 @@ export class Inventory implements IInventory {
     //     if (find == undefined) throw new Error("there is no item");
     //     const index = this.data.inventroySlot.indexOf(find)
     //     this.data.inventroySlot.splice(index, 1)
-        
+
     //     this.data.bodySlot[pos] = item
     // }
     GetInventory(i: number): InventorySlot {
@@ -83,7 +101,7 @@ export class Inventory implements IInventory {
         return itemDefs[key]
     }
     async GetNewItem(key: ItemId) {
-        const item = new Item(itemDefs[key], this.getAsset(key))
+        const item = new Item(ItemFactory.generateUniqueId(), itemDefs[key], this.getAsset(key))
         await item.Loader()
         return item
     }
@@ -96,17 +114,17 @@ export class Inventory implements IInventory {
             const id = (slot.item as Item).property.id
             if (id) {
                 const existItem = data.inventroySlot.find((e) => e.item.Id == id)
-                if(existItem) {
+                if (existItem) {
                     existItem.count += slot.count
                     inven.inventroySlot.splice(index, 1)
                 } else {
                     data.inventroySlot.push({
-                        item: new Item(itemDefs[id]),
+                        item: new Item(ItemFactory.generateUniqueId(), itemDefs[id]),
                         count: slot.count
                     })
                 }
             } else inven.inventroySlot.splice(index, 1)
-            index --
+            index--
         }
         inven.inventroySlot.length = 0
         inven.inventroySlot.push(...data.inventroySlot)
@@ -116,4 +134,5 @@ export class Inventory implements IInventory {
         this.data.bodySlot.length = 0
         this.data.inventroySlot.length = 0
     }
+
 }

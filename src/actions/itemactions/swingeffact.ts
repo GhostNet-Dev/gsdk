@@ -26,10 +26,12 @@ export default class SwingEffectAction implements IActionComponent, ILoop {
         this.trail = new WeaponTrail(this.scene, objA, objB)
         this.trail!.startTrail()
         this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+        console.log("Swing Effect Activated")
     }
     deactivate(target: IActionUser, context?: ActionContext | undefined): void {
         this.trail!.stopTrail()
         this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
+        console.log("Swing Effect Deactivated")
     }
     update(delta: number): void {
         this.trail!.update(delta)

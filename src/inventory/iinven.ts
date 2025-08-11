@@ -4,6 +4,7 @@ import { IActionComponent } from "@Glibs/types/actiontypes";
 import { Bind } from "@Glibs/types/assettypes";
 
 export default interface IInventory {
+    EquipItem(item: IItem): void
     GetItem(id: ItemId): InventorySlot | undefined
     GetItemInfo(key: ItemId): ItemProperty
     NewItem(key: ItemId): Promise<IItem | undefined>
@@ -11,6 +12,7 @@ export default interface IInventory {
 }
 
 export interface IItem {
+    get UniqId(): string
     get Id(): string
     get Name(): string
     get ItemType(): ItemType

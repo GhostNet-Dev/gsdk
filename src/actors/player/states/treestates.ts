@@ -32,6 +32,7 @@ export class CutDownTreeState extends State implements IPlayerAction {
     }
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
+        this.attackProcess = false
     }
     Update(delta: number, v: Vector3): IPlayerAction {
         const d = this.DefaultCheck({ attack: false, magic: false })

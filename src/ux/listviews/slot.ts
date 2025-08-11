@@ -37,15 +37,15 @@ export default class Slot extends GUX {
     RenderHTML(width: number): void {
         const maxPerRow = Math.floor((width * 0.8) / 40)
         const size = Math.max(40, Math.min(60, (width / maxPerRow) * 0.85))
-        console.log(width, maxPerRow, size, this.Dom.offsetLeft, this.Dom.offsetTop)
+        // console.log(width, maxPerRow, size, this.Dom.offsetLeft, this.Dom.offsetTop)
         if(this.Dom.offsetLeft >= width - size) {
             this.Dom.classList.remove("me-0")
             this.Dom.classList.add("me-1")
-            console.log("me-1", width - size, this.Dom.offsetLeft)
+            // console.log("me-1", width - size, this.Dom.offsetLeft)
         } else {
             this.Dom.classList.remove("me-1")
             this.Dom.classList.add("me-0")
-            console.log("me-0", width - size, this.Dom.offsetLeft)
+            // console.log("me-0", width - size, this.Dom.offsetLeft)
         }
         this.Dom.style.width = size + "px"
         this.Dom.style.height = size + "px"

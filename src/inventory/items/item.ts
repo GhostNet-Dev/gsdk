@@ -10,6 +10,7 @@ import { ItemIconProperty } from "../../ux/icons/itemicons"
 export class ItemAbstract implements IItem {
   meshs?: THREE.Group
 
+  get UniqId() { return this.uniqId }
   get Id() { return this.property.id }
   get ItemType() { return this.property.type }
   get IconPath() { return this.property.icon.path }
@@ -26,7 +27,7 @@ export class ItemAbstract implements IItem {
   get Enchantments() { return ("enchantments" in this.property) ? this.property.enchantments : undefined }
   // get Effects() { return this.property.effects }
 
-  constructor(public property: ItemProperty) { }
+  constructor(protected uniqId: string, public property: ItemProperty) { }
 }
 
 export class Item extends ItemAbstract implements IActionUser{
@@ -40,10 +41,11 @@ export class Item extends ItemAbstract implements IActionUser{
   get objs() { return this.meshs }
 
   constructor(
+    uniqId: string,
     public def: ItemProperty,
     private asset?: IAsset,
   ) {
-    super(def)
+    super(uniqId, def)
     this.id = def.id
     this.name = def.name
     this.icon = def.icon

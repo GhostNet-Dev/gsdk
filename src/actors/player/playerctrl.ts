@@ -142,6 +142,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
                 if (prevItem) (prevItem as Item).deactivate()
             }
             this.baseSpec.Equip(slot.item);
+            this.inventory.EquipItem(slot.item);
             (slot.item as Item).activate()
             this.currentState.Init()
         })
