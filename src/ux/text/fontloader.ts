@@ -34,6 +34,12 @@ export default class FontLoader {
     .gfont {
       font-family: "${font}"
     }
+    .gametext {
+        white-space: nowrap;
+        caret-color: transparent;
+        color:#fff;
+        text-shadow: -1px 0px black, 0px 1px black, 1px 0px black, 0px -1px black;
+    }
     `)
   }
   loadCSS(filename: string) {

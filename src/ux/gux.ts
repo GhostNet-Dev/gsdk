@@ -3,7 +3,7 @@ export interface IGUX {
     Show(): void
     Hide(): void
     RenderHTML(...param: any): void
-    AddChild(dom: IGUX, ...param: any): void
+    AddChild?(dom: IGUX, ...param: any): void
 }
 
 export abstract class GUX implements IGUX {
@@ -11,7 +11,7 @@ export abstract class GUX implements IGUX {
     abstract Show(): void
     abstract Hide(): void
     abstract RenderHTML(...param: any): void
-    abstract AddChild(dom: IGUX, ...param: any): void
+    abstract AddChild?(dom: IGUX, ...param: any): void
 
     applyDynamicStyle(styleId: string, css: string) {
         if (!document.getElementById(styleId)) {

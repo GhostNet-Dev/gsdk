@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { GUI } from "lil-gui"
+import IEventController from "@Glibs/interface/ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
 export const gui = new GUI()
 gui.hide()
@@ -16,11 +18,11 @@ export class Helper {
 
     constructor(
         private scene: THREE.Scene,
-        private nonglowfn?: Function,
+        private eventCtrl: IEventController,
         { enable = false, axesEnable = false, gridEnable = false } = {}
     ) {
-        this.nonglowfn?.(this.axesHelper)
-        this.nonglowfn?.(this.gridHelper)
+        this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, this.axesHelper)
+        this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, this.gridHelper)
         this.gridHelper.visible = gridEnable
         this.axesHelper.visible = axesEnable
         this.scene.add(this.axesHelper, this.gridHelper)

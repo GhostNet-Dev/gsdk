@@ -61,6 +61,7 @@ export enum EventTypes {
     AlarmInteractiveOff = "alarmintoff",
     Toast = "toast",
     Spinner = "spin",
+    DebugOut = "debugout",
 
     // player와 상호작용하는 객체 Attackable, Interatable
     AddInteractive = "addinter",
