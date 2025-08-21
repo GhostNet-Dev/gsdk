@@ -29,6 +29,8 @@ export enum MapEntryType {
     FenceModular = "FenceModular",
     FluffyMaker = "FluffyMaker",
     Interactive = "InteractiveManager",
+    Rain = "RainStorm",
+    WaterFoamRipples = "WaterFoamRipples",
 }
 
 export enum MapType {

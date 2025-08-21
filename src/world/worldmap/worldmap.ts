@@ -20,6 +20,8 @@ import FenceModular from './fencemodular';
 import GeometryGround from '../ground/defaultgeo';
 import FluffyMaker from '../fluffynature/fluffymaker';
 import InteractiveManager from '@Glibs/interactives/interactable/intermgr';
+import { RainStorm } from '../rain/rainstorm';
+import { WaterFoamRipples } from '../ocean/wavefoam';
 
 
 export default class WorldMap {
@@ -47,6 +49,8 @@ export default class WorldMap {
         EventBoxManager: EventBoxManager,
         FluffyMaker: FluffyMaker,
         InteractiveManager: InteractiveManager,
+        RainStorm: RainStorm,
+        WaterFoamRipples: WaterFoamRipples,
     };
     private worldMapTypes: Record<string, any> = {
         CustomGround: { scene: this.scene, eventCtrl: this.eventCtrl },
@@ -62,6 +66,8 @@ export default class WorldMap {
         EventBoxManager: { loader: this.loader, eventCtrl: this.eventCtrl },
         FluffyMaker: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl  },
         InteractiveManager: { loader: this.loader, eventCtrl: this.eventCtrl },
+        RainStorm: { scene: this.scene, camera: this.camera },
+        WaterFoamRipples: { scene: this.scene, camera: this.camera, renderer: this.renderer },
     }
 
     constructor(
@@ -69,6 +75,8 @@ export default class WorldMap {
         private scene: THREE.Scene,
         private eventCtrl: IEventController,
         private light: THREE.DirectionalLight,
+        private camera: THREE.Camera,
+        private renderer: THREE.WebGLRenderer,
     ) {
        initDB() 
     }
@@ -89,12 +97,21 @@ export default class WorldMap {
 
         if(!map) throw new Error("not defined");
 
-        if(mapType != MapEntryType.Tree && mapType != MapEntryType.FluffyMaker
-            && mapType != MapEntryType.Interactive)
-            this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, map)
+        // if(mapType != MapEntryType.Tree && 
+        //     mapType != MapEntryType.Ocean &&
+        //     mapType != MapEntryType.Interactive)
+        //     this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, map)
+
+        // if(mapType == MapEntryType.FluffyMaker || 
+        //     mapType == MapEntryType.EventBoxModel ||
+        //     mapType == MapEntryType.WaterFoamRipples ||
+        //     mapType == MapEntryType.Ocean)
+        //     this.eventCtrl.SendEventMessage(EventTypes.SetGlow, map)
 
         if (mapType != MapEntryType.UltimateModular &&
-            mapType != MapEntryType.FenceModular)
+            mapType != MapEntryType.FenceModular && 
+            mapType != MapEntryType.Rain &&
+            mapType != MapEntryType.WaterFoamRipples)
             this.scene.add(map)
 
         return map

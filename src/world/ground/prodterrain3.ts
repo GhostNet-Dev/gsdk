@@ -30,7 +30,7 @@ export default class ProduceTerrain3 implements IWorldMapObject{
             vertexColors: true,
         });
     }
-    Create(scale = 50, debug = false) {
+    Create({ scale = 50, debug = false } = {}) {
         const mesh = this.CreateTerrain(scale)
         this.eventCtrl.SendEventMessage(EventTypes.RegisterLandPhysic, mesh)
         if (debug) {
