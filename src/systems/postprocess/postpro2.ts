@@ -72,29 +72,12 @@ export class Postpro2 implements IPostPro {
             colorSpace: THREE.NoColorSpace, // 중간 버퍼는 linear 유지
             // samples: 4  // ❌ 호환성 문제로 비활성
         }
-        const DesaturateShader = {
-            uniforms: { tDiffuse: { value: null }, sat: { value: 0.0 } }, // 0=완전흑백, 0.2~0.4도 좋음
-            vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }`,
-            fragmentShader: `
-                    varying vec2 vUv;
-                    uniform sampler2D tDiffuse; uniform float sat;
-                    vec3 lumaW = vec3(0.299, 0.587, 0.114);
-                    void main(){
-                    vec3 c = texture2D(tDiffuse, vUv).rgb;
-                    float g = dot(c, lumaW);
-                    vec3 desat = mix(vec3(g), c, sat);
-                    gl_FragColor = vec4(desat, 1.0);
-                    }`
-        };
-        const desatPass = new ShaderPass(DesaturateShader);
-
         // bloom chain
         const rtBloom = new THREE.WebGLRenderTarget(w, h, rtOpts)
         this.bloomComposer = new EffectComposer(this.renderer, rtBloom)
         this.bloomComposer.renderToScreen = false
         this.bloomComposer.setPixelRatio(this._useSMAA ? 1 : pr)
         this.bloomComposer.addPass(this.renderScene)
-        this.bloomComposer.addPass(desatPass)
         this.bloomComposer.addPass(this.bloomPass)
 
         const finalMat = new THREE.ShaderMaterial({
@@ -306,29 +289,5 @@ export class Postpro2 implements IPostPro {
     private _getBloomTexture(): THREE.Texture {
         const c: any = this.bloomComposer
         return c.readBuffer?.texture || c.renderTarget2?.texture || c.writeBuffer?.texture
-    }
-    private readonly mask = () => {
-        const mask = new THREE.Layers()
-        mask.set((BLOOM_LAYER))
-        return mask
-    }
-
-    // non-bloom 객체를 일시적으로 검은색 머티리얼로 치환/복원
-    private _darkenNonBloom(enable: boolean) {
-        const mask = this.mask()
-        if (enable) {
-            this.scene.traverse((o: any) => {
-                if (!o.isMesh) return
-                if (o.layers.test(mask)) return // bloom 대상은 원래 머티리얼 유지
-                if (!this._matCache.has(o.uuid)) this._matCache.set(o.uuid, o.material)
-                o.material = this._darkMat
-            })
-        } else {
-            this._matCache.forEach((m, id) => {
-                const obj = this.scene.getObjectByProperty('uuid', id) as any
-                if (obj?.isMesh) obj.material = m
-            })
-            this._matCache.clear()
-        }
     }
 }

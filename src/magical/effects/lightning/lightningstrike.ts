@@ -70,44 +70,45 @@ type Subray = {
 	beginVanishingTime: number
 }
 export type LightningParam = {
-	sourceOffset?: THREE.Vector3, // The point where the ray starts.
-	destOffset?: THREE.Vector3, // The point where the ray ends.
-	timeScale?: number, // The rate at wich the ray form changes in time. Default: 1
-	roughness?: number, // From 0 to 1. The higher the value, the more wrinkled is the ray. Default: 0.9
-	straightness?: number, // From 0 to 1. The higher the value, the more straight will be a subray path. Default: 0.7
-	up0?: THREE.Vector3, //  Ray 'up' direction at the ray starting point. Must be normalized. It should be perpendicular to the ray forward direction but it doesn't matter much.
-	up1?: THREE.Vector3, // Like the up0 parameter but at the end of the ray. Must be normalized.
-	radius0?: number, // Radius of the main ray trunk at the start point. Default: 1
-	radius1?: number, // Radius of the main ray trunk at the end point. Default: 1
-	radius0Factor?: number, // The radius0 of a subray is this factor times the radius0 of its parent subray. Default: 0.5
-	radius1Factor?: number, // The radius1 of a subray is this factor times the radius1 of its parent subray. Default: 0.2
-	minRadius?: number, // value a subray radius0 or radius1 can get. Default: 0.1
+    sourceOffset?: THREE.Vector3, // 광선이 시작되는 지점.
+    destOffset?: THREE.Vector3, // 광선이 끝나는 지점.
+    timeScale?: number, // 시간에 따라 광선의 형태가 변하는 속도. 기본값: 1
+    roughness?: number, // 0에서 1 사이의 값. 값이 높을수록 광선이 더 구불구불해집니다. 기본값: 0.9
+    straightness?: number, // 0에서 1 사이의 값. 값이 높을수록 하위 광선 경로가 더 직선에 가까워집니다. 기본값: 0.7
+    up0?: THREE.Vector3, // 광선 시작점에서의 '위쪽' 방향. 정규화되어야 합니다. 광선의 진행 방향에 수직이어야 하지만, 크게 중요하지는 않습니다.
+    up1?: THREE.Vector3, // up0 매개변수와 같지만 광선의 끝 지점에서의 방향입니다. 정규화되어야 합니다.
+    radius0?: number, // 시작점에서의 주 광선 줄기의 반지름. 기본값: 1
+    radius1?: number, // 끝 지점에서의 주 광선 줄기의 반지름. 기본값: 1
+    radius0Factor?: number, // 하위 광선의 radius0은 부모 광선의 radius0에 이 계수를 곱한 값입니다. 기본값: 0.5
+    radius1Factor?: number, // 하위 광선의 radius1은 부모 광선의 radius1에 이 계수를 곱한 값입니다. 기본값: 0.2
+    minRadius?: number, // 하위 광선의 radius0 또는 radius1이 가질 수 있는 최소값입니다. 기본값: 0.1
 
-	isEternal?: boolean, // If true the ray never extinguishes. Otherwise its life is controlled by the 'birthTime' and 'deathTime' parameters. Default: true if any of those two parameters is undefined.
-	birthTime?: number, // The time at which the ray starts its life and begins propagating. Only if isEternal is false. Default: None.
-	deathTime?: number, // The time at which the ray ends vanishing and its life. Only if isEternal is false. Default: None.
-	propagationTimeFactor?: number, // From 0 to 1. Lifetime factor at which the ray ends propagating and enters the steady phase. For example, 0.1 means it is propagating 1/10 of its lifetime. Default: 0.1
-	vanishingTimeFactor?: number, // From 0 to 1. Lifetime factor at which the ray ends the steady phase and begins vanishing. For example, 0.9 means it is vanishing 1/10 of its lifetime. Default: 0.9
-	subrayPeriod?: number, // Subrays cycle periodically. This is their time period. Default: 4
-	subrayDutyCycle?: number, // From 0 to 1. This is the fraction of time a subray is active. Default: 0.6
+    isEternal?: boolean, // true이면 광선이 사라지지 않습니다. 그렇지 않으면 'birthTime'과 'deathTime' 매개변수에 의해 수명이 제어됩니다. 두 매개변수 중 하나라도 정의되지 않은 경우 기본값은 true입니다.
+    birthTime?: number, // 광선이 생명을 시작하고 전파를 시작하는 시간입니다. isEternal이 false일 경우에만 해당됩니다. 기본값: 없음.
+    deathTime?: number, // 광선이 사라지고 생명이 끝나는 시간입니다. isEternal이 false일 경우에만 해당됩니다. 기본값: 없음.
+    propagationTimeFactor?: number, // 0에서 1 사이의 값. 광선이 전파를 멈추고 안정 단계에 들어서는 수명 계수입니다. 예를 들어, 0.1은 수명의 1/10 동안 전파됨을 의미합니다. 기본값: 0.1
+    vanishingTimeFactor?: number, // 0에서 1 사이의 값. 광선이 안정 단계를 끝내고 사라지기 시작하는 수명 계수입니다. 예를 들어, 0.9는 수명의 마지막 1/10 동안 사라짐을 의미합니다. 기본값: 0.9
+    subrayPeriod?: number, // 하위 광선은 주기적으로 순환합니다. 이것은 그들의 시간 주기입니다. 기본값: 4
+    subrayDutyCycle?: number, // 0에서 1 사이의 값. 하위 광선이 활성화되어 있는 시간의 비율입니다. 기본값: 0.6
 
-	maxSubrays?: number
-	maxIterations?: number, //: Greater than 0. The number of ray's leaf segments is 2**maxIterations. Default: 9
-	isStatic?: boolean, // Set to true only for rays which won't change over time and are not attached to moving objects (Rare case). It is used to set the vertex buffers non-dynamic. You can omit calling update() for these rays.
-	ramification?: number, // Greater than 0. Maximum number of child subrays a subray can have. Default: 5
-	maxSubrayRecursion?: number, // Greater than 0. Maximum level of recursion (subray descendant generations). Default: 3 
-	recursionProbability?: number, // From 0 to 1. The lower the value, the less chance each new generation of subrays has to generate new subrays. Default: 0.6
-	generateUVs?: boolean, //  If true, the ray geometry will have uv coordinates generated. u runs along the ray, and v across its perimeter. Default: false.
-	randomGenerator?: Object, // Set here your random number generator which will seed the SimplexNoise and other decisions during ray tree creation.
-	/*
-	 * It can be used to generate repeatable rays. For that, set also the noiseSeed parameter, and each ray created with that generator and seed pair will be identical in time.
-	 * The randomGenerator parameter should be an object with a random() function similar to Math.random, but seedable.
-	 * It must have also a getSeed() method, which returns the current seed, and a setSeed( seed ) method, which accepts as seed a fractional number from 0 to 1, as well as any other number.
-	 * The default value is an internal generator for some uses and Math.random for others (It is non-repeatable even if noiseSeed is supplied)
-	 */
-	noiseSeed?: number, // Seed used to make repeatable rays (see the randomGenerator)
-	onDecideSubrayCreation?: Function, // Set this to change the callback which decides subray creation. You can look at the default callback in the code (createDefaultSubrayCreationCallbacks)for more info.
-	onSubrayCreation?: Function, // This is another callback, more simple than the previous one. It can be used to adapt the form of subrays or other parameters once a subray has been created and initialized. It is used in the examples to adapt subrays to a sphere or to a plane.
+    maxSubrays?: number,
+    maxIterations?: number, // 0보다 커야 합니다. 광선의 끝 부분 세그먼트 수는 2의 maxIterations 제곱입니다. 기본값: 9
+    isStatic?: boolean, // 시간이 지나도 변하지 않고 움직이는 객체에 연결되지 않은 광선에 대해서만 true로 설정합니다 (드문 경우). 정점 버퍼를 비동적으로 설정하는 데 사용됩니다. 이러한 광선에 대해서는 update() 호출을 생략할 수 있습니다.
+    ramification?: number, // 0보다 커야 합니다. 하나의 하위 광선이 가질 수 있는 자식 하위 광선의 최대 수입니다. 기본값: 5
+    maxSubrayRecursion?: number, // 0보다 커야 합니다. 최대 재귀 수준 (하위 광선 자손 세대)입니다. 기본값: 3
+    recursionProbability?: number, // 0에서 1 사이의 값. 값이 낮을수록 새로운 세대의 하위 광선이 또 다른 하위 광선을 생성할 확률이 줄어듭니다. 기본값: 0.6
+    generateUVs?: boolean, // true이면 광선 지오메트리에 uv 좌표가 생성됩니다. u는 광선을 따라, v는 광선의 둘레를 따라 적용됩니다. 기본값: false.
+    randomGenerator?: Object, // 광선 트리 생성 중 SimplexNoise 및 기타 결정에 시드(seed)를 제공할 사용자 정의 난수 생성기를 여기에 설정합니다.
+    /**
+     * 반복 가능한 광선을 생성하는 데 사용할 수 있습니다.
+     * 이를 위해 noiseSeed 매개변수도 설정하면, 해당 생성기와 시드 쌍으로 생성된 각 광선은 시간에 따라 동일하게 나타납니다.
+     * randomGenerator 매개변수는 Math.random과 유사하지만 시드를 설정할 수 있는 random() 함수를 가진 객체여야 합니다.
+     * 또한 현재 시드를 반환하는 getSeed() 메서드와, 0에서 1 사이의 소수 및 기타 모든 숫자를 시드로 받는 setSeed( seed ) 메서드를 가져야 합니다.
+     * 기본값은 일부 용도를 위한 내부 생성기이거나 Math.random입니다 (noiseSeed가 제공되어도 반복 불가능합니다).
+     */
+    noiseSeed?: number, // 반복 가능한 광선을 만들기 위해 사용되는 시드입니다 (randomGenerator 참조).
+    onDecideSubrayCreation?: Function, // 하위 광선 생성을 결정하는 콜백을 변경하려면 이것을 설정합니다. 자세한 정보는 코드의 기본 콜백(createDefaultSubrayCreationCallbacks)을 참조할 수 있습니다.
+    onSubrayCreation?: Function, // 이것은 이전 콜백보다 더 간단한 또 다른 콜백입니다. 하위 광선이 생성되고 초기화된 후, 그 형태나 다른 매개변수를 조정하는 데 사용할 수 있습니다. 예제에서는 하위 광선을 구나 평면에 맞게 조정하는 데 사용됩니다.
 }
 
 export class LightningStrike extends THREE.BufferGeometry {
@@ -355,24 +356,24 @@ export class LightningStrike extends THREE.BufferGeometry {
 
 	};
 
-    time: number = 0;
-    timeFraction: number = 0;
-    currentSegmentCallback?: Function | null;
-    currentCreateTriangleVertices?: Function;
-    numSubrays: number = 0;
-    currentSubray: any;
-    currentSegmentIndex: number = 0;
-    isInitialSegment: boolean = false;
-    subrayProbability: number = 0;
-    currentVertex: number = 0;
-    currentIndex: number = 0;
-    currentCoordinate: number = 0;
-    currentUVCoordinate: number = 0;
-    vertices?: Float32Array | null;
-    uvs?: Float32Array | null;
-    indices?: Uint32Array | null;
-    positionAttribute?: THREE.Float32BufferAttribute | null;
-    uvsAttribute?: THREE.Float32BufferAttribute | null;
+	time: number = 0;
+	timeFraction: number = 0;
+	currentSegmentCallback?: Function | null;
+	currentCreateTriangleVertices?: Function;
+	numSubrays: number = 0;
+	currentSubray: any;
+	currentSegmentIndex: number = 0;
+	isInitialSegment: boolean = false;
+	subrayProbability: number = 0;
+	currentVertex: number = 0;
+	currentIndex: number = 0;
+	currentCoordinate: number = 0;
+	currentUVCoordinate: number = 0;
+	vertices?: Float32Array | null;
+	uvs?: Float32Array | null;
+	indices?: Uint32Array | null;
+	positionAttribute?: THREE.Float32BufferAttribute | null;
+	uvsAttribute?: THREE.Float32BufferAttribute | null;
 	simplexX?: SimplexNoise
 	simplexY?: SimplexNoise
 	simplexZ?: SimplexNoise
@@ -411,7 +412,7 @@ export class LightningStrike extends THREE.BufferGeometry {
 			this.setAttribute('uv', this.uvsAttribute);
 		}
 
-		if (!this.isStatic&& this.index) {
+		if (!this.isStatic && this.index) {
 			this.index.setUsage(THREE.DynamicDrawUsage)
 			this.positionAttribute.setUsage(THREE.DynamicDrawUsage)
 			if (this.generateUVs && this.uvsAttribute) {
@@ -640,8 +641,8 @@ export class LightningStrike extends THREE.BufferGeometry {
 	};
 
 	createTriangleVerticesWithoutUVs(pos: THREE.Vector3, up: THREE.Vector3, forwards: THREE.Vector3, radius: number) {
-		if(!this.side || !this.down || !this.vPos || !this.vertices) throw new Error("undefined");
-		
+		if (!this.side || !this.down || !this.vPos || !this.vertices) throw new Error("undefined");
+
 		// Create an equilateral triangle (only vertices)
 		this.side.crossVectors(up, forwards).multiplyScalar(radius * this.COS30DEG);
 		this.down.copy(up).multiplyScalar(- radius * this.SIN30DEG);
@@ -671,9 +672,9 @@ export class LightningStrike extends THREE.BufferGeometry {
 
 	};
 
-	createTriangleVerticesWithUVs(pos: THREE.Vector3, up: THREE.Vector3, 
+	createTriangleVerticesWithUVs(pos: THREE.Vector3, up: THREE.Vector3,
 		forwards: THREE.Vector3, radius: number, u: number) {
-		if(!this.side || !this.down || !this.vPos || !this.uvs || !this.vertices) throw new Error("undefined");
+		if (!this.side || !this.down || !this.vPos || !this.uvs || !this.vertices) throw new Error("undefined");
 		// Create an equilateral triangle (only vertices)
 		this.side.crossVectors(up, forwards).multiplyScalar(radius * this.COS30DEG);
 		this.down.copy(up).multiplyScalar(- radius * this.SIN30DEG);
@@ -713,8 +714,8 @@ export class LightningStrike extends THREE.BufferGeometry {
 	};
 
 	createPrismFaces() {
-		if(!this.indices) throw new Error("undefined variable");
-		
+		if (!this.indices) throw new Error("undefined variable");
+
 		const indices = this.indices;
 		const vertex = this.currentVertex - 6;
 
@@ -815,7 +816,7 @@ export class LightningStrike extends THREE.BufferGeometry {
 			lightningStrike.subrayCylinderPosition?.(segment, parentSubray, childSubray, 0.5, 0.6, 0.2);
 		};
 
-		this.subrayConePosition = (segment: Segment, parentSubray: Subray, childSubray: Subray, 
+		this.subrayConePosition = (segment: Segment, parentSubray: Subray, childSubray: Subray,
 			heightFactor: number, sideWidthFactor: number, minSideWidthFactor: number) => {
 
 			// Sets childSubray pos0 and pos1 in a cone
@@ -835,7 +836,7 @@ export class LightningStrike extends THREE.BufferGeometry {
 
 		}
 
-		this.subrayCylinderPosition = (segment: Segment, parentSubray: Subray, childSubray: Subray, 
+		this.subrayCylinderPosition = (segment: Segment, parentSubray: Subray, childSubray: Subray,
 			heightFactor: number, sideWidthFactor: number, minSideWidthFactor: number) => {
 			// Sets childSubray pos0 and pos1 in a cylinder
 			childSubray.pos0.copy(segment.pos0);

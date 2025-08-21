@@ -17,6 +17,7 @@ import { EffectType } from "./effecttypes";
 import { IEffect } from "./ieffector";
 import { SoundEffect } from "./soundeffect";
 import IEventController from "@Glibs/interface/ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
 
 export class Effector {
@@ -38,6 +39,7 @@ export class Effector {
         switch (type) {
             case EffectType.LightningStrike:
                 ret = new LightningVfx(this.game)
+                this.eventCtrl.SendEventMessage(EventTypes.SetGlow, ret.Mesh)
                 break;
             case EffectType.Smoke:
                 ret = new SmokeVfx(this.game, ...arg)
