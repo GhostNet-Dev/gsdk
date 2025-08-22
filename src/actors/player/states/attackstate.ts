@@ -120,7 +120,6 @@ export class AttackState extends State implements IPlayerAction {
         return closestTarget
     }
     rangedAttack(itemInfo: IItem) {
-        this.eventCtrl.SendEventMessage(EventTypes.PlaySound, itemInfo.Mesh, itemInfo.Sound)
         if (itemInfo.AutoAttack && this.autoDirection() == null) {
             return false
         }
@@ -212,11 +211,15 @@ export class AttackState extends State implements IPlayerAction {
             return this.ChangeMode(this.playerCtrl.currentIdleState)
         }
         this.attackProcess = true
+        const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
+        if (handItem == undefined) return this;
+
+        if (!this.meleeAttackMode)
+            this.eventCtrl.SendEventMessage(EventTypes.PlaySound, handItem.Mesh, handItem.Sound)
+
         this.keytimeout = setTimeout(() => {
-            const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
-            if(handItem == undefined) return
             if (this.meleeAttackMode) {
-                if(handItem.AutoAttack) this.meleeAutoAttack()
+                if (handItem.AutoAttack) this.meleeAutoAttack()
                 else this.meleeAttack(handItem)
             } else this.rangedAttack(handItem)
         }, this.attackSpeed * 1000 * 0.6)

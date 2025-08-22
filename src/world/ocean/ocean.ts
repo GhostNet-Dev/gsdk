@@ -130,7 +130,8 @@ export class Ocean implements ILoop, IWorldMapObject {
     const uniforms = {
       uMap: { value: texture },
       uTime: { value: 0.0 },
-      uColor: { value: new THREE.Color("#009dc4") },
+      uColor: { value: new THREE.Color("#006ca5") },
+      // uColor: { value: new THREE.Color("#0496c7") },
 
       // Anti-shimmer
       uLodBias: { value: 0.75 },

@@ -20,17 +20,17 @@ const DEFAULTS: Required<WaterFoamOptions> = {
   size: 100,
   segments: 200,
   foamColor: 0xffffff,
-  waterColor: 0x14c6a5,
+  waterColor: 0x006ca5,
   threshold: 1.0,
   waveAmp: 0.06,
   waveFreq: 1.8,
-  waveSpeed: 1.2,
-  rippleStrength: 0.35,
-  dudvScale: 1.0,
+  waveSpeed: 1.0,
+  rippleStrength: 1.0,
+  dudvScale: 2.0,
   dudvUrl: 'https://i.imgur.com/hOIsXiZ.png',
-  position: new THREE.Vector3(0,0,0),
+  position: new THREE.Vector3(0,-1.0,0),
   rotationX: -Math.PI*0.5,
-  heightBand: 0.2,
+  heightBand: -1.0,
 };
 
 // ===== Shaders =====
