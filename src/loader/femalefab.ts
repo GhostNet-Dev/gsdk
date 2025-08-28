@@ -53,6 +53,7 @@ export class FemaleFab extends AssetModel implements IAsset {
             await this.LoadAnimation("assets/female/axe_attack.fbx", Ani.AxeAttack)
             await this.LoadAnimation("assets/female/axe_attack360.fbx", Ani.AxeAttack360)
             await this.LoadAnimation("assets/female/axe_run.fbx", Ani.AxeRun)
+            await this.LoadAnimation("assets/female/SleepingIdle.fbx", Ani.SleepingIdle)
 
             this.meshs.children[0].children[0].position.y = 0
 

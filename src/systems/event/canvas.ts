@@ -16,6 +16,7 @@ export class Canvas {
         this.height = window.innerHeight
 
         eventCtrl.RegisterEventListener(EventTypes.RegisterLoop, (obj: ILoop) => {
+            obj.StartLoop?.()
             if(!obj.LoopId) {
                 obj.LoopId = this.objId++
             } else {
@@ -27,6 +28,7 @@ export class Canvas {
             this.loopObjs.push(obj)
         })
         eventCtrl.RegisterEventListener(EventTypes.DeregisterLoop, (obj: ILoop) => {
+            obj.StopLoop?.()
             console.log("deregister " + obj.constructor.name);
             const idx = this.loopObjs.findIndex(o => o.LoopId == obj.LoopId)
             if(idx < 0) throw new Error("not exist in array");

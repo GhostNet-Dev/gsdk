@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Player } from "./player";
-import { DeadState, IPlayerAction, IdleState, JumpState, MagicH1State, MagicH2State, RunState } from "./states/playerstate";
+import { DeadState, IPlayerAction, IdleState, JumpState, MagicH1State, MagicH2State, RunState, SleepingIdleState } from "./states/playerstate";
 import { AttackIdleState, AttackState } from "./states/attackstate";
 import { BaseSpec } from "../battle/basespec";
 import { BuildingState, DeleteState, PickFruitState, PickFruitTreeState, PlantAPlantState, WarteringState } from "./states/farmstate";
@@ -16,6 +16,8 @@ import { ItemId } from "@Glibs/inventory/items/itemdefs";
 import { ActionContext, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes";
 import { CutDownTreeState, TreeIdleState } from "./states/treestates";
 import { Item } from "@Glibs/inventory/items/item";
+import { Buffdefs } from "@Glibs/magical/buff/buffdefs";
+import { Buff } from "@Glibs/magical/buff/buff";
 
 export class PlayerCtrl implements ILoop, IActionUser {
     LoopId = 0
@@ -24,6 +26,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     keyUpQueue: IKeyCommand[] = []
     inputVQueue: THREE.Vector3[] = []
     targets: THREE.Object3D[] = []
+    actions: IActionComponent[] = []
 
     contollerEnable = true
     inputMode = false
@@ -49,6 +52,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     WarteringSt: WarteringState
     BuildingSt: BuildingState
     DeleteSt: DeleteState
+    SleepingIdleSt: SleepingIdleState
 
     currentState: IPlayerAction
     currentIdleState: IPlayerAction
@@ -91,6 +95,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.WarteringSt = new WarteringState(this, this.player, this.gphysic, this.inventory, this.eventCtrl, this.baseSpec)
         this.BuildingSt = new BuildingState(this, this.player, this.gphysic, this.inventory, this.eventCtrl, this.baseSpec)
         this.DeleteSt = new DeleteState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
+        this.SleepingIdleSt = new SleepingIdleState(this, this.player, this.gphysic, this.baseSpec)
 
         this.TreeIdleSt = new TreeIdleState(this, this.player, this.gphysic, this.baseSpec)
         this.CutDownTreeSt = new CutDownTreeState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
@@ -181,8 +186,8 @@ export class PlayerCtrl implements ILoop, IActionUser {
         eventCtrl.RegisterEventListener(EventTypes.DelInteractive, (obj: THREE.Object3D) => {
             this.remove(obj)
         })
-        eventCtrl.RegisterEventListener(EventTypes.UpdateBuff, (buff: IBuffItem[]) => {
-            this.UpdateBuff(buff)
+        eventCtrl.RegisterEventListener(EventTypes.UpdateBuff, (buff: Buff) => {
+            this.baseSpec.Buff(buff)
         })
     }
     init() {
@@ -237,6 +242,11 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.currentState = this.currentState.Update(delta, this.moveDirection)
         this.player.Update(delta)
         this.actionReset()
+    }
+    changeState(state: IPlayerAction) {
+        this.currentState.Uninit()
+        this.currentState = state
+        this.currentState.Init()
     }
     actionReset() {
         for (let i = KeyType.Action0; i < KeyType.Count; i++) {

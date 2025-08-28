@@ -96,6 +96,9 @@ export enum EventTypes {
     RegisterSound = "sound",
     RegisterSoundListener = "soundlis",
     PlaySound = "soundplay",
+    PlayBGM = "soundbgm",
+    StopBGM = "stopbgm",
+    AllStopBGM = "allstopbgm",
 
     GameCenter = "gcenter",
 }

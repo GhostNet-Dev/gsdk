@@ -414,3 +414,28 @@ export class JumpState implements IPlayerAction {
         return this
     }
 }
+export class SleepingIdleState extends State implements IPlayerAction {
+    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
+        super(playerPhy, player, gphysic, baseSpec)
+        this.Init()
+    }
+    Init(): void {
+        this.player.ChangeAction(ActionType.SleepingIdle)
+        console.log("Idle!!")
+    }
+    Uninit(): void {
+        
+    }
+    Update(): IPlayerAction {
+        const d = this.DefaultCheck()
+        if(d != undefined) return d
+
+        const checkGravity = this.CheckGravity()
+        if (checkGravity != undefined) return checkGravity
+
+        const checkEnermy = this.CheckEnermyInRange()
+        if (checkEnermy != undefined) return checkEnermy
+
+        return this
+    }
+}

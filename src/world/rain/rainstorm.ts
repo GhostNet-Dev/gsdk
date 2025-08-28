@@ -1,4 +1,7 @@
 // RainStorm.ts
+import IEventController, { ILoop } from '@Glibs/interface/ievent';
+import { EventTypes } from '@Glibs/types/globaltypes';
+import { SoundType } from '@Glibs/types/soundtypes';
 import { IWorldMapObject, MapEntryType } from '@Glibs/types/worldmaptypes';
 import * as THREE from 'three';
 
@@ -215,7 +218,8 @@ interface Bolt {
 }
 
 /* ---------------------------------- Class ---------------------------------- */
-export class RainStorm implements IWorldMapObject {
+export class RainStorm implements IWorldMapObject, ILoop {
+  LoopId: number = 0
   public Mesh?: THREE.Object3D;
   Type: MapEntryType = MapEntryType.Rain;
 
@@ -269,7 +273,7 @@ export class RainStorm implements IWorldMapObject {
   private overlayAge = 0;
   private overlayDur = 0;
 
-  constructor(private scene: THREE.Scene, private camera: THREE.Camera) {}
+  constructor(private scene: THREE.Scene, private camera: THREE.Camera, private eventCtrl: IEventController) {}
 
   /* ---------------------------------- Create --------------------------------- */
   public Create(opts: RainStormCreateOptions): this {
@@ -410,21 +414,34 @@ export class RainStorm implements IWorldMapObject {
       callback?.(e);
     }
   }
+  StartLoop(): void {
+    this.Show()
+  }
+  StopLoop(): void {
+    this.Hide()
+    this.eventCtrl.SendEventMessage(EventTypes.StopBGM, "rainstorm", { fade: true })
+  }
 
   /* ----------------------- (선택) 외부 틱에서 호출하고 싶다면 ---------------------- */
-  public Update(delta: number): void { this._update(Math.min(delta, MAX_DELTA_TIME)); }
+  public update(delta: number): void { this._update(Math.min(delta, MAX_DELTA_TIME)); }
 
   /* --------------------------------- Loop ---------------------------------- */
   private startLoop() {
-    const tick = () => {
-      this._raf = requestAnimationFrame(tick);
-      const d = Math.min(this.clock.getDelta(), MAX_DELTA_TIME);
-      this._update(d);
-    };
-    this.clock.getDelta();
-    this._raf = requestAnimationFrame(tick);
+    this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+    this.eventCtrl.SendEventMessage(EventTypes.PlayBGM, "rainstorm", SoundType.NigitRain, { loop: true })
+    // const tick = () => {
+    //   this._raf = requestAnimationFrame(tick);
+    //   const d = Math.min(this.clock.getDelta(), MAX_DELTA_TIME);
+    //   this._update(d);
+    // };
+    // this.clock.getDelta();
+    // this._raf = requestAnimationFrame(tick);
   }
-  private stopLoop() { if (this._raf) cancelAnimationFrame(this._raf); this._raf = 0; }
+  private stopLoop() { 
+    this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
+    this.eventCtrl.SendEventMessage(EventTypes.StopBGM, "rainstorm", { fade: true })
+    // if (this._raf) cancelAnimationFrame(this._raf); this._raf = 0; 
+  }
 
   private _update(delta: number) {
     if (!this.Mesh) return;

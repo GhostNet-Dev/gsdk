@@ -25,6 +25,7 @@ export enum ActionType {
     Run,
     Jump,
     Punch,
+    SleepingIdle,
 
     Sword,
     SwordRun,

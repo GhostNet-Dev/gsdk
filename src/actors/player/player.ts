@@ -141,6 +141,8 @@ export class Player extends PhysicsObject {
         this.clipMap.set(ActionType.Run, asset.GetAnimationClip(Ani.Run))
         this.clipMap.set(ActionType.Jump, asset.GetAnimationClip(Ani.Jump))
         this.clipMap.set(ActionType.Punch, asset.GetAnimationClip(Ani.Punch))
+        this.clipMap.set(ActionType.SleepingIdle, asset.GetAnimationClip(Ani.SleepingIdle))
+
         this.clipMap.set(ActionType.Sword, asset.GetAnimationClip(Ani.Sword))
         this.clipMap.set(ActionType.OneHandGun, asset.GetAnimationClip(Ani.Shooting))
         this.clipMap.set(ActionType.TwoHandGun, asset.GetAnimationClip(Ani.Gunplay))

@@ -1,68 +1,48 @@
 import * as THREE from "three";
-import { AreaAttack, AttackUp, Healing } from "./buffitem"
-import { IBuffItem } from "@Glibs/interface/ibuff";
-import { AttackOption, AttackType } from "@Glibs/types/playertypes";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { EventFlag } from "@Glibs/types/eventtypes";
+import { ActionContext, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes";
+import { BuffProperty } from "./buffdefs";
+import { ActionRegistry } from "@Glibs/actions/actionregistry";
+import { BaseSpec } from "@Glibs/actors/battle/basespec";
 
 
 
-export class Buff {
-    buffItem: IBuffItem[] = [
-        new AttackUp(),
-        new AreaAttack(this.eventCtrl),
-        new Healing(this.eventCtrl),
-    ]
-    userBuff: IBuffItem[] = []
-
-    constructor(private eventCtrl: IEventController) {
-        eventCtrl.RegisterEventListener(EventTypes.Attack + "player", (opts: AttackOption[]) => {
-            opts.forEach((opt) => {
-                switch(opt.type) {
-                    case AttackType.Buff:
-                        break;
-                }
-            })
-        })
-         eventCtrl.RegisterEventListener(EventTypes.AppMode, (e: EventFlag) => {
-            switch (e) {
-                case EventFlag.Start:
-                    this.buffItem.forEach(b => {
-                        b.lv = 0
-                    })
-                    this.userBuff.length = 0
-                    break
-                case EventFlag.End:
-                    this.buffItem.forEach(b => {
-                        b.lv = 0
-                    })
-                    this.userBuff.length = 0
-                    break
-            }
-        })
-    }
-
-    GetRandomBuff() {
-        const randBuff: IBuffItem[] = []
-        const ticket = [...Array(this.buffItem.length).keys()]
-        for (let i = 0; i < 3; i++) {
-            const r = THREE.MathUtils.randInt(0, ticket.length - 1)
-            const rbuff = ticket[r]
-            ticket.splice(ticket.indexOf(rbuff), 1)
-            randBuff.push(this.buffItem[rbuff])
+export class Buff implements IActionUser {
+    stats?: any
+    actions: IActionComponent[] = []
+    baseSpec: BaseSpec
+    constructor(
+        private def: BuffProperty,
+    ) {
+        this.stats = ("stats" in def) ? def.stats : undefined
+        this.baseSpec = new BaseSpec(this.stats, this)
+        if ("actions" in def) {
+            this.actions = def.actions.map((a: any) => ActionRegistry.create(a))
         }
-        return randBuff
     }
-    SelectBuff(buff: IBuffItem) {
-        const exist = this.userBuff.indexOf(buff)
-        if(exist < 0) {
-            this.userBuff.push(buff)
+    applyAction(action: IActionComponent, ctx?: ActionContext) {
+        action.apply?.(this, ctx)
+        action.activate?.(this, ctx)
+    }
+    activate(context?: ActionContext) {
+        for (const action of this.actions) {
+            action.activate?.(this, context)
         }
-        buff.IncreaseLv()
-        this.eventCtrl.SendEventMessage(EventTypes.UpdateBuff, this.userBuff)
     }
-    GetBuff() {
-        return this.userBuff
+    deactivate(context?: ActionContext) {
+        for (const action of this.actions) {
+            action.deactivate?.(this, context)
+        }
+    }
+    trigger(triggerType: TriggerType, context?: ActionContext) {
+        for (const action of this.actions) {
+            action.trigger?.(this, triggerType, context)
+        }
+    }
+
+    tick(target: IActionUser, delta: number): boolean {
+        return true
     }
 }

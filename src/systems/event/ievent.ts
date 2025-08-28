@@ -14,6 +14,8 @@ export interface IKeyCommand {
 export interface ILoop {
     LoopId: number
     update(delta: number): void
+    StartLoop?(): void
+    StopLoop?(): void
 }
 
 export interface IViewer {

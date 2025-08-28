@@ -5,6 +5,8 @@ import { StatApplyMode, StatKey } from "@Glibs/inventory/stat/stattypes"
 import { StatSystem } from "@Glibs/inventory/stat/statsystem"
 import { CharacterStatus } from "./charstatus"
 import { IActionUser } from "@Glibs/types/actiontypes"
+import { Buffdefs } from "@Glibs/magical/buff/buffdefs"
+import { Buff } from "@Glibs/magical/buff/buff"
 
 
 
@@ -80,6 +82,14 @@ export class BaseSpec {
     }
     GetBindItem(slot: Bind) {
         return this.equipment[slot]
+    }
+    Buff(buff: Buff) {
+        if ("actions" in buff && buff.actions && Array.isArray(buff.actions)) {
+            for (const action of buff.actions) {
+                // ❗ baseSpec은 IActionUser가 아님 → 위임 필요
+                this.owner?.applyAction(action)
+            }
+        }
     }
     Equip(item: IItem) {
         if (item.Bind == undefined) throw new Error("item bind is undefined")

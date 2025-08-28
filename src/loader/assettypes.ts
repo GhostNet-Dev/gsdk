@@ -15,6 +15,7 @@ export enum Ani {
     Punch,
     FightIdle,
     Dying,
+    SleepingIdle,
 
     Sword,
     SwordRun,

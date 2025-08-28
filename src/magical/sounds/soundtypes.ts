@@ -21,4 +21,8 @@ export enum SoundType {
 
     MeadowBirds =  `${soundPath}essentials_series_nox_sound/sample_a_sound_effect/ambiance_nature_meadow_birds_flies_calm_loop_stereo.mp3`,
     NightLoop =  `${soundPath}essentials_series_nox_sound/nature_essentials_nox_sound/ambiance_night_loop_stereo.mp3`,
+    NigitRain =  `${soundPath}tommusic/bgs_loops/forest_night/forest_night_rain.mp3`,
+
+    
+    WhispersOfEldertree =  `${soundPath}bgm/free6fantasy/1_-_Whispers_of_the_Eldertree_(Loop).mp3`,
 }

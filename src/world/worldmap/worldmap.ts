@@ -66,7 +66,7 @@ export default class WorldMap {
         EventBoxManager: { loader: this.loader, eventCtrl: this.eventCtrl },
         FluffyMaker: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl  },
         InteractiveManager: { loader: this.loader, eventCtrl: this.eventCtrl },
-        RainStorm: { scene: this.scene, camera: this.camera },
+        RainStorm: { scene: this.scene, camera: this.camera, eventCtrl: this.eventCtrl },
         WaterFoamRipples: { scene: this.scene, camera: this.camera, renderer: this.renderer },
     }
 

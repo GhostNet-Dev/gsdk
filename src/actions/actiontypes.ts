@@ -51,6 +51,7 @@ export interface ActionContext {
   skillId?: string
   via?: "item" | "skill" | "buff"
   direction?: THREE.Vector3
+  param?: any
 }
 
 
@@ -101,6 +102,10 @@ export const ActionDefs = {
     trigger: "onActivate",
     socketA: "localTipAOffset",
     socketB: "localTipBOffset",
+  },
+  DarkParticle: {
+    type: "darkparticle",
+    trigger: "onActivate",
   },
   StatBoost: {
     type: "statBoost",

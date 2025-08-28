@@ -23,8 +23,9 @@ export default class SwingEffectAction implements IActionComponent, ILoop {
         const objA = obj.getObjectByName(this.socketA)!
         const objB = obj.getObjectByName(this.socketB)!
 
-        this.trail = new WeaponTrail(this.scene, objA, objB)
-        this.trail!.startTrail()
+        if(!this.trail)
+            this.trail = new WeaponTrail(this.scene, objA, objB)
+        this.trail.startTrail()
         this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         console.log("Swing Effect Activated")
     }
