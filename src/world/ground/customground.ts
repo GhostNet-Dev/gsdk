@@ -19,7 +19,7 @@ export default class CustomGround implements IWorldMapObject {
     noiseScale = 20.0; // 노이즈의 세기 조정
     noiseStrength = .5
     scale = .5
-    radius = 30 / this.scale
+    radius = 40 / this.scale
     geometry!: THREE.PlaneGeometry
     constructor(private scene: THREE.Scene, private eventCtrl: IEventController, 
         {

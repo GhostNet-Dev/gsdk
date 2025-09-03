@@ -17,8 +17,6 @@ export class ShakerAction implements IActionComponent {
         const box = new THREE.Box3().setFromObject(meshs);
         const maxHeight = box.max.y; // 나무 모델의 최대 높이
 
-        console.log("interactor Max Height:", maxHeight);
-
         meshs.traverse((child: any) => {
             if (child.isMesh && child.material.isMeshStandardMaterial) {
                 const originalOnBeforeCompile = child.material.onBeforeCompile;

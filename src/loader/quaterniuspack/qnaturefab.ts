@@ -71,22 +71,22 @@ export class QuaterniusNatureCommontree1Fab extends QuaterniusNaturePack impleme
 
 export class QuaterniusNatureCommontree2Fab extends QuaterniusNaturePack implements IAsset {
     get Id() {return Char.QuaterniusNatureCommontree2}
-    constructor(loader: Loader) { super(loader, "assets/quaterniuspack/stylized_nature_megakit/glTF/CommonTree_2.gltf") }
+    constructor(loader: Loader) { super(loader, "assets/quaterniuspack/stylized_nature_megakit/glTF/CommonTree_2.gltf", () => { this.meshs?.children[0].scale.set(2, 2, 2) }) }
 }
 
 export class QuaterniusNatureCommontree3Fab extends QuaterniusNaturePack implements IAsset {
     get Id() {return Char.QuaterniusNatureCommontree3}
-    constructor(loader: Loader) { super(loader, "assets/quaterniuspack/stylized_nature_megakit/glTF/CommonTree_3.gltf") }
+    constructor(loader: Loader) { super(loader, "assets/quaterniuspack/stylized_nature_megakit/glTF/CommonTree_3.gltf", () => { this.meshs?.children[0].scale.set(2, 2, 2) }) }
 }
 
 export class QuaterniusNatureCommontree4Fab extends QuaterniusNaturePack implements IAsset {
     get Id() {return Char.QuaterniusNatureCommontree4}
-    constructor(loader: Loader) { super(loader, "assets/quaterniuspack/stylized_nature_megakit/glTF/CommonTree_4.gltf") }
+    constructor(loader: Loader) { super(loader, "assets/quaterniuspack/stylized_nature_megakit/glTF/CommonTree_4.gltf", () => { this.meshs?.children[0].scale.set(2, 2, 2) }) }
 }
 
 export class QuaterniusNatureCommontree5Fab extends QuaterniusNaturePack implements IAsset {
     get Id() {return Char.QuaterniusNatureCommontree5}
-    constructor(loader: Loader) { super(loader, "assets/quaterniuspack/stylized_nature_megakit/glTF/CommonTree_5.gltf") }
+    constructor(loader: Loader) { super(loader, "assets/quaterniuspack/stylized_nature_megakit/glTF/CommonTree_5.gltf", () => { this.meshs?.children[0].scale.set(2, 2, 2) }) }
 }
 
 export class QuaterniusNatureDeadtree1Fab extends QuaterniusNaturePack implements IAsset {

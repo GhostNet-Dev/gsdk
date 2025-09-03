@@ -21,8 +21,6 @@ export class FluffyAction implements IActionComponent, ILoop {
         const windFrequency = 1.0;
         const maxHeight = box.max.y; // 나무 모델의 최대 높이
 
-        console.log("interactor Max Height:", maxHeight);
-
         meshs.traverse((child: any) => {
              if (child.isMesh && child.material.isMeshStandardMaterial) {
                 // child.material = child.material.clone();
