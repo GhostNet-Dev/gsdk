@@ -8,7 +8,7 @@ import { PlaneGeometry } from 'three';
 export interface PlacementInfo {
   position: THREE.Vector3;  // 월드 좌표
   scale: number;
-  rotation: number;         // 월드 Y축 기준 yaw (rad)
+  rotation: THREE.Euler;         // 월드 Y축 기준 yaw (rad)
   kind: number;             // 0..(numKinds_* - 1)
 }
 
@@ -255,7 +255,7 @@ export class ObjectPlacer {
         out.push({
           position: s.pWorld.clone(),
           scale: sclMin + rnd() * sclRnd,
-          rotation: rnd() * Math.PI * 2,
+          rotation: new THREE.Euler(0, Math.random() * Math.PI * 2, 0, 'YXZ'),
           kind: chooseKindFn(),
         });
       }
@@ -318,7 +318,7 @@ export class ObjectPlacer {
             out.push({
               position: s.pWorld.clone(),
               scale: sclMin + rnd() * sclRnd,
-              rotation: rnd() * Math.PI * 2,
+              rotation: new THREE.Euler(0, Math.random() * Math.PI * 2, 0, 'YXZ'),
               kind: parentKind,
             });
             rememberPlacedUvKind(parentKind, s.uv.x, s.uv.y);
@@ -407,7 +407,7 @@ export class ObjectPlacer {
       results.flowers.push({
         position: s.pWorld.clone(),
         scale: 0.7 + rnd() * 0.6,
-        rotation: rnd() * Math.PI * 2,
+        rotation: new THREE.Euler(0, Math.random() * Math.PI * 2, 0, 'YXZ'),
         kind: chooseKind(options.numKinds_flower as unknown as number),
       });
     }

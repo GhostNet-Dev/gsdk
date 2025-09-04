@@ -32,19 +32,8 @@ export abstract class InteractableObject extends THREE.Group implements IActionU
             this.actions = def.actions.map((a: any) => ActionRegistry.create(a))
         }
     }
-    async Loader(position: THREE.Vector3, rotation: THREE.Euler, scale: number, name: string) {
-        this.position.copy(position);
-        this.rotation.copy(rotation);
-        this.scale.set(scale, scale, scale);
-        this.name = name;
-        // const meshs = await this.asset.CloneModel()
-        const [meshs, _] = await this.asset.UniqModel(name)
-        // this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, meshs)
-        this.meshs = meshs
-        this.actions.forEach(a => this.applyAction(a))
-        this.add(meshs)
-        this.afterLoad()
-    }
+    abstract Loader(position: THREE.Vector3, rotation: THREE.Euler, scale: number, name: string): void;
+
     applyAction(action: IActionComponent, ctx?: ActionContext) {
         action.apply?.(this, ctx)
         action.activate?.(this, ctx)
