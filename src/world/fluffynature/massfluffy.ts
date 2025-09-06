@@ -1,4 +1,3 @@
-// WindyInstancedVegetation.ts
 import * as THREE from "three";
 import { IWorldMapObject, MapEntryType } from "@Glibs/types/worldmaptypes";
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
@@ -88,7 +87,6 @@ export interface WindyVegetationConfig {
   };
 }
 
-// https://codepen.io/ghostwebservice/pen/EaVrVGe?editors=1001
 const DEFAULT_CONFIG: WindyVegetationConfig = {
   windDir: new THREE.Vector2(1, 0),
   globalAmp: 0.2,
@@ -105,7 +103,7 @@ const DEFAULT_CONFIG: WindyVegetationConfig = {
   roughness: 0.95,
   metalness: 0.0,
   doubleSide: true,
-  castShadow: false,
+  castShadow: true,
   receiveShadow: false,
   frustumCulled: true,
 
@@ -170,14 +168,20 @@ type WindUniforms = {
   uBendExp: { value: number };
 };
 
-type Batch = {
+// NEW: 단일 InstancedMesh와 그 자원을 묶는 타입
+type BatchPart = {
   mesh: THREE.InstancedMesh;
   geometry: THREE.BufferGeometry;
   material: THREE.MeshStandardMaterial;
+  uniforms: WindUniforms;
+};
+
+// CHANGED: Batch가 BatchPart의 배열을 갖도록 구조 변경
+type Batch = {
+  parts: BatchPart[];
   baseMatrices: Float32Array;
   clusters: ClusterInfo[];
   totalCount: number;
-  uniforms: WindUniforms;
   ampSmooth?: number;
 };
 
@@ -188,16 +192,15 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
   public Type: MapEntryType = MapEntryType.WindyInstancedVegetation;
 
   private cfg: WindyVegetationConfig;
-
   private time = 0;
   private frame = 0;
 
-  private group: THREE.Group;       // 모든 배치의 부모
-  private batches: Batch[] = [];    // 다중 Create 지원
+  private group: THREE.Group;
+  private batches: Batch[] = [];
 
   constructor(
     private loader: Loader,
-    private scene: THREE.Scene, 
+    private scene: THREE.Scene,
     private eventCtrl: IEventController,
     private camera: THREE.Camera,
     config?: Partial<WindyVegetationConfig>
@@ -213,9 +216,18 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
   public SetCamera(cam: THREE.Camera) { this.camera = cam; }
 
   public SetWind(dirXZ: THREE.Vector2, globalAmp?: number, bendExp?: number) {
-    if (dirXZ) this.batches.forEach(b => b.uniforms.uWindDir.value.copy(dirXZ.clone().normalize()));
-    if (globalAmp !== undefined) { this.cfg.globalAmp = globalAmp; }
-    if (bendExp   !== undefined) { this.batches.forEach(b => b.uniforms.uBendExp.value = bendExp); }
+    if (dirXZ) {
+      const normDir = dirXZ.clone().normalize();
+      this.batches.forEach(b => b.parts.forEach(p => p.uniforms.uWindDir.value.copy(normDir)));
+    }
+    if (globalAmp !== undefined) {
+        this.cfg.globalAmp = globalAmp;
+        this.batches.forEach(b => b.parts.forEach(p => p.uniforms.uGlobalAmp.value = globalAmp));
+    }
+    if (bendExp !== undefined) {
+        this.cfg.bendExp = bendExp;
+        this.batches.forEach(b => b.parts.forEach(p => p.uniforms.uBendExp.value = bendExp));
+    }
   }
 
   public SetPatterns(
@@ -224,22 +236,30 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     patPhase?: [number, number, number]
   ) {
     this.batches.forEach(b => {
-      if (patAmp)   b.uniforms.uPatAmp.value.set(patAmp);
-      if (patFreq)  b.uniforms.uPatFreq.value.set(patFreq);
-      if (patPhase) b.uniforms.uPatPhase.value.set(patPhase);
+      b.parts.forEach(p => {
+        if (patAmp) p.uniforms.uPatAmp.value.set(patAmp);
+        if (patFreq) p.uniforms.uPatFreq.value.set(patFreq);
+        if (patPhase) p.uniforms.uPatPhase.value.set(patPhase);
+      });
     });
   }
-  async Loader(id: Char) {
-    const asset = this.loader.GetAssets(id)
-    return (await asset.CloneModel()).children[0] as THREE.Mesh
+  
+  async Loader(id: Char): Promise<THREE.Object3D> {
+    const asset = this.loader.GetAssets(id);
+    return await asset.CloneModel();
   }
-  /** 입력 TRS마다 군집을 만들어 전체 인스턴스를 배치합니다 (재패킹 없음). */
-  public async Create(transforms: TRS[], id?: Char): Promise<THREE.InstancedMesh> {
-    // 1) 군집 확장
+
+  public async Create({
+    transforms = [],
+    id,
+    config,
+  }: { transforms?: TRS[]; id?: Char, config?: Partial<WindyVegetationConfig> } = {}
+  ): Promise<THREE.Group> { // 1) 군집 확장
+    this.cfg = { ...DEFAULT_CONFIG, ...config };
+
     const expanded: TRS[] = [];
     const clusters: ClusterInfo[] = [];
     let runningStart = 0;
-    const baseMesh = (id) ? await this.Loader(id) : undefined;
 
     for (const t of transforms) {
       if (typeof t.scale === 'number') t.scale = [t.scale, t.scale, t.scale];
@@ -289,53 +309,44 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     }
 
     const totalCount = expanded.length;
+    if (totalCount === 0) return new THREE.Group();
 
-    // --- 2) 지오메트리 / 머티리얼 (배치별 고유 인스턴스 보장) ---
-    const { geometry, material } = this.prepareGeomMatForBatch(baseMesh);
-    const maxY = this.getGeometryHeightY(geometry) || this.cfg.defaultBlade.height;
+    // --- 2) 지오메트리 / 머티리얼 (Group 또는 기본 Blade 기반으로 BatchPart 생성) ---
+    const sourceObject = id ? await this.Loader(id) : this.makeDefaultBladeAsGroup();
+    const parts = this._createBatchParts(sourceObject, totalCount);
 
-    // 배치 전용 uniforms
-    const uniforms: WindUniforms = {
-      uTime:      { value: 0 },
-      uWindDir:   { value: this.cfg.windDir.clone().normalize() },
-      uPatAmp:    { value: new Float32Array(this.cfg.patAmp) },
-      uPatFreq:   { value: new Float32Array(this.cfg.patFreq) },
-      uPatPhase:  { value: new Float32Array(this.cfg.patPhase) },
-      uGlobalAmp: { value: this.cfg.globalAmp },
-      uMaxY:      { value: maxY },
-      uBendExp:   { value: this.cfg.bendExp },
-    };
-    this.installWindOnBeforeCompile(material, uniforms);
+    if (parts.length === 0) {
+      console.warn("WindyInstancedVegetation: No meshes found in the loaded model or default geometry.");
+      return new THREE.Group();
+    }
 
-    // --- 3) InstancedMesh & attributes ---
-    const inst = new THREE.InstancedMesh(geometry, material, totalCount);
-    inst.frustumCulled = this.cfg.frustumCulled;
-    inst.castShadow = this.cfg.castShadow;
-    inst.receiveShadow = this.cfg.receiveShadow;
-    inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-
-    const iPattern  = new Float32Array(totalCount);
-    const iPhase    = new Float32Array(totalCount);
-    const iStrength = new Float32Array(totalCount);
-    const iDir      = new Float32Array(totalCount);
-
+    // --- 3) 각 Part의 InstancedMesh에 attributes 설정 ---
     const jitter = THREE.MathUtils.degToRad(this.cfg.jitterAngleDeg);
     const [sMin, sMax] = this.cfg.strengthRange;
 
-    for (let i = 0; i < totalCount; i++) {
-      iPattern[i]  = i % this.cfg.patternCount;
-      iPhase[i]    = Math.random() * Math.PI * 2;
-      iStrength[i] = THREE.MathUtils.lerp(sMin, sMax, Math.random());
-      iDir[i]      = THREE.MathUtils.lerp(-jitter, jitter, Math.random());
-    }
-    geometry.setAttribute("iPattern",  new THREE.InstancedBufferAttribute(iPattern, 1, false));
-    geometry.setAttribute("iPhase",    new THREE.InstancedBufferAttribute(iPhase, 1, false));
-    geometry.setAttribute("iStrength", new THREE.InstancedBufferAttribute(iStrength, 1, false));
-    geometry.setAttribute("iDir",      new THREE.InstancedBufferAttribute(iDir, 1, false));
+    const iPattern = new Float32Array(totalCount);
+    const iPhase = new Float32Array(totalCount);
+    const iStrength = new Float32Array(totalCount);
+    const iDir = new Float32Array(totalCount);
 
-    // --- 4) 행렬 기록 (배치 내부 인덱스는 고정) ---
+    for (let i = 0; i < totalCount; i++) {
+        iPattern[i] = i % this.cfg.patternCount;
+        iPhase[i] = Math.random() * Math.PI * 2;
+        iStrength[i] = THREE.MathUtils.lerp(sMin, sMax, Math.random());
+        iDir[i] = THREE.MathUtils.lerp(-jitter, jitter, Math.random());
+    }
+
+    parts.forEach(p => {
+        p.geometry.setAttribute("iPattern", new THREE.InstancedBufferAttribute(iPattern, 1, false));
+        p.geometry.setAttribute("iPhase", new THREE.InstancedBufferAttribute(iPhase, 1, false));
+        p.geometry.setAttribute("iStrength", new THREE.InstancedBufferAttribute(iStrength, 1, false));
+        p.geometry.setAttribute("iDir", new THREE.InstancedBufferAttribute(iDir, 1, false));
+    });
+
+    // --- 4) 행렬 기록 ---
     const baseMatrices = new Float32Array(totalCount * 16);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3();
+    const resultGroup = new THREE.Group();
 
     for (let i = 0; i < totalCount; i++) {
       const t = expanded[i];
@@ -345,26 +356,29 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       q.setFromEuler(rot);
       m.compose(pos, q, scl);
       m.toArray(baseMatrices, i * 16);
-      inst.setMatrixAt(i, m);
+      
+      parts.forEach(part => part.mesh.setMatrixAt(i, m));
     }
-    inst.instanceMatrix.needsUpdate = true;
-    inst.count = totalCount; // 인덱스 고정
+
+    parts.forEach(part => {
+      part.mesh.instanceMatrix.needsUpdate = true;
+      part.mesh.count = totalCount;
+      resultGroup.add(part.mesh);
+    });
 
     // --- 5) 그룹에 추가 + 내부 배열에 등록 ---
-    this.group.add(inst);
-    const batch: Batch = { mesh: inst, geometry, material, baseMatrices, clusters, totalCount, uniforms, ampSmooth: undefined };
+    this.group.add(resultGroup);
+    const batch: Batch = { parts, baseMatrices, clusters, totalCount, ampSmooth: undefined };
     this.batches.push(batch);
-    this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+    this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
 
-    return inst;
+    return resultGroup;
   }
 
-  /** in-place LOD/프러스텀 컬링 적용(재패킹 없음) */
   public async CreateDone() {
     this.batches.forEach(b => this.applyCullLODInPlace(b, true));
   }
 
-  /** delta(sec)를 받아 시간/컬링/LOD/거리기반 Amp(스무딩)를 갱신합니다. */
   public update(delta: number): void {
     this.time += delta;
     this.frame++;
@@ -372,44 +386,38 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     const doCull = this.cfg.culling.enabled && (this.frame % Math.max(1, this.cfg.culling.everyNFrames) === 0);
 
     for (const b of this.batches) {
-      // 시간 전달
-      b.uniforms.uTime.value = this.time;
+      b.parts.forEach(p => p.uniforms.uTime.value = this.time);
 
-      // 컬링/LOD 적용
       if (doCull || this.cfg.lod.enabled) this.applyCullLODInPlace(b, false);
 
-      // 배치 중심 기준 거리 Amp 스무딩
       if (this.cfg.ampDistance.enabled && this.camera && b.clusters.length) {
-      const center = new THREE.Vector3();
+        const center = new THREE.Vector3();
         for (const c of b.clusters) center.add(c.center);
         center.multiplyScalar(1 / b.clusters.length);
 
-      const cam = new THREE.Vector3();
-      this.camera.getWorldPosition(cam);
-      const d = cam.distanceTo(center);
+        const cam = new THREE.Vector3();
+        this.camera.getWorldPosition(cam);
+        const d = cam.distanceTo(center);
 
-      const { near, far, minFactor } = this.cfg.ampDistance;
-      let target = this.cfg.globalAmp;
-        if      (d >= far)  target = this.cfg.globalAmp * minFactor;
-      else if (d > near) {
+        const { near, far, minFactor } = this.cfg.ampDistance;
+        let target = this.cfg.globalAmp;
+        if (d >= far) target = this.cfg.globalAmp * minFactor;
+        else if (d > near) {
           const t = (d - near) / Math.max(1e-6, (far - near));
-        target = this.cfg.globalAmp * THREE.MathUtils.lerp(1.0, minFactor, t);
-      }
+          target = this.cfg.globalAmp * THREE.MathUtils.lerp(1.0, minFactor, t);
+        }
 
         const tau = 0.15;
         b.ampSmooth = (b.ampSmooth ?? target) + (target - (b.ampSmooth ?? target)) * (1.0 - Math.exp(-delta / tau));
-        b.uniforms.uGlobalAmp.value = b.ampSmooth;
+        b.parts.forEach(p => p.uniforms.uGlobalAmp.value = b.ampSmooth as number);
+      }
     }
   }
-  }
 
-  /** 특정 배치만 삭제: mesh 또는 인덱스를 넘길 수 있음. 인자 없으면 전체 삭제 */
   public Delete(target?: THREE.Object3D | number): void {
     if (target === undefined) {
-      // 전체
       for (const b of this.batches) this.disposeBatch(b);
       this.batches = [];
-      // 그룹은 남겨 Mesh 참조 보존
       return;
     }
 
@@ -417,115 +425,102 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       const b = this.batches[target];
       if (b) { this.disposeBatch(b); this.batches.splice(target, 1); }
       return;
-  }
+    }
 
-    // mesh로 찾기
-    const idx = this.batches.findIndex(b => b.mesh === target);
+    const idx = this.batches.findIndex(b => b.parts.some(p => p.mesh === target || p.mesh.parent === target));
     if (idx >= 0) { this.disposeBatch(this.batches[idx]); this.batches.splice(idx, 1); }
   }
 
   public Show(): void { if (this.group) this.group.visible = true; }
   public Hide(): void { if (this.group) this.group.visible = false; }
 
-  /** 다중 배치 저장 */
   public Save() {
+    // NOTE: This save implementation assumes all parts share the same instanced attributes.
+    // It saves common data and reconstructs based on default geometry on Load.
     return this.batches.map(b => {
-    const matrices: number[] = [];
-    const m = new THREE.Matrix4();
-      for (let i = 0; i < b.totalCount; i++) { b.mesh.getMatrixAt(i, m); matrices.push(...m.elements); }
+      if (b.parts.length === 0) return null;
+      const firstPart = b.parts[0];
+      const g = firstPart.geometry;
+      const pick = (name: string) => (g.getAttribute(name) as THREE.InstancedBufferAttribute)?.array ?? null;
 
-      const g = b.geometry;
-    const pick = (name: string) => (g.getAttribute(name) as THREE.InstancedBufferAttribute)?.array ?? null;
-
-    return {
+      return {
         count: b.totalCount,
-      matrices,
-      attributes: {
-        iPattern: pick("iPattern"),
-        iPhase: pick("iPhase"),
-        iStrength: pick("iStrength"),
-        iDir: pick("iDir"),
-      },
-        cfg: this.cfg, // 참고로 저장(전역 공통)
-    };
-    });
+        matrices: Array.from(b.baseMatrices),
+        attributes: {
+          iPattern: pick("iPattern") ? Array.from(pick("iPattern") as Float32Array) : null,
+          iPhase: pick("iPhase") ? Array.from(pick("iPhase") as Float32Array) : null,
+          iStrength: pick("iStrength") ? Array.from(pick("iStrength") as Float32Array) : null,
+          iDir: pick("iDir") ? Array.from(pick("iDir")as Float32Array) : null,
+        },
+        cfg: this.cfg,
+      };
+    }).filter(item => item !== null);
   }
 
-  /** 다중 배치 로드 (Save() 반환 형태의 배열 지원) */
-  public Load(data: any, callback?: Function) {
-    // 기존 모두 제거
+  public Load(data: any[], callback?: Function) {
     this.Delete();
-
     const arr = Array.isArray(data) ? data : [data];
+
     for (const item of arr) {
-      // 기본 지오메트리/머티리얼
-      const { geometry, material } = this.prepareGeomMatForBatch(undefined);
-      const uniforms: WindUniforms = {
-        uTime: { value: 0 },
-        uWindDir: { value: this.cfg.windDir.clone().normalize() },
-        uPatAmp: { value: new Float32Array(this.cfg.patAmp) },
-        uPatFreq: { value: new Float32Array(this.cfg.patFreq) },
-        uPatPhase:{ value: new Float32Array(this.cfg.patPhase) },
-        uGlobalAmp:{ value: this.cfg.globalAmp },
-        uMaxY:{ value: this.getGeometryHeightY(geometry) || this.cfg.defaultBlade.height },
-        uBendExp:{ value: this.cfg.bendExp },
+      if (!item) continue;
+      const totalCount = item.count as number;
+      
+      const sourceObject = this.makeDefaultBladeAsGroup();
+      const parts = this._createBatchParts(sourceObject, totalCount);
+      if (parts.length === 0) continue;
+      
+      const baseMatrices = new Float32Array(item.matrices);
+      const m = new THREE.Matrix4();
+      
+      for (let i = 0; i < totalCount; i++) {
+          m.fromArray(baseMatrices, i * 16);
+          parts.forEach(p => p.mesh.setMatrixAt(i, m));
+      }
+
+      const apply = (name: string, a: Float32Array | number[] | null, itemSize = 1) => {
+        if (!a) return;
+        const f = Array.isArray(a) ? new Float32Array(a) : a;
+        parts.forEach(p => p.geometry.setAttribute(name, new THREE.InstancedBufferAttribute(f, itemSize, false)));
       };
-      this.installWindOnBeforeCompile(material, uniforms);
-
-      const count = item.count as number;
-    const inst = new THREE.InstancedMesh(geometry, material, count);
-    inst.frustumCulled = this.cfg.frustumCulled;
-    inst.castShadow = this.cfg.castShadow;
-    inst.receiveShadow = this.cfg.receiveShadow;
-
-      const fm = new Float32Array(item.matrices);
-    const m = new THREE.Matrix4();
-      for (let i = 0; i < count; i++) { m.fromArray(fm, i * 16); inst.setMatrixAt(i, m); }
-    inst.instanceMatrix.needsUpdate = true;
-      inst.count = count;
-
-    // attributes 복원
-      const g = inst.geometry;
-    const apply = (name: string, a: Float32Array | number[] | null, itemSize = 1) => {
-      if (!a) return;
-      const f = Array.isArray(a) ? new Float32Array(a) : a;
-      g.setAttribute(name, new THREE.InstancedBufferAttribute(f, itemSize, false));
-    };
       if (item.attributes) {
-        apply("iPattern",  item.attributes.iPattern);
-        apply("iPhase",    item.attributes.iPhase);
+        apply("iPattern", item.attributes.iPattern);
+        apply("iPhase", item.attributes.iPhase);
         apply("iStrength", item.attributes.iStrength);
-        apply("iDir",      item.attributes.iDir);
+        apply("iDir", item.attributes.iDir);
+      }
+      
+      const resultGroup = new THREE.Group();
+      parts.forEach(p => {
+          p.mesh.instanceMatrix.needsUpdate = true;
+          p.mesh.count = totalCount;
+          resultGroup.add(p.mesh);
+      });
+
+      const clusters = this.estimateClustersFromMatrices(baseMatrices);
+      
+      this.group.add(resultGroup);
+      this.batches.push({ parts, baseMatrices, clusters, totalCount, ampSmooth: undefined });
     }
-
-      // 클러스터 추정(간단 묶음)
-      const clusters = this.estimateClustersFromMatrices(fm);
-
-      this.group.add(inst);
-      this.batches.push({ mesh: inst, geometry, material, baseMatrices: fm, clusters, totalCount: count, uniforms, ampSmooth: undefined });
-    }
-
     callback?.();
   }
 
   /* ------------------------------ Internals ------------------------------ */
 
   private applyCullLODInPlace(b: Batch, _initial: boolean) {
-    if (!b || !b.baseMatrices) return;
+    if (!b || !b.baseMatrices || b.parts.length === 0) return;
 
-    // frustum 준비
     let frustum: THREE.Frustum | null = null;
     const camPos = new THREE.Vector3();
     if (this.camera) {
+      this.camera.updateMatrixWorld();
       const vp = new THREE.Matrix4().multiplyMatrices(
-        (this.camera as any).projectionMatrix,
-        (this.camera as any).matrixWorldInverse
+        this.camera.projectionMatrix,
+        this.camera.matrixWorldInverse
       );
       frustum = new THREE.Frustum().setFromProjectionMatrix(vp);
       this.camera.getWorldPosition(camPos);
     }
 
-    // stable hash for selection
     const hash01 = (i: number) => {
       const s = Math.sin(i * 12.9898) * 43758.5453;
       return s - Math.floor(s);
@@ -553,7 +548,6 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
         }
       }
 
-      // 인덱스 고정: keep 여부만 kill/restore
       for (let j = 0; j < c.count; j++) {
         const idx = c.start + j;
         const keep = !culled && (hash01(idx) <= density);
@@ -562,34 +556,65 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
         } else {
           m.copy(kill);
         }
-        b.mesh.setMatrixAt(idx, m);
+        b.parts.forEach(p => p.mesh.setMatrixAt(idx, m));
       }
     }
-
-    b.mesh.count = b.totalCount;
-    b.mesh.instanceMatrix.needsUpdate = true;
+    
+    b.parts.forEach(p => {
+        p.mesh.count = b.totalCount;
+        p.mesh.instanceMatrix.needsUpdate = true;
+    });
   }
 
-  private prepareGeomMatForBatch(baseMesh?: THREE.Mesh) {
-    let geometry: THREE.BufferGeometry;
-    let material: THREE.MeshStandardMaterial;
+  private _createBatchParts(source: THREE.Object3D, totalCount: number): BatchPart[] {
+    const parts: BatchPart[] = [];
+    
+    source.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+            const geometry = child.geometry.clone();
+            const material = child.material instanceof THREE.Material 
+                ? child.material.clone() as THREE.MeshStandardMaterial 
+                : new THREE.MeshStandardMaterial();
 
-    if (baseMesh) {
-      // 지오메트리는 반드시 clone (인스턴스 속성 추가 때문)
-      geometry = (baseMesh.geometry as THREE.BufferGeometry).clone();
-      // 머티리얼은 clone 해서 배치별 uniforms 분리
-      if (baseMesh.material instanceof THREE.MeshStandardMaterial) {
-        material = baseMesh.material.clone();
-        material.vertexColors = true;
-      } else {
-        material = new THREE.MeshStandardMaterial({ vertexColors: true });
-      }
-    } else {
-      const pair = this.makeDefaultBladeGeometryAndMaterial();
-      geometry = pair.geometry;
-      material = pair.material;
-    }
-    return { geometry, material };
+            if (!('vertexColors' in material)) {
+                (material as any).vertexColors = true;
+            } else {
+                 material.vertexColors = true;
+            }
+
+            const maxY = this.getGeometryHeightY(geometry) || this.cfg.defaultBlade.height;
+
+            const uniforms: WindUniforms = {
+                uTime: { value: 0 },
+                uWindDir: { value: this.cfg.windDir.clone().normalize() },
+                uPatAmp: { value: new Float32Array(this.cfg.patAmp) },
+                uPatFreq: { value: new Float32Array(this.cfg.patFreq) },
+                uPatPhase: { value: new Float32Array(this.cfg.patPhase) },
+                uGlobalAmp: { value: this.cfg.globalAmp },
+                uMaxY: { value: maxY },
+                uBendExp: { value: this.cfg.bendExp },
+            };
+            this.installWindOnBeforeCompile(material, uniforms);
+
+            const inst = new THREE.InstancedMesh(geometry, material, totalCount);
+            inst.frustumCulled = this.cfg.frustumCulled;
+            inst.castShadow = this.cfg.castShadow;
+            inst.receiveShadow = this.cfg.receiveShadow;
+            inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+            
+            parts.push({ mesh: inst, geometry, material, uniforms });
+        }
+    });
+
+    return parts;
+  }
+  
+  private makeDefaultBladeAsGroup(): THREE.Group {
+      const { geometry, material } = this.makeDefaultBladeGeometryAndMaterial();
+      const mesh = new THREE.Mesh(geometry, material);
+      const group = new THREE.Group();
+      group.add(mesh);
+      return group;
   }
 
   private makeDefaultBladeGeometryAndMaterial() {
@@ -634,7 +659,6 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
           attribute float iStrength;
           attribute float iDir;
 
-          // 0..1 hash from vec2
           float hash12(vec2 p){
             vec3 p3 = fract(vec3(p.xyx) * 0.1031);
             p3 += dot(p3, p3.yzx + 33.33);
@@ -645,10 +669,9 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
         .replace(
           "#include <begin_vertex>",
           `
-          vec3 transformed = vec3(position);
-
+          #include <begin_vertex>
           float h = max(uMaxY, 1e-4);
-          float k = clamp(transformed.y / h, 0.0, 1.0);
+          float k = clamp(position.y / h, 0.0, 1.0);
           k = pow(k, uBendExp);
 
           vec2 dir = normalize(uWindDir);
@@ -656,14 +679,12 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
           mat2 rot = mat2(ca, -sa, sa, ca);
           dir = rot * dir;
 
-          float p0 = 1.0 - step(0.5, iPattern);
-          float p1 = step(0.5, iPattern) * (1.0 - step(1.5, iPattern));
-          float p2 = step(1.5, iPattern);
-          float amp  = uPatAmp[0]*p0 + uPatAmp[1]*p1 + uPatAmp[2]*p2;
-          float freq = uPatFreq[0]*p0 + uPatFreq[1]*p1 + uPatFreq[2]*p2;
-          float phs  = uPatPhase[0]*p0 + uPatPhase[1]*p1 + uPatPhase[2]*p2;
+          int patternIdx = int(iPattern);
+          float amp, freq, phs;
+          if (patternIdx == 0) { amp = uPatAmp[0]; freq = uPatFreq[0]; phs = uPatPhase[0]; }
+          else if (patternIdx == 1) { amp = uPatAmp[1]; freq = uPatFreq[1]; phs = uPatPhase[1]; }
+          else { amp = uPatAmp[2]; freq = uPatFreq[2]; phs = uPatPhase[2]; }
 
-          // world-space phase seed (slot/LOD independent)
           #ifdef USE_INSTANCING
             vec3 iPos = (instanceMatrix * vec4(0.0,0.0,0.0,1.0)).xyz;
           #else
@@ -682,21 +703,20 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
           `
         );
 
-      (shader.uniforms as any).uTime      = uniforms.uTime;
-      (shader.uniforms as any).uWindDir   = uniforms.uWindDir;
-      (shader.uniforms as any).uPatAmp    = uniforms.uPatAmp;
-      (shader.uniforms as any).uPatFreq   = uniforms.uPatFreq;
-      (shader.uniforms as any).uPatPhase  = uniforms.uPatPhase;
-      (shader.uniforms as any).uGlobalAmp = uniforms.uGlobalAmp;
-      (shader.uniforms as any).uMaxY      = uniforms.uMaxY;
-      (shader.uniforms as any).uBendExp   = uniforms.uBendExp;
+      shader.uniforms.uTime = uniforms.uTime;
+      shader.uniforms.uWindDir = uniforms.uWindDir;
+      shader.uniforms.uPatAmp = uniforms.uPatAmp;
+      shader.uniforms.uPatFreq = uniforms.uPatFreq;
+      shader.uniforms.uPatPhase = uniforms.uPatPhase;
+      shader.uniforms.uGlobalAmp = uniforms.uGlobalAmp;
+      shader.uniforms.uMaxY = uniforms.uMaxY;
+      shader.uniforms.uBendExp = uniforms.uBendExp;
 
       (material as any).userData.shader = shader;
     };
+    material.needsUpdate = true;
   }
-
-  /* ------------------- Geometry utilities (colors/taper) ------------------ */
-
+  
   private makeTaperedBladeGeometry(bottomW: number, topW: number, height: number, segY: number): THREE.BufferGeometry {
     const geo = new THREE.PlaneGeometry(bottomW, height, 1, segY);
     geo.translate(0, height / 2, 0);
@@ -732,11 +752,11 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     for (let i = 0; i < pos.count; i++) {
       const y = pos.getY(i);
       if (tipColor && y >= tipStart) {
-        col[i*3+0] = tipColor.r; col[i*3+1] = tipColor.g; col[i*3+2] = tipColor.b;
+        col[i * 3 + 0] = tipColor.r; col[i * 3 + 1] = tipColor.g; col[i * 3 + 2] = tipColor.b;
       } else {
         const t = THREE.MathUtils.clamp((y - minY) / Math.max(1e-6, (maxY - minY)), 0, 1);
         const c = colBottom.clone().lerp(colTop, t);
-        col[i*3+0] = c.r; col[i*3+1] = c.g; col[i*3+2] = c.b;
+        col[i * 3 + 0] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
       }
     }
     g.setAttribute("color", new THREE.BufferAttribute(col, 3));
@@ -752,19 +772,18 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
   }
   private randInt(min: number, max: number) {
     return Math.floor(THREE.MathUtils.lerp(min, max + 1, Math.random()));
-    }
+  }
   private getGeometryHeightY(geo: THREE.BufferGeometry) {
-    geo.computeBoundingBox();
+    if (!geo.boundingBox) geo.computeBoundingBox();
     const bb = geo.boundingBox;
     return bb ? (bb.max.y - bb.min.y) || 0 : 0;
   }
 
   private estimateClustersFromMatrices(arr: Float32Array): ClusterInfo[] {
-    // 간단 그룹핑(고정 크기)
     const clusters: ClusterInfo[] = [];
     const m = new THREE.Matrix4(), p = new THREE.Vector3();
     const total = arr.length / 16;
-    const GROUP = 12;
+    const GROUP = 12; // Heuristic for grouping instances into a cluster
     for (let start = 0; start < total; start += GROUP) {
       const end = Math.min(total, start + GROUP);
       const center = new THREE.Vector3();
@@ -777,22 +796,17 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
   }
 
   private disposeBatch(b: Batch) {
-    // 지오메트리/어트리뷰트/머티리얼 정리
-    const g = b.geometry;
-    Object.values(g.attributes).forEach((a: any) => a?.dispose?.());
-    g.dispose();
-    b.material.dispose();
-
-    this.group.remove(b.mesh);
+    b.parts.forEach(p => {
+        // Find parent and remove mesh from it. The parent could be a group created in Create(), which is a child of this.group
+        p.mesh.parent?.remove(p.mesh);
+        p.geometry.dispose();
+        p.material.dispose();
+    });
   }
 
-  /* -------------------------- Optional getters --------------------------- */
-
-  /** 현재 생성된 InstancedMesh들을 반환 (읽기 전용) */
   public GetMeshes(): readonly THREE.InstancedMesh[] {
-    return this.batches.map(b => b.mesh);
+    return this.batches.flatMap(b => b.parts.map(p => p.mesh));
   }
 
-  /** 배치 개수 */
   public GetBatchCount(): number { return this.batches.length; }
 }

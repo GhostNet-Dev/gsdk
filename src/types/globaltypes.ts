@@ -84,6 +84,7 @@ export enum EventTypes {
     // 물리적인 충돌 검사가 필요한 객체 
     RegisterLandPhysic = "reglphysic",
     RegisterPhysic = "regphysic",
+    RegisterPhysicBox = "regphysicb",
     DeregisterPhysic = "deregphysic",
 
     // AI를 제어하는 함수들

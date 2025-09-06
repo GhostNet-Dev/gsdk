@@ -42,6 +42,8 @@ export default class OptPhysics implements IGPhysic {
             this.octreenode!.insert(spatialObj)
             obj.userData.spatialObj = spatialObj
         })
+        eventCtrl.RegisterEventListener(EventTypes.RegisterPhysicBox, (obj: THREE.Box3, uuid:string, raycastOn = false) => {
+        })
         eventCtrl.RegisterEventListener(EventTypes.DeregisterPhysic, (obj: THREE.Object3D) => {
             const spatialObj = obj.userData.spatialObj
             this.octreenode!.remove(spatialObj)
