@@ -416,6 +416,7 @@ export class RainStorm implements IWorldMapObject, ILoop {
   }
   StartLoop(): void {
     this.Show()
+    this.eventCtrl.SendEventMessage(EventTypes.PlayBGM, "rainstorm", SoundType.NigitRain, { loop: true })
   }
   StopLoop(): void {
     this.Hide()
