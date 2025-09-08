@@ -23,6 +23,7 @@ import InteractiveManager from '@Glibs/interactives/interactable/intermgr';
 import { RainStorm } from '../rain/rainstorm';
 import { WaterFoamRipples } from '../ocean/wavefoam';
 import { WindyInstancedVegetation } from '../fluffynature/massfluffy';
+import { InstancedVegetation } from '../fluffynature/massstatic';
 
 
 export default class WorldMap {
@@ -52,6 +53,7 @@ export default class WorldMap {
         InteractiveManager: InteractiveManager,
         RainStorm: RainStorm,
         WaterFoamRipples: WaterFoamRipples,
+        InstancedVegetation: InstancedVegetation,
         WindyInstancedVegetation: WindyInstancedVegetation,
     };
     private worldMapTypes: Record<string, any> = {
@@ -70,6 +72,7 @@ export default class WorldMap {
         InteractiveManager: { loader: this.loader, eventCtrl: this.eventCtrl },
         RainStorm: { scene: this.scene, camera: this.camera, eventCtrl: this.eventCtrl },
         WaterFoamRipples: { scene: this.scene, camera: this.camera, renderer: this.renderer },
+        InstancedVegetation: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl, camera: this.camera },
         WindyInstancedVegetation: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl, camera: this.camera },
     }
 

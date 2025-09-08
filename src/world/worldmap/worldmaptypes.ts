@@ -31,6 +31,7 @@ export enum MapEntryType {
     Interactive = "InteractiveManager",
     Rain = "RainStorm",
     WaterFoamRipples = "WaterFoamRipples",
+    InstancedVegetation = "InstancedVegetation",
     WindyInstancedVegetation = "WindyInstancedVegetation",
 }
 

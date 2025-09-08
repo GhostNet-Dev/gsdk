@@ -30,7 +30,7 @@ const DEFAULTS: Required<WaterFoamOptions> = {
   dudvUrl: 'https://i.imgur.com/hOIsXiZ.png',
   position: new THREE.Vector3(0,-1.0,0),
   rotationX: -Math.PI*0.5,
-  heightBand: -1.0,
+  heightBand: 0.5,
 };
 
 // ===== Shaders =====
