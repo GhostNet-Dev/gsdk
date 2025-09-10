@@ -13,7 +13,7 @@ export default class WheelLoader {
     this.wrapper.innerHTML = html
     this.applyDynamicStyle("wheelloader", css)
     document.body.appendChild(this.wrapper)
-    this.element =  document.querySelector(".wheelLoader") as HTMLElement
+    this.element = document.querySelector(".wheelLoader") as HTMLElement
     this.progressElement = this.element.querySelector("progress") as HTMLProgressElement;
     this.cogsElement = this.element.querySelector(".cogs") as HTMLElement;
     this.reset();
@@ -34,13 +34,19 @@ export default class WheelLoader {
       document.head.appendChild(link);
     });
   }
-  private load(value: number) {
-      if (this.progressElement) {
-        this.progressElement.value = value;
-      }
-      if (value === 100) {
-        this.close();
-      } 
+  sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+  private async load(value: number) {
+    this.progressElement = this.element.querySelector("progress") as HTMLProgressElement;
+    console.log(value, ": ", this.progressElement)
+    if (this.progressElement) {
+      this.progressElement.value = value;
+      await this.sleep(1)
+    }
+    if (value === 100) {
+      this.close();
+    }
   }
 
   private reset() {

@@ -42,10 +42,12 @@ export class AudioManagerMulti {
     this.attachToCamera(camera)
 
     eventCtrl.RegisterEventListener(EventTypes.PlayBGM, async (id: string, audioPath: SoundType, opts: PlayOpts = {}) => {
+      console.log("play bgm", id, audioPath)
       await this.resumeContext()
       await this.playBgm(id, audioPath, opts);
     })
     eventCtrl.RegisterEventListener(EventTypes.StopBGM, async (id: string, opts: PlayOpts = {}) => {
+      console.log("stop bgm", id)
       await this.resumeContext()
       await this.stopBgm(id, opts)
     })
@@ -119,10 +121,10 @@ export class AudioManagerMulti {
       if (t.gain.gain.value !== volume && (!fadeIn || fadeIn <= 0)) {
         t.gain.gain.value = volume;
       }
-      // 소스가 죽었거나 컨텍스트 바뀌었으면 재연결
-      try { t.src.disconnect(); } catch { }
-      t.src = this.ctx.createMediaElementSource(t.el);
-      t.src.connect(t.gain).connect(this.bgmBus);
+      // // 소스가 죽었거나 컨텍스트 바뀌었으면 재연결
+      // // try { t.src.disconnect(); } catch { }
+      // t.src = this.ctx.createMediaElementSource(t.el);
+      // t.src.connect(t.gain).connect(this.bgmBus);
     }
 
     await this.safePlay(t.el);

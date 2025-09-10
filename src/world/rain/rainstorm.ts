@@ -277,7 +277,7 @@ export class RainStorm implements IWorldMapObject, ILoop {
 
   /* ---------------------------------- Create --------------------------------- */
   public Create(opts: RainStormCreateOptions): this {
-    this.autoStart = opts.autoStart ?? true;
+    this.autoStart = opts.autoStart ?? false;
     if (opts.typeValue) this.Type = opts.typeValue;
     if (opts.config) deepMerge(this.cfg, opts.config);
 
@@ -415,12 +415,12 @@ export class RainStorm implements IWorldMapObject, ILoop {
     }
   }
   StartLoop(): void {
-    this.Show()
     this.eventCtrl.SendEventMessage(EventTypes.PlayBGM, "rainstorm", SoundType.NigitRain, { loop: true })
+    this.Show()
   }
   StopLoop(): void {
-    this.Hide()
     this.eventCtrl.SendEventMessage(EventTypes.StopBGM, "rainstorm", { fade: true })
+    this.Hide()
   }
 
   /* ----------------------- (선택) 외부 틱에서 호출하고 싶다면 ---------------------- */
@@ -429,7 +429,6 @@ export class RainStorm implements IWorldMapObject, ILoop {
   /* --------------------------------- Loop ---------------------------------- */
   private startLoop() {
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
-    this.eventCtrl.SendEventMessage(EventTypes.PlayBGM, "rainstorm", SoundType.NigitRain, { loop: true })
     // const tick = () => {
     //   this._raf = requestAnimationFrame(tick);
     //   const d = Math.min(this.clock.getDelta(), MAX_DELTA_TIME);
@@ -440,7 +439,6 @@ export class RainStorm implements IWorldMapObject, ILoop {
   }
   private stopLoop() { 
     this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
-    this.eventCtrl.SendEventMessage(EventTypes.StopBGM, "rainstorm", { fade: true })
     // if (this._raf) cancelAnimationFrame(this._raf); this._raf = 0; 
   }
 
