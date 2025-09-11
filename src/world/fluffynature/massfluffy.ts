@@ -5,39 +5,34 @@ import { Loader } from "@Glibs/loader/loader";
 import { Char } from "@Glibs/types/assettypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 
+/* -------------------------------------------------------------------------- */
+/* Public Interfaces                            */
+/* -------------------------------------------------------------------------- */
 export type TRS = {
   position: THREE.Vector3 | [number, number, number];
   rotation: THREE.Euler | [number, number, number]; // radians
-  scale: THREE.Vector3 | [number, number, number];
+  scale: number | THREE.Vector3 | [number, number, number];
 };
 export type PatternCount = 2 | 3;
-type Distribution = "uniform";
 
 /* ------------------------------ Config Object ----------------------------- */
 export interface WindyVegetationConfig {
-  // NEW: 바람 효과 활성화 여부
   windEnabled: boolean;
-
-  // Wind & bend
   windDir: THREE.Vector2;
   globalAmp: number;
   bendExp: number;
-  // Patterns (2~3개)
   patternCount: PatternCount;
   patAmp: [number, number, number];
   patFreq: [number, number, number];
   patPhase: [number, number, number];
-  // Per-instance jitter
   jitterAngleDeg: number;
   strengthRange: [number, number];
-  // Material / draw
   roughness: number;
   metalness: number;
   doubleSide: boolean;
   castShadow: boolean;
   receiveShadow: boolean;
   frustumCulled: boolean;
-  // Default blade geometry + vertex colors
   defaultBlade: {
     height: number;
     segY: number;
@@ -48,29 +43,25 @@ export interface WindyVegetationConfig {
     colorTop: THREE.ColorRepresentation;
     tipColor: THREE.ColorRepresentation;
   };
-  // Cluster generation (per input TRS)
   cluster: {
     enabled: boolean;
     countRange: [number, number];
     radius: number;
-    distribution: Distribution;
+    distribution: "uniform";
     posJitterY: [number, number];
     rotJitterYDeg: number;
     scaleJitter: [number, number];
   };
-  // LOD (density reduction) — in-place 방식 (재패킹 없음)
   lod: {
     enabled: boolean;
     near: number;
     far: number;
-    minDensity: number; // 0~1
+    minDensity: number;
   };
-  // Frustum culling (cluster-level), throttled
   culling: {
     enabled: boolean;
     everyNFrames: number;
   };
-  // Distance-based global amp (smoothed)
   ampDistance: {
     enabled: boolean;
     near: number;
@@ -80,9 +71,7 @@ export interface WindyVegetationConfig {
 }
 
 const DEFAULT_CONFIG: WindyVegetationConfig = {
-  // NEW: 기본값으로 바람 효과 활성화
   windEnabled: true,
-  
   windDir: new THREE.Vector2(1, 0),
   globalAmp: 0.2,
   bendExp: 1.5,
@@ -101,7 +90,7 @@ const DEFAULT_CONFIG: WindyVegetationConfig = {
   defaultBlade: {
     height: 1.05,
     segY: 4,
-    bottomWidth: 0.10,
+    bottomWidth: 0.1,
     topWidth: 0.045,
     withTip: true,
     colorBottom: "#6fbf63",
@@ -136,21 +125,20 @@ const DEFAULT_CONFIG: WindyVegetationConfig = {
 };
 
 /* ---------------------------- Helper Structures --------------------------- */
-type ClusterInfo = {
+export type ClusterInfo = {
   center: THREE.Vector3;
-  radius: number; // bounding sphere radius
-  start: number; // first instance index in packed array
-  count: number; // instances in this cluster
+  radius: number;
+  start: number;
+  count: number;
 };
 
 type WindUniforms = {
-  // NEW: 바람 효과 활성화 유니폼 타입
   uWindEnabled: { value: boolean };
   uTime: { value: number };
   uWindDir: { value: THREE.Vector2 };
-  uPatAmp: { value: Float32Array };
-  uPatFreq: { value: Float32Array };
-  uPatPhase: { value: Float32Array };
+  uPatAmp: { value: THREE.Vector3 };
+  uPatFreq: { value: THREE.Vector3 };
+  uPatPhase: { value: THREE.Vector3 };
   uGlobalAmp: { value: number };
   uMaxY: { value: number };
   uBendExp: { value: number };
@@ -169,56 +157,62 @@ type Batch = {
   clusters: ClusterInfo[];
   totalCount: number;
   ampSmooth?: number;
+  keepMask: Uint8Array;
+  modelId?: Char | null;
+  rand?: Float32Array; // 사전 계산된 난수 배열
 };
 
 /* --------------------------------- Class --------------------------------- */
 export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
   public LoopId: number = 0;
   public Type: MapEntryType = MapEntryType.WindyInstancedVegetation;
+
   private cfg: WindyVegetationConfig;
   private time = 0;
   private frame = 0;
   private group: THREE.Group;
   private batches: Batch[] = [];
+  private camera: THREE.Camera;
+
+  // 카메라 게이트를 위한 상태 변수
+  private lastCamPos = new THREE.Vector3();
+  private lastCamQuat = new THREE.Quaternion();
 
   constructor(
     private loader: Loader,
     private scene: THREE.Scene,
     private eventCtrl: IEventController,
-    private camera: THREE.Camera,
+    camera: THREE.Camera,
     config?: Partial<WindyVegetationConfig>
   ) {
     this.cfg = { ...DEFAULT_CONFIG, ...config };
     this.group = new THREE.Group();
     this.group.name = "WindyInstancedVegetation";
     this.scene.add(this.group);
+    this.camera = camera;
   }
 
   /* ------------------------------- Public API ------------------------------ */
   public SetCamera(cam: THREE.Camera) { this.camera = cam; }
 
-  // NEW: 바람 효과를 실시간으로 켜고 끄는 메서드
   public SetWindEnabled(enabled: boolean) {
     this.cfg.windEnabled = enabled;
-    this.batches.forEach(b => {
-        b.parts.forEach(p => {
-            p.uniforms.uWindEnabled.value = enabled;
-        });
-    });
+    this.batches.forEach(b => b.parts.forEach(p => { p.uniforms.uWindEnabled.value = enabled; }));
   }
 
   public SetWind(dirXZ: THREE.Vector2, globalAmp?: number, bendExp?: number) {
     if (dirXZ) {
       const normDir = dirXZ.clone().normalize();
+      this.cfg.windDir.copy(normDir);
       this.batches.forEach(b => b.parts.forEach(p => p.uniforms.uWindDir.value.copy(normDir)));
     }
     if (globalAmp !== undefined) {
-        this.cfg.globalAmp = globalAmp;
-        this.batches.forEach(b => b.parts.forEach(p => p.uniforms.uGlobalAmp.value = globalAmp));
+      this.cfg.globalAmp = globalAmp;
+      this.batches.forEach(b => b.parts.forEach(p => p.uniforms.uGlobalAmp.value = globalAmp));
     }
     if (bendExp !== undefined) {
-        this.cfg.bendExp = bendExp;
-        this.batches.forEach(b => b.parts.forEach(p => p.uniforms.uBendExp.value = bendExp));
+      this.cfg.bendExp = bendExp;
+      this.batches.forEach(b => b.parts.forEach(p => p.uniforms.uBendExp.value = bendExp));
     }
   }
 
@@ -227,15 +221,17 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     patFreq?: [number, number, number],
     patPhase?: [number, number, number]
   ) {
-    this.batches.forEach(b => {
-      b.parts.forEach(p => {
-        if (patAmp) p.uniforms.uPatAmp.value.set(patAmp);
-        if (patFreq) p.uniforms.uPatFreq.value.set(patFreq);
-        if (patPhase) p.uniforms.uPatPhase.value.set(patPhase);
-      });
-    });
+    if (patAmp) this.cfg.patAmp = patAmp;
+    if (patFreq) this.cfg.patFreq = patFreq;
+    if (patPhase) this.cfg.patPhase = patPhase;
+
+    this.batches.forEach(b => b.parts.forEach(p => {
+      if (patAmp) p.uniforms.uPatAmp.value.set(...patAmp);
+      if (patFreq) p.uniforms.uPatFreq.value.set(...patFreq);
+      if (patPhase) p.uniforms.uPatPhase.value.set(...patPhase);
+    }));
   }
-  
+
   async Loader(id: Char): Promise<THREE.Object3D> {
     const asset = this.loader.GetAssets(id);
     return await asset.CloneModel();
@@ -246,57 +242,58 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     id,
     config,
   }: { transforms?: TRS[]; id?: Char, config?: Partial<WindyVegetationConfig> } = {}
-  ): Promise<THREE.Group> { 
+  ): Promise<THREE.Group> {
     this.cfg = { ...DEFAULT_CONFIG, ...config };
+
     const expanded: TRS[] = [];
     const clusters: ClusterInfo[] = [];
     let runningStart = 0;
-    for (const t of transforms) {
-      if (typeof t.scale === 'number') t.scale = [t.scale, t.scale, t.scale];
-      const center = this.v3(t.position, new THREE.Vector3());
-      const yaw = (Array.isArray(t.rotation) ? t.rotation[1] : t.rotation.y) || 0;
-      const cCount = this.randInt(this.cfg.cluster.countRange[0], this.cfg.cluster.countRange[1]);
-      const cStart = runningStart;
-      for (let i = 0; i < cCount; i++) {
-        const r = this.cfg.cluster.radius * Math.sqrt(Math.random());
-        const a = Math.random() * Math.PI * 2;
-        const off = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r);
-        const cosY = Math.cos(yaw), sinY = Math.sin(yaw);
-        const offRot = new THREE.Vector3(
-          off.x * cosY - off.z * sinY,
-          0,
-          off.x * sinY + off.z * cosY
-        );
-        const jy = THREE.MathUtils.lerp(this.cfg.cluster.posJitterY[0], this.cfg.cluster.posJitterY[1], Math.random());
-        const jYaw = THREE.MathUtils.degToRad(this.cfg.cluster.rotJitterYDeg) * (Math.random() * 2 - 1);
-        const rot = Array.isArray(t.rotation)
-          ? [t.rotation[0], t.rotation[1] + jYaw, t.rotation[2]]
-          : [t.rotation.x, t.rotation.y + jYaw, t.rotation.z];
-        const js = THREE.MathUtils.lerp(this.cfg.cluster.scaleJitter[0], this.cfg.cluster.scaleJitter[1], Math.random());
-        const sc = this.v3(t.scale, new THREE.Vector3()).multiplyScalar(js);
-        expanded.push({
-          position: center.clone().add(offRot).add(new THREE.Vector3(0, jy, 0)),
-          rotation: rot as [number, number, number],
-          scale: sc.clone(),
-        });
-      }
-      const cCountFinal = expanded.length - cStart;
-      clusters.push({
-        center: center.clone(),
-        radius: this.cfg.cluster.radius,
-        start: cStart,
-        count: cCountFinal,
-      });
-      runningStart += cCountFinal;
+
+    for (const tRaw of transforms) {
+        const t = { ...tRaw } as TRS;
+        if (typeof t.scale === 'number') t.scale = [t.scale, t.scale, t.scale];
+
+        const center = this.v3(t.position, new THREE.Vector3());
+        const yaw = (Array.isArray(t.rotation) ? t.rotation[1] : t.rotation.y) || 0;
+        const cCount = this.cfg.cluster.enabled
+            ? this.randInt(this.cfg.cluster.countRange[0], this.cfg.cluster.countRange[1])
+            : 1;
+
+        const cStart = runningStart;
+        for (let i = 0; i < cCount; i++) {
+            const r = this.cfg.cluster.radius * Math.sqrt(Math.random());
+            const a = Math.random() * Math.PI * 2;
+            const off = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r);
+            const cosY = Math.cos(yaw), sinY = Math.sin(yaw);
+            const offRot = new THREE.Vector3(off.x * cosY - off.z * sinY, 0, off.x * sinY + off.z * cosY);
+            const jy = THREE.MathUtils.lerp(this.cfg.cluster.posJitterY[0], this.cfg.cluster.posJitterY[1], Math.random());
+            const jYaw = THREE.MathUtils.degToRad(this.cfg.cluster.rotJitterYDeg) * (Math.random() * 2 - 1);
+            const rot = Array.isArray(t.rotation)
+                ? [t.rotation[0], (t.rotation[1] ?? 0) + jYaw, t.rotation[2]]
+                : [t.rotation.x, t.rotation.y + jYaw, t.rotation.z];
+            const js = THREE.MathUtils.lerp(this.cfg.cluster.scaleJitter[0], this.cfg.cluster.scaleJitter[1], Math.random());
+            const sc = this.v3(t.scale, new THREE.Vector3()).multiplyScalar(js);
+            expanded.push({
+                position: center.clone().add(offRot).add(new THREE.Vector3(0, jy, 0)),
+                rotation: rot as [number, number, number],
+                scale: sc.clone(),
+            });
+        }
+        const cCountFinal = expanded.length - cStart;
+        clusters.push({ center: center.clone(), radius: this.cfg.cluster.radius, start: cStart, count: cCountFinal });
+        runningStart += cCountFinal;
     }
+
     const totalCount = expanded.length;
     if (totalCount === 0) return new THREE.Group();
+
     const sourceObject = id ? await this.Loader(id) : this.makeDefaultBladeAsGroup();
     const parts = this._createBatchParts(sourceObject, totalCount);
     if (parts.length === 0) {
       console.warn("WindyInstancedVegetation: No meshes found in the loaded model or default geometry.");
       return new THREE.Group();
     }
+
     const jitter = THREE.MathUtils.degToRad(this.cfg.jitterAngleDeg);
     const [sMin, sMax] = this.cfg.strengthRange;
     const iPattern = new Float32Array(totalCount);
@@ -304,74 +301,110 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     const iStrength = new Float32Array(totalCount);
     const iDir = new Float32Array(totalCount);
     for (let i = 0; i < totalCount; i++) {
-        iPattern[i] = i % this.cfg.patternCount;
-        iPhase[i] = Math.random() * Math.PI * 2;
-        iStrength[i] = THREE.MathUtils.lerp(sMin, sMax, Math.random());
-        iDir[i] = THREE.MathUtils.lerp(-jitter, jitter, Math.random());
+      iPattern[i] = i % this.cfg.patternCount;
+      iPhase[i] = Math.random() * Math.PI * 2;
+      iStrength[i] = THREE.MathUtils.lerp(sMin, sMax, Math.random());
+      iDir[i] = THREE.MathUtils.lerp(-jitter, jitter, Math.random());
     }
     parts.forEach(p => {
-        p.geometry.setAttribute("iPattern", new THREE.InstancedBufferAttribute(iPattern, 1, false));
-        p.geometry.setAttribute("iPhase", new THREE.InstancedBufferAttribute(iPhase, 1, false));
-        p.geometry.setAttribute("iStrength", new THREE.InstancedBufferAttribute(iStrength, 1, false));
-        p.geometry.setAttribute("iDir", new THREE.InstancedBufferAttribute(iDir, 1, false));
+      p.geometry.setAttribute("iPattern", new THREE.InstancedBufferAttribute(iPattern, 1, false));
+      p.geometry.setAttribute("iPhase", new THREE.InstancedBufferAttribute(iPhase, 1, false));
+      p.geometry.setAttribute("iStrength", new THREE.InstancedBufferAttribute(iStrength, 1, false));
+      p.geometry.setAttribute("iDir", new THREE.InstancedBufferAttribute(iDir, 1, false));
     });
+
     const baseMatrices = new Float32Array(totalCount * 16);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3();
+
     const resultGroup = new THREE.Group();
     for (let i = 0; i < totalCount; i++) {
       const t = expanded[i];
       const pos = this.v3(t.position, p);
       const rot = this.euler(t.rotation);
+      if (typeof t.scale === 'number') t.scale = [t.scale, t.scale, t.scale];
       const scl = this.v3(t.scale, s);
       q.setFromEuler(rot);
       m.compose(pos, q, scl);
       m.toArray(baseMatrices, i * 16);
-      
       parts.forEach(part => part.mesh.setMatrixAt(i, m));
     }
+
     parts.forEach(part => {
-      part.mesh.instanceMatrix.needsUpdate = true;
+      part.mesh.frustumCulled = false;
+      part.mesh.castShadow = this.cfg.castShadow;
+      part.mesh.receiveShadow = this.cfg.receiveShadow;
       part.mesh.count = totalCount;
+      part.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       resultGroup.add(part.mesh);
     });
+
     this.group.add(resultGroup);
-    const batch: Batch = { parts, baseMatrices, clusters, totalCount, ampSmooth: undefined };
+    const keepMask = new Uint8Array(totalCount);
+    const batch: Batch = { parts, baseMatrices, clusters, totalCount, keepMask, modelId: id ?? null };
+    
+    this.buildRand(batch); // 해시 사전계산
+    
     this.batches.push(batch);
+
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
+
     return resultGroup;
   }
-  
+
   public async CreateDone() {
+    this.camera.updateMatrixWorld();
+    this.lastCamPos.copy(this.camera.position);
+    this.lastCamQuat.copy(this.camera.quaternion);
+    
     this.batches.forEach(b => this.applyCullLODInPlace(b, true));
   }
-
+  
   public update(delta: number): void {
     this.time += delta;
     this.frame++;
-    const doCull = this.cfg.culling.enabled && (this.frame % Math.max(1, this.cfg.culling.everyNFrames) === 0);
+
+    const isDirty = this.isCameraDirty();
+    const canUpdateLOD = (this.frame % Math.max(1, this.cfg.culling.everyNFrames) === 0);
+
     for (const b of this.batches) {
-      if (this.cfg.windEnabled) {
-          b.parts.forEach(p => p.uniforms.uTime.value = this.time);
-      }
-      if (doCull || this.cfg.lod.enabled) this.applyCullLODInPlace(b, false);
-      if (this.cfg.ampDistance.enabled && this.camera && b.clusters.length) {
-        const center = new THREE.Vector3();
-        for (const c of b.clusters) center.add(c.center);
-        center.multiplyScalar(1 / b.clusters.length);
-        const cam = new THREE.Vector3();
-        this.camera.getWorldPosition(cam);
-        const d = cam.distanceTo(center);
-        const { near, far, minFactor } = this.cfg.ampDistance;
-        let target = this.cfg.globalAmp;
-        if (d >= far) target = this.cfg.globalAmp * minFactor;
-        else if (d > near) {
-          const t = (d - near) / Math.max(1e-6, (far - near));
-          target = this.cfg.globalAmp * THREE.MathUtils.lerp(1.0, minFactor, t);
+        if (this.cfg.windEnabled) {
+            b.parts.forEach(p => p.uniforms.uTime.value = this.time);
         }
-        const tau = 0.15;
-        b.ampSmooth = (b.ampSmooth ?? target) + (target - (b.ampSmooth ?? target)) * (1.0 - Math.exp(-delta / tau));
-        b.parts.forEach(p => p.uniforms.uGlobalAmp.value = b.ampSmooth as number);
-      }
+
+        // 스로틀링 강화: 두 조건을 모두 만족할 때만 실행
+        if (isDirty && canUpdateLOD) {
+            this.applyCullLODInPlace(b, false);
+        }
+
+        // 앰프 스무딩도 카메라가 움직였을 때만 재계산
+        if (isDirty && this.cfg.ampDistance.enabled && this.camera && b.clusters.length) {
+            const center = new THREE.Vector3();
+            for (const c of b.clusters) center.add(c.center);
+            center.multiplyScalar(1 / b.clusters.length);
+
+            const cam = new THREE.Vector3();
+            this.camera.getWorldPosition(cam);
+            const d = cam.distanceTo(center);
+            const { near, far, minFactor } = this.cfg.ampDistance;
+            let target = this.cfg.globalAmp;
+            if (d >= far) {
+                target = this.cfg.globalAmp * minFactor;
+            } else if (d > near) {
+                const t = (d - near) / Math.max(1e-6, (far - near));
+                target = this.cfg.globalAmp * THREE.MathUtils.lerp(1.0, minFactor, t);
+            }
+            
+            // 카메라가 움직였을 때는 목표값으로 즉시 반영하거나, 부드러운 전환을 위해 기존 로직 유지
+            // 여기서는 즉시 반영으로 변경
+            b.ampSmooth = target; 
+            b.parts.forEach(p => p.uniforms.uGlobalAmp.value = b.ampSmooth as number);
+        }
+    }
+
+    // 모든 업데이트가 끝난 후, 현재 카메라 상태를 캐시
+    if (isDirty) {
+        this.lastCamPos.copy(this.camera.position);
+        this.lastCamQuat.copy(this.camera.quaternion);
     }
   }
 
@@ -379,110 +412,151 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     if (target === undefined) {
       for (const b of this.batches) this.disposeBatch(b);
       this.batches = [];
+      this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this);
       return;
     }
     if (typeof target === "number") {
       const b = this.batches[target];
       if (b) { this.disposeBatch(b); this.batches.splice(target, 1); }
+      if (this.batches.length === 0) this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this);
       return;
     }
     const idx = this.batches.findIndex(b => b.parts.some(p => p.mesh === target || p.mesh.parent === target));
     if (idx >= 0) { this.disposeBatch(this.batches[idx]); this.batches.splice(idx, 1); }
+    if (this.batches.length === 0) this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this);
   }
 
   public Show(): void { if (this.group) this.group.visible = true; }
   public Hide(): void { if (this.group) this.group.visible = false; }
 
+  /* ------------------------------ Persistence ------------------------------ */
   public Save() {
     return this.batches.map(b => {
       if (b.parts.length === 0) return null;
       const firstPart = b.parts[0];
       const g = firstPart.geometry;
-      const pick = (name: string) => (g.getAttribute(name) as THREE.InstancedBufferAttribute)?.array ?? null;
+      const pickArr = (name: string) => {
+        const attr = g.getAttribute(name) as THREE.InstancedBufferAttribute | undefined;
+        return attr ? Array.from(attr.array as Float32Array) : null;
+      };
       return {
         count: b.totalCount,
         matrices: Array.from(b.baseMatrices),
         attributes: {
-          iPattern: pick("iPattern") ? Array.from(pick("iPattern") as Float32Array) : null,
-          iPhase: pick("iPhase") ? Array.from(pick("iPhase") as Float32Array) : null,
-          iStrength: pick("iStrength") ? Array.from(pick("iStrength") as Float32Array) : null,
-          iDir: pick("iDir")as Float32Array ? Array.from(pick("iDir") as Float32Array) : null,
+          iPattern: pickArr("iPattern"),
+          iPhase: pickArr("iPhase"),
+          iStrength: pickArr("iStrength"),
+          iDir: pickArr("iDir"),
         },
         cfg: this.cfg,
+        modelId: b.modelId ?? null,
       };
     }).filter(item => item !== null);
   }
 
-  public Load(data: any[], callback?: Function) {
+  public async Load(data: any[], callback?: Function) {
     this.Delete();
     const arr = Array.isArray(data) ? data : [data];
+
     for (const item of arr) {
       if (!item) continue;
       const totalCount = item.count as number;
-      
-      const sourceObject = this.makeDefaultBladeAsGroup();
+
+      if (item.cfg) this.cfg = { ...DEFAULT_CONFIG, ...item.cfg } as WindyVegetationConfig;
+
+      const sourceObject = item.modelId ? await this.Loader(item.modelId as Char) : this.makeDefaultBladeAsGroup();
       const parts = this._createBatchParts(sourceObject, totalCount);
       if (parts.length === 0) continue;
-      
+
       const baseMatrices = new Float32Array(item.matrices);
       const m = new THREE.Matrix4();
-      
       for (let i = 0; i < totalCount; i++) {
-          m.fromArray(baseMatrices, i * 16);
-          parts.forEach(p => p.mesh.setMatrixAt(i, m));
+        m.fromArray(baseMatrices, i * 16);
+        parts.forEach(p => p.mesh.setMatrixAt(i, m));
       }
-      const apply = (name: string, a: Float32Array | number[] | null, itemSize = 1) => {
+      const applyAttr = (name: string, a: Float32Array | number[] | null, itemSize = 1) => {
         if (!a) return;
         const f = Array.isArray(a) ? new Float32Array(a) : a;
         parts.forEach(p => p.geometry.setAttribute(name, new THREE.InstancedBufferAttribute(f, itemSize, false)));
       };
       if (item.attributes) {
-        apply("iPattern", item.attributes.iPattern);
-        apply("iPhase", item.attributes.iPhase);
-        apply("iStrength", item.attributes.iStrength);
-        apply("iDir", item.attributes.iDir);
+        applyAttr("iPattern", item.attributes.iPattern);
+        applyAttr("iPhase", item.attributes.iPhase);
+        applyAttr("iStrength", item.attributes.iStrength);
+        applyAttr("iDir", item.attributes.iDir);
       }
-      
+
       const resultGroup = new THREE.Group();
       parts.forEach(p => {
-          p.mesh.instanceMatrix.needsUpdate = true;
-          p.mesh.count = totalCount;
-          resultGroup.add(p.mesh);
+        p.mesh.instanceMatrix.needsUpdate = true;
+        p.mesh.count = totalCount;
+        p.mesh.frustumCulled = false;
+        resultGroup.add(p.mesh);
       });
+
       const clusters = this.estimateClustersFromMatrices(baseMatrices);
-      
+      const keepMask = new Uint8Array(totalCount);
       this.group.add(resultGroup);
-      this.batches.push({ parts, baseMatrices, clusters, totalCount, ampSmooth: undefined });
+      
+      const batch: Batch = { parts, baseMatrices, clusters, totalCount, keepMask, modelId: item.modelId ?? null };
+      this.buildRand(batch); // 로드 후 해시 사전계산
+      this.batches.push(batch);
     }
     callback?.();
   }
 
   /* ------------------------------ Internals ------------------------------ */
-  private applyCullLODInPlace(b: Batch, _initial: boolean) {
+  private isCameraDirty(): boolean {
+    const POS_THRESHOLD_SQ = 0.2 * 0.2;       // 20cm^2
+    const ROT_THRESHOLD = 0.99999;          // ~0.25° (cos(angle/2))
+
+    const distSq = this.camera.position.distanceToSquared(this.lastCamPos);
+    const dot = this.camera.quaternion.dot(this.lastCamQuat);
+
+    return distSq > POS_THRESHOLD_SQ || Math.abs(dot) < ROT_THRESHOLD;
+  }
+  
+  private buildRand(b: Batch): void {
+      if (b.rand) return;
+      const rand = new Float32Array(b.totalCount);
+      for (let i = 0; i < b.totalCount; i++) {
+          const s = Math.sin(i * 12.9898) * 43758.5453;
+          rand[i] = s - Math.floor(s);
+      }
+      b.rand = rand;
+  }
+
+  private applyCullLODInPlace(b: Batch, initial: boolean) {
     if (!b || !b.baseMatrices || b.parts.length === 0) return;
+    
+    if (!b.rand) this.buildRand(b);
+    const rand = b.rand!;
+
     let frustum: THREE.Frustum | null = null;
     const camPos = new THREE.Vector3();
     if (this.camera) {
       this.camera.updateMatrixWorld();
-      const vp = new THREE.Matrix4().multiplyMatrices(
-        this.camera.projectionMatrix,
-        this.camera.matrixWorldInverse
-      );
+      const vp = new THREE.Matrix4().multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
       frustum = new THREE.Frustum().setFromProjectionMatrix(vp);
       this.camera.getWorldPosition(camPos);
     }
-    const hash01 = (i: number) => {
-      const s = Math.sin(i * 12.9898) * 43758.5453;
-      return s - Math.floor(s);
-    };
+
     const kill = new THREE.Matrix4().makeScale(0, 0, 0);
     const m = new THREE.Matrix4();
+    let minTouched = Number.POSITIVE_INFINITY;
+    let maxTouched = -1;
+    const markTouched = (idx: number) => {
+      if (idx < minTouched) minTouched = idx;
+      if (idx > maxTouched) maxTouched = idx;
+    };
+
     for (const c of b.clusters) {
       let culled = false;
       if (this.cfg.culling.enabled && frustum) {
         const sphere = new THREE.Sphere(c.center, c.radius);
         culled = !frustum.intersectsSphere(sphere);
       }
+
       let density = 1.0;
       if (this.cfg.lod.enabled && this.camera) {
         const d = camPos.distanceTo(c.center);
@@ -494,86 +568,107 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
           density = THREE.MathUtils.lerp(1.0, minDensity, t);
         }
       }
+
       for (let j = 0; j < c.count; j++) {
         const idx = c.start + j;
-        const keep = !culled && (hash01(idx) <= density);
-        if (keep) {
-          m.fromArray(b.baseMatrices, idx * 16);
-        } else {
-          m.copy(kill);
+        const keep = (!culled) && (rand[idx] <= density); // sin() 대신 배열 조회
+        const prev = b.keepMask[idx];
+        const next = keep ? 1 : 0;
+        if (initial || prev !== next) {
+          if (keep) m.fromArray(b.baseMatrices, idx * 16);
+          else m.copy(kill);
+          b.parts.forEach(p => p.mesh.setMatrixAt(idx, m));
+          b.keepMask[idx] = next;
+          markTouched(idx);
         }
-        b.parts.forEach(p => p.mesh.setMatrixAt(idx, m));
       }
     }
-    
-    b.parts.forEach(p => {
+
+    if (minTouched !== Number.POSITIVE_INFINITY) {
+      const offset = minTouched * 16;
+      const count = (maxTouched - minTouched + 1) * 16;
+      for (const p of b.parts) {
         p.mesh.count = b.totalCount;
+        p.mesh.instanceMatrix.updateRange.offset = offset;
+        p.mesh.instanceMatrix.updateRange.count = count;
         p.mesh.instanceMatrix.needsUpdate = true;
-    });
+      }
+    }
   }
 
   private _createBatchParts(source: THREE.Object3D, totalCount: number): BatchPart[] {
     const parts: BatchPart[] = [];
-    
     source.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-            const geometry = child.geometry.clone();
-            const material = child.material instanceof THREE.Material 
-                ? child.material.clone() as THREE.MeshStandardMaterial 
-                : new THREE.MeshStandardMaterial();
-            if (!('vertexColors' in material)) {
-                (material as any).vertexColors = true;
-            } else {
-                 material.vertexColors = true;
-            }
-            const maxY = this.getGeometryHeightY(geometry) || this.cfg.defaultBlade.height;
-            
-            // CHANGED: 유니폼 객체에 uWindEnabled 추가
-            const uniforms: WindUniforms = {
-                uWindEnabled: { value: this.cfg.windEnabled },
-                uTime: { value: 0 },
-                uWindDir: { value: this.cfg.windDir.clone().normalize() },
-                uPatAmp: { value: new Float32Array(this.cfg.patAmp) },
-                uPatFreq: { value: new Float32Array(this.cfg.patFreq) },
-                uPatPhase: { value: new Float32Array(this.cfg.patPhase) },
-                uGlobalAmp: { value: this.cfg.globalAmp },
-                uMaxY: { value: maxY },
-                uBendExp: { value: this.cfg.bendExp },
-            };
-            this.installWindOnBeforeCompile(material, uniforms);
-            const inst = new THREE.InstancedMesh(geometry, material, totalCount);
-            inst.frustumCulled = this.cfg.frustumCulled;
-            inst.castShadow = this.cfg.castShadow;
-            inst.receiveShadow = this.cfg.receiveShadow;
-            inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-            
-            parts.push({ mesh: inst, geometry, material, uniforms });
-        }
+      if (child instanceof THREE.Mesh) {
+        const geometry = child.geometry.clone();
+        const material = child.material instanceof THREE.Material
+          ? (child.material.clone() as THREE.MeshStandardMaterial)
+          : new THREE.MeshStandardMaterial();
+
+        material.vertexColors = true;
+        material.roughness = this.cfg.roughness;
+        material.metalness = this.cfg.metalness;
+        material.side = this.cfg.doubleSide ? THREE.DoubleSide : THREE.FrontSide;
+
+        const maxY = this.getGeometryHeightY(geometry) || this.cfg.defaultBlade.height;
+        const uniforms: WindUniforms = {
+          uWindEnabled: { value: this.cfg.windEnabled },
+          uTime: { value: 0 },
+          uWindDir: { value: this.cfg.windDir.clone().normalize() },
+          uPatAmp: { value: new THREE.Vector3(...this.cfg.patAmp) },
+          uPatFreq: { value: new THREE.Vector3(...this.cfg.patFreq) },
+          uPatPhase: { value: new THREE.Vector3(...this.cfg.patPhase) },
+          uGlobalAmp: { value: this.cfg.globalAmp },
+          uMaxY: { value: maxY },
+          uBendExp: { value: this.cfg.bendExp },
+        };
+        this.installWindOnBeforeCompile(material, uniforms);
+
+        const inst = new THREE.InstancedMesh(geometry, material, totalCount);
+        inst.frustumCulled = false;
+        inst.castShadow = this.cfg.castShadow;
+        inst.receiveShadow = this.cfg.receiveShadow;
+        inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        parts.push({ mesh: inst, geometry, material, uniforms });
+      }
     });
+
+    if (parts.length === 0) {
+      const { geometry, material } = this.makeDefaultBladeGeometryAndMaterial();
+      const maxY = this.getGeometryHeightY(geometry) || this.cfg.defaultBlade.height;
+      const uniforms: WindUniforms = {
+        uWindEnabled: { value: this.cfg.windEnabled },
+        uTime: { value: 0 },
+        uWindDir: { value: this.cfg.windDir.clone().normalize() },
+        uPatAmp: { value: new THREE.Vector3(...this.cfg.patAmp) },
+        uPatFreq: { value: new THREE.Vector3(...this.cfg.patFreq) },
+        uPatPhase: { value: new THREE.Vector3(...this.cfg.patPhase) },
+        uGlobalAmp: { value: this.cfg.globalAmp },
+        uMaxY: { value: maxY },
+        uBendExp: { value: this.cfg.bendExp },
+      };
+      this.installWindOnBeforeCompile(material, uniforms);
+      const inst = new THREE.InstancedMesh(geometry, material, totalCount);
+      inst.frustumCulled = false;
+      inst.castShadow = this.cfg.castShadow;
+      inst.receiveShadow = this.cfg.receiveShadow;
+      inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      parts.push({ mesh: inst, geometry, material, uniforms });
+    }
     return parts;
   }
-  
+
   private makeDefaultBladeAsGroup(): THREE.Group {
-      const { geometry, material } = this.makeDefaultBladeGeometryAndMaterial();
-      const mesh = new THREE.Mesh(geometry, material);
-      const group = new THREE.Group();
-      group.add(mesh);
-      return group;
+    const { geometry, material } = this.makeDefaultBladeGeometryAndMaterial();
+    const mesh = new THREE.Mesh(geometry, material);
+    const group = new THREE.Group();
+    group.add(mesh);
+    return group;
   }
 
   private makeDefaultBladeGeometryAndMaterial() {
-    const g = this.makeTaperedBladeGeometry(
-      this.cfg.defaultBlade.bottomWidth,
-      this.cfg.defaultBlade.topWidth,
-      this.cfg.defaultBlade.height,
-      this.cfg.defaultBlade.segY
-    );
-    this.applyVerticalVertexColors(
-      g,
-      new THREE.Color(this.cfg.defaultBlade.colorBottom),
-      new THREE.Color(this.cfg.defaultBlade.colorTop),
-      this.cfg.defaultBlade.withTip ? new THREE.Color(this.cfg.defaultBlade.tipColor) : undefined
-    );
+    const g = this.makeTaperedBladeGeometry(this.cfg.defaultBlade.bottomWidth, this.cfg.defaultBlade.topWidth, this.cfg.defaultBlade.height, this.cfg.defaultBlade.segY);
+    this.applyVerticalVertexColors(g, new THREE.Color(this.cfg.defaultBlade.colorBottom), new THREE.Color(this.cfg.defaultBlade.colorTop), this.cfg.defaultBlade.withTip ? new THREE.Color(this.cfg.defaultBlade.tipColor) : undefined);
     const mtl = new THREE.MeshStandardMaterial({
       roughness: this.cfg.roughness,
       metalness: this.cfg.metalness,
@@ -583,22 +678,19 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     return { geometry: g, material: mtl };
   }
 
-  // CHANGED: 셰이더 코드 수정
   private installWindOnBeforeCompile(material: THREE.MeshStandardMaterial, uniforms: WindUniforms) {
     material.onBeforeCompile = (shader) => {
       shader.vertexShader = shader.vertexShader
         .replace(
           "#include <common>",
-          `
+          /* glsl */`
           #include <common>
-          // NEW: 유니폼 선언 추가
-          uniform bool uWindEnabled; 
-
+          uniform bool uWindEnabled;
           uniform float uTime;
           uniform vec2  uWindDir;
-          uniform float uPatAmp[3];
-          uniform float uPatFreq[3];
-          uniform float uPatPhase[3];
+          uniform vec3  uPatAmp;
+          uniform vec3  uPatFreq;
+          uniform vec3  uPatPhase;
           uniform float uGlobalAmp;
           uniform float uMaxY;
           uniform float uBendExp;
@@ -616,50 +708,45 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
         )
         .replace(
           "#include <begin_vertex>",
-          `
+          /* glsl */`
           #include <begin_vertex>
-          
-          // NEW: uWindEnabled가 true일 때만 바람 계산을 수행
           if (uWindEnabled) {
             float h = max(uMaxY, 1e-4);
             float k = clamp(position.y / h, 0.0, 1.0);
             k = pow(k, uBendExp);
-            
+
             vec2 dir = normalize(uWindDir);
             float ca = cos(iDir), sa = sin(iDir);
             mat2 rot = mat2(ca, -sa, sa, ca);
             dir = rot * dir;
-            
+
             int patternIdx = int(iPattern);
-            float amp, freq, phs;
-            if (patternIdx == 0) { amp = uPatAmp[0]; freq = uPatFreq[0]; phs = uPatPhase[0]; }
-            else if (patternIdx == 1) { amp = uPatAmp[1]; freq = uPatFreq[1]; phs = uPatPhase[1]; }
-            else { amp = uPatAmp[2]; freq = uPatFreq[2]; phs = uPatPhase[2]; }
-            
+            float amp  = (patternIdx == 0) ? uPatAmp.x  : ((patternIdx == 1) ? uPatAmp.y  : uPatAmp.z);
+            float freq = (patternIdx == 0) ? uPatFreq.x : ((patternIdx == 1) ? uPatFreq.y : uPatFreq.z);
+            float phs  = (patternIdx == 0) ? uPatPhase.x: ((patternIdx == 1) ? uPatPhase.y: uPatPhase.z);
+
             #ifdef USE_INSTANCING
               vec3 iPos = (instanceMatrix * vec4(0.0,0.0,0.0,1.0)).xyz;
             #else
               vec3 iPos = vec3(0.0);
             #endif
-            
+
             vec3 wPos = (modelMatrix * vec4(iPos,1.0)).xyz;
             float phaseSeed = hash12(wPos.xz) * 6.2831853;
             float main = sin(uTime*freq + phs + iPhase + phaseSeed);
             float sway = amp * iStrength * uGlobalAmp * main;
             vec2 orth = vec2(-dir.y, dir.x);
             float jiggle = sin(uTime*(freq*1.7) + phs*1.3 + iPhase*2.1 + phaseSeed*1.7) * 0.35;
-            
             transformed.xz += (dir * sway + orth * sway * jiggle) * k;
           }
           `
         );
-      // CHANGED: 새 유니폼 바인딩
       shader.uniforms.uWindEnabled = uniforms.uWindEnabled;
       shader.uniforms.uTime = uniforms.uTime;
       shader.uniforms.uWindDir = uniforms.uWindDir;
-      shader.uniforms.uPatAmp = uniforms.uPatAmp;
-      shader.uniforms.uPatFreq = uniforms.uPatFreq;
-      shader.uniforms.uPatPhase = uniforms.uPatPhase;
+      shader.uniforms.uPatAmp = { value: new THREE.Vector3().copy(uniforms.uPatAmp.value) };
+      shader.uniforms.uPatFreq = { value: new THREE.Vector3().copy(uniforms.uPatFreq.value) };
+      shader.uniforms.uPatPhase = { value: new THREE.Vector3().copy(uniforms.uPatPhase.value) };
       shader.uniforms.uGlobalAmp = uniforms.uGlobalAmp;
       shader.uniforms.uMaxY = uniforms.uMaxY;
       shader.uniforms.uBendExp = uniforms.uBendExp;
@@ -667,7 +754,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     };
     material.needsUpdate = true;
   }
-  
+
   private makeTaperedBladeGeometry(bottomW: number, topW: number, height: number, segY: number): THREE.BufferGeometry {
     const geo = new THREE.PlaneGeometry(bottomW, height, 1, segY);
     geo.translate(0, height / 2, 0);
@@ -686,12 +773,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     return geo;
   }
 
-  private applyVerticalVertexColors(
-    g: THREE.BufferGeometry,
-    colBottom: THREE.Color,
-    colTop: THREE.Color,
-    tipColor?: THREE.Color
-  ) {
+  private applyVerticalVertexColors(g: THREE.BufferGeometry, colBottom: THREE.Color, colTop: THREE.Color, tipColor?: THREE.Color) {
     g.computeBoundingBox();
     const bb = g.boundingBox!;
     const minY = bb.min.y, maxY = bb.max.y;
@@ -734,7 +816,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     const clusters: ClusterInfo[] = [];
     const m = new THREE.Matrix4(), p = new THREE.Vector3();
     const total = arr.length / 16;
-    const GROUP = 12; 
+    const GROUP = 12;
     for (let start = 0; start < total; start += GROUP) {
       const end = Math.min(total, start + GROUP);
       const center = new THREE.Vector3();
@@ -748,9 +830,8 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
 
   private disposeBatch(b: Batch) {
     b.parts.forEach(p => {
-        p.mesh.parent?.remove(p.mesh);
-        p.geometry.dispose();
-        p.material.dispose();
+      p.mesh.parent?.remove(p.mesh);
+      p.mesh.dispose();
     });
   }
 

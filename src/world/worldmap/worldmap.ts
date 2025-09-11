@@ -24,6 +24,7 @@ import { RainStorm } from '../rain/rainstorm';
 import { WaterFoamRipples } from '../ocean/wavefoam';
 import { WindyInstancedVegetation } from '../fluffynature/massfluffy';
 import { InstancedVegetation } from '../fluffynature/massstatic';
+import { Beach } from '../ocean/beach';
 
 
 export default class WorldMap {
@@ -55,6 +56,7 @@ export default class WorldMap {
         WaterFoamRipples: WaterFoamRipples,
         InstancedVegetation: InstancedVegetation,
         WindyInstancedVegetation: WindyInstancedVegetation,
+        Beach: Beach,
     };
     private worldMapTypes: Record<string, any> = {
         CustomGround: { scene: this.scene, eventCtrl: this.eventCtrl },
@@ -74,6 +76,7 @@ export default class WorldMap {
         WaterFoamRipples: { scene: this.scene, camera: this.camera, renderer: this.renderer },
         InstancedVegetation: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl, camera: this.camera },
         WindyInstancedVegetation: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl, camera: this.camera },
+        Beach: { scene: this.scene, eventCtrl: this.eventCtrl },
     }
 
     constructor(

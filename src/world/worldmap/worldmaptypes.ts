@@ -15,7 +15,7 @@ export type MapEntry = {
 }
 
 export enum MapEntryType {
-    Nature = "nature",
+    Nature = "Nature",
     Grass = "GrassMaker",
     Tree = "TreeMaker",
     Ocean = "Ocean",
@@ -33,6 +33,7 @@ export enum MapEntryType {
     WaterFoamRipples = "WaterFoamRipples",
     InstancedVegetation = "InstancedVegetation",
     WindyInstancedVegetation = "WindyInstancedVegetation",
+    Beach = "Beach",
 }
 
 export enum MapType {
