@@ -9,13 +9,14 @@ import { KeyType } from '@Glibs/types/eventtypes';
 
 export class Campfire extends InteractableObject implements ILoop {
     LoopId: number = 0
-  constructor(
+    campfire?: ToonCampfire
+    constructor(
         uniqId: string,
         protected def: InteractableProperty,
         protected eventCtrl: IEventController
-  ) {
-    super(uniqId, def, eventCtrl)
-  }
+    ) {
+        super(uniqId, def, eventCtrl)
+    }
     async Loader(position: THREE.Vector3, rotation: THREE.Euler, scale: number, name: string) {
         const campfire = new ToonCampfire({ position, scale })
         this.position.copy(position);
@@ -27,83 +28,85 @@ export class Campfire extends InteractableObject implements ILoop {
         this.meshs = campfire.group
         this.actions.forEach(a => this.applyAction(a))
         this.add(this.meshs)
+        this.campfire = campfire
         this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
     }
-  afterLoad(): void {
-    this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, this, true)
-  }
+    afterLoad(): void {
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, this, true)
+    }
 
-  tryInteract(actor: IPhysicsObject): void {
-    // EventBus.emit("gatherWood", { actor, tree: this });
-    if (actor.Pos.distanceTo(this.position) < 5 && !this.isActive) {
-      this.eventCtrl.SendEventMessage(EventTypes.AlarmInteractiveOn, {
-        [KeyType.Action1]: "나무 보충하기"
-      })
-      this.eventCtrl.SendEventMessage(EventTypes.ChangePlayerMode, 
-        this.def.type, this.interactId, "onHit")
-      // this.trigger("onHit")
-      this.isActive = true
-    } 
-  }
-  update(delta: number): void {
-      
-  }
+    tryInteract(actor: IPhysicsObject): void {
+        // EventBus.emit("gatherWood", { actor, tree: this });
+        if (actor.Pos.distanceTo(this.position) < 5 && !this.isActive) {
+            this.eventCtrl.SendEventMessage(EventTypes.AlarmInteractiveOn, {
+                [KeyType.Action1]: "나무 보충하기"
+            })
+            this.eventCtrl.SendEventMessage(EventTypes.ChangePlayerMode,
+                this.def.type, this.interactId, "onHit")
+            // this.trigger("onHit")
+            this.isActive = true
+        }
+    }
+    update(delta: number): void {
+        this.campfire!.update(delta)
+
+    }
 }
 
 export type CampfirePalette = {
-  coreBlue?: THREE.ColorRepresentation;   // 코어(푸른 기)
-  midYellow?: THREE.ColorRepresentation;  // 중간(노랑)
-  outerOrange?: THREE.ColorRepresentation;// 외곽(주황)
-  deepMaroon?: THREE.ColorRepresentation; // 가장 바깥(짙은 적갈)
+    coreBlue?: THREE.ColorRepresentation;   // 코어(푸른 기)
+    midYellow?: THREE.ColorRepresentation;  // 중간(노랑)
+    outerOrange?: THREE.ColorRepresentation;// 외곽(주황)
+    deepMaroon?: THREE.ColorRepresentation; // 가장 바깥(짙은 적갈)
 };
 
 export interface CampfireOptions {
-  position?: THREE.Vector3 | {x:number;y:number;z:number} | [number,number,number];
-  scale?: number;
+    position?: THREE.Vector3 | { x: number; y: number; z: number } | [number, number, number];
+    scale?: number;
 
-  // Flame shape (외곽 레이어 기준). 내부 레이어는 비율로 자동 보정됩니다.
-  flameShape?: {
-    width?: number;     // 0.3 ~ 0.7
-    tip?: number;       // 1.0 ~ 2.6
-    flow?: number;      // 0.4 ~ 1.2
-    wobble?: number;    // 0.0 ~ 0.5
-    noiseAmp?: number;  // 0.0 ~ 0.6
-    noiseFreq?: number; // 0.8 ~ 4.2
-    alpha?: number;     // 0.4 ~ 1.0
-  };
+    // Flame shape (외곽 레이어 기준). 내부 레이어는 비율로 자동 보정됩니다.
+    flameShape?: {
+        width?: number;     // 0.3 ~ 0.7
+        tip?: number;       // 1.0 ~ 2.6
+        flow?: number;      // 0.4 ~ 1.2
+        wobble?: number;    // 0.0 ~ 0.5
+        noiseAmp?: number;  // 0.0 ~ 0.6
+        noiseFreq?: number; // 0.8 ~ 4.2
+        alpha?: number;     // 0.4 ~ 1.0
+    };
 
-  wind?: { x?: number; z?: number }; // 바람 (연기·스파크·불꽃에 반영)
+    wind?: { x?: number; z?: number }; // 바람 (연기·스파크·불꽃에 반영)
 
-  palette?: CampfirePalette; // 불꽃 팔레트
-  glowAlpha?: number;        // 지면 잔광 강도(0~1)
+    palette?: CampfirePalette; // 불꽃 팔레트
+    glowAlpha?: number;        // 지면 잔광 강도(0~1)
 
-  // 삼각 스파크 옵션
-  triangles?: {
-    max?: number;   // 내부 버퍼 최대치(생성 시 고정). 기본 160
-    count?: number; // 실시간 드로우 개수(<= max)
-    rise?: number;  // 상승 속도 계수
-    curl?: number;  // 회오리감(곡률)
-    alpha?: number; // 투명도
-  };
+    // 삼각 스파크 옵션
+    triangles?: {
+        max?: number;   // 내부 버퍼 최대치(생성 시 고정). 기본 160
+        count?: number; // 실시간 드로우 개수(<= max)
+        rise?: number;  // 상승 속도 계수
+        curl?: number;  // 회오리감(곡률)
+        alpha?: number; // 투명도
+    };
 
-  // 연기
-  smoke?: {
-    enabled?: boolean;
-    alpha?: number; // 0~0.8
-  };
+    // 연기
+    smoke?: {
+        enabled?: boolean;
+        alpha?: number; // 0~0.8
+    };
 
-  // 포인트 라이트
-  light?: {
-    enabled?: boolean;
-    color?: THREE.ColorRepresentation;
-    intensity?: number;
-    distance?: number;
-    decay?: number;
-    flicker?: boolean; // update() 때 은은한 깜빡임
-  };
+    // 포인트 라이트
+    light?: {
+        enabled?: boolean;
+        color?: THREE.ColorRepresentation;
+        intensity?: number;
+        distance?: number;
+        decay?: number;
+        flicker?: boolean; // update() 때 은은한 깜빡임
+    };
 
-  // 빌보드(카메라를 향하게) 사용 여부
-  billboard?: boolean;
+    // 빌보드(카메라를 향하게) 사용 여부
+    billboard?: boolean;
 }
 
 /* ------------------------------ Shaders ------------------------------ */
@@ -254,430 +257,430 @@ const SMOKE_FRAG = /* glsl */`
 `;
 
 /* ------------------------------ Utility ------------------------------ */
-function colorArr(c: THREE.ColorRepresentation): [number,number,number] {
-  const col = new THREE.Color(c);
-  return [col.r, col.g, col.b];
+function colorArr(c: THREE.ColorRepresentation): [number, number, number] {
+    const col = new THREE.Color(c);
+    return [col.r, col.g, col.b];
 }
-function setVec3Like(target: THREE.Object3D, v?: THREE.Vector3 | {x:number;y:number;z:number} | [number,number,number]) {
-  if(!v) return;
-  if(Array.isArray(v)) target.position.set(v[0],v[1],v[2]);
-  else if('x' in v)     target.position.set(v.x, v.y, v.z);
-  else                  target.position.copy(v as THREE.Vector3);
+function setVec3Like(target: THREE.Object3D, v?: THREE.Vector3 | { x: number; y: number; z: number } | [number, number, number]) {
+    if (!v) return;
+    if (Array.isArray(v)) target.position.set(v[0], v[1], v[2]);
+    else if ('x' in v) target.position.set(v.x, v.y, v.z);
+    else target.position.copy(v as THREE.Vector3);
 }
 
 /* ------------------------------ Class ------------------------------ */
 export class ToonCampfire {
-  public readonly group = new THREE.Group();
+    public readonly group = new THREE.Group();
 
-  // parts
-  private glow?: THREE.Mesh;
-  private outer?: { mesh: THREE.Mesh; uniforms: any };
-  private mid?:   { mesh: THREE.Mesh; uniforms: any };
-  private core?:  { mesh: THREE.Mesh; uniforms: any };
-  private triMesh?: THREE.Mesh;
-  private triGeom?: THREE.InstancedBufferGeometry;
-  private triMat?: THREE.ShaderMaterial;
-  private smoke?: THREE.Mesh;
-  private smokeMat?: THREE.ShaderMaterial;
-  private light?: THREE.PointLight;
+    // parts
+    private glow?: THREE.Mesh;
+    private outer?: { mesh: THREE.Mesh; uniforms: any };
+    private mid?: { mesh: THREE.Mesh; uniforms: any };
+    private core?: { mesh: THREE.Mesh; uniforms: any };
+    private triMesh?: THREE.Mesh;
+    private triGeom?: THREE.InstancedBufferGeometry;
+    private triMat?: THREE.ShaderMaterial;
+    private smoke?: THREE.Mesh;
+    private smokeMat?: THREE.ShaderMaterial;
+    private light?: THREE.PointLight;
 
-  // state
-  private startTime = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
-  private baseIndexCount = 0;
+    // state
+    private startTime = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+    private baseIndexCount = 0;
 
-  // config
-  private cfg: Required<CampfireOptions>;
+    // config
+    private cfg: Required<CampfireOptions>;
 
-  constructor(options: CampfireOptions = {}) {
-    // defaults
-    const cfg: Required<CampfireOptions> = {
-      position: new THREE.Vector3(0,0,0),
-      scale: 1,
-      billboard: true,
-      flameShape: {
-        width: 0.5, tip: 1.85, flow: 0.8, wobble: 0.16, noiseAmp: 0.26, noiseFreq: 2.4, alpha: 0.95
-      },
-      wind: { x: 0.12, z: 0.0 },
-      palette: {
-        coreBlue: '#8ad9ff',
-        midYellow: '#ffd05a',
-        outerOrange: '#ff7b2f',
-        deepMaroon: '#4a1b0f'
-      },
-      glowAlpha: 0.46,
-      triangles: { max: 160, count: 150, rise: 1.8, curl: 0.22, alpha: 0.78 },
-      smoke: { enabled: true, alpha: 0.34 },
-      light: { enabled: true, color: 0xffb15a, intensity: 1.5, distance: 10, decay: 2.0, flicker: true }
-    };
-    // merge
-    this.cfg = {
-      ...cfg,
-      ...options,
-      flameShape: { ...cfg.flameShape, ...(options.flameShape ?? {}) },
-      wind: { ...cfg.wind, ...(options.wind ?? {}) },
-      palette: { ...cfg.palette, ...(options.palette ?? {}) },
-      triangles: { ...cfg.triangles, ...(options.triangles ?? {}) },
-      smoke: { ...cfg.smoke, ...(options.smoke ?? {}) },
-      light: { ...cfg.light, ...(options.light ?? {}) },
-    };
+    constructor(options: CampfireOptions = {}) {
+        // defaults
+        const cfg: Required<CampfireOptions> = {
+            position: new THREE.Vector3(0, 0, 0),
+            scale: 1,
+            billboard: true,
+            flameShape: {
+                width: 0.5, tip: 1.85, flow: 0.8, wobble: 0.16, noiseAmp: 0.26, noiseFreq: 2.4, alpha: 0.95
+            },
+            wind: { x: 0.12, z: 0.0 },
+            palette: {
+                coreBlue: '#8ad9ff',
+                midYellow: '#ffd05a',
+                outerOrange: '#ff7b2f',
+                deepMaroon: '#4a1b0f'
+            },
+            glowAlpha: 0.46,
+            triangles: { max: 160, count: 150, rise: 1.8, curl: 0.22, alpha: 0.78 },
+            smoke: { enabled: true, alpha: 0.34 },
+            light: { enabled: true, color: 0xffb15a, intensity: 1.5, distance: 10, decay: 2.0, flicker: true }
+        };
+        // merge
+        this.cfg = {
+            ...cfg,
+            ...options,
+            flameShape: { ...cfg.flameShape, ...(options.flameShape ?? {}) },
+            wind: { ...cfg.wind, ...(options.wind ?? {}) },
+            palette: { ...cfg.palette, ...(options.palette ?? {}) },
+            triangles: { ...cfg.triangles, ...(options.triangles ?? {}) },
+            smoke: { ...cfg.smoke, ...(options.smoke ?? {}) },
+            light: { ...cfg.light, ...(options.light ?? {}) },
+        };
 
-    // build
-    this.buildGlow();
-    this.buildFlames();
-    this.buildTriangles();
-    this.buildSmoke();
-    this.buildLight();
+        // build
+        this.buildGlow();
+        this.buildFlames();
+        this.buildTriangles();
+        this.buildSmoke();
+        this.buildLight();
 
-    // transform
-    setVec3Like(this.group, this.cfg.position);
-    if (this.cfg.scale !== 1) this.group.scale.setScalar(this.cfg.scale);
+        // transform
+        setVec3Like(this.group, this.cfg.position);
+        if (this.cfg.scale !== 1) this.group.scale.setScalar(this.cfg.scale);
 
-    // initial sync
-    this.syncAll();
-  }
-
-  /* --------------------------- Build Parts --------------------------- */
-  private buildGlow() {
-    const geo = new THREE.CircleGeometry(0.9, 48);
-    const mat = new THREE.ShaderMaterial({
-      vertexShader: GLOW_VERT,
-      fragmentShader: GLOW_FRAG,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      uniforms: {
-        uC: { value: new THREE.Color(0xffa63a) },
-        uA: { value: this.cfg.glowAlpha }
-      }
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.position.y = 0.001;
-    this.group.add(mesh);
-    this.glow = mesh;
-  }
-
-  private makeFlameLayer(opts: { width:number; tip:number; amp:number; freq:number; flow:number; wobble:number; alpha:number }) {
-    const uniforms = {
-      uTime:      { value: 0 },
-      uBillboard: { value: this.cfg.billboard ? 1.0 : 0.0 },
-      uWidth:     { value: opts.width },
-      uTipSharp:  { value: opts.tip },
-      uNoiseAmp:  { value: opts.amp },
-      uNoiseFreq: { value: opts.freq },
-      uFlow:      { value: opts.flow },
-      uWobble:    { value: opts.wobble },
-      uAlpha:     { value: opts.alpha },
-      uWind:      { value: new THREE.Vector2(this.cfg.wind.x!, this.cfg.wind.z!) },
-      uC0:        { value: colorArr(this.cfg.palette.coreBlue!) },
-      uC1:        { value: colorArr(this.cfg.palette.midYellow!) },
-      uC2:        { value: colorArr(this.cfg.palette.outerOrange!) },
-      uC3:        { value: colorArr(this.cfg.palette.deepMaroon!) },
-      uB1:        { value: 0.25 },
-      uB2:        { value: 0.56 },
-      uB3:        { value: 0.82 }
-    };
-    const mat = new THREE.ShaderMaterial({
-      uniforms,
-      vertexShader: FLAME_VERT,
-      fragmentShader: FLAME_FRAG,
-      transparent: true,
-      depthWrite: false,
-      blending: THREE.NormalBlending
-    });
-    const geo = new THREE.PlaneGeometry(1.25, 1.9);
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.y = 0.75;
-    return { mesh, uniforms };
-  }
-
-  private buildFlames() {
-    const s = this.cfg.flameShape;
-    // outer
-    this.outer = this.makeFlameLayer({
-      width: s.width!, tip: s.tip!*0.97, amp: s.noiseAmp!*0.96, freq: s.noiseFreq!*0.92, flow: s.flow!*0.95, wobble: s.wobble!, alpha: s.alpha!
-    });
-    this.group.add(this.outer.mesh);
-
-    // mid
-    this.mid = this.makeFlameLayer({
-      width: s.width!*0.9, tip: s.tip!*1.1, amp: s.noiseAmp!*0.85, freq: s.noiseFreq!*1.25, flow: s.flow!*1.15, wobble: s.wobble!*0.85, alpha: s.alpha!*0.85
-    });
-    this.mid.mesh.scale.set(0.9,0.9,1);
-    this.mid.mesh.position.y = 0.72;
-    this.group.add(this.mid.mesh);
-
-    // core (additive)
-    this.core = this.makeFlameLayer({
-      width: s.width!*0.78, tip: s.tip!*1.3, amp: s.noiseAmp!*0.7, freq: s.noiseFreq!*1.4, flow: s.flow!*1.3, wobble: s.wobble!*0.7, alpha: s.alpha!*0.82
-    });
-    (this.core.mesh.material as THREE.ShaderMaterial).blending = THREE.AdditiveBlending;
-    this.core.mesh.scale.set(0.78,0.78,1);
-    this.core.mesh.position.y = 0.7;
-    this.group.add(this.core.mesh);
-  }
-
-  private buildTriangles() {
-    const MAX = Math.max(1, Math.floor(this.cfg.triangles.max!));
-
-    // base prim: 3각 콘(삼각형 느낌)
-    const base = new THREE.ConeGeometry(0.06, 0.12, 3);
-    base.rotateX(Math.PI/2);
-
-    const geom = new THREE.InstancedBufferGeometry();
-    geom.index = base.index!;
-    geom.attributes.position = base.attributes.position;
-    geom.attributes.normal = base.attributes.normal;
-    geom.attributes.uv = base.attributes.uv;
-    this.baseIndexCount = base.index ? base.index.count : 0;
-
-    // attributes
-    const origins = new Float32Array(MAX*3);
-    const seeds   = new Float32Array(MAX*4);
-    const lifeA   = new Float32Array(MAX);
-    for(let i=0;i<MAX;i++){
-      origins[i*3+0]=(Math.random()*2-1)*0.12;
-      origins[i*3+1]=0.2+Math.random()*0.25;
-      origins[i*3+2]=(Math.random()*2-1)*0.12;
-      seeds[i*4+0]=THREE.MathUtils.lerp(0.6,2.2,Math.random());
-      seeds[i*4+1]=THREE.MathUtils.lerp(0.9,1.8,Math.random());
-      seeds[i*4+2]=Math.random();
-      seeds[i*4+3]=Math.random()*10.0; // tOffset
-      lifeA[i]=THREE.MathUtils.lerp(0.7,1.6,Math.random());
+        // initial sync
+        this.syncAll();
     }
-    geom.setAttribute('iOrigin', new THREE.InstancedBufferAttribute(origins,3));
-    geom.setAttribute('iSeed',   new THREE.InstancedBufferAttribute(seeds,4));
-    geom.setAttribute('iLife',   new THREE.InstancedBufferAttribute(lifeA,1));
 
-    const mat = new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false, blending: THREE.NormalBlending,
-      uniforms: {
-        uTime:  { value: 0 },
-        uRise:  { value: this.cfg.triangles.rise },
-        uCurl:  { value: this.cfg.triangles.curl },
-        uAlpha: { value: this.cfg.triangles.alpha },
-        uWind:  { value: new THREE.Vector2(this.cfg.wind.x!, this.cfg.wind.z!) },
-        uC0:    { value: colorArr('#ffd47a') },
-        uC1:    { value: colorArr('#ff9a3a') },
-        uC2:    { value: colorArr('#ee5b2a') }
-      },
-      vertexShader: TRI_VERT,
-      fragmentShader: TRI_FRAG
-    });
-
-    const mesh = new THREE.Mesh(geom, mat);
-    mesh.position.y = 0.7;
-    this.group.add(mesh);
-
-    geom.instanceCount = Math.min(MAX, Math.max(0, Math.floor(this.cfg.triangles.count!)));
-    this.triMesh = mesh;
-    this.triGeom = geom;
-    this.triMat = mat;
-  }
-
-  private buildSmoke() {
-    const geo = new THREE.PlaneGeometry(0.9, 1.6);
-    const mat = new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false, blending: THREE.NormalBlending,
-      uniforms: {
-        uTime:  { value: 0 },
-        uAlpha: { value: this.cfg.smoke.alpha },
-        uColor: { value: new THREE.Color('#7e8a9a') },
-        uWind:  { value: new THREE.Vector2(this.cfg.wind.x!, this.cfg.wind.z!) }
-      },
-      vertexShader: SMOKE_VERT,
-      fragmentShader: SMOKE_FRAG
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(0,1.2,0);
-    mesh.visible = !!this.cfg.smoke.enabled;
-
-    this.group.add(mesh);
-    this.smoke = mesh;
-    this.smokeMat = mat;
-  }
-
-  private buildLight() {
-    if (!this.cfg.light.enabled) return;
-    const L = new THREE.PointLight(
-      this.cfg.light.color,
-      this.cfg.light.intensity,
-      this.cfg.light.distance,
-      this.cfg.light.decay
-    );
-    L.position.set(0, 0.75, 0);
-    this.group.add(L);
-    this.light = L;
-  }
-
-  /* ----------------------------- Public API ----------------------------- */
-
-  /** 매 프레임 호출: elapsedSeconds를 넣어 주세요. */
-  update(elapsedSeconds: number) {
-    const t = elapsedSeconds ?? ((typeof performance !== 'undefined' ? performance.now() : Date.now())/1000 - this.startTime);
-
-    if (this.outer) this.outer.uniforms.uTime.value = t + 0.0;
-    if (this.mid)   this.mid.uniforms.uTime.value   = t + 77.0;
-    if (this.core)  this.core.uniforms.uTime.value  = t + 154.0;
-
-    if (this.triMat)   this.triMat.uniforms.uTime.value = t;
-    if (this.smokeMat) this.smokeMat.uniforms.uTime.value = t;
-
-    if (this.light && this.cfg.light.flicker) {
-      const flick = 0.8 + Math.sin(t*11.0)*0.12 + (Math.random()-0.5)*0.04;
-      this.light.intensity = (this.cfg.light.intensity ?? 1.5) * flick;
-      const tmp = new THREE.Color(this.cfg.light.color ?? 0xffb15a);
-      // 아주 미세한 H 변조
-      tmp.offsetHSL(0.01*Math.sin(t*2.0), 0, 0);
-      this.light.color.copy(tmp);
+    /* --------------------------- Build Parts --------------------------- */
+    private buildGlow() {
+        const geo = new THREE.CircleGeometry(0.9, 48);
+        const mat = new THREE.ShaderMaterial({
+            vertexShader: GLOW_VERT,
+            fragmentShader: GLOW_FRAG,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+            uniforms: {
+                uC: { value: new THREE.Color(0xffa63a) },
+                uA: { value: this.cfg.glowAlpha }
+            }
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.position.y = 0.001;
+        this.group.add(mesh);
+        this.glow = mesh;
     }
-  }
 
-  setWind(x: number, z: number) {
-    this.cfg.wind.x = x; this.cfg.wind.z = z;
-    const v = new THREE.Vector2(x, z);
-    if (this.outer) this.outer.uniforms.uWind.value.copy(v);
-    if (this.mid)   this.mid.uniforms.uWind.value.copy(v);
-    if (this.core)  this.core.uniforms.uWind.value.copy(v);
-    if (this.triMat) this.triMat.uniforms.uWind.value.copy(v);
-    if (this.smokeMat) this.smokeMat.uniforms.uWind.value.copy(v);
-  }
-
-  setPalette(p: CampfirePalette) {
-    this.cfg.palette = { ...this.cfg.palette, ...p };
-    this.syncPalette();
-  }
-
-  setTriCount(n: number) {
-    if (!this.triGeom) return;
-    const max = this.cfg.triangles.max!;
-    const clamped = Math.min(max, Math.max(0, Math.floor(n)));
-    this.cfg.triangles.count = clamped;
-    // Instancing 표준
-    this.triGeom.instanceCount = clamped;
-    // 일부 드라이버 호환성용(선택)
-    if (this.baseIndexCount && (this.triGeom as any).setDrawRange) {
-      (this.triGeom as any).setDrawRange(0, this.baseIndexCount * clamped);
+    private makeFlameLayer(opts: { width: number; tip: number; amp: number; freq: number; flow: number; wobble: number; alpha: number }) {
+        const uniforms = {
+            uTime: { value: 0 },
+            uBillboard: { value: this.cfg.billboard ? 1.0 : 0.0 },
+            uWidth: { value: opts.width },
+            uTipSharp: { value: opts.tip },
+            uNoiseAmp: { value: opts.amp },
+            uNoiseFreq: { value: opts.freq },
+            uFlow: { value: opts.flow },
+            uWobble: { value: opts.wobble },
+            uAlpha: { value: opts.alpha },
+            uWind: { value: new THREE.Vector2(this.cfg.wind.x!, this.cfg.wind.z!) },
+            uC0: { value: colorArr(this.cfg.palette.coreBlue!) },
+            uC1: { value: colorArr(this.cfg.palette.midYellow!) },
+            uC2: { value: colorArr(this.cfg.palette.outerOrange!) },
+            uC3: { value: colorArr(this.cfg.palette.deepMaroon!) },
+            uB1: { value: 0.25 },
+            uB2: { value: 0.56 },
+            uB3: { value: 0.82 }
+        };
+        const mat = new THREE.ShaderMaterial({
+            uniforms,
+            vertexShader: FLAME_VERT,
+            fragmentShader: FLAME_FRAG,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.NormalBlending
+        });
+        const geo = new THREE.PlaneGeometry(1.25, 1.9);
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.y = 0.75;
+        return { mesh, uniforms };
     }
-  }
 
-  setSmokeEnabled(enabled: boolean) {
-    this.cfg.smoke.enabled = enabled;
-    if (this.smoke) this.smoke.visible = enabled;
-  }
+    private buildFlames() {
+        const s = this.cfg.flameShape;
+        // outer
+        this.outer = this.makeFlameLayer({
+            width: s.width!, tip: s.tip! * 0.97, amp: s.noiseAmp! * 0.96, freq: s.noiseFreq! * 0.92, flow: s.flow! * 0.95, wobble: s.wobble!, alpha: s.alpha!
+        });
+        this.group.add(this.outer.mesh);
 
-  setSmokeAlpha(alpha: number) {
-    this.cfg.smoke.alpha = alpha;
-    if (this.smokeMat) this.smokeMat.uniforms.uAlpha.value = alpha;
-  }
+        // mid
+        this.mid = this.makeFlameLayer({
+            width: s.width! * 0.9, tip: s.tip! * 1.1, amp: s.noiseAmp! * 0.85, freq: s.noiseFreq! * 1.25, flow: s.flow! * 1.15, wobble: s.wobble! * 0.85, alpha: s.alpha! * 0.85
+        });
+        this.mid.mesh.scale.set(0.9, 0.9, 1);
+        this.mid.mesh.position.y = 0.72;
+        this.group.add(this.mid.mesh);
 
-  setGlowAlpha(a: number) {
-    this.cfg.glowAlpha = a;
-    const mat = this.glow?.material as THREE.ShaderMaterial | undefined;
-    if (mat) mat.uniforms.uA.value = a;
-  }
-
-  setFlameShape(partial: Partial<NonNullable<CampfireOptions['flameShape']>>) {
-    this.cfg.flameShape = { ...this.cfg.flameShape, ...(partial ?? {}) };
-    this.syncFlameShape();
-  }
-
-  setBillboard(enabled: boolean) {
-    this.cfg.billboard = enabled;
-    const v = enabled ? 1.0 : 0.0;
-    if (this.outer) this.outer.uniforms.uBillboard.value = v;
-    if (this.mid)   this.mid.uniforms.uBillboard.value   = v;
-    if (this.core)  this.core.uniforms.uBillboard.value  = v;
-  }
-
-  setLightEnabled(enabled: boolean) {
-    if (enabled && !this.light) {
-      this.buildLight();
-    } else if (!enabled && this.light) {
-      this.group.remove(this.light);
-      this.light.dispose();
-      this.light = undefined;
+        // core (additive)
+        this.core = this.makeFlameLayer({
+            width: s.width! * 0.78, tip: s.tip! * 1.3, amp: s.noiseAmp! * 0.7, freq: s.noiseFreq! * 1.4, flow: s.flow! * 1.3, wobble: s.wobble! * 0.7, alpha: s.alpha! * 0.82
+        });
+        (this.core.mesh.material as THREE.ShaderMaterial).blending = THREE.AdditiveBlending;
+        this.core.mesh.scale.set(0.78, 0.78, 1);
+        this.core.mesh.position.y = 0.7;
+        this.group.add(this.core.mesh);
     }
-    this.cfg.light.enabled = enabled;
-  }
 
-  setPosition(v: THREE.Vector3 | {x:number;y:number;z:number} | [number,number,number]) { setVec3Like(this.group, v); }
-  setScale(s: number) { this.group.scale.setScalar(s); }
+    private buildTriangles() {
+        const MAX = Math.max(1, Math.floor(this.cfg.triangles.max!));
 
-  /** 리소스 해제 */
-  dispose() {
-    const killMesh = (m?: THREE.Object3D) => {
-      if (!m) return;
-      m.traverse(obj=>{
-        if ((obj as any).geometry) (obj as any).geometry.dispose?.();
-        const mat = (obj as any).material;
-        if (Array.isArray(mat)) mat.forEach(mm=>mm.dispose?.());
-        else mat?.dispose?.();
-      });
-      m.parent?.remove(m);
-    };
-    killMesh(this.glow);
-    killMesh(this.outer?.mesh);
-    killMesh(this.mid?.mesh);
-    killMesh(this.core?.mesh);
-    killMesh(this.triMesh);
-    killMesh(this.smoke);
-    if (this.light) { this.group.remove(this.light); this.light.dispose(); this.light = undefined; }
-  }
+        // base prim: 3각 콘(삼각형 느낌)
+        const base = new THREE.ConeGeometry(0.06, 0.12, 3);
+        base.rotateX(Math.PI / 2);
 
-  /* ----------------------------- Sync Internals ----------------------------- */
-  private syncPalette() {
-    const c0 = colorArr(this.cfg.palette.coreBlue!);
-    const c1 = colorArr(this.cfg.palette.midYellow!);
-    const c2 = colorArr(this.cfg.palette.outerOrange!);
-    const c3 = colorArr(this.cfg.palette.deepMaroon!);
-    [this.outer, this.mid, this.core].forEach(L=>{
-      if (!L) return;
-      L.uniforms.uC0.value = c0;
-      L.uniforms.uC1.value = c1;
-      L.uniforms.uC2.value = c2;
-      L.uniforms.uC3.value = c3;
-    });
-  }
+        const geom = new THREE.InstancedBufferGeometry();
+        geom.index = base.index!;
+        geom.attributes.position = base.attributes.position;
+        geom.attributes.normal = base.attributes.normal;
+        geom.attributes.uv = base.attributes.uv;
+        this.baseIndexCount = base.index ? base.index.count : 0;
 
-  private syncFlameShape() {
-    const s = this.cfg.flameShape;
-    if (this.outer) {
-      this.outer.uniforms.uWidth.value   = s.width!;
-      this.outer.uniforms.uTipSharp.value= s.tip!*0.97;
-      this.outer.uniforms.uFlow.value    = s.flow!*0.95;
-      this.outer.uniforms.uWobble.value  = s.wobble!;
-      this.outer.uniforms.uNoiseAmp.value= s.noiseAmp!*0.96;
-      this.outer.uniforms.uNoiseFreq.value= s.noiseFreq!*0.92;
-      this.outer.uniforms.uAlpha.value   = s.alpha!;
+        // attributes
+        const origins = new Float32Array(MAX * 3);
+        const seeds = new Float32Array(MAX * 4);
+        const lifeA = new Float32Array(MAX);
+        for (let i = 0; i < MAX; i++) {
+            origins[i * 3 + 0] = (Math.random() * 2 - 1) * 0.12;
+            origins[i * 3 + 1] = 0.2 + Math.random() * 0.25;
+            origins[i * 3 + 2] = (Math.random() * 2 - 1) * 0.12;
+            seeds[i * 4 + 0] = THREE.MathUtils.lerp(0.6, 2.2, Math.random());
+            seeds[i * 4 + 1] = THREE.MathUtils.lerp(0.9, 1.8, Math.random());
+            seeds[i * 4 + 2] = Math.random();
+            seeds[i * 4 + 3] = Math.random() * 10.0; // tOffset
+            lifeA[i] = THREE.MathUtils.lerp(0.7, 1.6, Math.random());
+        }
+        geom.setAttribute('iOrigin', new THREE.InstancedBufferAttribute(origins, 3));
+        geom.setAttribute('iSeed', new THREE.InstancedBufferAttribute(seeds, 4));
+        geom.setAttribute('iLife', new THREE.InstancedBufferAttribute(lifeA, 1));
+
+        const mat = new THREE.ShaderMaterial({
+            transparent: true, depthWrite: false, blending: THREE.NormalBlending,
+            uniforms: {
+                uTime: { value: 0 },
+                uRise: { value: this.cfg.triangles.rise },
+                uCurl: { value: this.cfg.triangles.curl },
+                uAlpha: { value: this.cfg.triangles.alpha },
+                uWind: { value: new THREE.Vector2(this.cfg.wind.x!, this.cfg.wind.z!) },
+                uC0: { value: colorArr('#ffd47a') },
+                uC1: { value: colorArr('#ff9a3a') },
+                uC2: { value: colorArr('#ee5b2a') }
+            },
+            vertexShader: TRI_VERT,
+            fragmentShader: TRI_FRAG
+        });
+
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.position.y = 0.7;
+        this.group.add(mesh);
+
+        geom.instanceCount = Math.min(MAX, Math.max(0, Math.floor(this.cfg.triangles.count!)));
+        this.triMesh = mesh;
+        this.triGeom = geom;
+        this.triMat = mat;
     }
-    if (this.mid) {
-      this.mid.uniforms.uWidth.value   = s.width!*0.9;
-      this.mid.uniforms.uTipSharp.value= s.tip!*1.1;
-      this.mid.uniforms.uFlow.value    = s.flow!*1.15;
-      this.mid.uniforms.uWobble.value  = s.wobble!*0.85;
-      this.mid.uniforms.uNoiseAmp.value= s.noiseAmp!*0.85;
-      this.mid.uniforms.uNoiseFreq.value= s.noiseFreq!*1.25;
-      this.mid.uniforms.uAlpha.value   = s.alpha!*0.85;
-    }
-    if (this.core) {
-      this.core.uniforms.uWidth.value   = s.width!*0.78;
-      this.core.uniforms.uTipSharp.value= s.tip!*1.3;
-      this.core.uniforms.uFlow.value    = s.flow!*1.3;
-      this.core.uniforms.uWobble.value  = s.wobble!*0.7;
-      this.core.uniforms.uNoiseAmp.value= s.noiseAmp!*0.7;
-      this.core.uniforms.uNoiseFreq.value= s.noiseFreq!*1.4;
-      this.core.uniforms.uAlpha.value   = s.alpha!*0.82;
-    }
-  }
 
-  private syncAll() {
-    this.syncPalette();
-    this.syncFlameShape();
-    this.setWind(this.cfg.wind.x!, this.cfg.wind.z!);
-    this.setTriCount(this.cfg.triangles.count!);
-    this.setSmokeEnabled(!!this.cfg.smoke.enabled);
-    this.setGlowAlpha(this.cfg.glowAlpha!);
-    this.setBillboard(!!this.cfg.billboard);
-  }
+    private buildSmoke() {
+        const geo = new THREE.PlaneGeometry(0.9, 1.6);
+        const mat = new THREE.ShaderMaterial({
+            transparent: true, depthWrite: false, blending: THREE.NormalBlending,
+            uniforms: {
+                uTime: { value: 0 },
+                uAlpha: { value: this.cfg.smoke.alpha },
+                uColor: { value: new THREE.Color('#7e8a9a') },
+                uWind: { value: new THREE.Vector2(this.cfg.wind.x!, this.cfg.wind.z!) }
+            },
+            vertexShader: SMOKE_VERT,
+            fragmentShader: SMOKE_FRAG
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(0, 1.2, 0);
+        mesh.visible = !!this.cfg.smoke.enabled;
+
+        this.group.add(mesh);
+        this.smoke = mesh;
+        this.smokeMat = mat;
+    }
+
+    private buildLight() {
+        if (!this.cfg.light.enabled) return;
+        const L = new THREE.PointLight(
+            this.cfg.light.color,
+            this.cfg.light.intensity,
+            this.cfg.light.distance,
+            this.cfg.light.decay
+        );
+        L.position.set(0, 0.75, 0);
+        this.group.add(L);
+        this.light = L;
+    }
+
+    /* ----------------------------- Public API ----------------------------- */
+
+    /** 매 프레임 호출: elapsedSeconds를 넣어 주세요. */
+    update(elapsedSeconds: number) {
+        const t = elapsedSeconds ?? ((typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000 - this.startTime);
+
+        if (this.outer) this.outer.uniforms.uTime.value = t + 0.0;
+        if (this.mid) this.mid.uniforms.uTime.value = t + 77.0;
+        if (this.core) this.core.uniforms.uTime.value = t + 154.0;
+
+        if (this.triMat) this.triMat.uniforms.uTime.value = t;
+        if (this.smokeMat) this.smokeMat.uniforms.uTime.value = t;
+
+        if (this.light && this.cfg.light.flicker) {
+            const flick = 0.8 + Math.sin(t * 11.0) * 0.12 + (Math.random() - 0.5) * 0.04;
+            this.light.intensity = (this.cfg.light.intensity ?? 1.5) * flick;
+            const tmp = new THREE.Color(this.cfg.light.color ?? 0xffb15a);
+            // 아주 미세한 H 변조
+            tmp.offsetHSL(0.01 * Math.sin(t * 2.0), 0, 0);
+            this.light.color.copy(tmp);
+        }
+    }
+
+    setWind(x: number, z: number) {
+        this.cfg.wind.x = x; this.cfg.wind.z = z;
+        const v = new THREE.Vector2(x, z);
+        if (this.outer) this.outer.uniforms.uWind.value.copy(v);
+        if (this.mid) this.mid.uniforms.uWind.value.copy(v);
+        if (this.core) this.core.uniforms.uWind.value.copy(v);
+        if (this.triMat) this.triMat.uniforms.uWind.value.copy(v);
+        if (this.smokeMat) this.smokeMat.uniforms.uWind.value.copy(v);
+    }
+
+    setPalette(p: CampfirePalette) {
+        this.cfg.palette = { ...this.cfg.palette, ...p };
+        this.syncPalette();
+    }
+
+    setTriCount(n: number) {
+        if (!this.triGeom) return;
+        const max = this.cfg.triangles.max!;
+        const clamped = Math.min(max, Math.max(0, Math.floor(n)));
+        this.cfg.triangles.count = clamped;
+        // Instancing 표준
+        this.triGeom.instanceCount = clamped;
+        // 일부 드라이버 호환성용(선택)
+        if (this.baseIndexCount && (this.triGeom as any).setDrawRange) {
+            (this.triGeom as any).setDrawRange(0, this.baseIndexCount * clamped);
+        }
+    }
+
+    setSmokeEnabled(enabled: boolean) {
+        this.cfg.smoke.enabled = enabled;
+        if (this.smoke) this.smoke.visible = enabled;
+    }
+
+    setSmokeAlpha(alpha: number) {
+        this.cfg.smoke.alpha = alpha;
+        if (this.smokeMat) this.smokeMat.uniforms.uAlpha.value = alpha;
+    }
+
+    setGlowAlpha(a: number) {
+        this.cfg.glowAlpha = a;
+        const mat = this.glow?.material as THREE.ShaderMaterial | undefined;
+        if (mat) mat.uniforms.uA.value = a;
+    }
+
+    setFlameShape(partial: Partial<NonNullable<CampfireOptions['flameShape']>>) {
+        this.cfg.flameShape = { ...this.cfg.flameShape, ...(partial ?? {}) };
+        this.syncFlameShape();
+    }
+
+    setBillboard(enabled: boolean) {
+        this.cfg.billboard = enabled;
+        const v = enabled ? 1.0 : 0.0;
+        if (this.outer) this.outer.uniforms.uBillboard.value = v;
+        if (this.mid) this.mid.uniforms.uBillboard.value = v;
+        if (this.core) this.core.uniforms.uBillboard.value = v;
+    }
+
+    setLightEnabled(enabled: boolean) {
+        if (enabled && !this.light) {
+            this.buildLight();
+        } else if (!enabled && this.light) {
+            this.group.remove(this.light);
+            this.light.dispose();
+            this.light = undefined;
+        }
+        this.cfg.light.enabled = enabled;
+    }
+
+    setPosition(v: THREE.Vector3 | { x: number; y: number; z: number } | [number, number, number]) { setVec3Like(this.group, v); }
+    setScale(s: number) { this.group.scale.setScalar(s); }
+
+    /** 리소스 해제 */
+    dispose() {
+        const killMesh = (m?: THREE.Object3D) => {
+            if (!m) return;
+            m.traverse(obj => {
+                if ((obj as any).geometry) (obj as any).geometry.dispose?.();
+                const mat = (obj as any).material;
+                if (Array.isArray(mat)) mat.forEach(mm => mm.dispose?.());
+                else mat?.dispose?.();
+            });
+            m.parent?.remove(m);
+        };
+        killMesh(this.glow);
+        killMesh(this.outer?.mesh);
+        killMesh(this.mid?.mesh);
+        killMesh(this.core?.mesh);
+        killMesh(this.triMesh);
+        killMesh(this.smoke);
+        if (this.light) { this.group.remove(this.light); this.light.dispose(); this.light = undefined; }
+    }
+
+    /* ----------------------------- Sync Internals ----------------------------- */
+    private syncPalette() {
+        const c0 = colorArr(this.cfg.palette.coreBlue!);
+        const c1 = colorArr(this.cfg.palette.midYellow!);
+        const c2 = colorArr(this.cfg.palette.outerOrange!);
+        const c3 = colorArr(this.cfg.palette.deepMaroon!);
+        [this.outer, this.mid, this.core].forEach(L => {
+            if (!L) return;
+            L.uniforms.uC0.value = c0;
+            L.uniforms.uC1.value = c1;
+            L.uniforms.uC2.value = c2;
+            L.uniforms.uC3.value = c3;
+        });
+    }
+
+    private syncFlameShape() {
+        const s = this.cfg.flameShape;
+        if (this.outer) {
+            this.outer.uniforms.uWidth.value = s.width!;
+            this.outer.uniforms.uTipSharp.value = s.tip! * 0.97;
+            this.outer.uniforms.uFlow.value = s.flow! * 0.95;
+            this.outer.uniforms.uWobble.value = s.wobble!;
+            this.outer.uniforms.uNoiseAmp.value = s.noiseAmp! * 0.96;
+            this.outer.uniforms.uNoiseFreq.value = s.noiseFreq! * 0.92;
+            this.outer.uniforms.uAlpha.value = s.alpha!;
+        }
+        if (this.mid) {
+            this.mid.uniforms.uWidth.value = s.width! * 0.9;
+            this.mid.uniforms.uTipSharp.value = s.tip! * 1.1;
+            this.mid.uniforms.uFlow.value = s.flow! * 1.15;
+            this.mid.uniforms.uWobble.value = s.wobble! * 0.85;
+            this.mid.uniforms.uNoiseAmp.value = s.noiseAmp! * 0.85;
+            this.mid.uniforms.uNoiseFreq.value = s.noiseFreq! * 1.25;
+            this.mid.uniforms.uAlpha.value = s.alpha! * 0.85;
+        }
+        if (this.core) {
+            this.core.uniforms.uWidth.value = s.width! * 0.78;
+            this.core.uniforms.uTipSharp.value = s.tip! * 1.3;
+            this.core.uniforms.uFlow.value = s.flow! * 1.3;
+            this.core.uniforms.uWobble.value = s.wobble! * 0.7;
+            this.core.uniforms.uNoiseAmp.value = s.noiseAmp! * 0.7;
+            this.core.uniforms.uNoiseFreq.value = s.noiseFreq! * 1.4;
+            this.core.uniforms.uAlpha.value = s.alpha! * 0.82;
+        }
+    }
+
+    private syncAll() {
+        this.syncPalette();
+        this.syncFlameShape();
+        this.setWind(this.cfg.wind.x!, this.cfg.wind.z!);
+        this.setTriCount(this.cfg.triangles.count!);
+        this.setSmokeEnabled(!!this.cfg.smoke.enabled);
+        this.setGlowAlpha(this.cfg.glowAlpha!);
+        this.setBillboard(!!this.cfg.billboard);
+    }
 }
