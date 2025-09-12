@@ -71,7 +71,7 @@ export default class WheelLoader {
    */
   private updateProgress(): void {
     const percentage = this.totalTasks > 0 ? (this.completedTasks / this.totalTasks) * 100 : 0;
-    this.progressElement.style.width = `${percentage}%`;
+    this.load(percentage)
   }
 
   /**
