@@ -18,10 +18,19 @@ export class Campfire extends InteractableObject implements ILoop {
         super(uniqId, def, eventCtrl)
     }
     async Loader(position: THREE.Vector3, rotation: THREE.Euler, scale: number, name: string) {
-        const campfire = new ToonCampfire({ position, scale })
+        const campfire = new ToonCampfire({ scale })
         this.position.copy(position);
         this.rotation.copy(rotation);
         this.scale.set(scale, scale, scale);
+        const rocks = new ToonRockRing({
+            count: 14, radius: 0.8, position: [0, 0, 0],
+            shadows: { cast: false, receive: true }
+        });
+        const wood = new ToonFirewood({
+            count: 3, length: 1.0, radius: 0.06, position: [0, 0, 0],
+            shadows: { cast: true, receive: false }
+        });
+        campfire.group.add(rocks.group, wood.group);
         this.name = name;
         // const meshs = await this.asset.CloneModel()
         // this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, meshs)
@@ -47,8 +56,10 @@ export class Campfire extends InteractableObject implements ILoop {
             this.isActive = true
         }
     }
+    timer: number = 0
     update(delta: number): void {
-        this.campfire!.update(delta)
+        this.timer += delta
+        this.campfire!.update(this.timer)
 
     }
 }
@@ -683,4 +694,236 @@ export class ToonCampfire {
         this.setGlowAlpha(this.cfg.glowAlpha!);
         this.setBillboard(!!this.cfg.billboard);
     }
+}
+
+// ToonCampfireExtras.ts
+
+/* ------------------------- Utility: seeded random ------------------------- */
+function mulberry32(seed: number) {
+  return function() {
+    let t = (seed += 0x6D2B79F5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* ======================================================================== */
+/*                             Rock Ring (돌무더기)                         */
+/* ======================================================================== */
+export interface RockRingOptions {
+  position?: THREE.Vector3 | {x:number;y:number;z:number} | [number,number,number];
+  scale?: number;
+
+  /** 돌 개수 */
+  count?: number;         // default 14
+  /** 기준 반지름 */
+  radius?: number;        // default 0.8
+  /** 반지름 랜덤 편차 */
+  radiusJitter?: number;  // default 0.04
+  /** 돌 기본 사이즈 */
+  stoneSize?: number;     // default 0.13 (Dodecahedron)
+  /** 개별 스케일 가중 범위 */
+  stoneScaleRange?: [number, number]; // default [0.7, 1.3]
+  /** 돌 높이(y) */
+  height?: number;        // default 0.06
+  /** 재질 색상 */
+  color?: THREE.ColorRepresentation; // default 0x3a3a47
+  roughness?: number;     // default 1
+  metalness?: number;     // default 0
+  /** 그림자 옵션 */
+  shadows?: { cast?: boolean; receive?: boolean }; // default cast:false, receive:false
+  /** 재현 가능한 랜덤 배치를 위한 시드 */
+  seed?: number;          // default: Math.random()*1e9
+}
+
+export class ToonRockRing {
+  public readonly group = new THREE.Group();
+  private meshes: THREE.Mesh[] = [];
+  private mat?: THREE.MeshStandardMaterial;
+
+  private cfg: Required<RockRingOptions>;
+
+  constructor(options: RockRingOptions = {}) {
+    const cfgDefault: Required<RockRingOptions> = {
+      position: new THREE.Vector3(0,0,0),
+      scale: 1,
+      count: 14,
+      radius: 0.8,
+      radiusJitter: 0.04,
+      stoneSize: 0.13,
+      stoneScaleRange: [0.7, 1.3],
+      height: 0.06,
+      color: 0x3a3a47,
+      roughness: 1,
+      metalness: 0,
+      shadows: { cast: false, receive: false },
+      seed: Math.floor(Math.random()*1e9)
+    };
+    this.cfg = { ...cfgDefault, ...options,
+      shadows: { ...cfgDefault.shadows, ...(options.shadows ?? {}) }
+    };
+
+    setVec3Like(this.group, this.cfg.position);
+    if (this.cfg.scale !== 1) this.group.scale.setScalar(this.cfg.scale);
+
+    this.build();
+  }
+
+  private build() {
+    const rand = mulberry32(this.cfg.seed);
+    const geo = new THREE.DodecahedronGeometry(this.cfg.stoneSize, 0);
+    this.mat = new THREE.MeshStandardMaterial({
+      color: this.cfg.color,
+      roughness: this.cfg.roughness,
+      metalness: this.cfg.metalness,
+    });
+
+    // 생성
+    for (let i = 0; i < this.cfg.count; i++) {
+      const a = (i / this.cfg.count) * Math.PI * 2;
+      const r = this.cfg.radius + (rand()*2-1) * this.cfg.radiusJitter;
+      const m = new THREE.Mesh(geo, this.mat);
+      m.position.set(Math.cos(a)*r, this.cfg.height, Math.sin(a)*r);
+      m.rotation.y = rand()*Math.PI*2;
+
+      const [sMin, sMax] = this.cfg.stoneScaleRange;
+      const s = THREE.MathUtils.lerp(sMin, sMax, rand());
+      m.scale.setScalar(s);
+
+      const cast = !!this.cfg.shadows.cast;
+      const recv = !!this.cfg.shadows.receive;
+      m.castShadow = cast;
+      m.receiveShadow = recv;
+
+      this.group.add(m);
+      this.meshes.push(m);
+    }
+  }
+
+  setPosition(v: THREE.Vector3 | {x:number;y:number;z:number} | [number,number,number]) { setVec3Like(this.group, v); }
+  setScale(s: number) { this.group.scale.setScalar(s); }
+
+  dispose() {
+    this.meshes.forEach(m => {
+      m.geometry.dispose();
+      (m.material as THREE.Material).dispose?.();
+      m.parent?.remove(m);
+    });
+    this.meshes = [];
+    this.mat?.dispose();
+    this.mat = undefined;
+  }
+}
+
+/* ======================================================================== */
+/*                               Firewood (장작)                            */
+/* ======================================================================== */
+export interface FirewoodOptions {
+  position?: THREE.Vector3 | {x:number;y:number;z:number} | [number,number,number];
+  scale?: number;
+
+  /** 장작 개수 */
+  count?: number;           // default 3
+  /** 한 토막 길이 */
+  length?: number;          // default 1.0
+  /** 반지름(두께) */
+  radius?: number;          // default 0.06
+  /** 측면 분할 (낮을수록 로우폴리 감) */
+  radialSegments?: number;  // default 6
+  /** 중심에서의 기울기/배치 랜덤(라디안) */
+  tiltRandom?: number;      // default 0.2
+  /** 바닥에서 띄우는 높이 */
+  height?: number;          // default 0.08
+  /** Y축을 중심으로 둥글게 놓는 기본 오프셋 */
+  yawOffset?: number;       // default 0.2 (약간 비대칭)
+
+  /** 재질 색상/거칠기 */
+  color?: THREE.ColorRepresentation; // default 0x6b4a2b
+  roughness?: number;       // default 1
+  metalness?: number;       // default 0
+
+  /** 그림자 */
+  shadows?: { cast?: boolean; receive?: boolean }; // default cast:false, receive:false
+  /** 재현 가능한 랜덤 배치 시드 */
+  seed?: number;            // default: Math.random()*1e9
+}
+
+export class ToonFirewood {
+  public readonly group = new THREE.Group();
+  private meshes: THREE.Mesh[] = [];
+  private mat?: THREE.MeshStandardMaterial;
+
+  private cfg: Required<FirewoodOptions>;
+
+  constructor(options: FirewoodOptions = {}) {
+    const cfgDefault: Required<FirewoodOptions> = {
+      position: new THREE.Vector3(0,0,0),
+      scale: 1,
+      count: 3,
+      length: 1.0,
+      radius: 0.06,
+      radialSegments: 6,
+      tiltRandom: 0.2,
+      height: 0.08,
+      yawOffset: 0.2,
+      color: 0x6b4a2b,
+      roughness: 1,
+      metalness: 0,
+      shadows: { cast: false, receive: false },
+      seed: Math.floor(Math.random()*1e9)
+    };
+    this.cfg = { ...cfgDefault, ...options,
+      shadows: { ...cfgDefault.shadows, ...(options.shadows ?? {}) }
+    };
+
+    setVec3Like(this.group, this.cfg.position);
+    if (this.cfg.scale !== 1) this.group.scale.setScalar(this.cfg.scale);
+
+    this.build();
+  }
+
+  private build() {
+    const rand = mulberry32(this.cfg.seed);
+    const geo = new THREE.CylinderGeometry(this.cfg.radius, this.cfg.radius, this.cfg.length, this.cfg.radialSegments);
+    this.mat = new THREE.MeshStandardMaterial({
+      color: this.cfg.color,
+      roughness: this.cfg.roughness,
+      metalness: this.cfg.metalness
+    });
+
+    for (let i = 0; i < this.cfg.count; i++) {
+      const log = new THREE.Mesh(geo, this.mat);
+      log.position.y = this.cfg.height;
+
+      // 장작을 원형으로 배치하되 약간 비대칭
+      const yaw = i * (Math.PI * 2 / this.cfg.count) + this.cfg.yawOffset;
+      log.rotation.y = yaw;
+
+      // 살짝 기울기, 좌우 틀어짐
+      log.rotation.z = (rand()*2 - 1) * this.cfg.tiltRandom;
+
+      const cast = !!this.cfg.shadows.cast;
+      const recv = !!this.cfg.shadows.receive;
+      log.castShadow = cast;
+      log.receiveShadow = recv;
+
+      this.group.add(log);
+      this.meshes.push(log);
+    }
+  }
+
+  setPosition(v: THREE.Vector3 | {x:number;y:number;z:number} | [number,number,number]) { setVec3Like(this.group, v); }
+  setScale(s: number) { this.group.scale.setScalar(s); }
+
+  dispose() {
+    this.meshes.forEach(m => {
+      m.geometry.dispose();
+      (m.material as THREE.Material).dispose?.();
+      m.parent?.remove(m);
+    });
+    this.meshes = [];
+    this.mat?.dispose();
+    this.mat = undefined;
+  }
 }

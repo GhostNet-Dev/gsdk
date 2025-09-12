@@ -12,6 +12,7 @@ import { InterTree } from "./interobjs/intertree";
 import { IAsset } from "@Glibs/interface/iasset";
 import { TriggerType } from "@Glibs/types/actiontypes";
 import { Obstacles } from "./interobjs/obstacle";
+import { Campfire } from "./interobjs/campfire";
 
 export default class InteractiveManager implements IWorldMapObject {
     objs: InteractableObject[] = []
@@ -71,6 +72,9 @@ export default class InteractiveManager implements IWorldMapObject {
                 break;
             case "obstacle":
                 ret = new Obstacles(uniqId, interactableDefs.Obstacle, asset, this.eventCtrl)
+                break
+            case "campfire":
+                ret = new Campfire(uniqId, interactableDefs.Campfire, this.eventCtrl)
                 break
             default:
                 ret = new InterTree(uniqId, interactableDefs.Tree, asset, this.eventCtrl);
