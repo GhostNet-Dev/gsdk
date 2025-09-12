@@ -13,7 +13,7 @@ export class Obstacles extends InteractableObject {
         protected asset: IAsset,
         protected eventCtrl: IEventController
     ) {
-        super(uniqId, def, asset, eventCtrl)
+        super(uniqId, def, eventCtrl, asset)
     }
     afterLoad(): void {
         this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, this)

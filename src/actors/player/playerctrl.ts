@@ -186,7 +186,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         eventCtrl.RegisterEventListener(EventTypes.DelInteractive, (obj: THREE.Object3D) => {
             this.remove(obj)
         })
-        eventCtrl.RegisterEventListener(EventTypes.UpdateBuff, (buff: Buff) => {
+        eventCtrl.RegisterEventListener(EventTypes.UpdateBuff + "player", (buff: Buff) => {
             this.baseSpec.Buff(buff)
         })
     }

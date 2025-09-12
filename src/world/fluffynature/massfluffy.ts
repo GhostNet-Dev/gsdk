@@ -132,6 +132,14 @@ export type ClusterInfo = {
   count: number;
 };
 
+// NEW: 제외 구역 타입 정의
+type ExclusionZone = {
+  id: string | number;
+  position: THREE.Vector3;
+  radius: number;
+  radiusSq: number;
+};
+
 type WindUniforms = {
   uWindEnabled: { value: boolean };
   uTime: { value: number };
@@ -177,6 +185,10 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
   // 카메라 게이트를 위한 상태 변수
   private lastCamPos = new THREE.Vector3();
   private lastCamQuat = new THREE.Quaternion();
+  private forceUpdate = false; // 제외 구역 변경 시 즉시 업데이트를 위한 플래그
+
+  // 제외 구역 목록
+  private exclusionZones: ExclusionZone[] = [];
 
   constructor(
     private loader: Loader,
@@ -237,6 +249,55 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     return await asset.CloneModel();
   }
 
+  /**
+    * 특정 위치를 중심으로 하는 제외 구역을 추가합니다.
+    * @param position 제외 구역의 중심 위치
+    * @param radius 제외할 반경
+    * @param id 이 구역을 식별하기 위한 고유 ID (없으면 랜덤 생성)
+    */
+  public addExclusionZone(position: THREE.Vector3, radius: number, id?: string | number): void {
+    const zoneId = id ?? THREE.MathUtils.generateUUID();
+    // 동일한 ID가 있다면 업데이트, 없으면 새로 추가
+    const existingZone = this.exclusionZones.find(z => z.id === zoneId);
+    if (existingZone) {
+      existingZone.position = position;
+      existingZone.radius = radius;
+      existingZone.radiusSq = radius * radius;
+    } else {
+      this.exclusionZones.push({
+        id: zoneId,
+        position,
+        radius,
+        radiusSq: radius * radius,
+      });
+    }
+    this.forceUpdate = true; // 즉시 업데이트 필요
+  }
+
+  /**
+   * 지정된 ID의 제외 구역을 제거합니다.
+   * @param id 제거할 제외 구역의 ID
+   * @returns 제거 성공 여부
+   */
+  public removeExclusionZone(id: string | number): boolean {
+    const index = this.exclusionZones.findIndex(z => z.id === id);
+    if (index > -1) {
+      this.exclusionZones.splice(index, 1);
+      this.forceUpdate = true; // 즉시 업데이트 필요
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * 모든 제외 구역을 제거합니다.
+   */
+  public clearExclusionZones(): void {
+    if (this.exclusionZones.length > 0) {
+      this.exclusionZones = [];
+      this.forceUpdate = true; // 즉시 업데이트 필요
+    }
+  }
   public async Create({
     transforms = [],
     id,
@@ -250,38 +311,38 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     let runningStart = 0;
 
     for (const tRaw of transforms) {
-        const t = { ...tRaw } as TRS;
-        if (typeof t.scale === 'number') t.scale = [t.scale, t.scale, t.scale];
+      const t = { ...tRaw } as TRS;
+      if (typeof t.scale === 'number') t.scale = [t.scale, t.scale, t.scale];
 
-        const center = this.v3(t.position, new THREE.Vector3());
-        const yaw = (Array.isArray(t.rotation) ? t.rotation[1] : t.rotation.y) || 0;
-        const cCount = this.cfg.cluster.enabled
-            ? this.randInt(this.cfg.cluster.countRange[0], this.cfg.cluster.countRange[1])
-            : 1;
+      const center = this.v3(t.position, new THREE.Vector3());
+      const yaw = (Array.isArray(t.rotation) ? t.rotation[1] : t.rotation.y) || 0;
+      const cCount = this.cfg.cluster.enabled
+        ? this.randInt(this.cfg.cluster.countRange[0], this.cfg.cluster.countRange[1])
+        : 1;
 
-        const cStart = runningStart;
-        for (let i = 0; i < cCount; i++) {
-            const r = this.cfg.cluster.radius * Math.sqrt(Math.random());
-            const a = Math.random() * Math.PI * 2;
-            const off = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r);
-            const cosY = Math.cos(yaw), sinY = Math.sin(yaw);
-            const offRot = new THREE.Vector3(off.x * cosY - off.z * sinY, 0, off.x * sinY + off.z * cosY);
-            const jy = THREE.MathUtils.lerp(this.cfg.cluster.posJitterY[0], this.cfg.cluster.posJitterY[1], Math.random());
-            const jYaw = THREE.MathUtils.degToRad(this.cfg.cluster.rotJitterYDeg) * (Math.random() * 2 - 1);
-            const rot = Array.isArray(t.rotation)
-                ? [t.rotation[0], (t.rotation[1] ?? 0) + jYaw, t.rotation[2]]
-                : [t.rotation.x, t.rotation.y + jYaw, t.rotation.z];
-            const js = THREE.MathUtils.lerp(this.cfg.cluster.scaleJitter[0], this.cfg.cluster.scaleJitter[1], Math.random());
-            const sc = this.v3(t.scale, new THREE.Vector3()).multiplyScalar(js);
-            expanded.push({
-                position: center.clone().add(offRot).add(new THREE.Vector3(0, jy, 0)),
-                rotation: rot as [number, number, number],
-                scale: sc.clone(),
-            });
-        }
-        const cCountFinal = expanded.length - cStart;
-        clusters.push({ center: center.clone(), radius: this.cfg.cluster.radius, start: cStart, count: cCountFinal });
-        runningStart += cCountFinal;
+      const cStart = runningStart;
+      for (let i = 0; i < cCount; i++) {
+        const r = this.cfg.cluster.radius * Math.sqrt(Math.random());
+        const a = Math.random() * Math.PI * 2;
+        const off = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r);
+        const cosY = Math.cos(yaw), sinY = Math.sin(yaw);
+        const offRot = new THREE.Vector3(off.x * cosY - off.z * sinY, 0, off.x * sinY + off.z * cosY);
+        const jy = THREE.MathUtils.lerp(this.cfg.cluster.posJitterY[0], this.cfg.cluster.posJitterY[1], Math.random());
+        const jYaw = THREE.MathUtils.degToRad(this.cfg.cluster.rotJitterYDeg) * (Math.random() * 2 - 1);
+        const rot = Array.isArray(t.rotation)
+          ? [t.rotation[0], (t.rotation[1] ?? 0) + jYaw, t.rotation[2]]
+          : [t.rotation.x, t.rotation.y + jYaw, t.rotation.z];
+        const js = THREE.MathUtils.lerp(this.cfg.cluster.scaleJitter[0], this.cfg.cluster.scaleJitter[1], Math.random());
+        const sc = this.v3(t.scale, new THREE.Vector3()).multiplyScalar(js);
+        expanded.push({
+          position: center.clone().add(offRot).add(new THREE.Vector3(0, jy, 0)),
+          rotation: rot as [number, number, number],
+          scale: sc.clone(),
+        });
+      }
+      const cCountFinal = expanded.length - cStart;
+      clusters.push({ center: center.clone(), radius: this.cfg.cluster.radius, start: cStart, count: cCountFinal });
+      runningStart += cCountFinal;
     }
 
     const totalCount = expanded.length;
@@ -341,9 +402,9 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     this.group.add(resultGroup);
     const keepMask = new Uint8Array(totalCount);
     const batch: Batch = { parts, baseMatrices, clusters, totalCount, keepMask, modelId: id ?? null };
-    
+
     this.buildRand(batch); // 해시 사전계산
-    
+
     this.batches.push(batch);
 
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
@@ -355,56 +416,58 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     this.camera.updateMatrixWorld();
     this.lastCamPos.copy(this.camera.position);
     this.lastCamQuat.copy(this.camera.quaternion);
-    
+
     this.batches.forEach(b => this.applyCullLODInPlace(b, true));
   }
-  
+
   public update(delta: number): void {
     this.time += delta;
     this.frame++;
 
     const isDirty = this.isCameraDirty();
     const canUpdateLOD = (this.frame % Math.max(1, this.cfg.culling.everyNFrames) === 0);
+    const needsUpdate = isDirty || this.forceUpdate;
 
     for (const b of this.batches) {
-        if (this.cfg.windEnabled) {
-            b.parts.forEach(p => p.uniforms.uTime.value = this.time);
+      if (this.cfg.windEnabled) {
+        b.parts.forEach(p => p.uniforms.uTime.value = this.time);
+      }
+
+      // 스로틀링 강화: 두 조건을 모두 만족할 때만 실행
+      if (needsUpdate && canUpdateLOD) {
+        this.applyCullLODInPlace(b, false);
+      }
+
+      // 앰프 스무딩도 카메라가 움직였을 때만 재계산
+      if (needsUpdate && this.cfg.ampDistance.enabled && this.camera && b.clusters.length) {
+        const center = new THREE.Vector3();
+        for (const c of b.clusters) center.add(c.center);
+        center.multiplyScalar(1 / b.clusters.length);
+
+        const cam = new THREE.Vector3();
+        this.camera.getWorldPosition(cam);
+        const d = cam.distanceTo(center);
+        const { near, far, minFactor } = this.cfg.ampDistance;
+        let target = this.cfg.globalAmp;
+        if (d >= far) {
+          target = this.cfg.globalAmp * minFactor;
+        } else if (d > near) {
+          const t = (d - near) / Math.max(1e-6, (far - near));
+          target = this.cfg.globalAmp * THREE.MathUtils.lerp(1.0, minFactor, t);
         }
 
-        // 스로틀링 강화: 두 조건을 모두 만족할 때만 실행
-        if (isDirty && canUpdateLOD) {
-            this.applyCullLODInPlace(b, false);
-        }
-
-        // 앰프 스무딩도 카메라가 움직였을 때만 재계산
-        if (isDirty && this.cfg.ampDistance.enabled && this.camera && b.clusters.length) {
-            const center = new THREE.Vector3();
-            for (const c of b.clusters) center.add(c.center);
-            center.multiplyScalar(1 / b.clusters.length);
-
-            const cam = new THREE.Vector3();
-            this.camera.getWorldPosition(cam);
-            const d = cam.distanceTo(center);
-            const { near, far, minFactor } = this.cfg.ampDistance;
-            let target = this.cfg.globalAmp;
-            if (d >= far) {
-                target = this.cfg.globalAmp * minFactor;
-            } else if (d > near) {
-                const t = (d - near) / Math.max(1e-6, (far - near));
-                target = this.cfg.globalAmp * THREE.MathUtils.lerp(1.0, minFactor, t);
-            }
-            
-            // 카메라가 움직였을 때는 목표값으로 즉시 반영하거나, 부드러운 전환을 위해 기존 로직 유지
-            // 여기서는 즉시 반영으로 변경
-            b.ampSmooth = target; 
-            b.parts.forEach(p => p.uniforms.uGlobalAmp.value = b.ampSmooth as number);
-        }
+        // 카메라가 움직였을 때는 목표값으로 즉시 반영하거나, 부드러운 전환을 위해 기존 로직 유지
+        // 여기서는 즉시 반영으로 변경
+        b.ampSmooth = target;
+        b.parts.forEach(p => p.uniforms.uGlobalAmp.value = b.ampSmooth as number);
+      }
     }
 
     // 모든 업데이트가 끝난 후, 현재 카메라 상태를 캐시
-    if (isDirty) {
-        this.lastCamPos.copy(this.camera.position);
-        this.lastCamQuat.copy(this.camera.quaternion);
+    if (needsUpdate) {
+      this.lastCamPos.copy(this.camera.position);
+      this.lastCamQuat.copy(this.camera.quaternion);
+      this.forceUpdate = false; // 업데이트 완료 후 플래그 초기화
     }
   }
 
@@ -497,7 +560,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       const clusters = this.estimateClustersFromMatrices(baseMatrices);
       const keepMask = new Uint8Array(totalCount);
       this.group.add(resultGroup);
-      
+
       const batch: Batch = { parts, baseMatrices, clusters, totalCount, keepMask, modelId: item.modelId ?? null };
       this.buildRand(batch); // 로드 후 해시 사전계산
       this.batches.push(batch);
@@ -515,23 +578,26 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
 
     return distSq > POS_THRESHOLD_SQ || Math.abs(dot) < ROT_THRESHOLD;
   }
-  
+
   private buildRand(b: Batch): void {
-      if (b.rand) return;
-      const rand = new Float32Array(b.totalCount);
-      for (let i = 0; i < b.totalCount; i++) {
-          const s = Math.sin(i * 12.9898) * 43758.5453;
-          rand[i] = s - Math.floor(s);
-      }
-      b.rand = rand;
+    if (b.rand) return;
+    const rand = new Float32Array(b.totalCount);
+    for (let i = 0; i < b.totalCount; i++) {
+      const s = Math.sin(i * 12.9898) * 43758.5453;
+      rand[i] = s - Math.floor(s);
+    }
+    b.rand = rand;
   }
 
   private applyCullLODInPlace(b: Batch, initial: boolean) {
+    // 배치가 유효하지 않으면 즉시 종료
     if (!b || !b.baseMatrices || b.parts.length === 0) return;
-    
+
+    // 사전 계산된 난수 배열이 없으면 생성 (로드 시 대비)
     if (!b.rand) this.buildRand(b);
     const rand = b.rand!;
 
+    // 카메라 및 프러스텀 정보 계산
     let frustum: THREE.Frustum | null = null;
     const camPos = new THREE.Vector3();
     if (this.camera) {
@@ -541,8 +607,14 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       this.camera.getWorldPosition(camPos);
     }
 
+    // 인스턴스를 숨길 때 사용할 '크기 0' 행렬
     const kill = new THREE.Matrix4().makeScale(0, 0, 0);
+
+    // 재사용할 임시 변수들
     const m = new THREE.Matrix4();
+    const instancePos = new THREE.Vector3();
+
+    // GPU에 업데이트할 범위를 최소화하기 위한 변수
     let minTouched = Number.POSITIVE_INFINITY;
     let maxTouched = -1;
     const markTouched = (idx: number) => {
@@ -550,13 +622,16 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       if (idx > maxTouched) maxTouched = idx;
     };
 
+    // 모든 클러스터 순회
     for (const c of b.clusters) {
+      // 1. 프러스텀 컬링 검사
       let culled = false;
       if (this.cfg.culling.enabled && frustum) {
         const sphere = new THREE.Sphere(c.center, c.radius);
         culled = !frustum.intersectsSphere(sphere);
       }
 
+      // 2. LOD 밀도 계산
       let density = 1.0;
       if (this.cfg.lod.enabled && this.camera) {
         const d = camPos.distanceTo(c.center);
@@ -569,14 +644,49 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
         }
       }
 
+      // 3. 제외 구역과의 교차 여부 사전 검사 (효율성)
+      let isClusterInAnyExclusionZone = false;
+      if (this.exclusionZones.length > 0) {
+        for (const zone of this.exclusionZones) {
+          const distanceSq = c.center.distanceToSquared(zone.position);
+          const combinedRadius = c.radius + zone.radius;
+          if (distanceSq < combinedRadius * combinedRadius) {
+            isClusterInAnyExclusionZone = true;
+            break;
+          }
+        }
+      }
+
+      // 클러스터 내의 모든 인스턴스 순회
       for (let j = 0; j < c.count; j++) {
         const idx = c.start + j;
-        const keep = (!culled) && (rand[idx] <= density); // sin() 대신 배열 조회
+
+        // 최종 표시 여부(keep) 결정
+        let keep = (!culled) && (rand[idx] <= density);
+
+        // 제외 구역 검사 (클러스터가 구역 근처에 있을 때만 실행)
+        if (keep && isClusterInAnyExclusionZone) {
+          instancePos.setFromMatrixPosition(
+            m.fromArray(b.baseMatrices, idx * 16)
+          );
+          for (const zone of this.exclusionZones) {
+            if (instancePos.distanceToSquared(zone.position) < zone.radiusSq) {
+              keep = false; // 제외 구역 안에 있으면 최종적으로 숨김
+              break;
+            }
+          }
+        }
+
         const prev = b.keepMask[idx];
         const next = keep ? 1 : 0;
+
+        // 상태가 변경된 인스턴스만 행렬 업데이트
         if (initial || prev !== next) {
-          if (keep) m.fromArray(b.baseMatrices, idx * 16);
-          else m.copy(kill);
+          if (keep) {
+            m.fromArray(b.baseMatrices, idx * 16); // 복구
+          } else {
+            m.copy(kill); // 숨김
+          }
           b.parts.forEach(p => p.mesh.setMatrixAt(idx, m));
           b.keepMask[idx] = next;
           markTouched(idx);
@@ -584,11 +694,12 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       }
     }
 
+    // 변경된 인스턴스가 있을 경우, 최소한의 범위만 GPU에 업로드
     if (minTouched !== Number.POSITIVE_INFINITY) {
-      const offset = minTouched * 16;
-      const count = (maxTouched - minTouched + 1) * 16;
+      const offset = minTouched;
+      const count = maxTouched - minTouched + 1;
       for (const p of b.parts) {
-        p.mesh.count = b.totalCount;
+        p.mesh.count = b.totalCount; // count는 항상 최대로 유지해야 숨김/복구 가능
         p.mesh.instanceMatrix.updateRange.offset = offset;
         p.mesh.instanceMatrix.updateRange.count = count;
         p.mesh.instanceMatrix.needsUpdate = true;

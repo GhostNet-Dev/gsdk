@@ -21,8 +21,8 @@ export abstract class InteractableObject extends THREE.Group implements IActionU
     constructor(
         public interactId: string,
         protected def: InteractableProperty,
-        protected asset: IAsset,
-        protected eventCtrl: IEventController
+        protected eventCtrl: IEventController,
+        protected asset?: IAsset,
     ) {
         super();
         const stats = def.stats

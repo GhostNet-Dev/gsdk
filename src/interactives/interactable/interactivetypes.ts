@@ -44,6 +44,14 @@ export const interactableDefs = {
     assetKey: Char.UltimateCubeBricks,
     name: "obstacle",
     stats: { },
+  },
+  Campfire: {
+    id: "obstacle",
+    type: "obstacle",
+    level: "common",
+    assetKey: Char.None,
+    name: "obstacle",
+    stats: { },
   }
 } as const
 

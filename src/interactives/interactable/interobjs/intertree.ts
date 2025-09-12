@@ -13,7 +13,7 @@ export class InterTree extends InteractableObject {
         protected asset: IAsset,
         protected eventCtrl: IEventController
   ) {
-    super(uniqId, def, asset, eventCtrl)
+    super(uniqId, def, eventCtrl, asset)
     eventCtrl.RegisterEventListener(EventTypes.Attack + uniqId, () => {
       console.log("tree attack!!", this.position)
       eventCtrl.SendEventMessage(EventTypes.Drop, this.position.clone(), [{
