@@ -1,7 +1,16 @@
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
+/**
+ * 실행할 작업을 정의하는 타입.
+ * 각 작업은 완료를 나타내는 Promise를 반환해야 합니다.
+ */
+type Task = () => Promise<void>;
 
 export default class WheelLoader {
+  private taskQueue: Task[] = [];
+  private completedTasks: number = 0;
+  private totalTasks: number = 0;
+  private isRunning: boolean = false;
   private progressElement: HTMLProgressElement;
   private cogsElement: HTMLElement;
   private element: HTMLElement;
@@ -20,6 +29,58 @@ export default class WheelLoader {
     eventCtrl.RegisterEventListener(EventTypes.LoadingProgress, (value: number) => {
       this.load(value)
     })
+    eventCtrl.RegisterEventListener(EventTypes.RegisterLoadingItems, (task: Task) => {
+      this.taskQueue.push(task);
+    })
+  }
+  public startProcessing(interval: number = 300): void {
+    if (this.isRunning || this.taskQueue.length === 0) {
+      return; // 이미 실행 중이거나 작업이 없으면 시작하지 않음
+    }
+
+    // 상태 초기화
+    this.isRunning = true;
+    this.completedTasks = 0;
+    this.totalTasks = this.taskQueue.length;
+    this.updateProgress();
+
+    const processNextTask = () => {
+      // 처리할 작업이 남아있는 경우
+      if (this.taskQueue.length > 0) {
+        const task = this.taskQueue.shift(); // 대기열에서 작업 하나를 꺼냄
+        if (task) {
+          // 작업을 실행하고 완료되면 다음 단계로 진행
+          task().then(() => {
+            this.completedTasks++;
+            this.updateProgress();
+            setTimeout(processNextTask, interval); // 다음 작업 전 지연
+          });
+        }
+      } else {
+        // 모든 작업이 완료된 경우
+        this.finishProcessing();
+      }
+    };
+
+    // 첫 작업 시작
+    processNextTask();
+  }
+
+  /**
+   * 진행률 UI를 현재 상태에 맞게 업데이트합니다.
+   */
+  private updateProgress(): void {
+    const percentage = this.totalTasks > 0 ? (this.completedTasks / this.totalTasks) * 100 : 0;
+    this.progressElement.style.width = `${percentage}%`;
+  }
+
+  /**
+   * 모든 작업이 완료되었을 때 호출되는 정리 함수.
+   */
+  private finishProcessing(): void {
+    this.isRunning = false;
+    this.close();
+    console.log("모든 작업 완료.");
   }
   loadCSS(filename: string) {
     return new Promise((resolve, reject) => {

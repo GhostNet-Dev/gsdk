@@ -93,6 +93,7 @@ export enum EventTypes {
     AgentLoad = "agentld",
 
     LoadingProgress = "loading",
+    RegisterLoadingItems = "regloaditems",
 
     RegisterSound = "sound",
     RegisterSoundListener = "soundlis",
