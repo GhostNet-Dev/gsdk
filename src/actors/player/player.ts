@@ -144,6 +144,11 @@ export class Player extends PhysicsObject {
         this.clipMap.set(ActionType.SleepingIdle, asset.GetAnimationClip(Ani.SleepingIdle))
 
         this.clipMap.set(ActionType.Sword, asset.GetAnimationClip(Ani.Sword))
+        this.clipMap.set(ActionType.TwoHandSword1, asset.GetAnimationClip(Ani.TwoHandSword1))
+        this.clipMap.set(ActionType.TwoHandSword2, asset.GetAnimationClip(Ani.TwoHandSword2))
+        this.clipMap.set(ActionType.TwoHandSwordTonado, asset.GetAnimationClip(Ani.TwoHandSwordTonado))
+        this.clipMap.set(ActionType.TwoHandSwordFinish, asset.GetAnimationClip(Ani.TwoHandSwordFinish))
+
         this.clipMap.set(ActionType.OneHandGun, asset.GetAnimationClip(Ani.Shooting))
         this.clipMap.set(ActionType.TwoHandGun, asset.GetAnimationClip(Ani.Gunplay))
         this.clipMap.set(ActionType.Fight, asset.GetAnimationClip(Ani.FightIdle))

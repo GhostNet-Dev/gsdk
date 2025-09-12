@@ -29,6 +29,10 @@ export enum ActionType {
 
     Sword,
     SwordRun,
+    TwoHandSword1,
+    TwoHandSword2,
+    TwoHandSwordTonado,
+    TwoHandSwordFinish,
 
     OneHandGun,
     PistolRun,

@@ -13,12 +13,17 @@ export enum Ani {
     Run,
     Jump,
     Punch,
+    Rolling,
     FightIdle,
     Dying,
     SleepingIdle,
 
     Sword,
     SwordRun,
+    TwoHandSword1,
+    TwoHandSword2,
+    TwoHandSwordTonado,
+    TwoHandSwordFinish,
 
     MagicH1,
     MagicH2,

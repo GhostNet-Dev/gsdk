@@ -33,8 +33,17 @@ export class FemaleFab extends AssetModel implements IAsset {
             this.clips.set(Ani.Punch, gltf.animations.find((clip) => clip.name == "PunchCombo"))
             this.clips.set(Ani.FightIdle, gltf.animations.find((clip) => clip.name == "BouncingFightIdle"))
             this.clips.set(Ani.Dying, gltf.animations.find((clip) => clip.name == "Dying"))
+            await this.LoadAnimation("assets/female/Stand To Roll.fbx", Ani.Rolling)
+
+            // sword
             this.clips.set(Ani.Sword, gltf.animations.find((clip) => clip.name == "Sword"))
+            await this.LoadAnimation("assets/female/Great_Sword_Slash1.fbx", Ani.TwoHandSword1)
+            await this.LoadAnimation("assets/female/Great_Sword_Slash2.fbx", Ani.TwoHandSword2)
+            await this.LoadAnimation("assets/female/Great_Sword_Slash_tonado.fbx", Ani.TwoHandSwordTonado)
+            await this.LoadAnimation("assets/female/Great_Sword_Slash_finish.fbx", Ani.TwoHandSwordFinish)
             // this.clips.set(Ani.Shooting, gltf.animations.find((clip) => clip.name == "Gunplay"))
+
+            // gun
             await this.LoadAnimation("assets/female/Shooting.fbx", Ani.Shooting)
             this.clips.set(Ani.Gunplay, gltf.animations.find((clip) => clip.name == "Gunplay"))
             this.clips.set(Ani.MagicH1, gltf.animations.find((clip) => clip.name == "1HMagic"))
