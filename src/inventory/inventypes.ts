@@ -6,13 +6,16 @@ import { Bind } from "@Glibs/types/assettypes"
 import { MonsterId } from "@Glibs/types/monstertypes"
 
 
-export type ItemType = "attack" | "shield" | "armor" | "potion" | "material" | "farm" | "deck"
+export type ItemType = "meleeattack" | "rangeattack" | "shield" | "armor" | "potion" | "material" | "farm" | "deck"
 
 export enum AttackItemType {
-    Blunt, //둔기 
-    Axe,
+    OneHandBlunt, //둔기 
+    TwoHandBlunt, //둔기 
+    OneHandAxe,
+    TwoHandAxe,
     Knife,
-    Sword,
+    OneHandSword,
+    TwoHandSword,
     Bow,
     OneHandGun,
     TwoHandGun,

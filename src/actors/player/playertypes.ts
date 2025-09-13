@@ -25,10 +25,12 @@ export enum ActionType {
     Run,
     Jump,
     Punch,
+    Rolling,
     SleepingIdle,
 
     Sword,
     SwordRun,
+    TwoHandSwordIdle,
     TwoHandSword1,
     TwoHandSword2,
     TwoHandSwordTonado,

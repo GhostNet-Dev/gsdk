@@ -141,9 +141,11 @@ export class Player extends PhysicsObject {
         this.clipMap.set(ActionType.Run, asset.GetAnimationClip(Ani.Run))
         this.clipMap.set(ActionType.Jump, asset.GetAnimationClip(Ani.Jump))
         this.clipMap.set(ActionType.Punch, asset.GetAnimationClip(Ani.Punch))
+        this.clipMap.set(ActionType.Rolling, asset.GetAnimationClip(Ani.Rolling))
         this.clipMap.set(ActionType.SleepingIdle, asset.GetAnimationClip(Ani.SleepingIdle))
 
         this.clipMap.set(ActionType.Sword, asset.GetAnimationClip(Ani.Sword))
+        this.clipMap.set(ActionType.TwoHandSwordIdle, asset.GetAnimationClip(Ani.TwoHandSwordIdle))
         this.clipMap.set(ActionType.TwoHandSword1, asset.GetAnimationClip(Ani.TwoHandSword1))
         this.clipMap.set(ActionType.TwoHandSword2, asset.GetAnimationClip(Ani.TwoHandSword2))
         this.clipMap.set(ActionType.TwoHandSwordTonado, asset.GetAnimationClip(Ani.TwoHandSwordTonado))
@@ -241,7 +243,7 @@ export class Player extends PhysicsObject {
             const theta = (i / segments) * Math.PI * 2;
             const x = Math.cos(theta) * radius;
             const z = Math.sin(theta) * radius;
-            positions.push(x, 0, z); // Y = 0 평면에 생성
+            positions.push(x, 0.1, z); // Y = 0 평면에 생성
         }
 
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));

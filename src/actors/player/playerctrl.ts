@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Player } from "./player";
-import { DeadState, IPlayerAction, IdleState, JumpState, MagicH1State, MagicH2State, RunState, SleepingIdleState } from "./states/playerstate";
+import { DeadState, IPlayerAction, IdleState, JumpState, MagicH1State, MagicH2State, RollState, RunState, SleepingIdleState } from "./states/playerstate";
 import { AttackIdleState, AttackState } from "./states/attackstate";
 import { BaseSpec } from "../battle/basespec";
 import { BuildingState, DeleteState, PickFruitState, PickFruitTreeState, PlantAPlantState, WarteringState } from "./states/farmstate";
@@ -18,6 +18,8 @@ import { CutDownTreeState, TreeIdleState } from "./states/treestates";
 import { Item } from "@Glibs/inventory/items/item";
 import { Buffdefs } from "@Glibs/magical/buff/buffdefs";
 import { Buff } from "@Glibs/magical/buff/buff";
+import { MeleeAttackIdleState, MeleeAttackState } from "./states/meleeattackst";
+import { RangeAttackState } from "./states/rangeattackst";
 
 export class PlayerCtrl implements ILoop, IActionUser {
     LoopId = 0
@@ -37,13 +39,16 @@ export class PlayerCtrl implements ILoop, IActionUser {
     baseSpec: BaseSpec
     keyType: KeyType = KeyType.None
 
-    AttackSt: AttackState
+    MeleeAttackSt: MeleeAttackState
+    RangeAttackSt: RangeAttackState
     MagicH1St: MagicH1State
     MagicH2St: MagicH2State
     AttackIdleSt: AttackIdleState
+    MeleeAttackIdleSt: MeleeAttackIdleState
     RunSt: RunState
     JumpSt: JumpState
     IdleSt: IdleState
+    RollSt: RollState
     DyingSt: DeadState
     PickFruitSt: PickFruitState
     PickFruitTreeSt: PickFruitTreeState
@@ -80,13 +85,16 @@ export class PlayerCtrl implements ILoop, IActionUser {
         private eventCtrl: IEventController,
     ) {
         this.baseSpec = new BaseSpec(DefaultStatus.stats, this)
-        this.AttackSt = new AttackState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
+        this.MeleeAttackSt = new MeleeAttackState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
+        this.RangeAttackSt = new RangeAttackState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
         this.MagicH1St = new MagicH1State(this, this.player, this.gphysic, this.baseSpec)
         this.MagicH2St = new MagicH2State(this, this.player, this.gphysic, this.baseSpec)
         this.AttackIdleSt = new AttackIdleState(this, this.player, this.gphysic, this.baseSpec)
+        this.MeleeAttackIdleSt = new MeleeAttackIdleState(this, this.player, this.gphysic, this.baseSpec)
         this.RunSt = new RunState(this, this.player, this.camera, this.gphysic, this.eventCtrl, this.baseSpec)
         this.JumpSt = new JumpState(this, this.player, this.camera, this.gphysic)
         this.IdleSt = new IdleState(this, this.player, this.gphysic, this.baseSpec)
+        this.RollSt = new RollState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
         this.DyingSt = new DeadState(this, this.player, this.gphysic, this.baseSpec)
         this.PickFruitSt = new PickFruitState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
         this.PickFruitTreeSt = new PickFruitTreeState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
@@ -161,11 +169,21 @@ export class PlayerCtrl implements ILoop, IActionUser {
                 this.currentState = this.DyingSt
                 this.currentState.Init()
             }
+            
             if (!this.playEnable) return
             opts.forEach((opt) => {
+                if (opt.obj) {
+                    const ret = this.isObjectLookingAt(opt.obj, this.player.CenterPos, 90)
+                    const dis = this.player.CenterPos.distanceTo(opt.obj.position)
+                    if (!ret || dis > 3) {
+                        console.log("out of range")
+                        return
+                    }
+                }
                 switch (opt.type) {
                     case AttackType.NormalSwing:
                     case AttackType.Magic0:
+                        if(this.currentState == this.RollSt) break;
                         this.baseSpec.ReceiveCalcDamage(opt.damage)
                         this.player.DamageEffect(opt.damage)
                         break;
@@ -289,4 +307,26 @@ export class PlayerCtrl implements ILoop, IActionUser {
     UpdateBuff(buff: IBuffItem[]) {
         console.log(buff)
     }
+    isObjectLookingAt(object: THREE.Object3D, targetPosition: THREE.Vector3, fov: number): boolean {
+        // 1. 객체의 정면 방향 벡터를 구합니다.
+        const objectDirection = new THREE.Vector3();
+        // getWorldDirection는 객체의 로컬 Z축 방향(정면)을 월드 좌표 기준으로 가져옵니다.
+        object.getWorldDirection(objectDirection);
+      
+        // 2. 객체에서 목표 지점까지의 방향 벡터를 구합니다.
+        const targetDirection = new THREE.Vector3();
+        targetDirection.subVectors(targetPosition, object.position).normalize();
+      
+        // 3. 두 벡터 사이의 각도를 계산합니다 (라디안 단위).
+        // 벡터 내적(dot product)을 사용하여 두 벡터 사이의 각도를 구합니다.
+        const angle = Math.acos(objectDirection.dot(targetDirection));
+      
+        // 4. 시야각(fov)을 라디안으로 변환합니다.
+        // fov는 전체 시야각이므로, 정면 방향을 기준으로 절반으로 나눕니다.
+        const fovInRadians = THREE.MathUtils.degToRad(fov / 2);
+      
+        // 5. 계산된 각도가 시야각 범위 내에 있는지 확인합니다.
+        return angle <= fovInRadians;
+      }
+
 }

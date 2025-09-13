@@ -20,6 +20,7 @@ export enum Ani {
 
     Sword,
     SwordRun,
+    TwoHandSwordIdle,
     TwoHandSword1,
     TwoHandSword2,
     TwoHandSwordTonado,

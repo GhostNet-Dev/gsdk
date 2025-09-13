@@ -135,6 +135,7 @@ export class AttackZState extends State implements IMonsterAction {
             type: AttackType.NormalSwing,
             spec: [this.spec],
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
+            obj: this.zombie.Meshs
         }])
 
         this.attackProcess = false
@@ -233,7 +234,7 @@ export class RunZState extends State implements IMonsterAction {
         const dis = this.gphysic.CheckDirection(this.zombie, this.dir.copy(v));
         const moveAmount = v.clone().multiplyScalar(delta * this.speed);
         const moveDis = moveAmount.length();
-        console.log(moveDis, " / ", dis.distance, " / ", dis.move)
+        // console.log(moveDis, " / ", dis.distance, " / ", dis.move)
 
         if (dis.move) {
             this.zombie.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));

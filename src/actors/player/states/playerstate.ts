@@ -25,9 +25,12 @@ export class State {
         protected baseSpec: BaseSpec
     ) { }
 
-    DefaultCheck({ run = true, attack = true, jump = true, magic = true } = {}): IPlayerAction | undefined {
+    DefaultCheck({ run = true, attack = true, jump = true, magic = true, roll = true } = {}): IPlayerAction | undefined {
         const checkRun = (run) ? this.CheckRun() : undefined
         if (checkRun != undefined) return checkRun
+
+        const checkRoll = (roll) ? this.CheckRoll(): undefined
+        if (checkRoll != undefined) return checkRoll
 
         const checkAtt = (attack) ? this.CheckAttack(): undefined
         if (checkAtt != undefined) return checkAtt
@@ -48,11 +51,20 @@ export class State {
             return this.playerCtrl.RunSt
         }
     }
-    CheckAttack() {
+    CheckRoll() {
         if (this.playerCtrl.KeyState[KeyType.Action1]) {
+            this.playerCtrl.RollSt.Init()
+            return this.playerCtrl.RollSt
+        }
+    }
+    CheckAttack() {
+        if (this.playerCtrl.KeyState[KeyType.Action2]) {
             if (this.playerCtrl.mode == AppMode.Play) {
-                this.playerCtrl.AttackSt.Init()
-                return this.playerCtrl.AttackSt
+                const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
+                const state = (handItem?.ItemType == "meleeattack") ? 
+                    this.playerCtrl.MeleeAttackSt : this.playerCtrl.RangeAttackSt
+                state.Init()
+                return state
             } else if(this.playerCtrl.mode == AppMode.Weapon) {
                 this.playerCtrl.DeckSt.Init()
                 return this.playerCtrl.DeckSt
@@ -63,7 +75,7 @@ export class State {
         }
     }
     CheckMagic() {
-        if (this.playerCtrl.KeyState[KeyType.Action2]) {
+        if (this.playerCtrl.KeyState[KeyType.Action3]) {
             if (this.playerCtrl.mode == AppMode.Play) {
                 this.playerCtrl.MagicH1St.Init()
                 return this.playerCtrl.MagicH1St
@@ -74,7 +86,7 @@ export class State {
         }
     }
     CheckMagic2(): IPlayerAction | undefined {
-        if (this.playerCtrl.KeyState[KeyType.Action3]) {
+        if (this.playerCtrl.KeyState[KeyType.Action4]) {
             if (this.playerCtrl.mode == AppMode.Play) {
                 this.playerCtrl.MagicH2St.Init()
                 return this.playerCtrl.MagicH2St
@@ -104,15 +116,85 @@ export class State {
     CheckEnermyInRange() {
         const attackRange = this.playerCtrl.baseSpec.stats.getStat("attackRange")
         for (const v of this.playerCtrl.targets) {
-            const dis = this.player.Pos.distanceTo(v.position)
+            const dis = this.player.CenterPos.distanceTo(v.position)
             if(attackRange > dis) {
-                this.playerCtrl.AttackSt.Init()
-                return this.playerCtrl.AttackSt
+                const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
+                const state = (handItem?.ItemType == "meleeattack") ? 
+                    this.playerCtrl.MeleeAttackSt : this.playerCtrl.RangeAttackSt
+                state.Init()
+                return state
             }
         }
     }
 }
+export class RollState extends State implements IPlayerAction {
+    // 구르기 속도와 지속 시간 설정
+    private rollSpeed = 8.5
+    private rollDuration = 0.6 // 초 단위 (애니메이션 길이에 맞게 조절)
+    private rollTimer = 0
 
+    // 구르기 시작 시 방향을 저장할 벡터
+    private rollDirection = new THREE.Vector3()
+
+    constructor(
+        playerPhy: PlayerCtrl, 
+        player: Player, 
+        gphysic: IGPhysic, 
+        eventCtrl: IEventController, // eventCtrl은 필요 없을 수 있지만 구조적 일관성을 위해 유지
+        baseSpec: BaseSpec,
+    ) {
+        super(playerPhy, player, gphysic, baseSpec)
+    }
+
+    /**
+     * 구르기 상태를 시작합니다.
+     * @param v - 구르기를 시작할 때의 이동 입력 벡터 (이 방향으로 구릅니다)
+     */
+    Init(): void {
+        this.rollTimer = 0
+        this.rollDuration = this.player.ChangeAction(ActionType.Rolling) ?? 1
+
+        // ✅ 구르기 방향 결정 및 고정
+        // 입력이 있으면 해당 방향으로, 없으면 현재 바라보는 정면 방향으로 구르기
+        this.player.Meshs.getWorldDirection(this.rollDirection)
+    }
+
+    Uninit(): void { }
+
+    // 구르기 중에는 다른 상호작용이 불가능해야 하므로 주석 처리하거나 비워둡니다.
+    // CheckInteraction() {}
+
+    Update(delta: number): IPlayerAction {
+        this.rollTimer += delta
+
+        // ✅ 구르기 종료 체크
+        if (this.rollTimer >= this.rollDuration) {
+            this.Uninit()
+            this.playerCtrl.AttackIdleSt.Init()
+            return this.playerCtrl.AttackIdleSt
+        }
+
+        // 구르기 중에는 점프나 공격으로 상태를 변경할 수 없도록 관련 로직을 제거합니다.
+        // 단, 중력은 계속 적용되어야 합니다.
+        const checkGravity = this.CheckGravity()
+        if (checkGravity != undefined) return checkGravity
+
+        // ✅ 이동 처리
+        // Init에서 설정된 고정된 방향(rollDirection)으로 이동합니다.
+        const moveAmount = this.rollDirection.clone().multiplyScalar(delta * this.rollSpeed)
+        const moveDis = moveAmount.length()
+        const dis = this.gphysic.CheckDirection(this.player, this.rollDirection)
+
+        if (dis.move) {
+            this.player.Pos.add(dis.move.normalize().multiplyScalar(delta * this.rollSpeed))
+        } else if (moveDis < dis.distance) {
+            this.player.Pos.add(moveAmount)
+        }
+
+        // 구르기 상태를 유지합니다.
+        return this
+    }
+}
 export class MagicH2State extends State implements IPlayerAction {
     keytimeout?:NodeJS.Timeout
     next: IPlayerAction = this
@@ -217,9 +299,13 @@ export class IdleState extends State implements IPlayerAction {
     }
     getAnimationForItem(item: IItem): ActionType {
         switch (item.AttackType) {
-            case AttackItemType.Sword:
-            case AttackItemType.Axe:
-            case AttackItemType.Blunt:
+            case AttackItemType.TwoHandSword:
+            case AttackItemType.TwoHandAxe:
+            case AttackItemType.TwoHandBlunt:
+                return ActionType.TwoHandSwordIdle
+            case AttackItemType.OneHandSword:
+            case AttackItemType.OneHandAxe:
+            case AttackItemType.OneHandBlunt:
             case AttackItemType.OneHandGun:
                 return ActionType.Idle
             case AttackItemType.TwoHandGun:
@@ -258,14 +344,11 @@ export class RunState extends State implements IPlayerAction {
     dir = new THREE.Vector3()
 
     Update(delta: number, v: THREE.Vector3): IPlayerAction {
-        const checkAtt = this.CheckAttack()
-        if (checkAtt != undefined) return checkAtt
-
-        const checkJump = this.CheckJump()
-        if (checkJump != undefined) return checkJump
-
-        const checkGravity = this.CheckGravity()
-        if (checkGravity != undefined) return checkGravity
+        const d = this.DefaultCheck({ magic: false, run: false })
+        if (d != undefined) {
+            this.Uninit()
+            return d
+        }
 
         this.CheckInteraction()
 
@@ -326,9 +409,9 @@ export class RunState extends State implements IPlayerAction {
     }
     getAnimationForItem(item: IItem): ActionType {
         switch (item.AttackType) {
-            case AttackItemType.Sword:
+            case AttackItemType.OneHandSword:
                 return ActionType.SwordRun
-            case AttackItemType.Axe:
+            case AttackItemType.OneHandAxe:
                 return ActionType.AxeRun
             case AttackItemType.TwoHandGun:
                 return ActionType.RifleRun

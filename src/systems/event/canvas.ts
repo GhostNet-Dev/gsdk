@@ -31,8 +31,10 @@ export class Canvas {
             obj.StopLoop?.()
             console.log("deregister " + obj.constructor.name);
             const idx = this.loopObjs.findIndex(o => o.LoopId == obj.LoopId)
-            if(idx < 0) throw new Error("not exist in array");
-            
+            if(idx < 0) {
+                console.warn("not exist in array");
+                return
+            }            
             this.loopObjs.splice(idx, 1)
         })
         eventCtrl.RegisterEventListener(EventTypes.RegisterViewer, (obj: IViewer) => {

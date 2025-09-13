@@ -37,6 +37,7 @@ export class FemaleFab extends AssetModel implements IAsset {
 
             // sword
             this.clips.set(Ani.Sword, gltf.animations.find((clip) => clip.name == "Sword"))
+            await this.LoadAnimation("assets/female/Great_Sword_Idle.fbx", Ani.TwoHandSwordIdle)
             await this.LoadAnimation("assets/female/Great_Sword_Slash1.fbx", Ani.TwoHandSword1)
             await this.LoadAnimation("assets/female/Great_Sword_Slash2.fbx", Ani.TwoHandSword2)
             await this.LoadAnimation("assets/female/Great_Sword_Slash_tonado.fbx", Ani.TwoHandSwordTonado)
