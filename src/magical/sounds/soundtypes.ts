@@ -25,4 +25,8 @@ export enum SoundType {
 
     
     WhispersOfEldertree =  `${soundPath}bgm/free6fantasy/1_-_Whispers_of_the_Eldertree_(Loop).mp3`,
+
+    SwordAttack1 = `${soundPath}tommusic/sfx/attacks/sword_attacks_hits_and_blocks/sword_attack_1.mp3`,
+    SwordAttack2 = `${soundPath}tommusic/sfx/attacks/sword_attacks_hits_and_blocks/sword_attack_2.mp3`,
+    SwordAttack3 = `${soundPath}tommusic/sfx/attacks/sword_attacks_hits_and_blocks/sword_attack_3.mp3`,
 }

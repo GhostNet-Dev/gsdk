@@ -1,7 +1,8 @@
-// ComboMeleeState.ts — Controller/Input 수정 불필요 버전
-//  - 내부에서 KeyState 폴링 → 엣지 검출/입력버퍼 처리
-//  - CheckAttack 재호출로 재-Init되는 문제를 방지하기 위해 DefaultCheck 오버라이드
-//  - "히트 이후 + 리커버리"에서만 다음 스텝 소비(즉시 전개 방지 패치 적용)
+// ComboMeleeState.ts — Timer + Catch-up + Re-ChangeAction Resync 보조 버전
+//  - 총 재생시간(초) = attackSpeed (ChangeAction(anim, attackSpeed))
+//  - 스윙/히트 setTimeout 예약 + Update catch-up 즉시 실행
+//  - 드리프트 감지 → (가능시) 애니메이션 소프트 시크 / (초반) 하드 리셋(ChangeAction 재호출)
+//  - 입력창 소비 정책: "히트 이후 + 리커버리" 유지
 
 import * as THREE from "three";
 import { IPlayerAction } from "./playerstate";
@@ -14,7 +15,6 @@ import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { Bind } from "@Glibs/types/assettypes";
 import { ActionType } from "../playertypes";
-import { IItem } from "@Glibs/interface/iinven";
 import { Item } from "@Glibs/inventory/items/item";
 import { AttackState } from "./attackstate";
 import { KeyType } from "@Glibs/types/eventtypes";
@@ -24,31 +24,56 @@ import { KeyType } from "@Glibs/types/eventtypes";
 /* -------------------------------------------------------------------------- */
 
 type ComboPhase = "idle" | "windup" | "hit" | "recovery";
+type SecOrFrac = { sec?: number; frac?: number };
 
 interface ComboStep {
     anim: ActionType;
-    windup: number;                  // 준비동작 길이(초) — attackSpeed로 나눠서 실제시간 산정
-    hitTime: number;                 // 타격 시점(초) — attackSpeed로 나눠서 실제시간 산정
-    recovery: number;                // 후딜(초) — attackSpeed로 나눠서 실제시간 산정
-    damageMul?: number;              // 기본 대미지 배율
-    rangeMul?: number;               // 기본 사거리 배율
-    inputWindow?: [number, number];  // 다음 스텝 입력창(초) — attackSpeed로 나눠서 실제시간 산정
-    cancelInto?: ActionType[];       // 허용 캔슬 액션(구르기/런 등)
-    next?: number;                   // 다음 스텝 인덱스(없으면 종료)
-    sfx?: string;                    // SFX 태그(있으면 사용)
+
+    // (레거시) 절대초
+    windup?: number;
+    hitTime?: number;
+    recovery?: number;
+    inputWindow?: [number, number];
+
+    // (신규) frac(0..1) 또는 sec(절대초): 총 길이(attackSpeed)에 맞춰 해석
+    windupT?: SecOrFrac;
+    hitT?: SecOrFrac;
+    recoveryT?: SecOrFrac;
+    inputWindowT?: [SecOrFrac, SecOrFrac];
+
+    damageMul?: number;
+    rangeMul?: number;
+
+    cancelInto?: ActionType[];
+    next?: number;
+
+    // SFX
+    swingSfx?: string;
+    swingLeadSec?: number; // 히트 직전 리드
+    impactSfx?: string;
+    missSfx?: string;
+    sfx?: string; // (레거시) impactSfx 간주
 }
 
 interface ComboChain {
     name: string;
     steps: ComboStep[];
-    inputBufferSec?: number;         // 입력 버퍼 유지 시간
-    hitstopSec?: number;             // 히트스톱(연출) 시간
-    // (옵션) 트리거 정책: "afterHitOnly"가 기본 — 히트 이후에만 입력창을 열고 소비
+    inputBufferSec?: number;
+    hitstopSec?: number;
     triggerPolicy?: "afterHitOnly" | "anytimeRecovery";
 }
 
+interface ResolvedTimes {
+    windupSec: number;
+    hitSec: number;
+    recoverySec: number;
+    inputWinStartSec: number;
+    inputWinEndSec: number;
+    swingLeadSec: number;
+}
+
 /* -------------------------------------------------------------------------- */
-/*                                 Presets                                    */
+/*                              Chain Presets                                 */
 /* -------------------------------------------------------------------------- */
 
 const Unarmed3: ComboChain = {
@@ -57,7 +82,16 @@ const Unarmed3: ComboChain = {
     hitstopSec: 0.04,
     triggerPolicy: "afterHitOnly",
     steps: [
-        { anim: ActionType.Punch, windup: 0.12, hitTime: 0.18, recovery: 0.18, damageMul: 1.0, rangeMul: 1.0, inputWindow: [0.20, 0.35], next: 1, sfx: "punch1" },
+        {
+            anim: ActionType.Punch,
+            windupT: { sec: 0.12 },
+            hitT: { sec: 0.18 },
+            recoveryT: { sec: 0.18 },
+            inputWindowT: [{ sec: 0.20 }, { sec: 0.35 }],
+            damageMul: 1.0, rangeMul: 1.0,
+            swingSfx: "whoosh_light", swingLeadSec: 0.05,
+            impactSfx: "punch1",
+        }
     ]
 };
 
@@ -67,33 +101,88 @@ const OneHandSword3: ComboChain = {
     hitstopSec: 0.05,
     triggerPolicy: "afterHitOnly",
     steps: [
-        { anim: ActionType.TwoHandSword1, windup: 0.14, hitTime: 0.20, recovery: 0.22, damageMul: 1.2, rangeMul: 1.1, inputWindow: [0.18, 0.34], next: 1, sfx: "slash1" },
-        { anim: ActionType.TwoHandSword2, windup: 0.12, hitTime: 0.18, recovery: 0.24, damageMul: 1.3, rangeMul: 1.15, inputWindow: [0.18, 0.34], next: 2, sfx: "slash2" },
-        { anim: ActionType.TwoHandSwordFinish, windup: 0.16, hitTime: 0.24, recovery: 0.30, damageMul: 1.6, rangeMul: 1.25, inputWindow: [0.26, 0.40], sfx: "stab" },
+        {
+            anim: ActionType.TwoHandSword1,
+            windupT: { sec: 0.14 }, hitT: { sec: 0.20 }, recoveryT: { sec: 0.22 },
+            inputWindowT: [{ sec: 0.18 }, { sec: 0.34 }],
+            damageMul: 1.2, rangeMul: 1.1,
+            swingSfx: "whoosh_med", swingLeadSec: 0.06, impactSfx: "slash1",
+            next: 1
+        },
+        {
+            anim: ActionType.TwoHandSword2,
+            windupT: { sec: 0.12 }, hitT: { sec: 0.18 }, recoveryT: { sec: 0.24 },
+            inputWindowT: [{ sec: 0.18 }, { sec: 0.34 }],
+            damageMul: 1.3, rangeMul: 1.15,
+            swingSfx: "whoosh_med", swingLeadSec: 0.06, impactSfx: "slash2",
+            next: 2
+        },
+        {
+            anim: ActionType.TwoHandSwordFinish,
+            windupT: { sec: 0.16 }, hitT: { sec: 0.24 }, recoveryT: { sec: 0.30 },
+            inputWindowT: [{ sec: 0.26 }, { sec: 0.40 }],
+            damageMul: 1.6, rangeMul: 1.25,
+            swingSfx: "whoosh_heavy", swingLeadSec: 0.07, impactSfx: "stab"
+        }
     ]
 };
+
+/* -------------------------------------------------------------------------- */
+/*                      Tunables: 지연/드리프트/리셋 정책                     */
+/* -------------------------------------------------------------------------- */
+
+// 사운드 지연이 없다면 0 유지
+const AUDIO_LAG_COMP_SEC = 0.00;
+
+// catch-up 즉시 실행 허용 오차(초)
+const CATCHUP_EPSILON_SEC = 0.001;
+
+// 드리프트 임계치(초) — 이보다 크면 보조 동기화 시도
+const RESYNC_SOFT_SEEK_SEC = 0.020;  // 이 이상 어긋나면 애니메이션 seek 시도
+const RESYNC_HARD_RESET_SEC = 0.060; // 이 이상 + 스텝 초반이면 ChangeAction 재호출
+
+// 하드 리셋 허용 구간(스텝 시작 후 몇 초 이내만 허용 — 중/후반 리셋은 시각적으로 거슬림)
+const RESYNC_HARD_WINDOW_SEC = 0.20;
+
+// 디버그 로그 on/off
+const DEBUG_SYNC = false;
 
 /* -------------------------------------------------------------------------- */
 /*                              ComboMeleeState                               */
 /* -------------------------------------------------------------------------- */
 
 export class ComboMeleeState extends AttackState implements IPlayerAction {
-    // 콤보 진행
     private chain!: ComboChain;
     private stepIndex = 0;
     private currentStep!: ComboStep;
+
     private phase: ComboPhase = "idle";
-    private phaseTime = 0;         // 상태 시작 후 경과 시간(초, clock 기반)
-    private hitstopLeft = 0;       // 남은 히트스톱 시간(초)
+    private phaseTime = 0;
+    private hitstopLeft = 0;
     private comboWindowOpen = false;
 
-    // 입력(내부 처리)
-    private prevAttackPressed = false; // 엣지 검출용
-    private inputQueue: number[] = []; // 상태 상대시각 타임스탬프를 저장
-    private inputBufferSec = 0.25;     // 체인에서 덮어씀
+    // 입력 버퍼/엣지
+    private prevAttackPressed = false;
+    private inputQueue: number[] = [];
+    private inputBufferSec = 0.25;
 
-    // 정책/연출
     private hitstopSec = 0.04;
+
+    private resolved: ResolvedTimes = {
+        windupSec: 0, hitSec: 0, recoverySec: 0,
+        inputWinStartSec: 0, inputWinEndSec: 0,
+        swingLeadSec: 0.05
+    };
+
+    private swingSfxPlayed = false;
+    private impactSfxPlayed = false;
+
+    // 타이머 스케줄링/기준시각(벽시계)
+    private stepStartWallSec = 0;
+    private swingTimerId?: ReturnType<typeof setTimeout>;
+    private hitTimerId?: ReturnType<typeof setTimeout>;
+    private swingTimerFired = false;
+    private hitTimerFired = false;
 
     constructor(
         playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic,
@@ -105,17 +194,21 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
 
     /* ------------------------------ Helpers --------------------------------- */
 
-    // 공격속도 보정: 정의상 타임(sec)을 attackSpeed로 나눠 실제 경과 비교
-    private normTime(t: number) { return t / this.attackSpeed; }
+    private get totalDurSec(): number { return this.attackSpeed || 1; }
 
-    // 무기/맨손에 따라 콤보 체인을 선택
+    private resolveSec(of?: SecOrFrac, legacy?: number): number {
+        const T = this.totalDurSec;
+        if (!of) return legacy ?? 0;
+        if (of.sec != null) return of.sec;
+        if (of.frac != null) return of.frac * T;
+        return legacy ?? 0;
+    }
+
     private pickChain(): ComboChain {
         const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R);
-        // 실제 프로젝트 무기 타입/아이템 타입에 맞춰 분기하세요.
         return handItem ? OneHandSword3 : Unarmed3;
     }
 
-    // 내부 폴링: KeyState로부터 상승엣지 검출 + 버퍼 push
     private pollAttackEdgeAndBuffer(nowSec: number) {
         const pressed = !!this.playerCtrl.KeyState[KeyType.Action2];
         const risingEdge = pressed && !this.prevAttackPressed;
@@ -123,13 +216,11 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
 
         if (risingEdge) {
             this.inputQueue.push(nowSec);
-            // 만료 제거
             const oldest = nowSec - this.inputBufferSec;
             this.inputQueue = this.inputQueue.filter(t => t >= oldest);
         }
     }
 
-    // 버퍼에서 최신 입력 1개 소비(유효 시간 내)
     private tryConsumeBufferedInput(nowSec: number): boolean {
         const oldest = nowSec - this.inputBufferSec;
         for (let i = this.inputQueue.length - 1; i >= 0; i--) {
@@ -141,48 +232,42 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         return false;
     }
 
-    // 시간 기반 입력창 오픈 — 패치: 히트 이전에는 절대 열리지 않음 + 리커버리에서만 열림
-    private maybeOpenInputWindowByTime(now: number) {
+    private maybeOpenInputWindowByTime(nowSec: number) {
         if (this.comboWindowOpen) return;
-        const win = this.currentStep.inputWindow;
-        if (!win) return;
 
-        const [ws, we] = win;
-        const sBase = this.normTime(ws);
-        const e = this.normTime(we);
+        const sBase = this.resolved.inputWinStartSec;
+        const e = this.resolved.inputWinEndSec;
 
         const policy = this.chain.triggerPolicy ?? "afterHitOnly";
-        const hitAfter = this.normTime(this.currentStep.hitTime);
+        const hitAfter = this.resolved.hitSec;
         const s = policy === "afterHitOnly" ? Math.max(sBase, hitAfter) : sBase;
 
-        // 리커버리 구간에서만 입력창 허용
-        this.comboWindowOpen = (this.phase === "recovery") && (now >= s && now <= e);
+        this.comboWindowOpen = (this.phase === "recovery") && (nowSec >= s && nowSec <= e);
     }
 
-    // 히트 처리 → 리커버리로 전환 + 히트스톱
-    private forceDoHit() {
-        this.doHit();
-        this.phase = "recovery";
-        this.phaseTime = 0;
-        this.hitstopLeft = this.hitstopSec;
+    private playSfxOnce(tag?: string) {
+        if (!tag) return;
+        const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R);
+        this.eventCtrl.SendEventMessage(
+            EventTypes.PlaySound,
+            handItem?.Mesh ?? this.player.Meshs,
+            handItem?.Sound ?? tag
+        );
     }
 
-    // 실제 타격 판정(기존 근접 공격 로직 재사용)
+    // 충돌/대미지 처리
     private doHit() {
         const dmgMul = this.currentStep.damageMul ?? 1;
         const rangeMul = this.currentStep.rangeMul ?? 1;
         const baseDamage = this.baseSpec.Damage * dmgMul;
         const baseRange = this.attackDist * rangeMul;
 
-        const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R);
-        if (handItem?.Sound) {
-            this.eventCtrl.SendEventMessage(EventTypes.PlaySound, handItem.Mesh, handItem.Sound);
-        }
-
         this.player.Meshs.getWorldDirection(this.attackDir);
         this.raycast.set(this.player.CenterPos, this.attackDir.normalize());
 
         const hits = this.raycast.intersectObjects(this.playerCtrl.targets);
+        let anyHit = false;
+
         if (hits.length > 0 && hits[0].distance < baseRange) {
             const buckets = new Map<string, any[]>();
             for (const h of hits) {
@@ -196,15 +281,31 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
                 });
                 buckets.set(h.object.name, arr);
             }
-            buckets.forEach((v, k) => this.eventCtrl.SendEventMessage(EventTypes.Attack + k, v));
+            buckets.forEach((v, k) => {
+                this.eventCtrl.SendEventMessage(EventTypes.Attack + k, v);
+            });
+            anyHit = buckets.size > 0;
+        }
+
+        if (anyHit && !this.impactSfxPlayed) {
+            this.playSfxOnce(this.currentStep.impactSfx ?? this.currentStep.sfx);
+            this.impactSfxPlayed = true;
+        } else if (!anyHit && this.currentStep.missSfx) {
+            this.playSfxOnce(this.currentStep.missSfx);
         }
     }
 
-    // 콤보 입력 소비는 리커버리에서만 수행 — 즉시 전개 방지의 핵심
-    private tryQueueNextIfBuffered(now: number): boolean {
-        if (this.phase !== "recovery") return false;         // windup/hit에서는 절대 소비 금지
+    private forceDoHit() {
+        this.doHit();
+        this.phase = "recovery";
+        this.phaseTime = 0;
+        this.hitstopLeft = this.hitstopSec;
+    }
+
+    private tryQueueNextIfBuffered(nowSec: number): boolean {
+        if (this.phase !== "recovery") return false;
         if (!this.comboWindowOpen) return false;
-        if (!this.tryConsumeBufferedInput(now)) return false;
+        if (!this.tryConsumeBufferedInput(nowSec)) return false;
 
         const next = this.currentStep.next;
         if (next == null) return false;
@@ -213,13 +314,18 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         return true;
     }
 
-    // (옵션) 애니메이션 이벤트 훅 — 히트/입력창 오픈을 이벤트로 제어할 때 사용
     public onAnimationEvent(evtName: string) {
-        if (evtName === "Hit" && this.phase !== "hit") {
-            this.forceDoHit();
+        if (evtName === "Hit") {
+            // 시각 프레임 = 임팩트/판정(타이머 중복 방지)
+            if (!this.hitTimerFired) this.clearHitTimer();
+            if (!this.impactSfxPlayed) {
+                this.playSfxOnce(this.currentStep.impactSfx ?? this.currentStep.sfx);
+                this.impactSfxPlayed = true;
+            }
+            if (this.phase !== "hit") this.forceDoHit();
+            this.hitTimerFired = true;
         } else if (evtName === "ComboWindowStart") {
-            // 패치: 히트 이후 + 리커버리일 때만 인정
-            const hitAfter = this.normTime(this.currentStep.hitTime);
+            const hitAfter = this.resolved.hitSec;
             if (this.phase === "recovery" && this.phaseTime >= hitAfter) {
                 this.comboWindowOpen = true;
             }
@@ -228,7 +334,127 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         }
     }
 
-    /* ---------------------------- Lifecycle --------------------------------- */
+    /* --------------------------- Timer Scheduling ---------------------------- */
+
+    private clearSwingTimer() {
+        if (this.swingTimerId) clearTimeout(this.swingTimerId);
+        this.swingTimerId = undefined;
+        this.swingTimerFired = false;
+    }
+
+    private clearHitTimer() {
+        if (this.hitTimerId) clearTimeout(this.hitTimerId);
+        this.hitTimerId = undefined;
+        this.hitTimerFired = false;
+    }
+
+    private clearStepTimers() {
+        this.clearSwingTimer();
+        this.clearHitTimer();
+    }
+
+    private scheduleStepTimers() {
+        this.stepStartWallSec = performance.now() / 1000.0;
+
+        const swingAt = Math.max(
+            0,
+            this.resolved.hitSec - this.resolved.swingLeadSec - AUDIO_LAG_COMP_SEC
+        );
+        const hitAt = Math.max(0, this.resolved.hitSec);
+
+        this.clearStepTimers();
+
+        if (this.currentStep.swingSfx) {
+            this.swingTimerId = setTimeout(() => {
+                if (!this.swingSfxPlayed && this.phase === "windup") {
+                    this.playSfxOnce(this.currentStep.swingSfx);
+                    this.swingSfxPlayed = true;
+                }
+                this.swingTimerFired = true;
+            }, Math.max(0, swingAt * 1000));
+        }
+
+        this.hitTimerId = setTimeout(() => {
+            if (!this.hitTimerFired) {
+                if (this.phase === "windup" || this.phase === "hit") {
+                    this.forceDoHit();
+                }
+                this.hitTimerFired = true;
+            }
+        }, Math.max(0, hitAt * 1000));
+    }
+
+    /* -------------------------- Resync(보조 동기화) -------------------------- */
+
+    private get wallNowSec(): number {
+        return performance.now() / 1000.0 - this.stepStartWallSec;
+    }
+
+    // 플레이어가 애니메이션 시간을 설정할 수 있으면 사용
+    private trySeekAnimation(sec: number): boolean {
+        try {
+            // 우선순위: 플레이어 제공 헬퍼
+            const p: any = this.player as any;
+            if (typeof p.seekActionTime === "function") {
+                p.seekActionTime(sec);
+                return true;
+            }
+            // 핸들에 직접 접근
+            const handle = p.getCurrentActionHandle?.();
+            if (handle) {
+                if (typeof handle.setTime === "function") {
+                    handle.setTime(sec);
+                    return true;
+                }
+                if ("time" in handle) {
+                    handle.time = sec;
+                    if (typeof handle.paused === "boolean") handle.paused = false;
+                    // mixer 즉시 반영용 헬퍼가 있다면 호출
+                    if (typeof p.updateMixer === "function") p.updateMixer(0);
+                    return true;
+                }
+            }
+        } catch (e) {
+            if (DEBUG_SYNC) console.warn("[ComboSync] seek fail:", e);
+        }
+        return false;
+    }
+
+    // 스텝 재시작(처음부터) — ChangeAction 재호출 + 타이머/상태 리셋
+    private hardRestartCurrentStep() {
+        if (DEBUG_SYNC) console.log("[ComboSync] hard restart step", this.stepIndex);
+        this.startStep(this.stepIndex);
+    }
+
+    // 드리프트 감지/보정: Update에서 주기적으로 호출
+    private maybeResyncByDrift(nowPhaseSec: number) {
+        const wallNow = this.wallNowSec;
+        const drift = Math.abs(nowPhaseSec - wallNow);
+
+        if (DEBUG_SYNC) {
+            // eslint-disable-next-line no-console
+            console.log(`[ComboSync] now=${nowPhaseSec.toFixed(3)} wall=${wallNow.toFixed(3)} drift=${drift.toFixed(3)}`);
+        }
+
+        if (drift < RESYNC_SOFT_SEEK_SEC) return; // 미세 오차 무시
+
+        // 소프트 시크 먼저 시도(애니 API가 있으면 부드럽게 맞춤)
+        if (this.trySeekAnimation(wallNow)) {
+            this.phaseTime = wallNow; // 내부 시간도 함께 보정
+            return;
+        }
+
+        // 소프트 시크가 불가하고, 스텝 초반이며 드리프트가 크면 하드 리셋
+        if (drift >= RESYNC_HARD_RESET_SEC && wallNow <= RESYNC_HARD_WINDOW_SEC) {
+            this.hardRestartCurrentStep();
+            return;
+        }
+
+        // 그 외: 내부 시간만 벽시계에 맞춰 보정(비주얼은 다음 프레임에서 점진적으로 수렴)
+        this.phaseTime = wallNow;
+    }
+
+    /* ------------------------------ Lifecycle -------------------------------- */
 
     Init(): void {
         this.chain = this.pickChain();
@@ -236,89 +462,130 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         this.hitstopSec = this.chain.hitstopSec ?? 0.04;
 
         this.attackProcess = false;
-        this.attackSpeed = this.baseSpec.AttackSpeed;
+        this.attackSpeed = this.baseSpec.AttackSpeed;  // 총 길이(초)
         this.attackDist = this.baseSpec.AttackRange;
 
         this.clock = new THREE.Clock();
         this.startStep(0);
 
-        // 시작 프레임 연타 대비: 다음 프레임에 엣지를 만들 수 있도록 false로 초기화
         this.prevAttackPressed = false;
-        // 디버그 서클은 startStep에서 생성
     }
 
     private startStep(i: number) {
+        this.clearStepTimers();
+
         this.stepIndex = i;
         this.currentStep = this.chain.steps[i];
+
+        // 애니메이션 시작(처음부터, 총 길이=attackSpeed)
+        this.player.ChangeAction(this.currentStep.anim, this.attackSpeed);
+
+        // 타이밍 해석(절대초)
+        const s = this.currentStep;
+        const windupSec = s.windupT ? this.resolveSec(s.windupT, s.windup ?? 0) : (s.windup ?? 0);
+        const hitSec = s.hitT ? this.resolveSec(s.hitT, s.hitTime ?? Math.max(0, windupSec + 0.06))
+            : (s.hitTime ?? Math.max(0, windupSec + 0.06));
+        const recoverySec = s.recoveryT ? this.resolveSec(s.recoveryT, s.recovery ?? 0.18)
+            : (s.recovery ?? 0.18);
+
+        let inputS = 0, inputE = 0;
+        if (s.inputWindowT) {
+            inputS = this.resolveSec(s.inputWindowT[0], s.inputWindow?.[0] ?? 0);
+            inputE = this.resolveSec(s.inputWindowT[1], s.inputWindow?.[1] ?? 0);
+        } else if (s.inputWindow) {
+            inputS = s.inputWindow[0]; inputE = s.inputWindow[1];
+        }
+
+        this.resolved = {
+            windupSec, hitSec, recoverySec,
+            inputWinStartSec: inputS, inputWinEndSec: inputE,
+            swingLeadSec: Math.max(0, s.swingLeadSec ?? 0.05)
+        };
+
+        // 상태 리셋
         this.phase = "windup";
         this.phaseTime = 0;
         this.hitstopLeft = 0;
         this.comboWindowOpen = false;
+        this.swingSfxPlayed = false;
+        this.impactSfxPlayed = false;
+        this.swingTimerFired = false;
+        this.hitTimerFired = false;
 
-        // 애니메이션/사운드/오토에임
-        this.player.ChangeAction(this.currentStep.anim, this.attackSpeed);
-
+        // 무기 세팅/오토에임
         const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R);
         if (handItem) {
-            (handItem as Item).activate();
-            if (handItem.Sound) {
-                this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, handItem.Mesh, handItem.Sound);
+            (handItem as Item).activate?.();
+            if ((handItem as any).Sound) {
+                this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, (handItem as any).Mesh, (handItem as any).Sound);
             }
-            if (handItem.AutoAttack) this.autoDirection();
+            if ((handItem as any).AutoAttack) this.autoDirection();
         }
 
-        // 범위 디버그
+        // 예약 스케줄
+        this.scheduleStepTimers();
+
+        // 디버그 범위
         this.player.createDashedCircle(this.attackDist * (this.currentStep.rangeMul ?? 1));
     }
 
-    // 외부에서 호출해도 되지만, 이 구현은 내부 폴링만으로 충분합니다.
     public onAttackButtonPressed(): void {
         this.inputQueue.push(this.phaseTime);
     }
 
-    // 콤보 중 캔슬 허용 여부
     public tryCancelInto(action: ActionType): boolean {
-        // 필요 시 정책 변경(기본: 허용)
-        const allow = this.currentStep.cancelInto?.includes(action) ?? true;
-        return allow;
+        return this.currentStep.cancelInto?.includes(action) ?? true;
     }
 
     Update(_: number): IPlayerAction {
         const d = this.DefaultCheck({ attack: false, magic: false, jump: false });
-        if (d) return d;
+        if (d) { this.clearStepTimers(); return d; }
         if (!this.clock) return this;
 
         const dt = this.clock.getDelta();
         this.phaseTime += dt;
 
-        // 내부 폴링: 공격키 엣지 검출 + 버퍼 적재
-        const now = this.phaseTime; // 상태 상대시각(절대시각을 쓰고 싶으면 performance.now()/1000)
+        if (!this.detectEnermy) {
+            return this.ChangeMode(this.playerCtrl.currentIdleState)
+        }
+        if (!this.detectEnermy) {
+            this.clearStepTimers();
+            return this.ChangeMode(this.playerCtrl.currentIdleState);
+        }
+
+        const now = this.phaseTime;
         this.pollAttackEdgeAndBuffer(now);
 
-        // 히트스톱 중이면 시간 정지
+        // 히트스톱
         if (this.hitstopLeft > 0) {
             this.hitstopLeft = Math.max(0, this.hitstopLeft - dt);
             return this;
         }
 
-        // 타임라인 진행
-        if (this.phase === "windup") {
-            const hitT = this.normTime(this.currentStep.hitTime);
-            if (this.phaseTime >= hitT) {
-                this.phase = "hit";
-                this.forceDoHit(); // 내부에서 recovery로 전환됨
-            }
-        } else if (this.phase === "recovery") {
-            // 패치 적용: 리커버리에서만 입력창 오픈/버퍼 소비
+        // 1) 프레임 지연 catch-up — 이미 시점을 지나쳤다면 즉시 실행
+        const swingAtSec = Math.max(0, this.resolved.hitSec - this.resolved.swingLeadSec - AUDIO_LAG_COMP_SEC);
+        if (!this.swingSfxPlayed && !this.swingTimerFired && now + CATCHUP_EPSILON_SEC >= swingAtSec && this.phase === "windup") {
+            this.clearSwingTimer();
+            if (this.currentStep.swingSfx) this.playSfxOnce(this.currentStep.swingSfx);
+            this.swingSfxPlayed = true;
+        }
+        if (!this.hitTimerFired && now + CATCHUP_EPSILON_SEC >= this.resolved.hitSec && (this.phase === "windup" || this.phase === "hit")) {
+            this.clearHitTimer();
+            this.forceDoHit();
+            this.hitTimerFired = true;
+        }
+
+        // 2) 드리프트 감지/보조 동기화(소프트 시크/하드 리셋)
+        this.maybeResyncByDrift(now);
+
+        // 3) 상태 진행(종료는 총 길이 기반)
+        if (this.phase === "recovery") {
             this.maybeOpenInputWindowByTime(this.phaseTime);
             if (this.tryQueueNextIfBuffered(this.phaseTime)) return this;
 
-            const endT = this.normTime(
-                this.currentStep.windup + this.currentStep.hitTime + this.currentStep.recovery
-            );
-
+            const endT = this.totalDurSec;
             if (this.phaseTime >= endT) {
-                // (선택) 막차 입력 허용을 원치 않으면 아래 블록을 제거하세요.
+                this.clearStepTimers();
                 if (this.tryConsumeBufferedInput(this.phaseTime) && this.currentStep.next != null) {
                     this.startStep(this.currentStep.next!);
                     return this;
@@ -332,6 +599,7 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
     }
 
     Uninit(): void {
+        this.clearStepTimers();
         this.inputQueue.length = 0;
         this.comboWindowOpen = false;
         this.hitstopLeft = 0;

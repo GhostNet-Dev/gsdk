@@ -409,9 +409,14 @@ export class RunState extends State implements IPlayerAction {
     }
     getAnimationForItem(item: IItem): ActionType {
         switch (item.AttackType) {
-            case AttackItemType.OneHandSword:
+            case AttackItemType.TwoHandSword:
+            case AttackItemType.TwoHandAxe:
+            case AttackItemType.TwoHandBlunt:
                 return ActionType.SwordRun
+            case AttackItemType.OneHandSword:
             case AttackItemType.OneHandAxe:
+            case AttackItemType.OneHandBlunt:
+            case AttackItemType.OneHandGun:
                 return ActionType.AxeRun
             case AttackItemType.TwoHandGun:
                 return ActionType.RifleRun

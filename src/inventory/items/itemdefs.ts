@@ -45,6 +45,7 @@ export const itemDefs = {
     assetKey: Char.ItemsSwordSword1,
     level: "common",
     stackable: false,
+    sound: SoundType.SwordAttack1,
     binding: true, autoAttack: true,
     stats: { "damageMin": 3, "damageMax": 5, "speed": 1, "attackRange": 2 },
     actions: [ActionDefs.Swing],
