@@ -1,10 +1,8 @@
 import * as THREE from "three";
-import { IPlayerAction, State } from "./playerstate"
+import { IPlayerAction } from "./playerstate"
 import { Player } from "../player";
 import { BaseSpec } from "../../battle/basespec";
-import { AttackItemType } from "@Glibs/types/inventypes";
 import { PlayerCtrl } from "../playerctrl";
-import { MonsterId } from "@Glibs/types/monstertypes";
 import { AttackType } from "@Glibs/types/playertypes";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import IEventController from "@Glibs/interface/ievent";
@@ -108,6 +106,9 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
         }
         this.attackTime -= this.attackSpeed
 
+        if (!this.detectEnermy) {
+            return this.ChangeMode(this.playerCtrl.currentIdleState)
+        }
         this.attackProcess = true
         const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
         if (handItem == undefined) return this;
@@ -118,23 +119,6 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
                 if (handItem.AutoAttack) this.meleeAutoAttack()
                 else this.meleeAttack(handItem)
         }, this.attackSpeed * 1000 * 0.6)
-        return this
-    }
-}
-export class MeleeAttackIdleState extends State implements IPlayerAction {
-    constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
-        super(playerPhy, player, gphysic, baseSpec)
-    }
-    Init(): void {
-        this.player.ChangeAction(ActionType.TwoHandSwordIdle)
-    }
-    Uninit(): void {
-
-    }
-    Update(): IPlayerAction {
-        const d = this.DefaultCheck()
-        if (d != undefined) return d
-
         return this
     }
 }

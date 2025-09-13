@@ -62,7 +62,7 @@ export class State {
             if (this.playerCtrl.mode == AppMode.Play) {
                 const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
                 const state = (handItem?.ItemType == "meleeattack") ? 
-                    this.playerCtrl.MeleeAttackSt : this.playerCtrl.RangeAttackSt
+                    this.playerCtrl.ComboMeleeSt : this.playerCtrl.RangeAttackSt
                 state.Init()
                 return state
             } else if(this.playerCtrl.mode == AppMode.Weapon) {
@@ -120,7 +120,7 @@ export class State {
             if(attackRange > dis) {
                 const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
                 const state = (handItem?.ItemType == "meleeattack") ? 
-                    this.playerCtrl.MeleeAttackSt : this.playerCtrl.RangeAttackSt
+                    this.playerCtrl.ComboMeleeSt : this.playerCtrl.RangeAttackSt
                 state.Init()
                 return state
             }

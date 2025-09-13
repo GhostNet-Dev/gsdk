@@ -18,8 +18,9 @@ import { CutDownTreeState, TreeIdleState } from "./states/treestates";
 import { Item } from "@Glibs/inventory/items/item";
 import { Buffdefs } from "@Glibs/magical/buff/buffdefs";
 import { Buff } from "@Glibs/magical/buff/buff";
-import { MeleeAttackIdleState, MeleeAttackState } from "./states/meleeattackst";
+import { MeleeAttackState } from "./states/meleeattackst";
 import { RangeAttackState } from "./states/rangeattackst";
+import { ComboMeleeState } from "./states/combomeleeattackst";
 
 export class PlayerCtrl implements ILoop, IActionUser {
     LoopId = 0
@@ -40,11 +41,11 @@ export class PlayerCtrl implements ILoop, IActionUser {
     keyType: KeyType = KeyType.None
 
     MeleeAttackSt: MeleeAttackState
+    ComboMeleeSt: ComboMeleeState
     RangeAttackSt: RangeAttackState
     MagicH1St: MagicH1State
     MagicH2St: MagicH2State
     AttackIdleSt: AttackIdleState
-    MeleeAttackIdleSt: MeleeAttackIdleState
     RunSt: RunState
     JumpSt: JumpState
     IdleSt: IdleState
@@ -86,11 +87,11 @@ export class PlayerCtrl implements ILoop, IActionUser {
     ) {
         this.baseSpec = new BaseSpec(DefaultStatus.stats, this)
         this.MeleeAttackSt = new MeleeAttackState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
+        this.ComboMeleeSt = new ComboMeleeState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
         this.RangeAttackSt = new RangeAttackState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
         this.MagicH1St = new MagicH1State(this, this.player, this.gphysic, this.baseSpec)
         this.MagicH2St = new MagicH2State(this, this.player, this.gphysic, this.baseSpec)
         this.AttackIdleSt = new AttackIdleState(this, this.player, this.gphysic, this.baseSpec)
-        this.MeleeAttackIdleSt = new MeleeAttackIdleState(this, this.player, this.gphysic, this.baseSpec)
         this.RunSt = new RunState(this, this.player, this.camera, this.gphysic, this.eventCtrl, this.baseSpec)
         this.JumpSt = new JumpState(this, this.player, this.camera, this.gphysic)
         this.IdleSt = new IdleState(this, this.player, this.gphysic, this.baseSpec)
@@ -175,7 +176,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
                 if (opt.obj) {
                     const ret = this.isObjectLookingAt(opt.obj, this.player.CenterPos, 90)
                     const dis = this.player.CenterPos.distanceTo(opt.obj.position)
-                    if (!ret || dis > 3) {
+                    if (!ret || dis > 3.5) {
                         console.log("out of range")
                         return
                     }
