@@ -14,7 +14,7 @@ import { BaseSpec } from "@Glibs/actors/battle/basespec";
 export interface IPlayerAction {
     Init(): void
     Uninit(): void
-    Update(delta: number, v: THREE.Vector3): IPlayerAction
+    Update(delta: number, v?: THREE.Vector3): IPlayerAction
 }
 
 export class State {
