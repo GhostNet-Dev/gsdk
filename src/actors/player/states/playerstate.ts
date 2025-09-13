@@ -170,8 +170,8 @@ export class RollState extends State implements IPlayerAction {
         // ✅ 구르기 종료 체크
         if (this.rollTimer >= this.rollDuration) {
             this.Uninit()
-            this.playerCtrl.AttackIdleSt.Init()
-            return this.playerCtrl.AttackIdleSt
+            this.playerCtrl.IdleSt.Init()
+            return this.playerCtrl.IdleSt
         }
 
         // 구르기 중에는 점프나 공격으로 상태를 변경할 수 없도록 관련 로직을 제거합니다.
