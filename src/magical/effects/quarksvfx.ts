@@ -10,7 +10,7 @@ export class QuarksVfx implements IEffect {
     totalTime = 0;
     refreshIndex = 0;
     refreshTime = 2;
-    processFlag = false
+    processFlag = 0
     batchRenderer = new BatchedParticleRenderer();
     loaded = false
     endCallback?: Function
@@ -41,7 +41,7 @@ export class QuarksVfx implements IEffect {
     }
 
     Start(pos: THREE.Vector3, callback: Function): void {
-        if (this.processFlag || !this.loaded) return
+        if (!this.loaded) return
         this.endCallback = callback
         this.groups[this.refreshIndex].position.copy(pos)
         this.groups[this.refreshIndex].updateMatrixWorld(true)
@@ -55,11 +55,11 @@ export class QuarksVfx implements IEffect {
         } catch (e) {
             console.log(e, this.groups)
         }
-        this.processFlag = true
+        this.processFlag++
     }
     Complete(): void {
         this.totalTime = 0;
-        this.processFlag = false
+        this.processFlag--;
         this.endCallback?.()
     }
 

@@ -18,6 +18,7 @@ import { ActionType } from "../playertypes";
 import { Item } from "@Glibs/inventory/items/item";
 import { AttackState } from "./attackstate";
 import { KeyType } from "@Glibs/types/eventtypes";
+import { GlobalEffectType } from "@Glibs/types/effecttypes";
 
 /* -------------------------------------------------------------------------- */
 /*                                   Types                                    */
@@ -269,6 +270,12 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         let anyHit = false;
 
         if (hits.length > 0 && hits[0].distance < baseRange) {
+            const hit = hits[0]
+            const faceNormal = hit.face?.normal.clone() ?? new THREE.Vector3(0, 1, 0);
+            // InstancedMesh면 instanceMatrix까지 고려
+            const normalMatrix = new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld);
+            const impactNormal = faceNormal.applyMatrix3(normalMatrix).normalize();
+    
             const buckets = new Map<string, any[]>();
             for (const h of hits) {
                 if (h.distance > baseRange) continue;
@@ -282,7 +289,11 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
                 buckets.set(h.object.name, arr);
             }
             buckets.forEach((v, k) => {
-                this.eventCtrl.SendEventMessage(EventTypes.Attack + k, v);
+                this.keytimeout.push(setTimeout(() => {
+                    const particleCount = (this.stepIndex == this.chain.steps.length - 1) ? 400 : 40;
+                    this.eventCtrl.SendEventMessage(EventTypes.GlobalEffect, GlobalEffectType.SparkEshSystem, hit.point, impactNormal, { count: particleCount })
+                    this.eventCtrl.SendEventMessage(EventTypes.Attack + k, v);
+                }, this.attackSpeed * 1000 * 0.4))
             });
             anyHit = buckets.size > 0;
         }

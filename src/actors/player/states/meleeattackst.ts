@@ -115,10 +115,10 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
 
         if(handItem.Sound) this.eventCtrl.SendEventMessage(EventTypes.PlaySound, handItem.Mesh, handItem.Sound)
 
-        this.keytimeout = setTimeout(() => {
+        this.keytimeout.push(setTimeout(() => {
                 if (handItem.AutoAttack) this.meleeAutoAttack()
                 else this.meleeAttack(handItem)
-        }, this.attackSpeed * 1000 * 0.6)
+        }, this.attackSpeed * 1000 * 0.6))
         return this
     }
 }

@@ -44,17 +44,7 @@ export class RangeAttackState extends AttackState implements IPlayerAction {
         this.clock = new THREE.Clock()
         this.player.createDashedCircle(this.attackDist)
     }
-    /**
-     * 해제
-     * - attack timeout 해제
-     * - 공격 반경 표시 해제
-     */
-    Uninit(): void {
-        if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
-        const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
-        if (handItem) (handItem as Item).deactivate()
-        this.player.releaseDashsedCircle()
-    }
+    
     rangedAttack(itemInfo: IItem) {
         if (itemInfo.AutoAttack && this.autoDirection() == null) {
             return false
@@ -102,9 +92,9 @@ export class RangeAttackState extends AttackState implements IPlayerAction {
 
         this.eventCtrl.SendEventMessage(EventTypes.PlaySound, handItem.Mesh, handItem.Sound)
 
-        this.keytimeout = setTimeout(() => {
+        this.keytimeout.push(setTimeout(() => {
             this.rangedAttack(handItem)
-        }, this.attackSpeed * 1000 * 0.3)
+        }, this.attackSpeed * 1000 * 0.3))
         return this
     }
 }

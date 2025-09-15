@@ -20,7 +20,7 @@ export abstract class AttackState extends State implements IPlayerAction {
     attackDir = new THREE.Vector3()
     attackTime = 0
     attackSpeed = 2
-    keytimeout?:NodeJS.Timeout
+    keytimeout:NodeJS.Timeout[] = []
     attackProcess = false
     clock?: THREE.Clock
     meleeAttackMode = true
@@ -63,7 +63,9 @@ export abstract class AttackState extends State implements IPlayerAction {
      * - 공격 반경 표시 해제
      */
     Uninit(): void {
-        if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
+        this.keytimeout.forEach((timeout) => {
+            clearTimeout(timeout)
+        })
         const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
         if (handItem) (handItem as Item).deactivate()
         this.player.releaseDashsedCircle()

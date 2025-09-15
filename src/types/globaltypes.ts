@@ -101,6 +101,9 @@ export enum EventTypes {
     PlayBGM = "soundbgm",
     StopBGM = "stopbgm",
     AllStopBGM = "allstopbgm",
+    
+    // VFX
+    GlobalEffect = "globaleffect",
 
     GameCenter = "gcenter",
 }
