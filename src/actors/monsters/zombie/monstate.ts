@@ -1,26 +1,44 @@
 import * as THREE from "three";
-import { Zombie } from "./zombie"
-import { MonsterCtrl } from "./monctrl";
+import { Zombie } from "../zombie"
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import IEventController from "@Glibs/interface/ievent";
-import { MonsterProperty } from "../monstertypes";
 import { ActionType, AttackType } from "@Glibs/types/playertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
-import { IMonsterAction } from "../imonsters";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
+import { IMonsterAction } from "../monstertypes";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
 
-class State {
+type States = Record<string, IMonsterAction>
+const defSt: States = {}
+
+export function NewDefaultMonsterState(
+    zombie: Zombie, 
+    gphysic: IGPhysic,  
+    eventCtrl: IEventController, 
+    spec: BaseSpec): IMonsterAction 
+{ 
+    defSt["IdleSt"] = new IdleZState(defSt, zombie, gphysic, spec)
+    defSt["AttackSt"] = new AttackZState(defSt, zombie, gphysic, eventCtrl, spec)
+    defSt["JumpSt"] = new JumpZState(defSt, zombie, gphysic)
+    defSt["RunSt"] = new RunZState(defSt, zombie, gphysic, spec)
+    defSt["DyingSt"] = new DyingZState(defSt, zombie, gphysic, eventCtrl, spec)
+
+    return defSt.IdleSt
+}
+
+export class MonState {
     attackDist = 3
     constructor(
-        protected zCtrl: MonsterCtrl,
+        protected states: States,
         protected zombie: Zombie,
-        protected gphysic: IGPhysic
+        protected gphysic: IGPhysic,
+        protected spec: BaseSpec
     ) { }
 
     CheckRun(v: THREE.Vector3) {
         if (v.x || v.z) {
-            this.zCtrl.RunSt.Init()
-            return this.zCtrl.RunSt
+            this.states.RunSt.Init()
+            return this.states.RunSt
         }
     }
     perf = 0
@@ -29,11 +47,22 @@ class State {
         this.zombie.Meshs.position.y -= 0.5
         if (!this.gphysic.Check(this.zombie)) {
             this.zombie.Meshs.position.y += 0.5
-            this.zCtrl.JumpSt.Init()
-            this.zCtrl.JumpSt.velocity_y = 0
-            return this.zCtrl.JumpSt
+            this.states.JumpSt.Init(0);
+            return this.states.JumpSt
         }
         this.zombie.Meshs.position.y += 0.5
+    }
+    CheckDying() {
+        if (this.spec.Health <= 0) {
+            this.states.DyingSt.Init()
+            return this.states.DyingSt
+        }
+    }
+    CheckAttack(dist: number) {
+        if (dist < this.attackDist) {
+            this.states.AttackSt.Init()
+            return this.states.AttackSt
+        }
     }
 }
 export class JumpZState implements IMonsterAction {
@@ -45,10 +74,10 @@ export class JumpZState implements IMonsterAction {
     MX = new THREE.Matrix4()
     QT = new THREE.Quaternion()
 
-    constructor(private ctrl: MonsterCtrl, private zombie: Zombie, private gphysic: IGPhysic) { }
-    Init(): void {
+    constructor(private ctrl: States, private zombie: Zombie, private gphysic: IGPhysic) { }
+    Init(y?: number): void {
         console.log("Jump Init!!")
-        this.velocity_y = 16
+        this.velocity_y = y ?? 16
     }
     Uninit(): void {
         this.velocity_y = 16
@@ -88,7 +117,7 @@ export class JumpZState implements IMonsterAction {
         return this
     }
 }
-export class AttackZState extends State implements IMonsterAction {
+export class AttackZState extends MonState implements IMonsterAction {
     keytimeout?:NodeJS.Timeout
     attackProcess = false
     attackTime = 0
@@ -96,10 +125,10 @@ export class AttackZState extends State implements IMonsterAction {
     attackDamageMax = this.spec.AttackDamageMax
     attackDamageMin = this.spec.AttackDamageMin
 
-    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: IGPhysic,
-        private eventCtrl: IEventController, private spec: BaseSpec
+    constructor(states: States, zombie: Zombie, gphysic: IGPhysic,
+        private eventCtrl: IEventController, spec: BaseSpec
     ) {
-        super(zCtrl, zombie, gphysic)
+        super(states, zombie, gphysic, spec)
     }
     Init(): void {
         this.attackSpeed = this.spec.AttackSpeed
@@ -111,7 +140,10 @@ export class AttackZState extends State implements IMonsterAction {
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
     }
-    Update(delta: number, v: THREE.Vector3, dist: number): IMonsterAction {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+        const dist = this.zombie.Pos.distanceTo(target.Pos)
+        const checkDying = this.CheckDying()
+        if (checkDying != undefined) return checkDying
         if (dist > this.attackDist) {
             const checkRun = this.CheckRun(v)
             if (checkRun != undefined) return checkRun
@@ -142,9 +174,9 @@ export class AttackZState extends State implements IMonsterAction {
     }
 }
 
-export class IdleZState extends State implements IMonsterAction {
-    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: IGPhysic) {
-        super(zCtrl, zombie, gphysic)
+export class IdleZState extends MonState implements IMonsterAction {
+    constructor(state: States, zombie: Zombie, gphysic: IGPhysic, spec: BaseSpec) {
+        super(state, zombie, gphysic, spec)
         this.Init()
     }
     Init(): void {
@@ -156,15 +188,17 @@ export class IdleZState extends State implements IMonsterAction {
     Update(_delta: number, v: THREE.Vector3): IMonsterAction {
         const checkRun = this.CheckRun(v)
         if (checkRun != undefined) return checkRun
+        const checkDying = this.CheckDying()
+        if (checkDying != undefined) return checkDying
 
         return this
     }
 }
-export class DyingZState extends State implements IMonsterAction {
+export class DyingZState extends MonState implements IMonsterAction {
     fadeMode = false
     fade = 1
-    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: IGPhysic, private eventCtrl: IEventController) {
-        super(zCtrl, zombie, gphysic)
+    constructor(states: States, zombie: Zombie, gphysic: IGPhysic, private eventCtrl: IEventController, spec: BaseSpec) {
+        super(states, zombie, gphysic, spec)
     }
     Init(): void {
         this.fadeMode = (this.zombie.dyingClip == undefined)
@@ -174,7 +208,7 @@ export class DyingZState extends State implements IMonsterAction {
 
         this.eventCtrl.SendEventMessage(EventTypes.Attack + "player", [{
             type: AttackType.Exp,
-            damage: 20,
+            damage: this.spec.stats.getStat("expBonus"),
         }])
     }
     Uninit(): void {
@@ -189,10 +223,10 @@ export class DyingZState extends State implements IMonsterAction {
         return this
     }
 }
-export class RunZState extends State implements IMonsterAction {
+export class RunZState extends MonState implements IMonsterAction {
     speed = this.spec.Speed
-    constructor(zCtrl: MonsterCtrl, zombie: Zombie, gphysic: IGPhysic, private spec: BaseSpec) {
-        super(zCtrl, zombie, gphysic)
+    constructor(states: States, zombie: Zombie, gphysic: IGPhysic, spec: BaseSpec) {
+        super(states, zombie, gphysic, spec)
     }
     Init(): void {
         this.zombie.ChangeAction(ActionType.Run)
@@ -207,17 +241,19 @@ export class RunZState extends State implements IMonsterAction {
     QT = new THREE.Quaternion()
     dir = new THREE.Vector3()
 
-    Update(delta: number, v: THREE.Vector3, dist: number): IMonsterAction {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
         const checkGravity = this.CheckGravity()
         if (checkGravity != undefined) return checkGravity
+        const checkDying = this.CheckDying()
+        if (checkDying != undefined) return checkDying
 
-        if(dist < this.attackDist) {
-            this.zCtrl.AttackSt.Init()
-            return this.zCtrl.AttackSt
-        }
+        const dist = this.zombie.Pos.distanceTo(target.Pos)
+        const checkAttack = this.CheckAttack(dist)
+        if(checkAttack != undefined) return checkAttack
+
         if (v.x == 0 && v.z == 0) {
-            this.zCtrl.IdleSt.Init()
-            return this.zCtrl.IdleSt
+            this.states.IdleSt.Init()
+            return this.states.IdleSt
         }
         v.y = 0
 

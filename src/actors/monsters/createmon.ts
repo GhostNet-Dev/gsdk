@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { MonsterSet } from "./monsters"
-import { Zombie } from "./zombie/zombie"
-import { MonsterCtrl } from "./zombie/monctrl"
+import { Zombie } from "./zombie"
+import { MonsterCtrl } from "./monctrl"
 import { MonsterDb } from "./monsterdb"
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import IEventController from "@Glibs/interface/ievent";

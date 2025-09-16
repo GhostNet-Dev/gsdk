@@ -1,6 +1,11 @@
 import { ItemId } from "@Glibs/inventory/items/itemdefs"
 import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { Char } from "@Glibs/types/assettypes"
+import IEventController from "@Glibs/interface/ievent"
+import { IGPhysic } from "@Glibs/interface/igphysics"
+import { Zombie } from "@Glibs/actors/monsters/zombie"
+import { BaseSpec } from "@Glibs/actors/battle/basespec"
+import { IPhysicsObject } from "@Glibs/interface/iobject"
 
 export class MonsterId {
     public static Zombie = "Zombie"
@@ -53,5 +58,15 @@ export type MonsterProperty = {
     model: Char
     stats?: Partial<Record<StatKey, number>>
     drop?: MonDrop[]
+    idleStates?: (
+        zombie: Zombie,
+        gphysic: IGPhysic,
+        eventCtrl: IEventController,
+        spec: BaseSpec) => IMonsterAction
 }
 
+export interface IMonsterAction {
+    Init(param?: any): void
+    Uninit(): void
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction
+}

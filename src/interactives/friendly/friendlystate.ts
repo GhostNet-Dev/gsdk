@@ -1,13 +1,14 @@
 import * as THREE from "three";
 import { Fly } from "./fly"
 import { FlyCtrl } from "./flyctrl"
-import { IMonsterAction } from "@Glibs/interface/imonsters";
 import { MonsterId, MonsterProperty } from "@Glibs/types/monstertypes";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { ActionType } from "@Glibs/types/playertypes";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
+import { IMonsterAction } from "@Glibs/actors/monsters/monstertypes";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
 
 
 class State {
@@ -52,7 +53,8 @@ export class IdleFState extends State implements IMonsterAction {
     Uninit(): void {
         
     }
-    Update(delta: number, v: THREE.Vector3, dist: number): IMonsterAction {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+        const dist = this.fly.Pos.distanceTo(target.Pos)
         if(dist > this.protectDist) {
             const checkRun = this.CheckRun(v)
             if (checkRun != undefined) return checkRun
@@ -139,7 +141,8 @@ export class AttackFState extends State implements IMonsterAction {
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
     }
-    Update(delta: number, v: THREE.Vector3, dist: number): IMonsterAction {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+        const dist = this.fly.Pos.distanceTo(target.Pos)
         if (dist > this.playDist) {
             const checkRun = this.CheckRun(v)
             if (checkRun != undefined) return checkRun
@@ -234,7 +237,8 @@ export class RunFState extends State implements IMonsterAction {
     MX = new THREE.Matrix4()
     QT = new THREE.Quaternion()
 
-    Update(delta: number, v: THREE.Vector3, dist: number): IMonsterAction {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+        const dist = this.fly.Pos.distanceTo(target.Pos)
 
         if(dist < this.protectDist) {
             this.fCtrl.IdleSt.Init()

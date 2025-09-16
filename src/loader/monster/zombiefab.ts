@@ -34,6 +34,11 @@ export class ZombieFab extends AssetModel implements IAsset {
             this.clips.set(Ani.MonBiting, gltf.animations.find((clip) => clip.name == "ZombieBiting"))
             this.clips.set(Ani.Dying, gltf.animations.find((clip) => clip.name == "ZombieDying"))
             this.clips.set(Ani.MonScream, gltf.animations.find((clip) => clip.name == "ZombieScream"))
+
+            await this.LoadAnimation("assets/monster/Zombie_Neck_Bite.fbx", Ani.MonBiteNeck)
+            await this.LoadAnimation("assets/monster/Zombie_Agonizing.fbx", Ani.MonAgonizing)
+            await this.LoadAnimation("assets/monster/Running_Crawl.fbx", Ani.MonRunningCrawl)
+            
         })
     }
     GetBodyMeshId() { return "mixamorigRightHand" }

@@ -6,11 +6,11 @@ import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { MonsterProperty } from "@Glibs/types/monstertypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
-import { IMonsterAction } from "@Glibs/interface/imonsters";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { StatKey } from "@Glibs/types/stattypes";
 import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
+import { IMonsterAction } from "@Glibs/actors/monsters/monstertypes";
 
 
 export class FlyCtrl implements ILoop, IFlyCtrl, IActionUser {
@@ -57,7 +57,7 @@ export class FlyCtrl implements ILoop, IFlyCtrl, IActionUser {
         if (this.fly.CannonPos.distanceTo(this.player.CannonPos)) { // two far 
         }
         */
-        this.currentState = this.currentState.Update(delta, this.moveDirection, dist)
+        this.currentState = this.currentState.Update(delta, this.moveDirection, this.fly)
         this.fly.update(delta)
         
     }

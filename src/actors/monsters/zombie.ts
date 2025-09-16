@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { PhysicsObject } from "@Glibs/interface/iobject";
 import { IAsset } from "@Glibs/interface/iasset";
-import { MonsterId } from "../monstertypes";
+import { MonsterId } from "./monstertypes";
 import { Effector } from "@Glibs/magical/effects/effector";
 import { FloatingName } from "@Glibs/ux/text/floatingtxt";
 import { EffectType } from "@Glibs/types/effecttypes";

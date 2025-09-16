@@ -290,7 +290,7 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
             }
             buckets.forEach((v, k) => {
                 this.keytimeout.push(setTimeout(() => {
-                    const particleCount = (this.stepIndex == this.chain.steps.length - 1) ? 400 : 40;
+                    const particleCount = (this.stepIndex == this.chain.steps.length - 1) ? 40 : 20;
                     this.eventCtrl.SendEventMessage(EventTypes.GlobalEffect, GlobalEffectType.SparkEshSystem, hit.point, impactNormal, { count: particleCount })
                     this.eventCtrl.SendEventMessage(EventTypes.Attack + k, v);
                 }, this.attackSpeed * 1000 * 0.4))

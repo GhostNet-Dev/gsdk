@@ -7,6 +7,7 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
   [MonsterId.Zombie]: {
     hp: 10,
     mp: 0,
+    expBonus: 20,
     attack: 12,
     defense: 8,
     intelligence: 2,

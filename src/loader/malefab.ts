@@ -44,17 +44,34 @@ export class MaleFab extends AssetModel implements IAsset {
             await this.LoadAnimation("assets/male/Standing 1H Magic Attack 01.fbx", Ani.MagicH1)
             await this.LoadAnimation("assets/male/Standing 2H Magic Attack 01.fbx", Ani.MagicH2)
             await this.LoadAnimation("assets/male/Standing 2H Magic Attack 01_.fbx", Ani.MagicH2)
-            await this.LoadAnimation("assets/male/Sword And Shield Slash.fbx", Ani.Sword)
-            await this.LoadAnimation("assets/male/Shooting.fbx", Ani.Shooting)
-            await this.LoadAnimation("assets/male/Gunplay.fbx", Ani.Gunplay)
             await this.LoadAnimation("assets/male/Dying Backwards.fbx", Ani.Dying)
+            await this.LoadAnimation("assets/female/Stand To Roll.fbx", Ani.Rolling)
             await this.LoadAnimation("assets/male/Bouncing Fight Idle.fbx", Ani.FightIdle)
  
+            await this.LoadAnimation("assets/male/Sword And Shield Slash.fbx", Ani.Sword)
+            await this.LoadAnimation("assets/female/Great_Sword_Idle.fbx", Ani.TwoHandSwordIdle)
+            await this.LoadAnimation("assets/female/Great_Sword_Slash1.fbx", Ani.TwoHandSword1)
+            await this.LoadAnimation("assets/female/Great_Sword_Slash2.fbx", Ani.TwoHandSword2)
+            await this.LoadAnimation("assets/female/Great_Sword_Slash_tonado.fbx", Ani.TwoHandSwordTonado)
+            await this.LoadAnimation("assets/female/Great_Sword_Slash_finish.fbx", Ani.TwoHandSwordFinish)
+
+            await this.LoadAnimation("assets/male/Shooting.fbx", Ani.Shooting)
+            await this.LoadAnimation("assets/male/Gunplay.fbx", Ani.Gunplay)
+
             await this.LoadAnimation("assets/female/PlantAPlant.fbx", Ani.PlantAPlant)
             await this.LoadAnimation("assets/female/PickFruit.fbx", Ani.PickFruit)
             await this.LoadAnimation("assets/female/PickFruit_tree.fbx", Ani.PickFruitTree)
             await this.LoadAnimation("assets/female/StandingMeleeAttackDownward.fbx", Ani.Hammering)
             await this.LoadAnimation("assets/female/Watering.fbx", Ani.Wartering)
+
+            await this.LoadAnimation("assets/female/Pistol_Run.fbx", Ani.PistolRun)
+            await this.LoadAnimation("assets/female/Rifle_Idle.fbx", Ani.RifleIdle)
+            await this.LoadAnimation("assets/female/Rifle_Run.fbx", Ani.RifleRun)
+            await this.LoadAnimation("assets/female/Great_Sword_Run.fbx", Ani.SwordRun)
+            await this.LoadAnimation("assets/female/axe_attack.fbx", Ani.AxeAttack)
+            await this.LoadAnimation("assets/female/axe_attack360.fbx", Ani.AxeAttack360)
+            await this.LoadAnimation("assets/female/axe_run.fbx", Ani.AxeRun)
+            await this.LoadAnimation("assets/female/SleepingIdle.fbx", Ani.SleepingIdle)
         })
     }
     CreateVectorGui(f: GUI, v: THREE.Vector3 | THREE.Euler, name: string, step: number) {

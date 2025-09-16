@@ -52,6 +52,9 @@ export enum Ani {
     MonBiting,
     MonScream,
     MonHurt,
+    MonBiteNeck,
+    MonAgonizing,
+    MonRunningCrawl,
 }
 
 export enum Char {

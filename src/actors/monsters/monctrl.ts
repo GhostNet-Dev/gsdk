@@ -1,13 +1,13 @@
 import * as THREE from "three";
 import { Zombie } from "./zombie"
-import { AttackZState, DyingZState, IdleZState, JumpZState, RunZState } from "./monstate"
-import { IMonsterCtrl, MonsterBox } from "../monsters";
+import { AttackZState, DyingZState, IdleZState, JumpZState, RunZState } from "./zombie/monstate"
+import { IMonsterCtrl, MonsterBox } from "./monsters";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
-import { MonsterProperty } from "../monstertypes";
+import { MonsterProperty } from "./monstertypes";
 import { EffectType } from "@Glibs/types/effecttypes";
-import { IMonsterAction } from "../imonsters";
+import { IMonsterAction } from "./monstertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
@@ -18,17 +18,11 @@ import { StatKey } from "@Glibs/types/stattypes";
 export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     LoopId = 0
     baseSpec: BaseSpec = new BaseSpec(this.stats, this)
-    IdleSt = new IdleZState(this, this.zombie, this.gphysic)
-    AttackSt = new AttackZState(this, this.zombie, this.gphysic, this.eventCtrl, this.baseSpec)
-    RunSt = new RunZState(this, this.zombie, this.gphysic, this.baseSpec)
-    DyingSt = new DyingZState(this, this.zombie, this.gphysic, this.eventCtrl)
-    JumpSt = new JumpZState(this, this.zombie, this.gphysic)
-
-    currentState: IMonsterAction = this.IdleSt
+    currentState: IMonsterAction
+    idleState: IMonsterAction
     raycast = new THREE.Raycaster()
     dir = new THREE.Vector3(0, 0, 0)
     moveDirection = new THREE.Vector3()
-    health = this.baseSpec.Health
     private phybox: MonsterBox
     get Drop() { return this.property.drop }
     get MonsterBox() { return this.phybox }
@@ -51,6 +45,8 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
             color: 0xff0000,
             wireframe: true
         })
+        this.idleState = this.currentState = property.idleStates!(this.zombie, this.gphysic, this.eventCtrl, this.baseSpec);
+
         this.phybox = new MonsterBox(id, "mon", property.id, geometry, material)
         if (window.location.hostname == "hons.ghostwebservice.com") {
             this.phybox.visible = false
@@ -62,9 +58,9 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         action.activate?.(this, ctx)
     }
     Respawning() {
-        this.health = this.baseSpec.Health
+        this.baseSpec.ResetStatus()
         this.zombie.SetOpacity(1)
-        this.currentState = this.IdleSt
+        this.currentState = this.idleState
         this.currentState.Init()
         this.MonsterBox.position.copy(this.zombie.Pos)
     }
@@ -74,7 +70,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
 
         const dist = this.zombie.Pos.distanceTo(this.player.Pos)
 
-        if (this.health > 0) {
+        if (this.Spec.Health > 0) {
             this.dir.subVectors(this.player.CenterPos, this.zombie.CenterPos)
             this.raycast.set(this.zombie.CenterPos, this.dir.normalize())
 
@@ -101,8 +97,8 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
             } else {
                 this.moveDirection.copy(this.dir)
             }
-            this.currentState = this.currentState.Update(delta, this.moveDirection, dist)
         }
+        this.currentState = this.currentState.Update(delta, this.moveDirection, this.player)
 
         this.zombie.update(delta)
 
@@ -111,13 +107,11 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         this.phybox.position.y += this.zombie.Size.y / 2
     }
     
-    ReceiveDemage(demage: number, effect?: EffectType): boolean {
-        if (this.health <= 0) return false
-        this.zombie.DamageEffect(demage, effect)
-        this.health -= demage
-        if (this.health <= 0) {
-            this.DyingSt.Init()
-            this.currentState = this.DyingSt
+    ReceiveDemage(damage: number, effect?: EffectType): boolean {
+        if (this.Spec.Health <= 0) return false
+        this.zombie.DamageEffect(damage, effect)
+        this.Spec.ReceiveCalcDamage(damage)
+        if (this.Spec.Health <= 0) {
             return false
         }
         return true

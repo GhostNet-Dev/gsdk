@@ -1,4 +1,5 @@
 import { baseStatPresets } from "@Glibs/actors/battle/stats"
+import { NewDefaultMonsterState } from "@Glibs/actors/monsters/zombie/monstate"
 import { itemDefs } from "@Glibs/inventory/items/itemdefs"
 import { Char } from "@Glibs/types/assettypes"
 import { MonsterId, MonsterProperty, MonsterType } from "@Glibs/types/monstertypes"
@@ -11,7 +12,8 @@ export class MonsterDb {
             id: MonsterId.Bee,
             type: MonsterType.Insect,
             model: Char.CharAniBee,
-            stats: baseStatPresets[MonsterId.Bee]
+            stats: baseStatPresets[MonsterId.Bee],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.Zombie, {
             id: MonsterId.Zombie,
@@ -21,7 +23,8 @@ export class MonsterDb {
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
                 { itemId: itemDefs.ZombieDeck.id, ratio: 0.1 }
             ],
-            stats: baseStatPresets[MonsterId.Zombie]
+            stats: baseStatPresets[MonsterId.Zombie],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.Minotaur, {
             id: MonsterId.Minotaur,
@@ -31,7 +34,8 @@ export class MonsterDb {
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
                 { itemId: itemDefs.MinataurDeck.id, ratio: 0.05 }
             ],
-            stats: baseStatPresets[MonsterId.Minotaur]
+            stats: baseStatPresets[MonsterId.Minotaur],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.Batpig, {
             id: MonsterId.Batpig,
@@ -41,7 +45,8 @@ export class MonsterDb {
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
                 { itemId: itemDefs.BatPigDeck.id, ratio: 0.05 }
             ],
-            stats: baseStatPresets[MonsterId.Batpig]
+            stats: baseStatPresets[MonsterId.Batpig],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.Bilby, {
             id: MonsterId.Bilby,
@@ -50,7 +55,8 @@ export class MonsterDb {
             drop: [
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
                 { itemId: itemDefs.BilbyDeck.id, ratio: 0.05 }
-            ]
+            ],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.Birdmon, {
             id: MonsterId.Birdmon,
@@ -59,7 +65,8 @@ export class MonsterDb {
             drop: [
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
                 { itemId: itemDefs.BirdmonDeck.id, ratio: 0.05 }
-            ]
+            ],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.Crab, {
             id: MonsterId.Crab,
@@ -68,7 +75,8 @@ export class MonsterDb {
             drop: [
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
                 { itemId: itemDefs.CrabDeck.id, ratio: 0.05 }
-            ]
+            ],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.Builder, {
             id: MonsterId.Builder,
@@ -77,7 +85,8 @@ export class MonsterDb {
             drop: [
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
                 { itemId: itemDefs.BuilderDeck.id, ratio: 0.05 }
-            ]
+            ],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.Golem, {
             id: MonsterId.Golem,
@@ -86,7 +95,8 @@ export class MonsterDb {
             drop: [
                 { itemId: itemDefs.Rocks.id, ratio: 0.5 },
                 { itemId: itemDefs.GolemDeck.id, ratio: 0.05 }
-            ]
+            ],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.BigGolem, {
             id: MonsterId.BigGolem,
@@ -95,7 +105,8 @@ export class MonsterDb {
             drop: [
                 { itemId: itemDefs.Rocks.id, ratio: 0.5 },
                 { itemId: itemDefs.BigGolemDeck.id, ratio: 0.05 }
-            ]
+            ],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.KittenMonk, {
             id: MonsterId.KittenMonk,
@@ -104,7 +115,8 @@ export class MonsterDb {
             drop: [
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
                 { itemId: itemDefs.KittenMonkDeck.id, ratio: 0.05 }
-            ]
+            ],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.Skeleton, {
             id: MonsterId.Skeleton,
@@ -112,7 +124,8 @@ export class MonsterDb {
             model: Char.CharMonSkeleton,
             drop: [
                 { itemId: itemDefs.SkeletonDeck.id, ratio: 0.05 }
-            ]
+            ],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.Snake, {
             id: MonsterId.Snake,
@@ -120,7 +133,8 @@ export class MonsterDb {
             model: Char.CharMonSnake,
             drop: [
                 { itemId: itemDefs.SnakeDeck.id, ratio: 0.05 }
-            ]
+            ],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.ToadMage, {
             id: MonsterId.ToadMage,
@@ -129,7 +143,8 @@ export class MonsterDb {
             drop: [
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
                 { itemId: itemDefs.ToadMageDeck.id, ratio: 0.05 }
-            ]
+            ],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.Viking, {
             id: MonsterId.Viking,
@@ -137,7 +152,8 @@ export class MonsterDb {
             model: Char.CharHumanViking,
             drop: [
                 { itemId: itemDefs.VikingDeck.id, ratio: 0.05 }
-            ]
+            ],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.WereWolf, {
             id: MonsterId.WereWolf,
@@ -146,7 +162,8 @@ export class MonsterDb {
             drop: [
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
                 { itemId: itemDefs.WereWolfDeck.id, ratio: 0.05 }
-            ]
+            ],
+            idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.Stone, {
             id: MonsterId.Stone,

@@ -19,6 +19,9 @@ export type StatKey =
   | 'strength' | 'dexterity' | 'constitution'
   | 'intelligence' | 'wisdom' | 'agility' | 'luck'
 
+  // 경험치 보너스 
+  | 'expBonus'
+
   // 상태이상 저항
   | 'fireResistance' | 'iceResistance' | 'poisonResistance'
   | 'stunResistance' | 'slowResistance'
@@ -30,7 +33,6 @@ export type StatKey =
 
   // 확장 스탯 (숫자형만 포함)
   | 'enchantments' | 'sockets' | 'setBonus';
-
 
 export const StatDescriptions: Record<StatKey, string> = {
   // ⚔️ 전투 스탯
