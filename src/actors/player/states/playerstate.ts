@@ -129,7 +129,7 @@ export class State {
 }
 export class RollState extends State implements IPlayerAction {
     // 구르기 속도와 지속 시간 설정
-    private rollSpeed = 8.5
+    private rollSpeed = 10.5
     private rollDuration = 0.6 // 초 단위 (애니메이션 길이에 맞게 조절)
     private rollTimer = 0
 

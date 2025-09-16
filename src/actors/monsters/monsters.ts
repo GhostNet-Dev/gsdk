@@ -82,24 +82,24 @@ export class Monsters {
                 this.ReceiveDemage(z, damage, opt.effect)
             })
         })
-        eventCtrl.RegisterEventListener(EventTypes.Attack + "monster", (opts: AttackOption[]) => {
-            if (!this.mode) return
-            const pos = this.player.Meshs.position
-            const dist = opts[0].distance
-            const damage = opts[0].damage
-            const effect = opts[0].effect
-            if(dist == undefined) return
-            this.monsters.forEach((mon) => {
-                for (let i = 0; i < mon.length; i++) {
-                    const z = mon[i]
-                    if (!z.live) continue
-                    const betw = z.monModel.Meshs.position.distanceTo(pos)
-                    if (betw < dist) {
-                        this.ReceiveDemage(z, damage, effect)
-                    }
-                }
-            })
-        })
+        // eventCtrl.RegisterEventListener(EventTypes.Attack + "monster", (opts: AttackOption[]) => {
+        //     if (!this.mode) return
+        //     const pos = this.player.Meshs.position
+        //     const dist = opts[0].distance
+        //     const damage = opts[0].damage
+        //     const effect = opts[0].effect
+        //     if(dist == undefined) return
+        //     this.monsters.forEach((mon) => {
+        //         for (let i = 0; i < mon.length; i++) {
+        //             const z = mon[i]
+        //             if (!z.live) continue
+        //             const betw = z.monModel.Meshs.position.distanceTo(pos)
+        //             if (betw < dist) {
+        //                 this.ReceiveDemage(z, damage, effect)
+        //             }
+        //         }
+        //     })
+        // })
     }
     ReceiveDemage(z: MonsterSet, damage: number, effect?: EffectType) {
         if (z && !z.monCtrl.ReceiveDemage(damage, effect)) {

@@ -50,4 +50,7 @@ export class InterTree extends InteractableObject {
       this.isActive = true
     } 
   }
+  _disable(): void {
+        
+    }
 }

@@ -66,6 +66,7 @@ export abstract class AttackState extends State implements IPlayerAction {
         this.keytimeout.forEach((timeout) => {
             clearTimeout(timeout)
         })
+        this.keytimeout = []
         const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
         if (handItem) (handItem as Item).deactivate()
         this.player.releaseDashsedCircle()

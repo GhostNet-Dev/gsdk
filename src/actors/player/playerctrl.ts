@@ -174,9 +174,10 @@ export class PlayerCtrl implements ILoop, IActionUser {
             if (!this.playEnable) return
             opts.forEach((opt) => {
                 if (opt.obj) {
-                    const ret = this.isObjectLookingAt(opt.obj, this.player.CenterPos, 90)
+                    // const ret = this.isObjectLookingAt(opt.obj, this.player.CenterPos, 90)
                     const dis = this.player.CenterPos.distanceTo(opt.obj.position)
-                    if (!ret || dis > 3.5) {
+                    // if (!ret || dis > 3.5) {
+                    if (dis > 3.5) {
                         console.log("out of range")
                         return
                     }

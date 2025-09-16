@@ -49,6 +49,7 @@ export abstract class InteractableObject extends THREE.Group implements IActionU
         }
     }
     abstract tryInteract(actor: IPhysicsObject): void;
+    abstract _disable(): void;
     abstract afterLoad(): void;
 
     interact(actor: IPhysicsObject): void {
@@ -63,6 +64,7 @@ export abstract class InteractableObject extends THREE.Group implements IActionU
         this.isActive = false
         this.eventCtrl.SendEventMessage(EventTypes.ChangePlayerMode)
         this.eventCtrl.SendEventMessage(EventTypes.AlarmInteractiveOff)
+        this._disable()
     }
 
     addComponent(comp: IInteractiveComponent) {

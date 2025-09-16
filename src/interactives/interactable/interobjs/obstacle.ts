@@ -20,6 +20,9 @@ export class Obstacles extends InteractableObject {
     }
     tryInteract(actor: IPhysicsObject): void {
     }
+    _disable(): void {
+        
+    }
     async Loader(position: THREE.Vector3, rotation: THREE.Euler, scale: number, name: string) {
         this.position.copy(position);
         this.rotation.copy(rotation);

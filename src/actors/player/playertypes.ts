@@ -65,6 +65,10 @@ export enum ActionType {
     AxeAttack,
     AxeAttack360,
     AxeRun,
+
+    MonBiteNeck,
+    MonAgonizing,
+    MonRunningCrawl,
 }
 export type PlayMode =
   | "default"

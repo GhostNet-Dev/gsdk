@@ -9,7 +9,6 @@ import { IMonsterAction } from "../monstertypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 
 type States = Record<string, IMonsterAction>
-const defSt: States = {}
 
 export function NewDefaultMonsterState(
     zombie: Zombie, 
@@ -17,6 +16,7 @@ export function NewDefaultMonsterState(
     eventCtrl: IEventController, 
     spec: BaseSpec): IMonsterAction 
 { 
+    const defSt: States = {}
     defSt["IdleSt"] = new IdleZState(defSt, zombie, gphysic, spec)
     defSt["AttackSt"] = new AttackZState(defSt, zombie, gphysic, eventCtrl, spec)
     defSt["JumpSt"] = new JumpZState(defSt, zombie, gphysic)
@@ -140,6 +140,12 @@ export class AttackZState extends MonState implements IMonsterAction {
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
     }
+
+    ZeroV = new THREE.Vector3(0, 0, 0)
+    YV = new THREE.Vector3(0, 1, 0)
+    MX = new THREE.Matrix4()
+    QT = new THREE.Quaternion()
+
     Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
         const dist = this.zombie.Pos.distanceTo(target.Pos)
         const checkDying = this.CheckDying()
@@ -148,6 +154,12 @@ export class AttackZState extends MonState implements IMonsterAction {
             const checkRun = this.CheckRun(v)
             if (checkRun != undefined) return checkRun
         }
+
+        const mx = this.MX.lookAt(v, this.ZeroV, this.YV)
+        const qt = this.QT.setFromRotationMatrix(mx)
+        this.zombie.Meshs.quaternion.copy(qt)
+
+
         if(this.attackProcess) return this
         this.attackTime += delta
         if (this.attackTime / this.attackSpeed < 1) {
@@ -201,10 +213,7 @@ export class DyingZState extends MonState implements IMonsterAction {
         super(states, zombie, gphysic, spec)
     }
     Init(): void {
-        this.fadeMode = (this.zombie.dyingClip == undefined)
-        this.fade = 1
-        if (this.fadeMode) this.zombie.StopAnimation()
-        else this.zombie.ChangeAction(ActionType.Dying)
+        this.zombie.ChangeAction(ActionType.Dying)
 
         this.eventCtrl.SendEventMessage(EventTypes.Attack + "player", [{
             type: AttackType.Exp,
@@ -212,14 +221,8 @@ export class DyingZState extends MonState implements IMonsterAction {
         }])
     }
     Uninit(): void {
-        
     }
     Update(delta: number): IMonsterAction {
-        if(this.fadeMode) {
-            this.fade -= delta
-            if (this.fade < 0) this.fade = 0
-            this.zombie.SetOpacity(this.fade)
-        }
         return this
     }
 }

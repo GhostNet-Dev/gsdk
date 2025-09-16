@@ -104,6 +104,7 @@ export enum EventTypes {
     
     // VFX
     GlobalEffect = "globaleffect",
+    CampfireCtrl = "campfire",
 
     GameCenter = "gcenter",
 }

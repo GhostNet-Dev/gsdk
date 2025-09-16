@@ -3,6 +3,7 @@ import { NewDefaultMonsterState } from "@Glibs/actors/monsters/zombie/monstate"
 import { itemDefs } from "@Glibs/inventory/items/itemdefs"
 import { Char } from "@Glibs/types/assettypes"
 import { MonsterId, MonsterProperty, MonsterType } from "@Glibs/types/monstertypes"
+import { NewDashMonsterState } from "@Glibs/actors/monsters/zombie/dashmonst"
 
 
 export class MonsterDb {
@@ -24,7 +25,7 @@ export class MonsterDb {
                 { itemId: itemDefs.ZombieDeck.id, ratio: 0.1 }
             ],
             stats: baseStatPresets[MonsterId.Zombie],
-            idleStates: NewDefaultMonsterState,
+            idleStates: NewDashMonsterState,
         })
         this.monDb.set(MonsterId.Minotaur, {
             id: MonsterId.Minotaur,

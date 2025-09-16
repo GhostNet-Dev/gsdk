@@ -12,11 +12,9 @@ export class Zombie extends PhysicsObject {
     mixer?: THREE.AnimationMixer
     currentAni?: THREE.AnimationAction
     currentClip?: THREE.AnimationClip
+    currentActionType = ActionType.Idle
 
-    idleClip?: THREE.AnimationClip
-    runClip?: THREE.AnimationClip
-    punchingClip?: THREE.AnimationClip
-    dyingClip?: THREE.AnimationClip
+    clipMap = new Map<ActionType, THREE.AnimationClip | undefined>()
 
     private controllerEnable: boolean = false
 
@@ -82,16 +80,20 @@ export class Zombie extends PhysicsObject {
         this.mixer = this.asset.GetMixer(text + id)
         if (this.mixer == undefined) throw new Error("mixer is undefined");
         
-        this.idleClip = this.asset.GetAnimationClip(Ani.Idle)
-        this.runClip = this.asset.GetAnimationClip(Ani.Run)
-        this.punchingClip = this.asset.GetAnimationClip(Ani.Punch)
-        this.dyingClip = this.asset.GetAnimationClip(Ani.Dying)
-        this.changeAnimate(this.idleClip)
+        this.clipMap.set(ActionType.Idle, this.asset.GetAnimationClip(Ani.Idle))
+        this.clipMap.set(ActionType.Run, this.asset.GetAnimationClip(Ani.Run))
+        this.clipMap.set(ActionType.Punch, this.asset.GetAnimationClip(Ani.Punch))
+        this.clipMap.set(ActionType.Dying, this.asset.GetAnimationClip(Ani.Dying))
+
+        this.clipMap.set(ActionType.MonBiteNeck, this.asset.GetAnimationClip(Ani.MonBiteNeck))
+        this.clipMap.set(ActionType.MonAgonizing, this.asset.GetAnimationClip(Ani.MonAgonizing))
+        this.clipMap.set(ActionType.MonRunningCrawl, this.asset.GetAnimationClip(Ani.MonRunningCrawl))
+        this.changeAnimate(this.clipMap.get(this.currentActionType))
 
         this.Visible = false
 
     }
-    changeAnimate(animate: THREE.AnimationClip | undefined, ) {
+    changeAnimate(animate: THREE.AnimationClip | undefined, speed?: number) {
         if (animate == undefined) return
 
         const currentAction = this.mixer?.clipAction(animate)
@@ -99,12 +101,15 @@ export class Zombie extends PhysicsObject {
 
         let fadeTime = 0.2
         this.currentAni?.fadeOut(0.2)
-        if (animate == this.dyingClip) {
+        if (animate == this.clipMap.get(ActionType.Dying)) {
             fadeTime = 0
             currentAction.clampWhenFinished = true
             currentAction.setLoop(THREE.LoopOnce, 1)
         } else {
             currentAction.setLoop(THREE.LoopRepeat, Infinity)
+        }
+        if(speed != undefined) {
+            currentAction.timeScale = animate.duration / speed
         }
         currentAction.reset().fadeIn(fadeTime).play()
 
@@ -114,24 +119,10 @@ export class Zombie extends PhysicsObject {
     StopAnimation() {
         this.currentAni?.stop()
     }
-    ChangeAction(action: ActionType) {
+    ChangeAction(action: ActionType, speed?: number) {
         let clip: THREE.AnimationClip | undefined
-        switch(action) {
-            case ActionType.Idle:
-                clip = this.idleClip
-                break
-            case ActionType.Run:
-                clip = this.runClip
-                break
-            case ActionType.Punch:
-                clip = this.punchingClip
-                break
-            case ActionType.Dying:
-                clip = this.dyingClip
-                break
-
-        }
-        this.changeAnimate(clip)
+        this.currentActionType = action
+        this.changeAnimate(this.clipMap.get(action), speed)
         return clip?.duration
     }
     clock = new THREE.Clock()

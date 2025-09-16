@@ -22,6 +22,7 @@ export class ZombieFab extends AssetModel implements IAsset {
                 child.receiveShadow = false
                 if (child.isMesh) {
                     child.material = new THREE.MeshToonMaterial({ map: child.material.map })
+                    // child.material.color.setHSL(0, 1.0, 0.75)
                 }
             })
             const scale = 0.024

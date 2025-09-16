@@ -13,6 +13,7 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
     intelligence: 2,
     speed: 0.6,
     lifeSteal: 0.1,
+    attackSpeed: 2,
   },
   'Minotaur': {
     'hp': 200,

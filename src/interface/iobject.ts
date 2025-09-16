@@ -91,6 +91,7 @@ export class PhysicsObject implements IPhysicsObject {
     CBoxUpdate() {
         this.collisionBox?.position.copy(this.Pos)
     }
+
     constructor(protected asset: IAsset) { }
 }
 
