@@ -32,6 +32,6 @@ export default class DefaultLights extends THREE.DirectionalLight {
         const fill = new THREE.DirectionalLight(0xfffaef, 0.25);
         fill.position.set(-10, 10, -6);
         fill.castShadow = false;
-        this.scene.add(ambient, fill, /*hemispherelight,*/ this,/*this.effector.meshs*/)
+        this.scene.add(ambient, fill, hemi, /*hemispherelight,*/ this,/*this.effector.meshs*/)
     }
 }
