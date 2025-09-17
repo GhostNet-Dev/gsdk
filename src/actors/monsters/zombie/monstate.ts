@@ -11,6 +11,7 @@ import { IPhysicsObject } from "@Glibs/interface/iobject";
 type States = Record<string, IMonsterAction>
 
 export function NewDefaultMonsterState(
+    id: number,
     zombie: Zombie, 
     gphysic: IGPhysic,  
     eventCtrl: IEventController, 
@@ -26,7 +27,7 @@ export function NewDefaultMonsterState(
     return defSt.IdleSt
 }
 
-export class MonState {
+export abstract class MonState {
     attackDist = 3
     constructor(
         protected states: States,
@@ -35,8 +36,11 @@ export class MonState {
         protected spec: BaseSpec
     ) { }
 
+    abstract Uninit(): void
+
     CheckRun(v: THREE.Vector3) {
         if (v.x || v.z) {
+            this.Uninit()
             this.states.RunSt.Init()
             return this.states.RunSt
         }
@@ -47,6 +51,7 @@ export class MonState {
         this.zombie.Meshs.position.y -= 0.5
         if (!this.gphysic.Check(this.zombie)) {
             this.zombie.Meshs.position.y += 0.5
+            this.Uninit()
             this.states.JumpSt.Init(0);
             return this.states.JumpSt
         }
@@ -54,12 +59,14 @@ export class MonState {
     }
     CheckDying() {
         if (this.spec.Health <= 0) {
+            this.Uninit()
             this.states.DyingSt.Init()
             return this.states.DyingSt
         }
     }
     CheckAttack(dist: number) {
         if (dist < this.attackDist) {
+            this.Uninit()
             this.states.AttackSt.Init()
             return this.states.AttackSt
         }

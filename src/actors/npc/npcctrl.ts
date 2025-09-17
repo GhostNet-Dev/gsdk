@@ -41,6 +41,10 @@ export class NpcCtrl implements ILoop, IActionUser {
         action.apply?.(this)
         action.activate?.(this, ctx)
     }
+    removeAction(action: IActionComponent, context?: ActionContext | undefined): void {
+        action.deactivate?.(this, context)
+        action.remove?.(this)
+    }
 
     update(delta: number): void {
         this.currentState = this.currentState.Update(delta)

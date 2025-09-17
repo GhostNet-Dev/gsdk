@@ -13,6 +13,7 @@ export interface IActionUser {
   }
 
   applyAction(action: IActionComponent, context?: ActionContext): void
+  removeAction(action: IActionComponent, context?: ActionContext): void
 }
 
 /*
@@ -34,6 +35,7 @@ export type TriggerType =
   | "onUse"
   | "onFire"
   | "onHit"
+  | "onActivate"
 
 
 export interface ActionDef {
@@ -102,6 +104,10 @@ export const ActionDefs = {
     trigger: "onActivate",
     socketA: "localTipAOffset",
     socketB: "localTipBOffset",
+  },
+  StunStars: {
+    type: "stunstars",
+    trigger: "onActivate" as TriggerType,
   },
   DarkParticle: {
     type: "darkparticle",

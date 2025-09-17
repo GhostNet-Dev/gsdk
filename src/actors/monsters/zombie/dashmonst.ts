@@ -8,22 +8,25 @@ import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { IMonsterAction } from "../monstertypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { DyingZState, IdleZState, JumpZState, MonState } from "./monstate";
+import { Buff } from "@Glibs/magical/buff/buff";
+import { buffDefs } from "@Glibs/magical/buff/buffdefs";
 
 type States = Record<string, IMonsterAction>
-const defSt: States = {}
 
 export function NewDashMonsterState(
+    id: number,
     zombie: Zombie, 
     gphysic: IGPhysic,  
     eventCtrl: IEventController, 
     spec: BaseSpec): IMonsterAction 
 { 
+    const defSt: States = {}
     defSt["IdleSt"] = new IdleZState(defSt, zombie, gphysic, spec)
     defSt["AttackSt"] = new DashAttackState(defSt, zombie, gphysic, eventCtrl, spec)
     defSt["JumpSt"] = new JumpZState(defSt, zombie, gphysic)
     defSt["RunSt"] =  new DashRunState(defSt, zombie, gphysic, spec)
     defSt["DashRunSt"] = new FastDashRunState(defSt, zombie, gphysic, spec)
-    defSt["AgonizingSt"] = new DashAgonizingState(defSt, zombie, gphysic, spec)
+    defSt["AgonizingSt"] = new DashAgonizingState(id, defSt, zombie, gphysic, eventCtrl, spec)
     defSt["DyingSt"] = new DyingZState(defSt, zombie, gphysic, eventCtrl, spec)
 
     return defSt.IdleSt
@@ -151,20 +154,25 @@ export class DashRunState extends MonState implements IMonsterAction {
 export class DashAgonizingState extends MonState implements IMonsterAction {
     runningTime = 5
     elapsedTime = 0
-    constructor(state: States, zombie: Zombie, gphysic: IGPhysic, spec: BaseSpec) {
+    buf = new Buff(buffDefs.StunStar)
+    constructor(
+        private id: number, state: States, zombie: Zombie, 
+        gphysic: IGPhysic, private eventCtrl: IEventController, spec: BaseSpec
+    ) {
         super(state, zombie, gphysic, spec)
-        this.Init()
     }
     Init(): void {
         this.elapsedTime = 0
         this.zombie.ChangeAction(ActionType.MonAgonizing)
+        this.eventCtrl.SendEventMessage(EventTypes.UpdateBuff + "mon" + this.id, this.buf)
     }
     Uninit(): void {
-        
+        this.eventCtrl.SendEventMessage(EventTypes.RemoveBuff + "mon" + this.id, this.buf)
     }
     Update(delta: number, v: THREE.Vector3): IMonsterAction {
         this.elapsedTime += delta
         if(this.elapsedTime > this.runningTime) {
+            this.Uninit()
             this.states.IdleSt.Init()
             return this.states.IdleSt
         }

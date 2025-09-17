@@ -46,6 +46,7 @@ export enum EventTypes {
     Attack = "attack",
     AreaOfEffect = "AOE",
     UpdateBuff = "updatebuff",
+    RemoveBuff = "removebuff",
 
     SceneClear = "clear",
     Reload = "reload",
@@ -104,7 +105,10 @@ export enum EventTypes {
     
     // VFX
     GlobalEffect = "globaleffect",
+    
+    // Actor를 제어하는 함수들
     CampfireCtrl = "campfire",
+    DarkParticle = "darkparticle",
 
     GameCenter = "gcenter",
 }

@@ -209,6 +209,9 @@ export class PlayerCtrl implements ILoop, IActionUser {
         eventCtrl.RegisterEventListener(EventTypes.UpdateBuff + "player", (buff: Buff) => {
             this.baseSpec.Buff(buff)
         })
+        eventCtrl.RegisterEventListener(EventTypes.RemoveBuff + "player", (buff: Buff) => {
+            this.baseSpec.RemoveBuff(buff)
+        })
     }
     init() {
         this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
@@ -235,6 +238,10 @@ export class PlayerCtrl implements ILoop, IActionUser {
     applyAction(action: IActionComponent, ctx?: ActionContext) {
         action.apply?.(this)
         action.activate?.(this, ctx)
+    }
+    removeAction(action: IActionComponent, context?: ActionContext | undefined): void {
+        action.deactivate?.(this, context)
+        action.remove?.(this)
     }
     updateInputVector() {
         const cmd = this.inputVQueue.shift()

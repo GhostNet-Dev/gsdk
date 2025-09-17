@@ -13,6 +13,7 @@ export class Buff implements IActionUser {
     stats?: any
     actions: IActionComponent[] = []
     baseSpec: BaseSpec
+    get id() { return this.def.id }
     constructor(
         private def: BuffProperty,
     ) {
@@ -25,6 +26,10 @@ export class Buff implements IActionUser {
     applyAction(action: IActionComponent, ctx?: ActionContext) {
         action.apply?.(this, ctx)
         action.activate?.(this, ctx)
+    }
+    removeAction(action: IActionComponent, context?: ActionContext | undefined): void {
+        action.deactivate?.(this, context)
+        action.remove?.(this)
     }
     activate(context?: ActionContext) {
         for (const action of this.actions) {

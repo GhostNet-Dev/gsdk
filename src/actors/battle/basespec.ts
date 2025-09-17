@@ -91,6 +91,13 @@ export class BaseSpec {
             }
         }
     }
+    RemoveBuff(buff: Buff) {
+        if ("actions" in buff && buff.actions && Array.isArray(buff.actions)) {
+            for (const action of buff.actions) {
+                this.owner?.removeAction(action)
+            }
+        }
+    }
     Equip(item: IItem) {
         if (item.Bind == undefined) throw new Error("item bind is undefined")
         const prevItem = this.equipment[item.Bind];

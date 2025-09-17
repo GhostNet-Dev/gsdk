@@ -15,6 +15,19 @@ export const buffDefs = {
         binding: true,
         actions: [ActionDefs.DarkParticle],
     },
+    StunStar: {
+        id: "stunstar",
+        name: "Stun",
+        nameKr: "기절",
+        descriptionKr: "",
+        description: "",
+        type: "stun",
+        levelRequirement: 0,
+        level: "common",
+        stackable: false,
+        binding: true,
+        actions: [ActionDefs.StunStars],
+    },
 }
 
 export type Buffdefs = typeof buffDefs

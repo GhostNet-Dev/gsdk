@@ -12,6 +12,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
 import { StatKey } from "@Glibs/types/stattypes";
+import { Buff } from "@Glibs/magical/buff/buff";
 
 
 
@@ -45,17 +46,28 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
             color: 0xff0000,
             wireframe: true
         })
-        this.idleState = this.currentState = property.idleStates!(this.zombie, this.gphysic, this.eventCtrl, this.baseSpec);
+        this.idleState = this.currentState = property.idleStates!(id, this.zombie, this.gphysic, this.eventCtrl, this.baseSpec);
 
         this.phybox = new MonsterBox(id, "mon", property.id, geometry, material)
         if (window.location.hostname == "hons.ghostwebservice.com") {
             this.phybox.visible = false
         }
         this.phybox.position.copy(this.zombie.Pos)
+
+        eventCtrl.RegisterEventListener(EventTypes.UpdateBuff + "mon" + id, (buff: Buff) => {
+            this.baseSpec.Buff(buff)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.RemoveBuff + "mon" + id, (buff: Buff) => {
+            this.baseSpec.RemoveBuff(buff)
+        })
     }
     applyAction(action: IActionComponent, ctx?: ActionContext) {
         action.apply?.(this, ctx)
         action.activate?.(this, ctx)
+    }
+    removeAction(action: IActionComponent, context?: ActionContext | undefined): void {
+        action.deactivate?.(this, context)
+        action.remove?.(this)
     }
     Respawning() {
         this.baseSpec.ResetStatus()

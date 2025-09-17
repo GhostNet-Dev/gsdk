@@ -37,6 +37,10 @@ export class ProjectileCtrl implements IActionUser{
         action.apply?.(this, ctx)
         action.activate?.(this, ctx)
     }
+    removeAction(action: IActionComponent, context?: ActionContext | undefined): void {
+        action.deactivate?.(this, context)
+        action.remove?.(this)
+    }
     Release () {
         this.projectile.release()
         this.live = false

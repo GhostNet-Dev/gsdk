@@ -42,6 +42,10 @@ export class FlyCtrl implements ILoop, IFlyCtrl, IActionUser {
         action.apply?.(this, ctx)
         action.activate?.(this, ctx)
     }
+    removeAction(action: IActionComponent, context?: ActionContext | undefined): void {
+        action.deactivate?.(this, context)
+        action.remove?.(this)
+    }
     Release(): void {
     }
 

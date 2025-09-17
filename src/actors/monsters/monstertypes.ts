@@ -6,6 +6,7 @@ import { IGPhysic } from "@Glibs/interface/igphysics"
 import { Zombie } from "@Glibs/actors/monsters/zombie"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
 import { IPhysicsObject } from "@Glibs/interface/iobject"
+import { ActionDef } from "@Glibs/actions/actiontypes"
 
 export class MonsterId {
     public static Zombie = "Zombie"
@@ -58,7 +59,9 @@ export type MonsterProperty = {
     model: Char
     stats?: Partial<Record<StatKey, number>>
     drop?: MonDrop[]
+    actions?: ActionDef[],
     idleStates?: (
+        id: number,
         zombie: Zombie,
         gphysic: IGPhysic,
         eventCtrl: IEventController,

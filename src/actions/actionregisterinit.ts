@@ -9,6 +9,7 @@ import { ShakerAction } from "./itemactions/shakeract";
 import { FluffyAction } from "./itemactions/fluffyact";
 import SwingEffectAction from "./itemactions/swingeffact";
 import { DarkAction } from "./visualactions/darkact";
+import { StunStarsAction } from "./visualactions/stunstar";
 
 export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scene) {
     ActionRegistry.register("statBoost", def => new StatBoostAction(def.stats))
@@ -22,5 +23,6 @@ export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scen
     ActionRegistry.register("fluffy", def => new FluffyAction(eventCtrl))
     ActionRegistry.register("swing", def => new SwingEffectAction(eventCtrl, scene, def.socketA, def.socketB, ))
     ActionRegistry.register("darkparticle", def => new DarkAction(eventCtrl, scene))
+    ActionRegistry.register("stunstars", def => new StunStarsAction(eventCtrl, scene))
 }
 

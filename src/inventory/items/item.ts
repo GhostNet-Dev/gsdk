@@ -61,6 +61,10 @@ export class Item extends ItemAbstract implements IActionUser{
     action.apply?.(this, ctx)
     action.activate?.(this, ctx)
   }
+  removeAction(action: IActionComponent, context?: ActionContext | undefined): void {
+    action.deactivate?.(this, context)
+    action.remove?.(this)
+  }
   activate(context?: ActionContext) {
     for (const action of this.actions) {
       action.activate?.(this, context)

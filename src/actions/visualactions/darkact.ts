@@ -19,6 +19,9 @@ export class DarkAction implements IActionComponent, ILoop {
         if (!this.dark) this.dark = new OccludingParticles({ ...context?.param })
         this.dark.setTargets([obj], "local", true)
         this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+        this.eventCtrl.RegisterEventListener(EventTypes.DarkParticle, (count: number) => {
+          this.dark!.setOptions({ particleCount: count })
+        })
         // this.scean.add(this.dark.points)
         obj.add((this.dark.points))
     }

@@ -38,6 +38,10 @@ export abstract class InteractableObject extends THREE.Group implements IActionU
         action.apply?.(this, ctx)
         action.activate?.(this, ctx)
     }
+    removeAction(action: IActionComponent, context?: ActionContext | undefined): void {
+        action.deactivate?.(this, context)
+        action.remove?.(this)
+    }
     activate(context?: ActionContext) {
         for (const action of this.actions) {
             action.activate?.(this, context)
