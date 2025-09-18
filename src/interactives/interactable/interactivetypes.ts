@@ -46,8 +46,8 @@ export const interactableDefs = {
     stats: { },
   },
   Campfire: {
-    id: "obstacle",
-    type: "obstacle",
+    id: "campfire",
+    type: "event",
     level: "common",
     assetKey: Char.None,
     name: "obstacle",

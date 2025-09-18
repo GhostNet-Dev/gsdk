@@ -46,7 +46,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
             color: 0xff0000,
             wireframe: true
         })
-        this.idleState = this.currentState = property.idleStates!(id, this.zombie, this.gphysic, this.eventCtrl, this.baseSpec);
+        this.idleState = this.currentState = property.idleStates!(id, this.zombie, this.property, this.gphysic, this.eventCtrl, this.baseSpec);
 
         this.phybox = new MonsterBox(id, "mon", property.id, geometry, material)
         if (window.location.hostname == "hons.ghostwebservice.com") {

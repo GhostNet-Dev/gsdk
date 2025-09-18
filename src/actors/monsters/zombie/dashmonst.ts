@@ -5,7 +5,7 @@ import IEventController from "@Glibs/interface/ievent";
 import { ActionType, AttackType } from "@Glibs/types/playertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
-import { IMonsterAction } from "../monstertypes";
+import { IMonsterAction, MonsterProperty } from "../monstertypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { DyingZState, IdleZState, JumpZState, MonState } from "./monstate";
 import { Buff } from "@Glibs/magical/buff/buff";
@@ -16,6 +16,7 @@ type States = Record<string, IMonsterAction>
 export function NewDashMonsterState(
     id: number,
     zombie: Zombie, 
+    prop: MonsterProperty,
     gphysic: IGPhysic,  
     eventCtrl: IEventController, 
     spec: BaseSpec): IMonsterAction 
@@ -27,7 +28,7 @@ export function NewDashMonsterState(
     defSt["RunSt"] =  new DashRunState(defSt, zombie, gphysic, spec)
     defSt["DashRunSt"] = new FastDashRunState(defSt, zombie, gphysic, spec)
     defSt["AgonizingSt"] = new DashAgonizingState(id, defSt, zombie, gphysic, eventCtrl, spec)
-    defSt["DyingSt"] = new DyingZState(defSt, zombie, gphysic, eventCtrl, spec)
+    defSt["DyingSt"] = new DyingZState(defSt, zombie, prop, gphysic, eventCtrl, spec)
 
     return defSt.IdleSt
 }

@@ -7,22 +7,25 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { IMonsterAction } from "../monstertypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { MonsterProperty } from "@Glibs/types/monstertypes";
 
 type States = Record<string, IMonsterAction>
 
 export function NewDefaultMonsterState(
     id: number,
     zombie: Zombie, 
+    prop: MonsterProperty,
     gphysic: IGPhysic,  
     eventCtrl: IEventController, 
-    spec: BaseSpec): IMonsterAction 
+    spec: BaseSpec
+): IMonsterAction
 { 
     const defSt: States = {}
     defSt["IdleSt"] = new IdleZState(defSt, zombie, gphysic, spec)
     defSt["AttackSt"] = new AttackZState(defSt, zombie, gphysic, eventCtrl, spec)
     defSt["JumpSt"] = new JumpZState(defSt, zombie, gphysic)
     defSt["RunSt"] = new RunZState(defSt, zombie, gphysic, spec)
-    defSt["DyingSt"] = new DyingZState(defSt, zombie, gphysic, eventCtrl, spec)
+    defSt["DyingSt"] = new DyingZState(defSt, zombie, prop, gphysic, eventCtrl, spec)
 
     return defSt.IdleSt
 }
@@ -216,7 +219,7 @@ export class IdleZState extends MonState implements IMonsterAction {
 export class DyingZState extends MonState implements IMonsterAction {
     fadeMode = false
     fade = 1
-    constructor(states: States, zombie: Zombie, gphysic: IGPhysic, private eventCtrl: IEventController, spec: BaseSpec) {
+    constructor(states: States, zombie: Zombie, private prop: MonsterProperty, gphysic: IGPhysic, private eventCtrl: IEventController, spec: BaseSpec) {
         super(states, zombie, gphysic, spec)
     }
     Init(): void {
@@ -225,6 +228,7 @@ export class DyingZState extends MonState implements IMonsterAction {
         this.eventCtrl.SendEventMessage(EventTypes.Attack + "player", [{
             type: AttackType.Exp,
             damage: this.spec.stats.getStat("expBonus"),
+            srcMonsterId: this.prop.id,
         }])
     }
     Uninit(): void {

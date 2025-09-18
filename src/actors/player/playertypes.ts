@@ -81,6 +81,7 @@ export type AttackOption = {
     spec?: BaseSpec[],
     distance?: number
     obj?: THREE.Object3D
+    srcMonsterId?: string,
     targetPoint?: THREE.Vector3
     callback?: Function
 }

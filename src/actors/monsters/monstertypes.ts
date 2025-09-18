@@ -63,6 +63,7 @@ export type MonsterProperty = {
     idleStates?: (
         id: number,
         zombie: Zombie,
+        prop: MonsterProperty,
         gphysic: IGPhysic,
         eventCtrl: IEventController,
         spec: BaseSpec) => IMonsterAction

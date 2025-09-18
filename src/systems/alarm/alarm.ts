@@ -2,6 +2,7 @@ import IEventController from "@Glibs/interface/ievent"
 import { KeyType } from "@Glibs/types/eventtypes"
 import { EventTypes } from "@Glibs/types/globaltypes"
 import { gsap } from "gsap"
+import { QuestAnimator } from "./bigtext"
 
 export enum AlarmType {
     Normal,
@@ -11,16 +12,22 @@ export enum AlarmType {
 
 export class Alarm {
     dom = document.createElement("div")
+    normalDom = document.createElement("div")
     bigDom = document.createElement("div")
     interactiveDom = document.createElement("div")
+    quest: QuestAnimator
     constructor(eventCtrl: IEventController) {
         this.dom.className = "playalarm"
         this.makeDomStyle(this.dom, { top: "15%" })
         document.body.appendChild(this.dom)
 
-        this.bigDom.className = "bigplayalarm"
-        this.makeDomStyle(this.bigDom, { top: "15%" })
+        this.normalDom.className = "bigplayalarm"
+        this.makeDomStyle(this.normalDom, { top: "15%" })
+        document.body.appendChild(this.normalDom)
+
+        this.bigDom.id = "questalarm"
         document.body.appendChild(this.bigDom)
+        this.quest = new QuestAnimator("questalarm")
 
         this.interactiveDom.className = "interactivealarm"
         this.makeDomStyle(this.interactiveDom, { bottom: "35%" })
@@ -31,6 +38,9 @@ export class Alarm {
         })
         eventCtrl.RegisterEventListener(EventTypes.AlarmWarning, (text: string) => {
             this.NotifyInfo(text, AlarmType.Warning)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.AlarmBig, (text: string) => {
+            this.quest.show({ text: text, })
         })
         eventCtrl.RegisterEventListener(EventTypes.AlarmInteractiveOff, () => {
             this.interactiveDom.style.display = "none"
@@ -66,6 +76,30 @@ export class Alarm {
                 duration: 1.5 // 지속 시간은 여기에 명시하는 것이 좋습니다.
             });
         })
+        eventCtrl.RegisterEventListener(EventTypes.AlarmHookMsgOn, (msg: { [key in KeyType]?: string }, clickEvent: Function) => {
+            let html = ``
+            Object.keys(msg).forEach(key => {
+                const enumKey = Number(key)
+                const value = msg[enumKey as KeyType]
+                html += value +`&nbsp;&nbsp
+                <span role="presentation" style="font-size:large;" class="material-symbols-outlined">
+                `
+                switch (enumKey) {
+                    case KeyType.Action0: html +=  "close"; break;
+                    case KeyType.Action1: html +=  "circle"; break;
+                    case KeyType.Action2: html +=  "square"; break;
+                    case KeyType.Action3: html +=  "change_history"; break;
+                }
+                eventCtrl.SendEventMessage(EventTypes.InputHookOnce, enumKey, () => {
+                    this.interactiveDom.style.display = "none"
+                    this.interactiveDom.innerHTML = ''
+                    clickEvent(enumKey)
+                })
+                html += "</span>"
+            });
+            this.interactiveDom.style.display = "block"
+            this.interactiveDom.innerHTML = html
+        })
     }
     textQueue: string[] = []
 
@@ -88,12 +122,12 @@ export class Alarm {
                 break;
             case AlarmType.Warning:
             case AlarmType.Deck:
-                this.bigDom.style.display = "block"
-                this.bigDom.insertAdjacentHTML("beforeend", text + "<br>")
+                this.normalDom.style.display = "block"
+                this.normalDom.insertAdjacentHTML("beforeend", text + "<br>")
                 gsap.to('.bigplayalarm', 3, {
                     scale: 2, ease: "elastic.out", onComplete: () => {
-                        this.bigDom.style.display = "none"
-                        this.bigDom.innerText = ''
+                        this.normalDom.style.display = "none"
+                        this.normalDom.innerText = ''
                     }
                 })
                 break;

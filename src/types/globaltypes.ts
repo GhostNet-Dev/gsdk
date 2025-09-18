@@ -27,6 +27,10 @@ export enum EventTypes {
     KeyDown = "keydown",
     KeyUp = "keyup",
     Input = "input",
+    InputButtonEnable = "inputbtnenable",
+    InputHookOnce = "inputhookonce",
+    InputHookRemove = "inputhookremove",
+
     CtrlObj = "ctrlObj",
     CtrlObjOff = "ctrlObjOff",
     // bloom효과를 제거해야하는 객체를 등록
@@ -59,8 +63,11 @@ export enum EventTypes {
 
     AlarmWarning = "alarmwarning",
     AlarmNormal = "alarmnormal",
+    AlarmBig = "alarmbig",
     AlarmInteractiveOn = "alarminton",
     AlarmInteractiveOff = "alarmintoff",
+    AlarmHookMsgOn = "alarmhookon",
+    AlarmHookMsgOff = "alarmhookoff",
     Toast = "toast",
     Spinner = "spin",
     DebugOut = "debugout",
