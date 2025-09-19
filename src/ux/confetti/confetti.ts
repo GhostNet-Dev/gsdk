@@ -12,7 +12,7 @@ export default class Confetti {
 
     constructor(
         private eventCtrl: IEventController,
-        private parent: HTMLElement, { index = 99 } = {}
+        private parent: HTMLElement, { index = 1 } = {}
     ) {
         this.eventCtrl.RegisterEventListener(EventTypes.Confetti, (onOff: boolean) => {
             if(onOff) this.show()

@@ -373,6 +373,7 @@ const css = `
     position: absolute;
     left: 10px;
     bottom: 10px;
+    z-index: 999;
 }
 #joypad_buttons {
     display: none;

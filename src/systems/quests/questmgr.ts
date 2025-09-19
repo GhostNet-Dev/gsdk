@@ -20,11 +20,14 @@ export class QuestManager {
     // 플레이어가 '완료'한 퀘스트 ID를 저장
     private completedQuests: Set<QuestId>;
 
-    constructor(private eventCtrl: IEventController) {
+    constructor(private eventCtrl: IEventController, newQuestDef?: Record<string, Quest>) {
         // 기본 퀘스트 데이터로 초기화
         this.questDefinitions = new Map(Object.entries(questDefs));
         this.activeQuests = new Map();
         this.completedQuests = new Set();
+        if(newQuestDef) {
+            this.addQuestDefinitions(newQuestDef);
+        }
 
         // 게임 이벤트 구독 (예시: 실제 이벤트 이름으로 변경 필요)
         this.eventCtrl.RegisterEventListener(EventTypes.Pickup, (itemId: ItemId) => {
