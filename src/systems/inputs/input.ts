@@ -128,8 +128,9 @@ export default class Input {
             const action = this.domActionMap[key as keyof typeof this.domActionMap] as ActionType;
             if (element) {
                 // --- [수정] 버튼이 비활성화 상태인지 확인하는 로직 추가 ---
-                const handleKeyDown = () => {
+                const handleKeyDown = (e: any) => {
                     if (this.disabledButtons.has(action)) return;
+                    e.preventDefault();
                     this.keyDownHandlers.get(action)?.();
                 };
                 const handleKeyUp = () => {
@@ -140,9 +141,9 @@ export default class Input {
                 element.ontouchstart = handleKeyDown;
                 element.ontouchend = handleKeyUp;
 
-                if (key.includes('up') || key.includes('down') || key.includes('left') || key.includes('right') || key.includes('jump')) {
+                // if (key.includes('up') || key.includes('down') || key.includes('left') || key.includes('right') || key.includes('jump')) {
                     element.onclick = handleKeyDown;
-                }
+                // }
             }
         }
     }

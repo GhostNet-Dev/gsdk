@@ -5,6 +5,7 @@
 export interface QuestAnimationConfig {
     text?: string;
     fontSize?: string;
+    fontStyle?: string; // 추가
     textColor?: string;
     shadowColor?: string;
     fadeInTime?: number;
@@ -15,11 +16,12 @@ export interface QuestAnimationConfig {
 
 const Default: Required<QuestAnimationConfig> = {
     text: '',
+    fontStyle: `'Batang', serif`,
     fontSize: '60px',
     textColor: '#ffd700',
     shadowColor: '#ffc400',
-    fadeInTime: 0.5,
-    stayTime: 2,
+    fadeInTime: 1.5,
+    stayTime: 1,
     fadeOutTime: 0.8,
     effect: 'focus',
 }
@@ -75,7 +77,7 @@ export class QuestAnimator {
         const el = this.questTitleElement;
         el.textContent = config.text ?? "error";
         el.style.position = "absolute";
-        el.style.fontSize = config.fontSize ?? "5rem";
+        el.style.fontSize = config.fontSize ?? Default.fontSize;
         el.style.color = config.textColor ?? "";
         el.style.setProperty('--shadow-color', config.shadowColor ?? "");
         el.style.textShadow = `0 0 5px rgba(0, 0, 0, 0.7), 0 0 15px ${config.shadowColor}`;
@@ -83,7 +85,32 @@ export class QuestAnimator {
         el.style.transition = 'none';
         el.className = '';
         el.style.opacity = ''; // 인라인 opacity 스타일 제거
+
+        // [수정] 폰트 스타일 적용
+        el.style.fontFamily = config.fontStyle ?? Default.fontStyle;
+        
+        // [수정] 자동 크기 조절 로직 호출
+        this.autoResizeFont(config.fontSize ?? Default.fontSize);
     }
+
+    /**
+     * [신규] 텍스트가 화면 너비를 벗어나지 않도록 글꼴 크기를 자동으로 조절합니다.
+     */
+    private autoResizeFont(initialFontSize: string): void {
+        const el = this.questTitleElement;
+        // 화면 너비의 90%를 최대 너비로 설정
+        const maxWidth = window.innerWidth * 0.9;
+
+        let currentFontSize = parseFloat(initialFontSize);
+        el.style.fontSize = `${currentFontSize}px`;
+
+        // 텍스트 너비가 최대 너비보다 크고, 폰트 크기가 10px보다 클 경우 반복
+        while (el.scrollWidth > maxWidth && currentFontSize > 10) {
+            currentFontSize--; // 폰트 크기를 1px씩 줄임
+            el.style.fontSize = `${currentFontSize}px`;
+        }
+    }
+
     
     /**
      * 애니메이션을 트리거합니다.

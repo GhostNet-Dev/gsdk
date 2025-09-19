@@ -43,6 +43,7 @@ export default class InteractiveManager implements IWorldMapObject {
 
                 const result = this.isLookingAt(obj.Pos, myDirection, inter.position, halfFovRadians)
                 if (result) {
+                    this.eventCtrl.SendEventMessage(EventTypes.ActiveInteraction, inter.DefId)
                     inter.tryInteract(obj)
                 } else {
                     if(inter.isActive) inter.disable()

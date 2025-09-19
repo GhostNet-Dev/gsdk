@@ -16,6 +16,7 @@ export abstract class InteractableObject extends THREE.Group implements IActionU
     actions: IActionComponent[] = []
     components: Map<string, IInteractiveComponent> = new Map();
     meshs?: THREE.Group
+    get DefId() { return this.def.id }
     get objs() { return this.meshs }
 
     constructor(

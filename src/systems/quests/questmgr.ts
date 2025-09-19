@@ -37,9 +37,12 @@ export class QuestManager {
                 }
             })
         });
-        this.eventCtrl.RegisterEventListener(EventTypes.DoInteraction, (id: string) => {
+        this.eventCtrl.RegisterEventListener(EventTypes.ActiveInteraction, (id: string) => {
             this.handleGameEvent({ type: 'interactive', targetId: id });
         });
+        this.eventCtrl.RegisterEventListener(EventTypes.QuestComplete, (id: QuestId) => {
+            this.completeQuest(id)
+        })
     }
 
     /**
@@ -103,7 +106,7 @@ export class QuestManager {
 
         const title = this.questDefinitions.get(questId)?.title;
         console.log(`퀘스트 시작: ${title}`);
-        this.eventCtrl.SendEventMessage('questStateChanged', { questId, status: 'ACTIVE' });
+        this.eventCtrl.SendEventMessage(EventTypes.QuestStateChanged, { questId, status: 'ACTIVE' });
         this.eventCtrl.SendEventMessage(EventTypes.AlarmBig, title)
         return true;
     }
@@ -143,7 +146,7 @@ export class QuestManager {
         this.activeQuests.delete(questId);
         this.completedQuests.add(questId);
 
-        this.eventCtrl.SendEventMessage('questStateChanged', { questId, status: 'COMPLETED' });
+        this.eventCtrl.SendEventMessage(EventTypes.QuestStateChanged, { questId, status: 'COMPLETED' });
         return true;
     }
 
@@ -166,7 +169,7 @@ export class QuestManager {
         if (allObjectivesMet) {
             activeQuest.status = 'COMPLETABLE';
             console.log(`퀘스트 완료 가능: ${questDef.title}`);
-            this.eventCtrl.SendEventMessage('questStateChanged', { questId, status: 'COMPLETABLE' });
+            this.eventCtrl.SendEventMessage(EventTypes.QuestStateChanged, { questId, status: 'COMPLETABLE' });
         }
     }
 }

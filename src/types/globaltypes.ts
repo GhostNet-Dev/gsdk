@@ -61,6 +61,7 @@ export enum EventTypes {
     JoypadOn = "joypadon",
     JoypadOff = "joypadoff",
 
+    // Message
     AlarmWarning = "alarmwarning",
     AlarmNormal = "alarmnormal",
     AlarmBig = "alarmbig",
@@ -79,9 +80,15 @@ export enum EventTypes {
     // player와 상호작용하는 객체 interatable
     CheckInteraction = "checkinter",
     DoInteraction = "dointer",
+    ActiveInteraction = "actinter",
 
     // 상호작용에 의해 Player 모드 변경 
     ChangePlayerMode = "chgplayermod",
+
+    // Quest Event
+    QuestStateChanged = "queststate",
+    QuestComplete = "questcomp",
+    Confetti = "confetti",
 
     // 주기적으로 호출되는 함수 등록
     RegisterLoop = "regloop",

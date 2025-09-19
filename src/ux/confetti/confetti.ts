@@ -1,3 +1,5 @@
+import IEventController from "@Glibs/interface/ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
 
 export default class Confetti {
@@ -8,15 +10,20 @@ export default class Confetti {
     confettiAnimations = ['slow', 'medium', 'fast'];
     confettiInterval?: NodeJS.Timeout
 
-    constructor(private parent: HTMLElement, { index = 0 } = {}) {
+    constructor(
+        private eventCtrl: IEventController,
+        private parent: HTMLElement, { index = 99 } = {}
+    ) {
+        this.eventCtrl.RegisterEventListener(EventTypes.Confetti, (onOff: boolean) => {
+            if(onOff) this.show()
+            else this.dispose()
+        })
         this.applyDynamicStyle("confetti", getCSS(index))
 
         this.el = document.createElement("div");
         this.el.classList.add("js-container", "_container")
-        parent.appendChild(this.el)
 
         this._setupElements();
-        this._renderConfetti();
     }
     dispose() {
         clearInterval(this.confettiInterval)
@@ -30,6 +37,7 @@ export default class Confetti {
     _setupElements() {
         const containerEl = document.createElement('div');
         this.el.style.position = 'absolute';
+        this.el.style.top = '0';
 
         containerEl.classList.add('confetti-container');
 
@@ -92,6 +100,7 @@ function getCSS(index: number) {
     }
 
     ._container {
+        position: absolute;
         width: 100%;
         height: 100vh;
     }

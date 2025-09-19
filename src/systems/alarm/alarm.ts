@@ -26,6 +26,10 @@ export class Alarm {
         document.body.appendChild(this.normalDom)
 
         this.bigDom.id = "questalarm"
+        this.bigDom.style.whiteSpace = "nowrap"
+        this.bigDom.style.transform = "translate(-50%, -50%)",
+        this.bigDom.style.top = "30%"
+        this.bigDom.style.left = "50%"
         document.body.appendChild(this.bigDom)
         this.quest = new QuestAnimator("questalarm")
 

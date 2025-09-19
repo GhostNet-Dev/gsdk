@@ -5,7 +5,7 @@ export default class DefaultLights extends THREE.DirectionalLight {
         super(0xfff2e0, 1.0)
 
         const ambient = new THREE.AmbientLight(0xffffff, 1.0); // 밝은 베이스
-        const hemi = new THREE.HemisphereLight(0xfffbef, 0xf7fbff, 1.8); // warm sky, very light ground
+        const hemi = new THREE.HemisphereLight(0xfffbef, 0xf7fbff, 0.8); // warm sky, very light ground
         hemi.position.set(0, 80, 0);
 
         // 직사광은 살짝만(대비 낮춤). 색도 웜톤으로.
