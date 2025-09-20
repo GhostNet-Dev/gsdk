@@ -21,6 +21,7 @@ import { Buff } from "@Glibs/magical/buff/buff";
 import { MeleeAttackState } from "./states/meleeattackst";
 import { RangeAttackState } from "./states/rangeattackst";
 import { ComboMeleeState } from "./states/combomeleeattackst";
+import { EventActionState, EventIdleState } from "./states/eventstate";
 
 export class PlayerCtrl implements ILoop, IActionUser {
     LoopId = 0
@@ -66,6 +67,9 @@ export class PlayerCtrl implements ILoop, IActionUser {
     TreeIdleSt: TreeIdleState
     CutDownTreeSt: CutDownTreeState
 
+    EventIdleSt: EventIdleState
+    EventActSt: EventActionState
+
     worker = new Worker(new URL('./player.worker.ts', import.meta.url))
 
     set Immortal(enable: boolean) { this.baseSpec.status.immortal = enable }
@@ -109,6 +113,9 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.TreeIdleSt = new TreeIdleState(this, this.player, this.gphysic, this.baseSpec)
         this.CutDownTreeSt = new CutDownTreeState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
 
+        this.EventIdleSt = new EventIdleState(this, this.player, this.gphysic, this.baseSpec)
+        this.EventActSt = new EventActionState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
+
         this.currentState = this.IdleSt
         this.currentIdleState = this.IdleSt
         this.worker.onmessage = (e: any) => { console.log(e) }
@@ -122,6 +129,11 @@ export class PlayerCtrl implements ILoop, IActionUser {
                     this.TreeIdleSt.TargetIntId = interId
                     this.TreeIdleSt.triggerType = triggerType
                     this.currentIdleState = this.TreeIdleSt
+                    break;
+                case "event":
+                    this.EventIdleSt.TargetIntId = interId
+                    this.EventIdleSt.triggerType = triggerType
+                    this.currentIdleState = this.EventIdleSt 
                     break;
                 default:
                     this.currentIdleState = this.IdleSt

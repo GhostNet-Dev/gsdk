@@ -66,6 +66,9 @@ export default class WoodModal implements IDialog {
             })
         })
     }
+    Clear() {
+        this.container.replaceChildren()
+    }
     applyDynamicStyle(styleId: string, css: string) {
         if (!document.getElementById(styleId)) {
             const style = document.createElement("style");

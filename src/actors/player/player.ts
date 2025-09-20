@@ -138,6 +138,7 @@ export class Player extends PhysicsObject {
 
         this.clipMap.set(ActionType.Idle, asset.GetAnimationClip(Ani.Idle))
         this.clipMap.set(ActionType.TreeIdle, asset.GetAnimationClip(Ani.FightIdle))
+        this.clipMap.set(ActionType.EventIdle, asset.GetAnimationClip(Ani.Idle))
         this.clipMap.set(ActionType.Run, asset.GetAnimationClip(Ani.Run))
         this.clipMap.set(ActionType.Jump, asset.GetAnimationClip(Ani.Jump))
         this.clipMap.set(ActionType.Punch, asset.GetAnimationClip(Ani.Punch))
@@ -166,6 +167,7 @@ export class Player extends PhysicsObject {
         this.clipMap.set(ActionType.Building, asset.GetAnimationClip(Ani.Hammering))
 
         this.clipMap.set(ActionType.CutDownTree, asset.GetAnimationClip(Ani.AxeAttack))
+        this.clipMap.set(ActionType.EventAction, asset.GetAnimationClip(Ani.PlantAPlant))
         this.clipMap.set(ActionType.AxeAttack, asset.GetAnimationClip(Ani.AxeAttack))
         this.clipMap.set(ActionType.AxeAttack360, asset.GetAnimationClip(Ani.AxeAttack360))
         this.clipMap.set(ActionType.AxeRun, asset.GetAnimationClip(Ani.AxeRun))

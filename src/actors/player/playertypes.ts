@@ -22,6 +22,7 @@ export enum AttackType {
 export enum ActionType {
     Idle,
     TreeIdle,
+    EventIdle,
     Run,
     Jump,
     Punch,
@@ -61,6 +62,7 @@ export enum ActionType {
     Watering,
     Building,
     CutDownTree,
+    EventAction,
     
     AxeAttack,
     AxeAttack360,
@@ -73,6 +75,7 @@ export enum ActionType {
 export type PlayMode =
   | "default"
   | "tree"
+  | "event"
 
 export type AttackOption = {
     type: AttackType,

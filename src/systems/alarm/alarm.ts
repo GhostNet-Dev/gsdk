@@ -15,6 +15,7 @@ export class Alarm {
     normalDom = document.createElement("div")
     bigDom = document.createElement("div")
     interactiveDom = document.createElement("div")
+    scriptDom = document.createElement("div")
     quest: QuestAnimator
     constructor(eventCtrl: IEventController) {
         this.dom.className = "playalarm"
@@ -36,6 +37,10 @@ export class Alarm {
         this.interactiveDom.className = "interactivealarm"
         this.makeDomStyle(this.interactiveDom, { bottom: "35%" })
         document.body.appendChild(this.interactiveDom)
+
+        this.scriptDom.className = "scriptalarm"
+        this.makeDomStyle(this.scriptDom, { bottom: "25%" })
+        document.body.appendChild(this.scriptDom)
 
         eventCtrl.RegisterEventListener(EventTypes.AlarmNormal, (text: string) => {
             this.NotifyInfo(text, AlarmType.Normal)
@@ -95,14 +100,14 @@ export class Alarm {
                     case KeyType.Action3: html +=  "change_history"; break;
                 }
                 eventCtrl.SendEventMessage(EventTypes.InputHookOnce, enumKey, () => {
-                    this.interactiveDom.style.display = "none"
-                    this.interactiveDom.innerHTML = ''
+                    this.scriptDom.style.display = "none"
+                    this.scriptDom.innerHTML = ''
                     clickEvent(enumKey)
                 })
                 html += "</span>"
             });
-            this.interactiveDom.style.display = "block"
-            this.interactiveDom.innerHTML = html
+            this.scriptDom.style.display = "block"
+            this.scriptDom.innerHTML = html
         })
     }
     textQueue: string[] = []
