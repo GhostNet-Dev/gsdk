@@ -2,17 +2,17 @@ import { GUX, IGUX } from "../gux"
 
 export class GameButton extends GUX {
   Dom = document.createElement("div")
-  constructor(options?: { color: "orange" | "green" | "red" }) {
+  constructor({ title = "OK", click = () => { } } = {}, color?: "orange" | "green" | "red") {
     super()
     this.applyDynamicStyle("gamebutton", getCSS())
-    this.Dom.classList.add("game-button", (options) ? options.color : "green", "m-1")
+    this.Dom.classList.add("game-button", color ?? "green", "m-1")
+    this.Dom.innerHTML = title
+    this.Dom.onclick = () => { click() }
   }
   GetContentElement() {
     return this.Dom
   }
-  RenderHTML({ title = "OK", click = () => { } } = {}): void {
-    this.Dom.innerHTML = title
-    this.Dom.onclick = () => { click() }
+  RenderHTML(){
   }
   Show(): void {
     

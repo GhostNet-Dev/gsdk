@@ -20,6 +20,7 @@ export interface Quest {
         experience?: number;
         gold?: number;
         items?: { itemId: string; amount: number }[];
+        skills?: { skillId: string; lv?: number }[];
     };
 }
 

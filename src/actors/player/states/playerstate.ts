@@ -51,14 +51,8 @@ export class State {
             return this.playerCtrl.RunSt
         }
     }
-    CheckRoll() {
-        if (this.playerCtrl.KeyState[KeyType.Action1]) {
-            this.playerCtrl.RollSt.Init()
-            return this.playerCtrl.RollSt
-        }
-    }
     CheckAttack() {
-        if (this.playerCtrl.KeyState[KeyType.Action2]) {
+        if (this.playerCtrl.KeyState[KeyType.Action1]) {
             if (this.playerCtrl.mode == AppMode.Play) {
                 const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
                 const state = (handItem?.ItemType == "meleeattack") ? 
@@ -72,6 +66,12 @@ export class State {
                 this.playerCtrl.PlantASt.Init()
                 return this.playerCtrl.PlantASt
             } 
+        }
+    }
+    CheckRoll() {
+        if (this.playerCtrl.KeyState[KeyType.Action2]) {
+            this.playerCtrl.RollSt.Init()
+            return this.playerCtrl.RollSt
         }
     }
     CheckMagic() {

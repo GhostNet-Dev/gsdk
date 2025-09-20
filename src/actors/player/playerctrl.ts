@@ -140,7 +140,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
 
         eventCtrl.RegisterEventListener(EventTypes.Input, (e: any, real: THREE.Vector3) => {
             if (!this.contollerEnable || !this.playEnable) return
-            if (e.type == "move") {
+            if (e.type == "move" || this.currentState == this.RollSt) {
                 this.inputVQueue.push(new THREE.Vector3().copy(real))
                 this.inputMode = true
             } else {

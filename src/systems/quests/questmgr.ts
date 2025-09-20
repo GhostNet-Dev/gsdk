@@ -124,6 +124,10 @@ export class QuestManager {
         const activeQuest = this.activeQuests.get(questId);
         return activeQuest ? activeQuest.status : 'INACTIVE';
     }
+    public getQuestInfo(questId: QuestId) {
+        const r = this.questDefinitions.get(questId)
+        return r
+    }
 
     /**
      * 퀘스트를 최종 완료하고 보상을 지급합니다.

@@ -184,6 +184,7 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
     private hitTimerId?: ReturnType<typeof setTimeout>;
     private swingTimerFired = false;
     private hitTimerFired = false;
+    private autoAttack = false;
 
     constructor(
         playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic,
@@ -530,7 +531,8 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
             if ((handItem as any).Sound) {
                 this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, (handItem as any).Mesh, (handItem as any).Sound);
             }
-            if ((handItem as any).AutoAttack) this.autoDirection();
+            this.autoAttack = handItem.AutoAttack;
+            if (this.autoAttack) this.autoDirection();
         }
 
         // 예약 스케줄
@@ -549,6 +551,9 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
     }
 
     Update(_: number): IPlayerAction {
+        if (this.playerCtrl.KeyState[KeyType.Action1]) {
+            this.onAttackButtonPressed()
+        }
         const d = this.DefaultCheck({ attack: false, magic: false, jump: false });
         if (d) { this.clearStepTimers(); return d; }
         if (!this.clock) return this;
@@ -556,12 +561,9 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         const dt = this.clock.getDelta();
         this.phaseTime += dt;
 
-        if (!this.detectEnermy) {
-            return this.ChangeMode(this.playerCtrl.currentIdleState)
-        }
-        if (!this.detectEnermy) {
+        if (this.autoAttack && !this.detectEnermy) {
             this.clearStepTimers();
-            return this.ChangeMode(this.playerCtrl.currentIdleState);
+            return this.ChangeMode(this.playerCtrl.currentIdleState)
         }
 
         const now = this.phaseTime;
@@ -597,10 +599,25 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
             const endT = this.totalDurSec;
             if (this.phaseTime >= endT) {
                 this.clearStepTimers();
-                if (this.tryConsumeBufferedInput(this.phaseTime) && this.currentStep.next != null) {
+
+                const hasNext = this.currentStep.next != null;
+                const buffered = this.tryConsumeBufferedInput(this.phaseTime);
+
+                // 버퍼가 있고 다음 스텝이 있으면 정상 진행
+                if (buffered && hasNext) {
                     this.startStep(this.currentStep.next!);
                     return this;
                 }
+
+                // ★ 마지막 스텝 종료 시: 1단계로 되돌리기 (체인 길이 > 1일 때만)
+                const isLast = !hasNext;
+                const hasMulti = this.chain.steps.length > 1;
+                if (isLast && hasMulti) {
+                    this.startStep(0);
+                    return this;
+                }
+
+                // 그 외엔 종료 → Idle
                 this.Uninit();
                 return this.playerCtrl.IdleSt;
             }

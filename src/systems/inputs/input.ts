@@ -367,6 +367,7 @@ const css = `
     position: absolute;
     left: 10px;
     bottom: 10px;
+    z-index: 999;
 }
 #joypad {
     display: none;
@@ -381,6 +382,7 @@ const css = `
     position: absolute;
     right: 10px;
     bottom: 10px;
+    z-index: 999;
 }
 .joypad_arrow {
     display: inline-block;
