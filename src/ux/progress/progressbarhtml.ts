@@ -46,6 +46,7 @@ export default class ProgressBarHtml extends GUX {
         </div>
         `;
         this.Dom.innerHTML = html;
+        document.body.appendChild(this.Dom);
 
         // 렌더링된 HTML 내부의 요소들을 찾아 클래스 속성에 할당
         this.loadingBar = this.Dom.querySelector<HTMLSpanElement>("#htmlloading");
@@ -59,17 +60,22 @@ export default class ProgressBarHtml extends GUX {
     }
 }
 
+const width = 150
 const css = `
 #htmlprogressbar{
   height: 26px;
   position: absolute;
   left: 50%;
-  top: 50%;
-  width: 200px;
+  bottom: 20%;
+  width: ${width}px;
   background: rgba(159, 159, 159, 0.5);
   border-radius: 10px;
-  margin: -20px 0 0 -100px;
+  margin: -20px 0 0 -${width / 2}px;
   padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 #htmlloading{
   /* width 변경 시 부드러운 전환 효과를 위해 transition 수정 */
@@ -79,8 +85,8 @@ const css = `
   border-radius: 8px;
   background: #474747;
   position: absolute;
-  margin: 3px;
-  display: inline-block;
+  left: 3px
+  /* display: inline-block; */
   /* animation 속성은 로직과 충돌할 수 있으므로 제거 */
 }
 #htmlprogressload{ /* CSS 선택자 오타 수정 (load -> htmlprogressload) */
@@ -89,7 +95,7 @@ const css = `
   text-align: center;
   position: relative; /* 텍스트가 바 위에 올바르게 표시되도록 수정 */
   color: white;
-  line-height: 26px; /* 수직 중앙 정렬 */
   text-shadow: 1px 1px 2px black; /* 텍스트 가독성 향상 */
+  z-index: 1;
 }
 `;
