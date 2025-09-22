@@ -11,10 +11,15 @@ export default class ProgressBarHtml extends GUX {
 
     constructor(
         eventCtrl: IEventController,
+        { center = false } = {}
     ) {
         super();
         this.RenderHTML();
         this.Hide()
+
+        if (center && this.loadingBar) {
+            this.loadingBar.style.display = "inline-block";
+        }
 
         // 이벤트 리스너 구현
         eventCtrl.RegisterEventListener(EventTypes.ShowProgress, (ratio: number, text: string) => {
