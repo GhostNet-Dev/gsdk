@@ -753,10 +753,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
           part.mesh.setMatrixAt(i, tmp);
         }
         part.mesh.count = aliveCount;
-        // @ts-ignore
-        part.mesh.instanceMatrix.updateRange.offset = 0;
-        // @ts-ignore
-        part.mesh.instanceMatrix.updateRange.count  = Math.max(1, aliveCount * 16);
+        part.mesh.instanceMatrix.addUpdateRange(0, Math.max(1, aliveCount * 16))
         part.mesh.instanceMatrix.needsUpdate = true;
       }
       return;
@@ -770,9 +767,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       const countElems  = countInstances  * 16;
       for (const p of b.parts) {
         // @ts-ignore
-        p.mesh.instanceMatrix.updateRange.offset = offsetElems;
-        // @ts-ignore
-        p.mesh.instanceMatrix.updateRange.count  = countElems;
+        p.mesh.instanceMatrix.addUpdateRange(offsetElems, countElems)
         p.mesh.instanceMatrix.needsUpdate = true;
         p.mesh.count = b.totalCount;
       }
@@ -787,7 +782,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     for (let i = 0; i < aliveCount; i++) temp[i] = arr[alive[i]];
     arr.set(temp, 0);
     // @ts-ignore
-    attr.updateRange = { offset: 0, count: Math.max(1, aliveCount) };
+    attr.addUpdateRange(0, Math.max(1, aliveCount))
     attr.needsUpdate = true;
   }
 

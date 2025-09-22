@@ -43,6 +43,8 @@ export enum EventTypes {
     Drop = "drop",
     DirectDrop = "directdrop",
     Pickup = "pickup",
+    // item이 사용되는 때
+    UseItem = "useitem",
 
     BrickInfo = "bsize",
     TerrainInfo = "tsize",
@@ -109,6 +111,7 @@ export enum EventTypes {
 
     LoadingProgress = "loading",
     RegisterLoadingItems = "regloaditems",
+    ShowProgress = "showprogress",
 
     RegisterSound = "sound",
     RegisterSoundListener = "soundlis",

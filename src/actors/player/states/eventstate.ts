@@ -14,9 +14,8 @@ import { BaseSpec } from "@Glibs/actors/battle/basespec"
 export class EventActionState extends State implements IPlayerAction {
     TargetIntId: string =""
     triggerType: TriggerType = "onInteract"
-    attackProcess = false
     attackTime = 0
-    attackSpeed = 2
+    modeTime = 0
     keytimeout?:NodeJS.Timeout
 
     constructor(
@@ -26,13 +25,11 @@ export class EventActionState extends State implements IPlayerAction {
         super(playerPhy, player, gphysic, baseSpec)
     }
     Init(): void {
-        this.attackSpeed = this.baseSpec.AttackSpeed
-        this.attackTime = this.attackSpeed
-        this.player.ChangeAction(ActionType.EventAction, this.attackSpeed)
+        this.attackTime = 0
+        this.player.ChangeAction(ActionType.EventAction)
     }
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
-        this.attackProcess = false
     }
     Update(delta: number, v: Vector3): IPlayerAction {
         const d = this.DefaultCheck({ attack: false, magic: false })
@@ -42,26 +39,26 @@ export class EventActionState extends State implements IPlayerAction {
         }
 
         this.attackTime += delta
-        if(this.attackProcess) return this
-        if(this.attackTime / this.attackSpeed < 1) {
+
+        const ratio = this.attackTime / this.modeTime
+        if (ratio < 1) {
+            this.eventCtrl.SendEventMessage(EventTypes.ShowProgress, ratio, "")
             return this
         }
-        this.attackTime -= this.attackSpeed
+        this.eventCtrl.SendEventMessage(EventTypes.ShowProgress, 1, "")
+        console.log("Attack!! from character")
+        this.eventCtrl.SendEventMessage(EventTypes.DoInteraction, this.TargetIntId, this.triggerType)
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + this.TargetIntId)
 
-        this.attackProcess = true
-        this.keytimeout = setTimeout(() => {
-            console.log("Attack!! from character")
-            this.eventCtrl.SendEventMessage(EventTypes.DoInteraction, this.TargetIntId, this.triggerType)
-            this.eventCtrl.SendEventMessage(EventTypes.Attack + this.TargetIntId)
-            this.attackProcess = false
-        }, this.attackSpeed * 1000 * 0.5)
-        
-        return this
+        this.Uninit()
+        this.playerCtrl.EventIdleSt.Init()
+        return this.playerCtrl.EventIdleSt
     }
 }
 export class EventIdleState extends State implements IPlayerAction {
     TargetIntId: string =""
     triggerType: TriggerType = "onInteract"
+    modeTime = 0
 
     constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
         super(playerPhy, player, gphysic, baseSpec)
@@ -82,8 +79,9 @@ export class EventIdleState extends State implements IPlayerAction {
         if (this.playerCtrl.KeyState[KeyType.Action1]) {
             this.playerCtrl.EventActSt.TargetIntId = this.TargetIntId
             this.playerCtrl.EventActSt.triggerType = this.triggerType
+            this.playerCtrl.EventActSt.modeTime = this.modeTime
             this.playerCtrl.EventActSt.Init()
-            return this.playerCtrl.CutDownTreeSt
+            return this.playerCtrl.EventActSt
         }
         return this
     }

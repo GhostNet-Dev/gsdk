@@ -121,9 +121,10 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.worker.onmessage = (e: any) => { console.log(e) }
 
         eventCtrl.RegisterEventListener(EventTypes.ChangePlayerMode, (
-            mode: PlayMode, interId: string, triggerType: TriggerType
+            mode: PlayMode, interId: string, triggerType: TriggerType, modeTime: number
         ) => {
             if (this.playMode == mode) return
+            console.log("ChangePlayerMode", mode, interId, triggerType)
             switch (mode) {
                 case "tree":
                     this.TreeIdleSt.TargetIntId = interId
@@ -133,6 +134,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
                 case "event":
                     this.EventIdleSt.TargetIntId = interId
                     this.EventIdleSt.triggerType = triggerType
+                    this.EventIdleSt.modeTime = modeTime
                     this.currentIdleState = this.EventIdleSt 
                     break;
                 default:

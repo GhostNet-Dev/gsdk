@@ -191,7 +191,7 @@ export default class OptPhysics implements IGPhysic {
     }
     clock = new THREE.Clock()
     update() {
-        const delta = this.clock.getDelta() * this.timeScale
+        const delta = Math.min(this.clock.getDelta() * this.timeScale, 1)
         this.physicalObjs.forEach(obj => {
             obj.update?.(delta)
         })

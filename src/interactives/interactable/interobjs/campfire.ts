@@ -17,6 +17,9 @@ export class Campfire extends InteractableObject implements ILoop {
   ) {
     super(uniqId, def, eventCtrl)
 
+    eventCtrl.RegisterEventListener(EventTypes.Attack + uniqId, () => {
+      console.log("campfire attack!!", this.position)
+    })
   }
   async Loader(position: THREE.Vector3, rotation: THREE.Euler, scale: number, name: string) {
     const campfire = new ToonCampfire({ scale })
@@ -63,7 +66,7 @@ export class Campfire extends InteractableObject implements ILoop {
         [KeyType.Action1]: "나무 보충하기"
       })
       this.eventCtrl.SendEventMessage(EventTypes.ChangePlayerMode,
-        this.def.type, this.interactId, "onHit")
+        this.def.type, this.interactId, "onHit", 5)
       // this.trigger("onHit")
       this.isActive = true
     }
