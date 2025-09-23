@@ -20,6 +20,9 @@ export class Obstacles extends InteractableObject {
     }
     tryInteract(actor: IPhysicsObject): void {
     }
+    DoInteract(actor: IPhysicsObject, ...param: any): void {
+        
+    }
     _disable(): void {
         
     }

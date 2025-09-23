@@ -23,6 +23,14 @@ export class Inventory implements IInventory {
         { maxSlot = 15 } = {},
     ) {
         this.MaxSlot = maxSlot
+        this.event.RegisterEventListener(EventTypes.UseItem, (id: ItemId, count: number) => {
+            const find = this.data.inventroySlot.find((slot) => slot.item.Id == id)
+            if(find && find.count >= count) {
+                console.log("use item: ", id, count)
+                find.count -= count
+                if(find.count == 0) this.data.inventroySlot.splice(this.data.inventroySlot.indexOf(find), 1)
+            }
+        })
     }
     EquipItem(item: IItem) {
         const bind = item.Bind
@@ -47,7 +55,7 @@ export class Inventory implements IInventory {
         }
         this.data.inventroySlot.push({ item: item, count: 1 })
     }
-    GetItem(id: ItemId) {
+    GetItemSlot(id: ItemId) {
         return this.data.inventroySlot.find(e => e.item.Id == id)
     }
     private getAsset(key: ItemId) {

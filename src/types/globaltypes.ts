@@ -125,6 +125,7 @@ export enum EventTypes {
     
     // Actor를 제어하는 함수들
     CampfireCtrl = "campfire",
+    CampfireInteract = "campfireinter",
     DarkParticle = "darkparticle",
 
     GameCenter = "gcenter",

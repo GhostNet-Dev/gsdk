@@ -54,6 +54,7 @@ export abstract class InteractableObject extends THREE.Group implements IActionU
         }
     }
     abstract tryInteract(actor: IPhysicsObject): void;
+    abstract DoInteract(actor: IPhysicsObject, ...param: any): void;
     abstract _disable(): void;
     abstract afterLoad(): void;
 

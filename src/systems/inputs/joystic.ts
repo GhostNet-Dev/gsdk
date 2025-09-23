@@ -68,6 +68,7 @@ export class Joystick {
 	}
 	Hide() {
 		this.joy.style.display = "none"
+		this.end()
 	}
 	Show() {
 		this.joy.style.display = "block"

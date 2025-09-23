@@ -54,7 +54,7 @@ export class Player extends PhysicsObject {
             this.meshs.visible = false
         })
         this.eventCtrl.RegisterEventListener(EventTypes.Equipment, (id: ItemId) => {
-            const slot = this.inventory.GetItem(id)
+            const slot = this.inventory.GetItemSlot(id)
             if(slot == undefined) throw new Error("item is undefined")
             // right hand
             this.ReloadBindingItem(slot.item)

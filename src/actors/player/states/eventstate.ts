@@ -47,8 +47,7 @@ export class EventActionState extends State implements IPlayerAction {
         }
         this.eventCtrl.SendEventMessage(EventTypes.ShowProgress, 1, "")
         console.log("Attack!! from character")
-        this.eventCtrl.SendEventMessage(EventTypes.DoInteraction, this.TargetIntId, this.triggerType)
-        this.eventCtrl.SendEventMessage(EventTypes.Attack + this.TargetIntId)
+        this.eventCtrl.SendEventMessage(EventTypes.DoInteraction, this.TargetIntId, this.triggerType, this.player)
 
         this.Uninit()
         this.playerCtrl.EventIdleSt.Init()

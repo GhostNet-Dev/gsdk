@@ -163,7 +163,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
             }
         })
         eventCtrl.RegisterEventListener(EventTypes.Equipment, (id: ItemId) => {
-            const slot = this.inventory.GetItem(id)
+            const slot = this.inventory.GetItemSlot(id)
             if (slot == undefined) throw new Error("item is undefined")
             if (slot.item.Bind) {
                 const prevItem = this.baseSpec.GetBindItem(slot.item.Bind);

@@ -21,9 +21,12 @@ export default class InteractiveManager implements IWorldMapObject {
         private loader: Loader,
         private eventCtrl: IEventController
     ) { 
-        eventCtrl.RegisterEventListener(EventTypes.DoInteraction, (id: string, type: TriggerType) => {
+        eventCtrl.RegisterEventListener(EventTypes.DoInteraction, (id: string, type: TriggerType, obj: IPhysicsObject, param: any[]) => {
             this.objs.forEach(inter => {
-                if(inter.interactId == id) inter.trigger(type)
+                if(inter.interactId == id) {
+                    inter.trigger(type)
+                    inter.DoInteract(obj, param)
+                }
             })
             
         })

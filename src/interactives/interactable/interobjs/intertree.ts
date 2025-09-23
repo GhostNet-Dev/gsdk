@@ -37,6 +37,9 @@ export class InterTree extends InteractableObject {
   afterLoad(): void {
     this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, this, true)
   }
+  DoInteract(actor: IPhysicsObject, ...param: any): void {
+    
+  }
 
   tryInteract(actor: IPhysicsObject): void {
     // EventBus.emit("gatherWood", { actor, tree: this });

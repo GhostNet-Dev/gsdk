@@ -158,7 +158,7 @@ export class Carpenter implements ILoop {
         const slots: InventorySlot[] = []
         const ret = items.some((e) => {
             // search inventory and store
-            const slot = this.inven.GetItem(e.itemId as ItemId)
+            const slot = this.inven.GetItemSlot(e.itemId as ItemId)
             if (slot && slot.count >= e.count) slots.push(slot)
             else {
                 const info = this.inven.GetItemInfo(e.itemId as ItemId)

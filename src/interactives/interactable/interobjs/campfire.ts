@@ -6,6 +6,8 @@ import IEventController, { ILoop } from '@Glibs/interface/ievent';
 import { EventTypes } from '@Glibs/types/globaltypes';
 import { IPhysicsObject } from '@Glibs/interface/iobject';
 import { KeyType } from '@Glibs/types/eventtypes';
+import { PlayerCtrl } from '@Glibs/actors/player/playerctrl';
+import { itemDefs } from '@Glibs/inventory/items/itemdefs';
 
 export class Campfire extends InteractableObject implements ILoop {
   LoopId: number = 0
@@ -16,10 +18,9 @@ export class Campfire extends InteractableObject implements ILoop {
     protected eventCtrl: IEventController
   ) {
     super(uniqId, def, eventCtrl)
-
-    eventCtrl.RegisterEventListener(EventTypes.Attack + uniqId, () => {
-      console.log("campfire attack!!", this.position)
-    })
+  }
+  DoInteract(actor: IPhysicsObject): void {
+    this.eventCtrl.SendEventMessage(EventTypes.CampfireInteract, actor)
   }
   async Loader(position: THREE.Vector3, rotation: THREE.Euler, scale: number, name: string) {
     const campfire = new ToonCampfire({ scale })
@@ -45,12 +46,14 @@ export class Campfire extends InteractableObject implements ILoop {
 
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
     this.eventCtrl.RegisterEventListener(EventTypes.CampfireCtrl, (amount: number) => {
-      if (amount == 1) {
-        this.campfire!.ignite()
-      } else if (amount > 0) {
-        this.campfire!.setFireAmount(amount)
-      } else
-        this.campfire!.extinguish()
+      console.log("campfire: ", amount)
+      if (amount > 0) {
+        this.campfire!.ignite(true)
+      } else {
+        this.campfire!.extinguish(true)
+        return
+      }
+      this.campfire!.setFireAmount(amount, true)
     })
   }
   afterLoad(): void {
