@@ -25,20 +25,6 @@ export class ToiletFab extends AssetModel implements IAsset {
             this.meshs.children[0].scale.set(scale, scale, scale)
         })
     }
-    
-    GetBox(mesh: THREE.Group) {
-        if (this.meshs == undefined) this.meshs = mesh
-        if (this.box == undefined) {
-            const s = this.GetSize(mesh)
-            this.box = new THREE.Mesh(
-                new THREE.BoxGeometry(s.x, s.y, s.z), this.boxMat)
-        }
-
-        const p = this.GetBoxPos(mesh)
-        this.box.position.copy(p)
-        this.box.rotation.copy(this.meshs.rotation)
-        return new THREE.Box3().setFromObject(this.box)
-    }
     GetSize(mesh: THREE.Group): THREE.Vector3 {
         if (this.meshs == undefined) this.meshs = mesh
         if (this.size) return this.size
@@ -50,8 +36,6 @@ export class ToiletFab extends AssetModel implements IAsset {
         console.log(this.meshs, this.size)
         return this.size 
     }
-
-    GetBodyMeshId() { return "mixamorigRightHand" }
 }
 export class SinkFab extends AssetModel implements IAsset {
     id = Char.Sink
@@ -73,20 +57,6 @@ export class SinkFab extends AssetModel implements IAsset {
             this.meshs.children[0].scale.set(scale, scale, scale)
         })
     }
-    
-    GetBox(mesh: THREE.Group) {
-        if (this.meshs == undefined) this.meshs = mesh
-        if (this.box == undefined) {
-            const s = this.GetSize(mesh)
-            this.box = new THREE.Mesh(
-                new THREE.BoxGeometry(s.x, s.y, s.z), this.boxMat)
-        }
-
-        const p = this.GetBoxPos(mesh)
-        this.box.position.copy(p)
-        this.box.rotation.copy(mesh.rotation)
-        return new THREE.Box3().setFromObject(this.box)
-    }
     GetSize(mesh: THREE.Group): THREE.Vector3 {
         if (this.meshs == undefined) this.meshs = mesh
         if (this.size) return this.size
@@ -98,8 +68,6 @@ export class SinkFab extends AssetModel implements IAsset {
         console.log(this.meshs, this.size)
         return this.size 
     }
-
-    GetBodyMeshId() { return "mixamorigRightHand" }
 }
 export class BathFab extends AssetModel implements IAsset {
     id = Char.Bath
@@ -122,19 +90,6 @@ export class BathFab extends AssetModel implements IAsset {
         })
     }
     
-    GetBox(mesh: THREE.Group) {
-        if (this.meshs == undefined) this.meshs = mesh
-        if (this.box == undefined) {
-            const s = this.GetSize(mesh)
-            this.box = new THREE.Mesh(
-                new THREE.BoxGeometry(s.x, s.y, s.z), this.boxMat)
-        }
-
-        const p = this.GetBoxPos(mesh)
-        this.box.position.copy(p)
-        this.box.rotation.copy(mesh.rotation)
-        return new THREE.Box3().setFromObject(this.box)
-    }
     GetSize(mesh: THREE.Group): THREE.Vector3 {
         if (this.meshs == undefined) this.meshs = mesh
         if (this.size) return this.size
@@ -146,6 +101,4 @@ export class BathFab extends AssetModel implements IAsset {
         console.log(this.meshs, this.size)
         return this.size 
     }
-
-    GetBodyMeshId() { return "mixamorigRightHand" }
 }

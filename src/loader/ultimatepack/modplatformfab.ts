@@ -26,19 +26,6 @@ class UltimatePack extends AssetModel {
             // this.meshs.children[0].scale.set(scale, scale, scale)
         })
     }
-    
-    GetBodyMeshId() { return "mixamorigRightHand" }
-    GetBox(mesh: THREE.Group) {
-        if (this.meshs == undefined) this.meshs = mesh
-        if (this.box == undefined) {
-            const s = this.GetSize(mesh)
-            this.box = new THREE.Mesh(new THREE.BoxGeometry(s.x, s.y, s.z), this.boxMat)
-        }
-
-        const p = this.GetBoxPos(mesh)
-        this.box.position.set(p.x, p.y, p.z)
-        return new THREE.Box3().setFromObject(this.box)
-    }
     GetSize(mesh: THREE.Group): THREE.Vector3 {
         if (this.meshs == undefined) this.meshs = mesh
         if (this.size) return this.size

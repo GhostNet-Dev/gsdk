@@ -56,20 +56,6 @@ export class OfficeGirlFab extends AssetModel implements IAsset {
             await this.LoadAnimation("assets/officegirl/Idle.fbx", Ani.Idle)
         })
     }
-    GetBodyMeshId(_bind: Bind) { return "" }
-    GetBox(mesh: THREE.Group) {
-        if (this.meshs == undefined) this.meshs = mesh
-        // Don't Use this.meshs
-        if (this.box == undefined) {
-            const s = this.GetSize(mesh)
-            this.box = new THREE.Mesh(new THREE.BoxGeometry(s.x, s.y, s.z), this.boxMat)
-        }
-
-        const p = this.GetBoxPos(mesh)
-        this.box.position.copy(p)
-        this.box.rotation.copy(mesh.rotation)
-        return new THREE.Box3().setFromObject(this.box)
-    }
     GetSize(mesh: THREE.Group): THREE.Vector3 {
         if (this.meshs == undefined) this.meshs = mesh
         // Don't Use mesh

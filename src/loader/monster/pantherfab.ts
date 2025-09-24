@@ -27,27 +27,6 @@ class Pantherpack extends AssetModel {
             this.clips.set(Ani.Jump, gltf.animations.find((clip) => clip.name == "jump regular"))
         })
     }
-    
-    GetBodyMeshId() { return "mixamorigRightHand" }
-    GetBox(mesh: THREE.Group) {
-        if (this.meshs == undefined) this.meshs = mesh
-        if (this.box == undefined) {
-            const s = this.GetSize(mesh)
-            this.box = new THREE.Mesh(new THREE.BoxGeometry(s.x, s.y, s.z), this.boxMat)
-        }
-
-        const p = this.GetBoxPos(mesh)
-        this.box.position.set(p.x, p.y, p.z)
-        return new THREE.Box3().setFromObject(this.box)
-    }
-    GetSize(mesh: THREE.Group): THREE.Vector3 {
-        if (this.meshs == undefined) this.meshs = mesh
-        if (this.size) return this.size
-
-        const bbox = new THREE.Box3().setFromObject(this.meshs)
-        this.size = bbox.getSize(new THREE.Vector3)
-        return this.size 
-    }
 }
 /*
 panther_black_and_white_animated.glb

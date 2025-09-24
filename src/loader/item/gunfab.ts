@@ -18,19 +18,6 @@ class GunFab extends AssetModel {
             customFn?.()
         })
     }
-    GetBox(mesh: THREE.Group) {
-        if (this.meshs == undefined) this.meshs = mesh
-        // Don't Use this.meshs
-        if (this.box == undefined) {
-            const s = this.GetSize(mesh)
-            this.box = new THREE.Mesh(new THREE.BoxGeometry(s.x, s.y, s.z), this.boxMat)
-        }
-
-        const p = this.GetBoxPos(mesh)
-        this.box.position.copy(p)
-        this.box.rotation.copy(mesh.rotation)
-        return new THREE.Box3().setFromObject(this.box)
-    }
     GetSize(mesh: THREE.Group): THREE.Vector3 {
         if (this.meshs == undefined) this.meshs = mesh
         // Don't Use mesh
@@ -42,7 +29,6 @@ class GunFab extends AssetModel {
         this.size.z = Math.ceil(this.size.z)
         return this.size 
     }
-    GetBodyMeshId() { return "mixamorigRightHand" }
 }
 
 export class OldGunFab extends GunFab implements IAsset {

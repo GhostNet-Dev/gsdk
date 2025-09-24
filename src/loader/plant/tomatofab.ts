@@ -21,20 +21,7 @@ export class Tomato0Fab extends AssetModel implements IAsset {
             this.meshs.rotation.set(0, 0, 0)
         })
     }
-    GetBodyMeshId() { return "mixamorigRightHand" }
-    GetBox(mesh: THREE.Group) {
-        if (this.meshs == undefined) this.meshs = mesh
-        // Don't Use this.meshs
-        if (this.box == undefined) {
-            const s = this.GetSize(mesh)
-            this.box = new THREE.Mesh(new THREE.BoxGeometry(s.x, s.y, s.z), this.boxMat)
-        }
-
-        const p = this.GetBoxPos(mesh)
-        this.box.position.copy(p)
-        this.box.rotation.copy(mesh.rotation)
-        return new THREE.Box3().setFromObject(this.box)
-    }
+    
     GetSize(mesh: THREE.Group): THREE.Vector3 {
         if (this.meshs == undefined) this.meshs = mesh
         // Don't Use mesh
@@ -64,20 +51,7 @@ export class Tomato1Fab extends AssetModel implements IAsset {
             this.meshs.rotation.set(0, 0, 0)
         })
     }
-    GetBodyMeshId() { return "mixamorigRightHand" }
-    GetBox(mesh: THREE.Group) {
-        if (this.meshs == undefined) this.meshs = mesh
-        // Don't Use this.meshs
-        if (this.box == undefined) {
-            const s = this.GetSize(mesh)
-            this.box = new THREE.Mesh(new THREE.BoxGeometry(s.x, s.y, s.z), this.boxMat)
-        }
-
-        const p = this.GetBoxPos(mesh)
-        this.box.position.copy(p)
-        this.box.rotation.copy(mesh.rotation)
-        return new THREE.Box3().setFromObject(this.box)
-    }
+    
     GetSize(mesh: THREE.Group): THREE.Vector3 {
         if (this.meshs == undefined) this.meshs = mesh
         // Don't Use mesh
@@ -107,20 +81,7 @@ export class Tomato2Fab extends AssetModel implements IAsset {
             this.meshs.rotation.set(0, 0, 0)
         })
     }
-    GetBodyMeshId() { return "mixamorigRightHand" }
-    GetBox(mesh: THREE.Group) {
-        if (this.meshs == undefined) this.meshs = mesh
-        // Don't Use this.meshs
-        if (this.box == undefined) {
-            const s = this.GetSize(mesh)
-            this.box = new THREE.Mesh(new THREE.BoxGeometry(s.x, s.y, s.z), this.boxMat)
-        }
-
-        const p = this.GetBoxPos(mesh)
-        this.box.position.copy(p)
-        this.box.rotation.copy(mesh.rotation)
-        return new THREE.Box3().setFromObject(this.box)
-    }
+    
     GetSize(mesh: THREE.Group): THREE.Vector3 {
         if (this.meshs == undefined) this.meshs = mesh
         // Don't Use mesh
