@@ -6,11 +6,12 @@ import { Char } from "@Glibs/types/assettypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 
 /**
- * WindyInstancedVegetation — 배치별 독립 설정(딥 스냅샷) + 거리 LOD + 프러스텀 컬링
- *  - Exclusion Zone 관련 로직 완전 제거
- *  - Create() 호출마다 cfgLocal(딥 클론/딥 머지) 생성 → Batch.cfg로 고정
- *  - update()/applyCullLODInPlace()는 Batch.cfg 기준으로 동작
- *  - 깜빡임 완화: alphaTest 기반 컷아웃 + polygonOffset + alphaToCoverage(옵션)
+ * WindyInstancedVegetation — 안정화 통합본
+ * - 프러스텀 컬링(클러스터 구체) + 거리 LOD
+ * - iRand(인스턴스 고유 난수) + 히스테리시스로 카메라 이동 시 깜빡임/떨림 방지
+ * - 조건부 컴팩션: 주기(repackEveryNFrames) 또는 강제 시에만 재배열, 그 외엔 부분 갱신
+ * - 카메라 더티(위/회전/FOV/Zoom/Near/Far) 즉시 재계산
+ * - 디버그 옵션을 cfg.debug로 통합 (Save/Load 포함), aliveCount 로깅
  */
 
 export type TRS = {
@@ -19,6 +20,16 @@ export type TRS = {
   scale: number | THREE.Vector3 | [number, number, number];
 };
 export type PatternCount = 2 | 3;
+
+/* ----------------------- Debug 옵션 (cfg에 포함) ----------------------- */
+export type DebugOptions = {
+  enabled: boolean;
+  logEveryNFrames: number;
+  samplesPerBatch: number;
+  sampleFirstInstanceOnly: boolean;
+  logCamera: boolean;
+  showAlive?: boolean; // aliveCount 요약 출력
+};
 
 export interface WindyVegetationConfig {
   windEnabled: boolean;
@@ -73,9 +84,12 @@ export interface WindyVegetationConfig {
     minFactor: number;
   };
   hardMode?: {
-    compactionEnabled: boolean;
+    compactionEnabled: boolean;       // 유지(옵션), 기본은 조건부 컴팩션으로 동작
     repackEveryNFrames?: number;
   };
+
+  // ✅ 디버그 옵션 통합
+  debug: DebugOptions;
 }
 
 const DEFAULT_CONFIG: WindyVegetationConfig = {
@@ -132,13 +146,21 @@ const DEFAULT_CONFIG: WindyVegetationConfig = {
   },
   hardMode: {
     compactionEnabled: false,
-    repackEveryNFrames: 4,
+    repackEveryNFrames: 6, // 컴팩션 주기 기본값(조금 여유)
+  },
+  debug: {
+    enabled: false,
+    logEveryNFrames: 30,
+    samplesPerBatch: 3,
+    sampleFirstInstanceOnly: true,
+    logCamera: false,
+    showAlive: true,
   },
 };
 
 export type ClusterInfo = {
   center: THREE.Vector3; // 로컬 좌표
-  radius: number;        // 로컬 반경(프러스텀 구 반경 산정에 사용)
+  radius: number;        // 로컬 반경
   start: number;
   count: number;
 };
@@ -170,11 +192,13 @@ type Batch = {
   ampSmooth?: number;
   keepMask: Uint8Array; // 0 or 1
   modelId?: Char | null;
-  rand?: Float32Array;
-  cfg: WindyVegetationConfig;  // ← 배치 전용 스냅샷
+  cfg: WindyVegetationConfig;  // 배치 스냅샷(디버그 포함)
+  root: THREE.Object3D;        // 배치 루트
+  _lastRootPos?: THREE.Vector3;
+  _lastRootQuat?: THREE.Quaternion;
+  _lastRootScale?: THREE.Vector3;
 };
 
-/* ----------------------- 딥 클론/딥 머지 유틸 ----------------------- */
 function cloneCfg(src: WindyVegetationConfig): WindyVegetationConfig {
   return {
     ...src,
@@ -185,6 +209,7 @@ function cloneCfg(src: WindyVegetationConfig): WindyVegetationConfig {
     culling: { ...src.culling },
     ampDistance: { ...src.ampDistance },
     hardMode: src.hardMode ? { ...src.hardMode } : undefined,
+    debug: { ...src.debug },
   };
 }
 function mergeCfg(base: WindyVegetationConfig, patch?: Partial<WindyVegetationConfig>): WindyVegetationConfig {
@@ -202,6 +227,7 @@ function mergeCfg(base: WindyVegetationConfig, patch?: Partial<WindyVegetationCo
   if (patch.culling)      out.culling      = { ...out.culling,      ...patch.culling };
   if (patch.ampDistance)  out.ampDistance  = { ...out.ampDistance,  ...patch.ampDistance };
   if (patch.hardMode)     out.hardMode     = { ...(out.hardMode ?? {}), ...patch.hardMode };
+  if (patch.debug)        out.debug        = { ...out.debug, ...patch.debug };
   return out;
 }
 
@@ -209,7 +235,6 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
   public LoopId = 0;
   public Type: MapEntryType = MapEntryType.WindyInstancedVegetation;
 
-  /** 전역 기본값(템플릿) — 각 배치 생성 시 딥 클론되어 batch.cfg로 저장됩니다 */
   private cfg: WindyVegetationConfig;
 
   private time = 0;
@@ -220,6 +245,11 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
 
   private lastCamPos = new THREE.Vector3();
   private lastCamQuat = new THREE.Quaternion();
+  private lastCamFov?: number;
+  private lastCamZoom?: number;
+  private lastCamNear?: number;
+  private lastCamFar?: number;
+
   private forceUpdate = false;
 
   constructor(
@@ -239,10 +269,53 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     this.group.name = "WindyInstancedVegetation";
     this.scene.add(this.group);
     this.camera = camera;
+    this.SetCamera(camera);
   }
 
-  /* ----------------------- 전역/배치 제어 API ----------------------- */
-  /** 전역 템플릿 갱신 + 모든 배치 유니폼 반영 */
+  private dlog(...args: any[]) {
+    if (!this.cfg?.debug?.enabled) return;
+    // eslint-disable-next-line no-console
+    console.log("[WindyVeg]", ...args);
+  }
+
+  public SetCamera(cam: THREE.Camera) {
+    this.camera = cam;
+    this.camera.updateMatrixWorld(true);
+    this.lastCamPos.copy(cam.position);
+    this.lastCamQuat.copy(cam.quaternion);
+
+    const anyCam: any = cam;
+    this.lastCamFov  = typeof anyCam.fov  === 'number' ? anyCam.fov  : undefined;
+    this.lastCamZoom = typeof anyCam.zoom === 'number' ? anyCam.zoom : undefined;
+    this.lastCamNear = typeof anyCam.near === 'number' ? anyCam.near : undefined;
+    this.lastCamFar  = typeof anyCam.far  === 'number' ? anyCam.far  : undefined;
+  }
+
+  public SetDebug(options: Partial<DebugOptions>, batchIndex?: number) {
+    if (batchIndex == null) {
+      this.cfg.debug = { ...this.cfg.debug, ...options };
+      this.batches.forEach(b => { b.cfg.debug = { ...b.cfg.debug, ...options }; });
+    } else {
+      const b = this.batches[batchIndex];
+      if (!b) return;
+      b.cfg.debug = { ...b.cfg.debug, ...options };
+    }
+    this.forceUpdate = true;
+  }
+
+  public SetCullingForBatch(batchIndex: number, opts: Partial<WindyVegetationConfig["culling"]>) {
+    const b = this.batches[batchIndex];
+    if (!b) return;
+    b.cfg.culling = { ...b.cfg.culling, ...opts };
+    this.forceUpdate = true;
+  }
+  public SetLODForBatch(batchIndex: number, opts: Partial<WindyVegetationConfig["lod"]>) {
+    const b = this.batches[batchIndex];
+    if (!b) return;
+    b.cfg.lod = { ...b.cfg.lod, ...opts };
+    this.forceUpdate = true;
+  }
+
   public SetWindEnabled(enabled: boolean, batchIndex?: number) {
     if (batchIndex == null) {
       this.cfg.windEnabled = enabled;
@@ -258,7 +331,6 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     }
   }
 
-  /** 전역/배치: 바람 방향/진폭/곡률 */
   public SetWind(dirXZ: THREE.Vector2, globalAmp?: number, bendExp?: number, batchIndex?: number) {
     const apply = (b: Batch) => {
       if (dirXZ) {
@@ -284,7 +356,6 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     }
   }
 
-  /** 전역/배치: 바람 패턴 파라미터 */
   public SetPatterns(
     patAmp?: [number, number, number],
     patFreq?: [number, number, number],
@@ -380,43 +451,56 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       return new THREE.Group();
     }
 
-    const jitter = THREE.MathUtils.degToRad(cfgLocal.jitterAngleDeg);
-    const [sMin, sMax] = cfgLocal.strengthRange;
-    const iPattern = new Float32Array(totalCount);
-    const iPhase = new Float32Array(totalCount);
-    const iStrength = new Float32Array(totalCount);
-    const iDir = new Float32Array(totalCount);
-    for (let i = 0; i < totalCount; i++) {
-      iPattern[i] = i % cfgLocal.patternCount;
-      iPhase[i] = Math.random() * Math.PI * 2;
-      iStrength[i] = THREE.MathUtils.lerp(sMin, sMax, Math.random());
-      iDir[i] = THREE.MathUtils.lerp(-jitter, jitter, Math.random());
-    }
-    parts.forEach(p => {
-      p.geometry.setAttribute("iPattern", new THREE.InstancedBufferAttribute(iPattern, 1, false));
-      p.geometry.setAttribute("iPhase", new THREE.InstancedBufferAttribute(iPhase, 1, false));
-      p.geometry.setAttribute("iStrength", new THREE.InstancedBufferAttribute(iStrength, 1, false));
-      p.geometry.setAttribute("iDir", new THREE.InstancedBufferAttribute(iDir, 1, false));
-    });
-
+    // matrices 먼저 구성
     const baseMatrices = new Float32Array(totalCount * 16);
-    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), s = new THREE.Vector3();
-
-    const resultGroup = new THREE.Group();
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), pTmp = new THREE.Vector3(), sTmp = new THREE.Vector3();
+    const resultGroup = new THREE.Group(); // batch root
     for (let i = 0; i < totalCount; i++) {
       const t = expanded[i];
-      const pos = this.v3(t.position, p);
-      pos.y += 0.005; // 지면과 미세 분리로 z-fighting 완화(스케일에 맞춰 조정 가능)
+      const pos = this.v3(t.position, pTmp);
+      pos.y += 0.005; // z-fighting 완화
       const rot = this.euler(t.rotation);
-      const scl = Array.isArray(t.scale) ? this.v3(t.scale as [number,number,number], s) : (t.scale as THREE.Vector3);
+      const scl = Array.isArray(t.scale) ? this.v3(t.scale as [number,number,number], sTmp) : (t.scale as THREE.Vector3);
       q.setFromEuler(rot);
       m.compose(pos, q, scl);
       m.toArray(baseMatrices, i * 16);
       parts.forEach(part => part.mesh.setMatrixAt(i, m));
     }
 
+    // per-instance attributes
+    const jitter = THREE.MathUtils.degToRad(cfgLocal.jitterAngleDeg);
+    const [sMin, sMax] = cfgLocal.strengthRange;
+    const iPattern = new Float32Array(totalCount);
+    const iPhase = new Float32Array(totalCount);
+    const iStrength = new Float32Array(totalCount);
+    const iDir = new Float32Array(totalCount);
+    const iRand = new Float32Array(totalCount); // ★ 인스턴스 고유 난수
+
+    const matForRand = new THREE.Matrix4();
+    const posForRand = new THREE.Vector3();
+
+    for (let i = 0; i < totalCount; i++) {
+      iPattern[i] = i % cfgLocal.patternCount;
+      iPhase[i] = Math.random() * Math.PI * 2;
+      iStrength[i] = THREE.MathUtils.lerp(sMin, sMax, Math.random());
+      iDir[i] = THREE.MathUtils.lerp(-jitter, jitter, Math.random());
+
+      // 위치 기반 해시로 고정 난수 생성(인덱스/카메라 무관)
+      matForRand.fromArray(baseMatrices, i * 16);
+      posForRand.setFromMatrixPosition(matForRand);
+      const h = Math.sin(posForRand.x * 12.9898 + posForRand.z * 78.233) * 43758.5453;
+      iRand[i] = h - Math.floor(h);
+    }
+    parts.forEach(p => {
+      p.geometry.setAttribute("iPattern", new THREE.InstancedBufferAttribute(iPattern, 1, false));
+      p.geometry.setAttribute("iPhase", new THREE.InstancedBufferAttribute(iPhase, 1, false));
+      p.geometry.setAttribute("iStrength", new THREE.InstancedBufferAttribute(iStrength, 1, false));
+      p.geometry.setAttribute("iDir", new THREE.InstancedBufferAttribute(iDir, 1, false));
+      p.geometry.setAttribute("iRand", new THREE.InstancedBufferAttribute(iRand, 1, false)); // ★
+    });
+
     parts.forEach(part => {
-      part.mesh.frustumCulled = false;
+      part.mesh.frustumCulled = false; // 메쉬 레벨 컬링 Off (인스턴스 단위로 처리)
       part.mesh.castShadow = cfgLocal.castShadow;
       part.mesh.receiveShadow = cfgLocal.receiveShadow;
       part.mesh.count = totalCount;
@@ -429,18 +513,21 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     const keepMask = new Uint8Array(totalCount);
 
     const batch: Batch = {
-      parts, baseMatrices, clusters, totalCount, keepMask, modelId: id ?? null, cfg: cfgLocal
+      parts, baseMatrices, clusters, totalCount, keepMask,
+      modelId: id ?? null, cfg: cfgLocal, root: resultGroup
     };
-    this.buildRand(batch);
     this.batches.push(batch);
 
-    this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
+    // 초기 컬링/LOD 1회(조건부 컴팩션 포함)
+    this.applyCullLODInPlace(batch, true);
+    this.forceUpdate = true;
 
+    this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
     return resultGroup;
   }
 
   public async CreateDone() {
-    this.camera.updateMatrixWorld();
+    this.camera.updateMatrixWorld(true);
     this.lastCamPos.copy(this.camera.position);
     this.lastCamQuat.copy(this.camera.quaternion);
     this.batches.forEach(b => this.applyCullLODInPlace(b, true));
@@ -451,24 +538,50 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     this.time += delta;
     this.frame++;
 
-    const isDirty = this.isCameraDirty();
-    // 배치별 everyNFrames 사용을 원하면 아래를 b.cfg 단위로 옮겨도 됩니다.
-    const canUpdateLOD = (this.frame % Math.max(1, this.cfg.culling.everyNFrames) === 0);
-    const needsUpdate = isDirty || this.forceUpdate;
+    if (this.cfg.debug.enabled && this.cfg.debug.logCamera && (this.frame % this.cfg.debug.logEveryNFrames === 0)) {
+      const cam: any = this.camera;
+      const isPersp = cam && typeof cam.fov === 'number';
+      this.dlog(
+        `frame=${this.frame}`,
+        "pos=",
+        this.camera.position.toArray().map((v:number)=>Number(v).toFixed(3)),
+        isPersp ? `fov=${cam.fov?.toFixed(2)}` : "",
+        `zoom=${(cam.zoom !== undefined) ? cam.zoom : ""}`,
+        `near=${cam.near ?? ""} far=${cam.far ?? ""}`
+      );
+    }
+
+    const camDirty = this.isCameraDirty();
+    const globalNeedsUpdate = camDirty || this.forceUpdate;
 
     for (const b of this.batches) {
+      const batchMoved = this.isBatchRootDirty(b);
+
+      // 움직이면 빠르게, 정지면 설정값
+      const adaptiveEveryN = batchMoved ? Math.min(2, Math.max(1, b.cfg.culling.everyNFrames)) : b.cfg.culling.everyNFrames;
+      const canUpdateLOD = (this.frame % Math.max(1, adaptiveEveryN) === 0);
+
       if (b.cfg.windEnabled) {
         b.parts.forEach(p => p.uniforms.uTime.value = this.time);
       }
 
-      if ((needsUpdate && canUpdateLOD) || this.forceUpdate) {
-        this.applyCullLODInPlace(b, false);
-      }
+      const anyFeatureOn = (b.cfg.culling.enabled || b.cfg.lod.enabled);
+      const mustRunNow = camDirty;
+      const shouldRunLOD = (canUpdateLOD || mustRunNow || batchMoved || globalNeedsUpdate) && anyFeatureOn;
+      if (shouldRunLOD) this.applyCullLODInPlace(b, false);
 
-      if (needsUpdate && b.cfg.ampDistance.enabled && this.camera && b.clusters.length) {
+      // Amp-distance
+      if ((globalNeedsUpdate || batchMoved) && b.cfg.ampDistance.enabled && this.camera && b.clusters.length) {
         const cam = new THREE.Vector3();
         this.camera.getWorldPosition(cam);
-        const dist = Math.min(...b.clusters.map(c => cam.distanceTo(c.center)));
+        b.root.updateMatrixWorld();
+        const groupMW = b.root.matrixWorld;
+
+        const dist = Math.min(...b.clusters.map(c => {
+          const centerWorld = c.center.clone().applyMatrix4(groupMW);
+          return cam.distanceTo(centerWorld);
+        }));
+
         const { near, far, minFactor } = b.cfg.ampDistance;
         let target = b.cfg.globalAmp;
         if (dist >= far)      target = b.cfg.globalAmp * minFactor;
@@ -478,9 +591,20 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       }
     }
 
-    if (needsUpdate) {
+    if (globalNeedsUpdate) {
+      this.camera.updateMatrixWorld(true);
+      const anyCam: any = this.camera;
+      if (typeof anyCam.updateProjectionMatrix === 'function') {
+        anyCam.updateProjectionMatrix();
+      }
+
       this.lastCamPos.copy(this.camera.position);
       this.lastCamQuat.copy(this.camera.quaternion);
+      this.lastCamFov  = typeof anyCam.fov  === 'number' ? anyCam.fov  : this.lastCamFov;
+      this.lastCamZoom = typeof anyCam.zoom === 'number' ? anyCam.zoom : this.lastCamZoom;
+      this.lastCamNear = typeof anyCam.near === 'number' ? anyCam.near : this.lastCamNear;
+      this.lastCamFar  = typeof anyCam.far  === 'number' ? anyCam.far  : this.lastCamFar;
+
       this.forceUpdate = false;
     }
   }
@@ -499,7 +623,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       if (this.batches.length === 0) this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this);
       return;
     }
-    const idx = this.batches.findIndex(b => b.parts.some(p => p.mesh === target || p.mesh.parent === target));
+    const idx = this.batches.findIndex(b => b.root === target || b.parts.some(p => p.mesh === target || p.mesh.parent === target));
     if (idx >= 0) { this.disposeBatch(this.batches[idx]); this.batches.splice(idx, 1); }
     if (this.batches.length === 0) this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this);
   }
@@ -519,7 +643,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       };
       const cfg = {
         ...b.cfg,
-        windDir: { x: b.cfg.windDir.x, y: b.cfg.windDir.y } // Vector2 직렬화
+        windDir: { x: b.cfg.windDir.x, y: b.cfg.windDir.y }
       } as any;
       return {
         count: b.totalCount,
@@ -529,6 +653,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
           iPhase: pickArr("iPhase"),
           iStrength: pickArr("iStrength"),
           iDir: pickArr("iDir"),
+          iRand: pickArr("iRand"), // ★ 직렬화 포함(선택)
         },
         cfg,
         modelId: b.modelId ?? null,
@@ -544,7 +669,6 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       if (!item) continue;
       const totalCount = item.count as number;
 
-      // 배치 전용 cfgLocal 복구
       const cfgLocal = (() => {
         const cfg = mergeCfg(DEFAULT_CONFIG, item.cfg);
         cfg.windDir = this.toVector2(item.cfg?.windDir ?? cfg.windDir);
@@ -575,6 +699,21 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
         applyAttr("iPhase", item.attributes.iPhase);
         applyAttr("iStrength", item.attributes.iStrength);
         applyAttr("iDir", item.attributes.iDir);
+        if (item.attributes.iRand) applyAttr("iRand", item.attributes.iRand);
+      }
+
+      // iRand가 없으면 위치 기반으로 재생성
+      const g0 = parts[0].geometry as THREE.BufferGeometry;
+      if (!g0.getAttribute("iRand")) {
+        const iRand = new Float32Array(totalCount);
+        const mat = new THREE.Matrix4(), pos = new THREE.Vector3();
+        for (let i = 0; i < totalCount; i++) {
+          mat.fromArray(baseMatrices, i * 16);
+          pos.setFromMatrixPosition(mat);
+          const h = Math.sin(pos.x * 12.9898 + pos.z * 78.233) * 43758.5453;
+          iRand[i] = h - Math.floor(h);
+        }
+        parts.forEach(p => p.geometry.setAttribute("iRand", new THREE.InstancedBufferAttribute(iRand, 1, false)));
       }
 
       const resultGroup = new THREE.Group();
@@ -589,9 +728,10 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       const keepMask = new Uint8Array(totalCount);
       this.group.add(resultGroup);
 
-      const batch: Batch = { parts, baseMatrices, clusters, totalCount, keepMask, modelId: item.modelId ?? null, cfg: cfgLocal };
-      this.buildRand(batch);
+      const batch: Batch = { parts, baseMatrices, clusters, totalCount, keepMask, modelId: item.modelId ?? null, cfg: cfgLocal, root: resultGroup };
       this.batches.push(batch);
+
+      this.applyCullLODInPlace(batch, true);
     }
 
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
@@ -600,123 +740,218 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
 
   /* ----------------------- 내부 로직 ----------------------- */
   private isCameraDirty(): boolean {
-    const POS_THRESHOLD_SQ = 0.2 * 0.2;
-    const ROT_THRESHOLD = 0.99999;
+    const POS_THRESHOLD_SQ = 0.05 * 0.05; // 5cm
+    const ROT_THRESHOLD = 0.999999;
+
     const distSq = this.camera.position.distanceToSquared(this.lastCamPos);
     const dot = this.camera.quaternion.dot(this.lastCamQuat);
-    return distSq > POS_THRESHOLD_SQ || Math.abs(dot) < ROT_THRESHOLD;
+
+    let dirty = (distSq > POS_THRESHOLD_SQ) || (Math.abs(dot) < ROT_THRESHOLD);
+
+    const anyCam: any = this.camera;
+    if (typeof anyCam.fov  === 'number' && this.lastCamFov  !== undefined && anyCam.fov  !== this.lastCamFov ) dirty = true;
+    if (typeof anyCam.zoom === 'number' && this.lastCamZoom !== undefined && anyCam.zoom !== this.lastCamZoom) dirty = true;
+    if (typeof anyCam.near === 'number' && this.lastCamNear !== undefined && anyCam.near !== this.lastCamNear) dirty = true;
+    if (typeof anyCam.far  === 'number' && this.lastCamFar  !== undefined && anyCam.far  !== this.lastCamFar ) dirty = true;
+
+    return dirty;
   }
 
-  private buildRand(b: Batch): void {
-    if (b.rand) return;
-    const rand = new Float32Array(b.totalCount);
-    for (let i = 0; i < b.totalCount; i++) {
-      const s = Math.sin(i * 12.9898) * 43758.5453;
-      rand[i] = s - Math.floor(s);
+  private isBatchRootDirty(b: Batch): boolean {
+    b.root.updateMatrixWorld();
+    const pos = new THREE.Vector3();
+    const quat = new THREE.Quaternion();
+    const scl = new THREE.Vector3();
+    b.root.matrixWorld.decompose(pos, quat, scl);
+
+    const POS_EPS_SQ = 0.02 * 0.02;
+    const ROT_DOT_MIN = 0.99999;
+    const SCL_EPS = 1e-4;
+
+    let dirty = false;
+
+    if (!b._lastRootPos || !b._lastRootQuat || !b._lastRootScale) {
+      dirty = true;
+    } else {
+      const dp = pos.distanceToSquared(b._lastRootPos);
+      const dq = Math.abs(quat.dot(b._lastRootQuat));
+      const ds = (
+        Math.abs(scl.x - b._lastRootScale.x) > SCL_EPS ||
+        Math.abs(scl.y - b._lastRootScale.y) > SCL_EPS ||
+        Math.abs(scl.z - b._lastRootScale.z) > SCL_EPS
+      );
+      if (dp > POS_EPS_SQ || dq < ROT_DOT_MIN || ds) dirty = true;
     }
-    b.rand = rand;
+
+    b._lastRootPos   = (b._lastRootPos   ?? new THREE.Vector3()).copy(pos);
+    b._lastRootQuat  = (b._lastRootQuat  ?? new THREE.Quaternion()).copy(quat);
+    b._lastRootScale = (b._lastRootScale ?? new THREE.Vector3()).copy(scl);
+
+    return dirty;
   }
 
   /**
-   * 프러스텀 컬링 + 거리 LOD 밀도 적용.
-   *  - near 이내: density=1.0
-   *  - far 이상: density=minDensity
-   *  - 사이: 선형 보간
-   *  - rand[idx] <= density → keep
-   *  - 하드 모드: 주기적으로 컴팩션
+   * 프러스텀 컬링 + 거리 LOD
+   * - iRand + 히스테리시스(±hys)로 경계 떨림 억제
+   * - 조건부 컴팩션: repackEveryNFrames/강제시에만 재배열, 그 외엔 부분 갱신
    */
   private applyCullLODInPlace(b: Batch, initial: boolean) {
     if (!b || !b.baseMatrices || b.parts.length === 0) return;
 
-    // Frustum
+    const dbg = b.cfg.debug;
+
+    // 카메라/프러스텀
     let frustum: THREE.Frustum | null = null;
     const camPos = new THREE.Vector3();
     if (this.camera) {
-      this.camera.updateMatrixWorld();
-      const vp = new THREE.Matrix4().multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse);
+      this.camera.updateMatrixWorld(true);
+      const anyCam: any = this.camera;
+      if (typeof anyCam.updateProjectionMatrix === 'function') anyCam.updateProjectionMatrix();
+      const vp = new THREE.Matrix4().multiplyMatrices(
+        this.camera.projectionMatrix,
+        this.camera.matrixWorldInverse
+      );
       frustum = new THREE.Frustum().setFromProjectionMatrix(vp);
       this.camera.getWorldPosition(camPos);
+    } else if (dbg?.enabled) {
+      console.warn("[WindyVeg] camera is null/undefined");
     }
 
-    // 배치 그룹의 matrixWorld
-    const firstMesh = b.parts[0]?.mesh;
-    const groupNode: THREE.Object3D | undefined = firstMesh?.parent ?? firstMesh;
-    if (groupNode) groupNode.updateMatrixWorld();
-    const groupMW = groupNode?.matrixWorld ?? new THREE.Matrix4();
+    // 배치 루트
+    b.root.updateMatrixWorld();
+    const groupMW = b.root.matrixWorld;
 
-    if (!b.rand) this.buildRand(b);
-    const rand = b.rand!;
+    const alive: number[] = []; // 이번 프레임 살아남은 인덱스
 
-    const kill = new THREE.Matrix4().makeScale(0, 0, 0);
-    const m = new THREE.Matrix4();
+    // LOD 파라미터
+    const hardCutEnabled = true;
+    const hardFarMul = 1.2;
+    const hardFar = b.cfg.lod.far * hardFarMul;
+    const gamma = 2.0;
+    const minFloor = 0.0;
+    const steps = 0;
 
-    let minTouched = Number.POSITIVE_INFINITY;
-    let maxTouched = -1;
-    const markTouched = (idx: number) => { if (idx < minTouched) minTouched = idx; if (idx > maxTouched) maxTouched = idx; };
+    // 히스테리시스(경계 떨림 억제)
+    const hys = 0.08;
+
+    // 루트 월드 스케일
+    const ws = new THREE.Vector3();
+    b.root.matrixWorld.decompose(new THREE.Vector3(), new THREE.Quaternion(), ws);
+    const sMax = Math.max(Math.abs(ws.x), Math.abs(ws.y), Math.abs(ws.z));
+
+    const iRandAttr = b.parts[0].geometry.getAttribute("iRand") as THREE.InstancedBufferAttribute;
+
+    let clusterIndex = -1;
 
     for (const c of b.clusters) {
-      // 1) 프러스텀 컬링(클러스터 단위)
+      clusterIndex++;
+
+      // 1) 클러스터 프러스텀 컬링
       let culled = false;
       if (b.cfg.culling.enabled && frustum) {
         const centerWorld = c.center.clone().applyMatrix4(groupMW);
-        const radiusWorld = c.radius * 1.2;
+        const radiusWorld = c.radius * sMax * 1.1;
         const sphere = new THREE.Sphere(centerWorld, radiusWorld);
         culled = !frustum.intersectsSphere(sphere);
       }
 
       // 2) 거리 LOD 밀도
       let density = 1.0;
+      let d = 0;
       if (b.cfg.lod.enabled && this.camera) {
         const centerWorld = c.center.clone().applyMatrix4(groupMW);
-        const d = camPos.distanceTo(centerWorld);
-        const { near, far, minDensity } = b.cfg.lod;
-        if (d <= near) density = 1.0;
-        else if (d >= far) density = minDensity;
-        else density = THREE.MathUtils.lerp(1.0, minDensity, (d - near) / Math.max(1e-6, (far - near)));
-
-        // (옵션) 양자화/히스테리시스로 깜빡임 완화하려면 여기서 보간값 보정
-        // density = Math.round(density * 10) / 10;
+        d = camPos.distanceTo(centerWorld);
+        const n = Math.max(0, b.cfg.lod.near);
+        const f = Math.max(n + 1e-6, b.cfg.lod.far);
+        const t = THREE.MathUtils.clamp((d - n) / (f - n), 0, 1);
+        const minD = Math.max(minFloor, THREE.MathUtils.clamp(b.cfg.lod.minDensity, 0, 1));
+        density = THREE.MathUtils.lerp(1.0, minD, Math.pow(t, gamma));
+        if (hardCutEnabled && d > hardFar) density = 0.0;
+        if (steps > 0) density = Math.max(minD, Math.round(density * steps) / steps);
+        density = THREE.MathUtils.clamp(density, 0, 1);
       }
 
-      // 3) 인스턴스 유지/제거
+      // 3) 인스턴스 선별 + 히스테리시스
       for (let j = 0; j < c.count; j++) {
         const idx = c.start + j;
-        const keep = (!culled) && (rand[idx] <= density);
+        const r = iRandAttr.getX(idx); // 고정 난수
+        const wasKept = b.keepMask[idx] === 1;
 
-        const prev = b.keepMask[idx];
-        const next = keep ? 1 : 0;
+        const densIn  = Math.min(1.0, density + (wasKept ? hys : 0.0));
+        const densOut = Math.max(0.0, density - (wasKept ? 0.0 : hys));
+        const densForCheck = wasKept ? densIn : densOut;
 
-        if (initial || prev !== next) {
-          if (keep) m.fromArray(b.baseMatrices, idx * 16);
-          else m.copy(kill);
-          b.parts.forEach(p => p.mesh.setMatrixAt(idx, m));
-          b.keepMask[idx] = next;
-          markTouched(idx);
+        const keep = (!culled) && (r <= densForCheck);
+
+        b.keepMask[idx] = keep ? 1 : 0;
+        if (keep) alive.push(idx);
+
+        if (dbg.enabled) {
+          const sampleInst = (!dbg.sampleFirstInstanceOnly) || (j === 0);
+          const shouldSample = initial || (this.frame % dbg.logEveryNFrames === 0);
+          if (sampleInst && shouldSample && clusterIndex < dbg.samplesPerBatch) {
+            this.dlog(
+              `[inst] f=${this.frame} c=${clusterIndex} idx=${idx} ` +
+              `keep=${keep} culledCluster=${culled}`
+            );
+          }
+        }
+      }
+
+      if (dbg.enabled) {
+        const shouldSample = initial || (this.frame % dbg.logEveryNFrames === 0);
+        if (shouldSample && clusterIndex < dbg.samplesPerBatch) {
+          this.dlog(
+            `[cluster] f=${this.frame} idx=${clusterIndex} culled=${culled} ` +
+            `near=${b.cfg.lod.near.toFixed(1)} far=${b.cfg.lod.far.toFixed(1)} ` +
+            `hardFar=${(b.cfg.lod.far * 1.2).toFixed(1)}`
+          );
         }
       }
     }
 
-    // 하드 모드(컴팩션)
-    const useCompaction = !!b.cfg.hardMode?.compactionEnabled;
+    const aliveCount = alive.length;
+
+    if (dbg.enabled && (initial || (this.frame % dbg.logEveryNFrames === 0)) && dbg.showAlive) {
+      const batchIdx = this.batches.indexOf(b);
+      this.dlog(`[alive] f=${this.frame} batch=${batchIdx} aliveCount=${aliveCount}`);
+    }
+
+    // 0개면 드로우 중단
+    if (aliveCount === 0) {
+      if (dbg.enabled && dbg.showAlive) {
+        const batchIdx = this.batches.indexOf(b);
+        this.dlog(`[alive] f=${this.frame} batch=${batchIdx} aliveCount=0 (all culled)`);
+      }
+      for (const part of b.parts) {
+        part.mesh.count = 0;
+        part.mesh.instanceMatrix.updateRange.offset = 0;
+        part.mesh.instanceMatrix.updateRange.count = 0;
+        part.mesh.instanceMatrix.needsUpdate = true;
+      }
+      return;
+    }
+
+    // 조건부 컴팩션(주기/강제 시에만)
     const repackN = b.cfg.hardMode?.repackEveryNFrames ?? b.cfg.culling.everyNFrames;
     const allowRepackNow = initial || this.forceUpdate || (this.frame % Math.max(1, repackN) === 0);
-    if (useCompaction && allowRepackNow) {
-      const alive: number[] = [];
-      for (let i = 0; i < b.totalCount; i++) if (b.keepMask[i]) alive.push(i);
-      const aliveCount = alive.length;
 
+    if (allowRepackNow) {
+      // ----- 컴팩션 -----
       const frontMat = new Float32Array(aliveCount * 16);
       for (let i = 0; i < aliveCount; i++) {
-        const src = alive[i] * 16; const dst = i * 16;
+        const src = alive[i] * 16, dst = i * 16;
         frontMat.set(b.baseMatrices.subarray(src, src + 16), dst);
       }
       b.baseMatrices.set(frontMat, 0);
 
       for (const part of b.parts) {
+        // per-instance attributes 재배열
         this.reorderInstancedAttribute(part.geometry, "iPattern", alive, aliveCount);
         this.reorderInstancedAttribute(part.geometry, "iPhase",   alive, aliveCount);
         this.reorderInstancedAttribute(part.geometry, "iStrength",alive, aliveCount);
         this.reorderInstancedAttribute(part.geometry, "iDir",     alive, aliveCount);
+        this.reorderInstancedAttribute(part.geometry, "iRand",    alive, aliveCount);
 
         const tmp = new THREE.Matrix4();
         for (let i = 0; i < aliveCount; i++) {
@@ -724,24 +959,50 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
           part.mesh.setMatrixAt(i, tmp);
         }
         part.mesh.count = aliveCount;
-        // @ts-ignore
-        part.mesh.instanceMatrix.addUpdateRange(0, Math.max(1, aliveCount * 16))
+        part.mesh.instanceMatrix.updateRange.offset = 0;
+        part.mesh.instanceMatrix.updateRange.count  = Math.max(1, aliveCount * 16);
         part.mesh.instanceMatrix.needsUpdate = true;
       }
-      return;
-    }
 
-    // 부분 업로드
-    if (minTouched !== Number.POSITIVE_INFINITY) {
-      const offsetInstances = minTouched;
-      const countInstances  = maxTouched - minTouched + 1;
-      const offsetElems = offsetInstances * 16;
-      const countElems  = countInstances  * 16;
-      for (const p of b.parts) {
-        // @ts-ignore
-        p.mesh.instanceMatrix.addUpdateRange(offsetElems, countElems)
-        p.mesh.instanceMatrix.needsUpdate = true;
-        p.mesh.count = b.totalCount;
+      if (dbg.enabled && (initial || (this.frame % dbg.logEveryNFrames === 0)) && dbg.showAlive) {
+        const batchIdx = this.batches.indexOf(b);
+        const partCounts = b.parts.map((p, i) => `p${i}=${p.mesh.count}`).join(", ");
+        this.dlog(`[alive] f=${this.frame} batch=${batchIdx} aliveCount=${aliveCount} | ${partCounts}`);
+      }
+    } else {
+      // ----- 부분 갱신(살아있는 건 원 위치 유지, 죽은 건 kill 매트릭스) -----
+      const kill = new THREE.Matrix4().makeScale(0, 0, 0);
+      const tmp  = new THREE.Matrix4();
+
+      let minTouched = Number.POSITIVE_INFINITY;
+      let maxTouched = -1;
+
+      // keepMask 기준으로 매트릭스만 업데이트
+      for (const c of b.clusters) {
+        for (let j = 0; j < c.count; j++) {
+          const idx = c.start + j;
+          if (b.keepMask[idx]) tmp.fromArray(b.baseMatrices, idx * 16);
+          else tmp.copy(kill);
+
+          for (const part of b.parts) {
+            part.mesh.setMatrixAt(idx, tmp);
+          }
+
+          if (idx < minTouched) minTouched = idx;
+          if (idx > maxTouched) maxTouched = idx;
+        }
+      }
+
+      if (minTouched !== Number.POSITIVE_INFINITY) {
+        const offsetElems = minTouched * 16;
+        const countElems  = (maxTouched - minTouched + 1) * 16;
+        for (const part of b.parts) {
+          part.mesh.instanceMatrix.updateRange.offset = offsetElems;
+          part.mesh.instanceMatrix.updateRange.count  = countElems;
+          part.mesh.instanceMatrix.needsUpdate = true;
+          // 컴팩션 안 했으므로 전체 슬롯 유지
+          part.mesh.count = b.totalCount;
+        }
       }
     }
   }
@@ -753,12 +1014,12 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     const temp = new Float32Array(aliveCount);
     for (let i = 0; i < aliveCount; i++) temp[i] = arr[alive[i]];
     arr.set(temp, 0);
-    // @ts-ignore
-    attr.addUpdateRange(0, Math.max(1, aliveCount))
+    attr.updateRange.offset = 0;
+    attr.updateRange.count  = Math.max(1, aliveCount);
     attr.needsUpdate = true;
   }
 
-  /** 비표준 재질을 안전하게 MeshStandardMaterial로 승격(Clone) — TS 안전 버전 */
+  /** 비표준 재질을 MeshStandardMaterial로 승격(Clone) */
   private toStdMaterial(m: THREE.Material, cfg: WindyVegetationConfig): THREE.MeshStandardMaterial {
     const anyM: any = m;
     let std: THREE.MeshStandardMaterial;
@@ -778,25 +1039,23 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       if (typeof anyM.opacity === 'number') std.opacity = anyM.opacity;
     }
 
-    // 얇은 빌보드/풀에서 깜빡임 완화
     std.vertexColors = true;
     std.roughness = cfg.roughness;
     std.metalness = cfg.metalness;
     std.side = cfg.doubleSide ? THREE.DoubleSide : THREE.FrontSide;
 
-    // ✨ 컷아웃 우선(투명 블렌딩 비사용)
+    // 얇은 평면 최적화
     std.alphaTest = Math.max(std.alphaTest ?? 0.0, 0.4);
     std.transparent = false;
     std.depthWrite = true;
     std.depthTest  = true;
 
-    // z-fighting 완화
+    // z-fighting 억제
     std.polygonOffset = true;
     std.polygonOffsetFactor = -1;
     std.polygonOffsetUnits  = 1;
 
-    // MSAA 렌더러에서 경계 품질 개선(웹GL2에서만 효과)
-    (std as any).alphaToCoverage = true;
+    (std as any).alphaToCoverage = true; // WebGL2 + MSAA
 
     return std;
   }
@@ -905,6 +1164,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
           attribute float iPhase;
           attribute float iStrength;
           attribute float iDir;
+          attribute float iRand; // ★ 고정 난수
 
           float hash12(vec2 p){
             vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -932,14 +1192,9 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
             float freq = (patternIdx == 0) ? uPatFreq.x : ((patternIdx == 1) ? uPatFreq.y : uPatFreq.z);
             float phs  = (patternIdx == 0) ? uPatPhase.x: ((patternIdx == 1) ? uPatPhase.y: uPatPhase.z);
 
-            #ifdef USE_INSTANCING
-              vec3 iPos = (instanceMatrix * vec4(0.0,0.0,0.0,1.0)).xyz;
-            #else
-              vec3 iPos = vec3(0.0);
-            #endif
+            // 고정 seed(인스턴스 고유 난수 기반) → 카메라/컴팩션에 영향 없음
+            float phaseSeed = iRand * 6.2831853;
 
-            vec3 wPos = (modelMatrix * vec4(iPos,1.0)).xyz;
-            float phaseSeed = hash12(wPos.xz) * 6.2831853;
             float main = sin(uTime*freq + phs + iPhase + phaseSeed);
             float sway = amp * iStrength * uGlobalAmp * main;
             vec2 orth = vec2(-dir.y, dir.x);
@@ -1049,6 +1304,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       p.mesh.parent?.remove(p.mesh);
       p.mesh.dispose();
     });
+    b.root.parent?.remove(b.root);
   }
 
   public GetMeshes(): readonly THREE.InstancedMesh[] {
