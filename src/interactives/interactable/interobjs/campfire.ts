@@ -6,12 +6,11 @@ import IEventController, { ILoop } from '@Glibs/interface/ievent';
 import { EventTypes } from '@Glibs/types/globaltypes';
 import { IPhysicsObject } from '@Glibs/interface/iobject';
 import { KeyType } from '@Glibs/types/eventtypes';
-import { PlayerCtrl } from '@Glibs/actors/player/playerctrl';
-import { itemDefs } from '@Glibs/inventory/items/itemdefs';
 
 export class Campfire extends InteractableObject implements ILoop {
   LoopId: number = 0
   campfire?: ToonCampfire
+  fireAmount: number = 0
   constructor(
     uniqId: string,
     protected def: InteractableProperty,
@@ -27,6 +26,7 @@ export class Campfire extends InteractableObject implements ILoop {
     this.position.copy(position);
     this.rotation.copy(rotation);
     this.scale.set(scale, scale, scale);
+
     const rocks = new ToonRockRing({
       count: 14, radius: 0.8, position: [0, 0, 0],
       shadows: { cast: false, receive: true }
@@ -35,6 +35,7 @@ export class Campfire extends InteractableObject implements ILoop {
       count: 3, length: 1.0, radius: 0.06, position: [0, 0, 0],
       shadows: { cast: true, receive: false }
     });
+
     campfire.group.add(rocks.group, wood.group);
     this.name = name;
     // const meshs = await this.asset.CloneModel()
@@ -47,6 +48,7 @@ export class Campfire extends InteractableObject implements ILoop {
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
     this.eventCtrl.RegisterEventListener(EventTypes.CampfireCtrl, (amount: number) => {
       console.log("campfire: ", amount)
+      this.fireAmount = amount
       if (amount > 0) {
         this.campfire!.ignite(true)
       } else {
@@ -63,6 +65,10 @@ export class Campfire extends InteractableObject implements ILoop {
   }
 
   tryInteract(actor: IPhysicsObject): void {
+    if(this.fireAmount == 1) {
+      this.disable()
+      return
+    }
     // EventBus.emit("gatherWood", { actor, tree: this });
     if (actor.Pos.distanceTo(this.position) < 5 && !this.isActive) {
       this.eventCtrl.SendEventMessage(EventTypes.AlarmInteractiveOn, {

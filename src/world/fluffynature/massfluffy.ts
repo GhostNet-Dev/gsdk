@@ -925,8 +925,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       }
       for (const part of b.parts) {
         part.mesh.count = 0;
-        part.mesh.instanceMatrix.updateRange.offset = 0;
-        part.mesh.instanceMatrix.updateRange.count = 0;
+        part.mesh.instanceMatrix.addUpdateRange(0, 0)
         part.mesh.instanceMatrix.needsUpdate = true;
       }
       return;
@@ -959,8 +958,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
           part.mesh.setMatrixAt(i, tmp);
         }
         part.mesh.count = aliveCount;
-        part.mesh.instanceMatrix.updateRange.offset = 0;
-        part.mesh.instanceMatrix.updateRange.count  = Math.max(1, aliveCount * 16);
+        part.mesh.instanceMatrix.addUpdateRange(0, Math.max(1, aliveCount * 16))
         part.mesh.instanceMatrix.needsUpdate = true;
       }
 
@@ -997,8 +995,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
         const offsetElems = minTouched * 16;
         const countElems  = (maxTouched - minTouched + 1) * 16;
         for (const part of b.parts) {
-          part.mesh.instanceMatrix.updateRange.offset = offsetElems;
-          part.mesh.instanceMatrix.updateRange.count  = countElems;
+          part.mesh.instanceMatrix.addUpdateRange(offsetElems, countElems)
           part.mesh.instanceMatrix.needsUpdate = true;
           // 컴팩션 안 했으므로 전체 슬롯 유지
           part.mesh.count = b.totalCount;
@@ -1014,8 +1011,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     const temp = new Float32Array(aliveCount);
     for (let i = 0; i < aliveCount; i++) temp[i] = arr[alive[i]];
     arr.set(temp, 0);
-    attr.updateRange.offset = 0;
-    attr.updateRange.count  = Math.max(1, aliveCount);
+    attr.addUpdateRange(0, Math.max(1, aliveCount));
     attr.needsUpdate = true;
   }
 
