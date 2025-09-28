@@ -18,6 +18,8 @@ class PPsDungeonPackFab extends AssetModel {
         meshs.castShadow = true
         meshs.receiveShadow = true
         meshs.rotateX(-Math.PI / 2)
+        const scale = 3
+        meshs.scale.set(scale, scale, scale)
     }
 }
 export class PPsDungeonPackBarrelFab extends PPsDungeonPackFab implements IAsset {
