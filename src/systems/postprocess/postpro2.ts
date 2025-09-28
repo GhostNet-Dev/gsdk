@@ -286,7 +286,10 @@ export class Postpro2 implements IPostPro {
             if (i !== -1) this.outlineTargets = [...this.outlineTargets.slice(0, i), ...this.outlineTargets.slice(i + 1)]
             else this.outlineTargets = [...this.outlineTargets, t]
         })
-        eventCtrl.RegisterEventListener(EventTypes.RegisterPhysic, (o: THREE.Object3D) => this.occlusionObstacles.push(o))
+        eventCtrl.RegisterEventListener(EventTypes.RegisterPhysic, (t: THREE.Object3D) => {
+          const i = this.occlusionObstacles.findIndex(o => o.uuid === t.uuid)
+          if (i < 0) this.occlusionObstacles.push(t)
+        })
 
         // context loss logs
         this.renderer.domElement.addEventListener('webglcontextlost', e => { e.preventDefault(); console.warn('WebGL context lost') })

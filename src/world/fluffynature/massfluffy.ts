@@ -4,14 +4,15 @@ import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { Loader } from "@Glibs/loader/loader";
 import { Char } from "@Glibs/types/assettypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
 
 /**
- * WindyInstancedVegetation — 안정화 통합본
+ * WindyInstancedVegetation — 안정화 통합본 (Focus-anchored 거리 LOD/culling)
  * - 프러스텀 컬링(클러스터 구체) + 거리 LOD
- * - iRand(인스턴스 고유 난수) + 히스테리시스로 카메라 이동 시 깜빡임/떨림 방지
- * - 조건부 컴팩션: 주기(repackEveryNFrames) 또는 강제 시에만 재배열, 그 외엔 부분 갱신
- * - 카메라 더티(위/회전/FOV/Zoom/Near/Far) 즉시 재계산
- * - 디버그 옵션을 cfg.debug로 통합 (Save/Load 포함), aliveCount 로깅
+ * - iRand(인스턴스 고유 난수) + 히스테리시스(경계 떨림 억제)
+ * - 조건부 컴팩션: 주기(repackEveryNFrames)/강제 시만 재배열, 그 외엔 부분 갱신
+ * - 카메라/포커스 더티 즉시 재계산, aliveCount 로깅(디버그)
+ * - 거리 기준 앵커(anchor): camera | focus (기본 focus)
  */
 
 export type TRS = {
@@ -72,6 +73,8 @@ export interface WindyVegetationConfig {
     near: number;       // 이내: 밀도 1.0
     far: number;        // 이상: minDensity
     minDensity: number; // [0..1]
+    /** 거리 LOD 기준점: 'camera' | 'focus' (기본 'focus') */
+    distanceAnchor?: 'camera' | 'focus';
   };
   culling: {
     enabled: boolean;   // 프러스텀 컬링
@@ -82,10 +85,18 @@ export interface WindyVegetationConfig {
     near: number;
     far: number;
     minFactor: number;
+    /** 진폭 감쇠 기준점: 'camera' | 'focus' (기본 'focus') */
+    distanceAnchor?: 'camera' | 'focus';
   };
   hardMode?: {
     compactionEnabled: boolean;       // 유지(옵션), 기본은 조건부 컴팩션으로 동작
     repackEveryNFrames?: number;
+  };
+
+  /** 포커스 관련 설정(포커스 미지정 시 사용) */
+  focus?: {
+    /** focus 미지정 시 camera.forward * defaultDistance 지점 사용 */
+    defaultDistance?: number; // 기본 10
   };
 
   // ✅ 디버그 옵션 통합
@@ -133,6 +144,7 @@ const DEFAULT_CONFIG: WindyVegetationConfig = {
     near: 12,
     far: 80,
     minDensity: 0.3,
+    distanceAnchor: 'focus',
   },
   culling: {
     enabled: true,
@@ -143,10 +155,14 @@ const DEFAULT_CONFIG: WindyVegetationConfig = {
     near: 10,
     far: 70,
     minFactor: 0.55,
+    distanceAnchor: 'focus',
   },
   hardMode: {
     compactionEnabled: false,
-    repackEveryNFrames: 6, // 컴팩션 주기 기본값(조금 여유)
+    repackEveryNFrames: 6, // 컴팩션 주기 기본값
+  },
+  focus: {
+    defaultDistance: 10,
   },
   debug: {
     enabled: false,
@@ -209,6 +225,7 @@ function cloneCfg(src: WindyVegetationConfig): WindyVegetationConfig {
     culling: { ...src.culling },
     ampDistance: { ...src.ampDistance },
     hardMode: src.hardMode ? { ...src.hardMode } : undefined,
+    focus: src.focus ? { ...src.focus } : undefined,
     debug: { ...src.debug },
   };
 }
@@ -227,6 +244,7 @@ function mergeCfg(base: WindyVegetationConfig, patch?: Partial<WindyVegetationCo
   if (patch.culling)      out.culling      = { ...out.culling,      ...patch.culling };
   if (patch.ampDistance)  out.ampDistance  = { ...out.ampDistance,  ...patch.ampDistance };
   if (patch.hardMode)     out.hardMode     = { ...(out.hardMode ?? {}), ...patch.hardMode };
+  if (patch.focus)        out.focus        = { ...(out.focus ?? {}), ...patch.focus };
   if (patch.debug)        out.debug        = { ...out.debug, ...patch.debug };
   return out;
 }
@@ -250,6 +268,11 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
   private lastCamNear?: number;
   private lastCamFar?: number;
 
+  // ▼ 포커스 타겟 상태
+  private focusTargetObj?: THREE.Object3D | null;
+  private focusTargetPos?: THREE.Vector3 | null;
+  private _lastFocusPoint?: THREE.Vector3;
+
   private forceUpdate = false;
 
   constructor(
@@ -270,6 +293,47 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     this.scene.add(this.group);
     this.camera = camera;
     this.SetCamera(camera);
+    this.eventCtrl.RegisterEventListener(EventTypes.CtrlObj, (obj: IPhysicsObject) => {
+      this.SetFocusTarget(obj.Meshs)
+    })
+  }
+
+  /* ----------------------- Focus API ----------------------- */
+  /** 카메라가 바라보는 타겟을 설정
+   *  - Object3D: 월드 좌표를 추적
+   *  - Vector3 : 고정 포인트
+   *  - null    : 카메라 forward * defaultDistance 지점 사용
+   */
+  public SetFocusTarget(t: THREE.Object3D | THREE.Vector3 | null) {
+    if (t instanceof THREE.Object3D) {
+      this.focusTargetObj = t;
+      this.focusTargetPos = null;
+    } else if (t instanceof THREE.Vector3) {
+      this.focusTargetObj = undefined;
+      this.focusTargetPos = t.clone();
+    } else {
+      this.focusTargetObj = undefined;
+      this.focusTargetPos = null;
+    }
+    this.forceUpdate = true;
+  }
+
+  /** 현재 거리 기준 앵커 포인트(world)를 얻는다 */
+  private getAnchorPoint(out = new THREE.Vector3()): THREE.Vector3 {
+    if (this.focusTargetObj) {
+      this.focusTargetObj.updateMatrixWorld(true);
+      return this.focusTargetObj.getWorldPosition(out);
+    }
+    if (this.focusTargetPos) {
+      return out.copy(this.focusTargetPos);
+    }
+    // fallback: 카메라 forward * defaultDistance
+    const d = this.cfg.focus?.defaultDistance ?? 10;
+    const dir = new THREE.Vector3();
+    this.camera.getWorldDirection(dir); // normalized
+    const cam = new THREE.Vector3();
+    this.camera.getWorldPosition(cam);
+    return out.copy(cam).add(dir.multiplyScalar(d));
   }
 
   private dlog(...args: any[]) {
@@ -289,6 +353,9 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     this.lastCamZoom = typeof anyCam.zoom === 'number' ? anyCam.zoom : undefined;
     this.lastCamNear = typeof anyCam.near === 'number' ? anyCam.near : undefined;
     this.lastCamFar  = typeof anyCam.far  === 'number' ? anyCam.far  : undefined;
+
+    // 포커스 초기화용
+    this._lastFocusPoint = this.getAnchorPoint(new THREE.Vector3()).clone();
   }
 
   public SetDebug(options: Partial<DebugOptions>, batchIndex?: number) {
@@ -530,6 +597,8 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     this.camera.updateMatrixWorld(true);
     this.lastCamPos.copy(this.camera.position);
     this.lastCamQuat.copy(this.camera.quaternion);
+    // 포커스 더티 초기화
+    this._lastFocusPoint = this.getAnchorPoint(new THREE.Vector3()).clone();
     this.batches.forEach(b => this.applyCullLODInPlace(b, true));
   }
 
@@ -570,16 +639,22 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       const shouldRunLOD = (canUpdateLOD || mustRunNow || batchMoved || globalNeedsUpdate) && anyFeatureOn;
       if (shouldRunLOD) this.applyCullLODInPlace(b, false);
 
-      // Amp-distance
+      // Amp-distance (anchor 기준)
       if ((globalNeedsUpdate || batchMoved) && b.cfg.ampDistance.enabled && this.camera && b.clusters.length) {
         const cam = new THREE.Vector3();
         this.camera.getWorldPosition(cam);
+
+        const anchor =
+          ((b.cfg.ampDistance.distanceAnchor ?? this.cfg.ampDistance.distanceAnchor) === 'camera')
+          ? cam
+          : this.getAnchorPoint(new THREE.Vector3());
+
         b.root.updateMatrixWorld();
         const groupMW = b.root.matrixWorld;
 
         const dist = Math.min(...b.clusters.map(c => {
           const centerWorld = c.center.clone().applyMatrix4(groupMW);
-          return cam.distanceTo(centerWorld);
+          return anchor.distanceTo(centerWorld);
         }));
 
         const { near, far, minFactor } = b.cfg.ampDistance;
@@ -604,6 +679,9 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       this.lastCamZoom = typeof anyCam.zoom === 'number' ? anyCam.zoom : this.lastCamZoom;
       this.lastCamNear = typeof anyCam.near === 'number' ? anyCam.near : this.lastCamNear;
       this.lastCamFar  = typeof anyCam.far  === 'number' ? anyCam.far  : this.lastCamFar;
+
+      // 포커스 포인트 스냅샷
+      this._lastFocusPoint = this.getAnchorPoint(new THREE.Vector3()).clone();
 
       this.forceUpdate = false;
     }
@@ -653,7 +731,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
           iPhase: pickArr("iPhase"),
           iStrength: pickArr("iStrength"),
           iDir: pickArr("iDir"),
-          iRand: pickArr("iRand"), // ★ 직렬화 포함(선택)
+          iRand: pickArr("iRand"),
         },
         cfg,
         modelId: b.modelId ?? null,
@@ -754,6 +832,13 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     if (typeof anyCam.near === 'number' && this.lastCamNear !== undefined && anyCam.near !== this.lastCamNear) dirty = true;
     if (typeof anyCam.far  === 'number' && this.lastCamFar  !== undefined && anyCam.far  !== this.lastCamFar ) dirty = true;
 
+    // ▼ 포커스 포인트 이동 감지
+    const fp = this.getAnchorPoint(new THREE.Vector3());
+    if (!this._lastFocusPoint || fp.distanceToSquared(this._lastFocusPoint) > 1e-6) {
+      dirty = true;
+    }
+    this._lastFocusPoint = (this._lastFocusPoint ?? new THREE.Vector3()).copy(fp);
+
     return dirty;
   }
 
@@ -794,6 +879,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
    * 프러스텀 컬링 + 거리 LOD
    * - iRand + 히스테리시스(±hys)로 경계 떨림 억제
    * - 조건부 컴팩션: repackEveryNFrames/강제시에만 재배열, 그 외엔 부분 갱신
+   * - 거리 기준 앵커: camera | focus (기본 focus)
    */
   private applyCullLODInPlace(b: Batch, initial: boolean) {
     if (!b || !b.baseMatrices || b.parts.length === 0) return;
@@ -843,10 +929,14 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
 
     let clusterIndex = -1;
 
+    // 거리 앵커(LOD 계산용)
+    const lodAnchorChoice = (b.cfg.lod.distanceAnchor ?? this.cfg.lod.distanceAnchor) === 'camera' ? 'camera' : 'focus';
+    const lodAnchorPos = lodAnchorChoice === 'camera' ? camPos : this.getAnchorPoint(new THREE.Vector3());
+
     for (const c of b.clusters) {
       clusterIndex++;
 
-      // 1) 클러스터 프러스텀 컬링
+      // 1) 클러스터 프러스텀 컬링(카메라 뷰 기준 유지)
       let culled = false;
       if (b.cfg.culling.enabled && frustum) {
         const centerWorld = c.center.clone().applyMatrix4(groupMW);
@@ -855,12 +945,12 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
         culled = !frustum.intersectsSphere(sphere);
       }
 
-      // 2) 거리 LOD 밀도
+      // 2) 거리 LOD 밀도 (앵커 기준)
       let density = 1.0;
       let d = 0;
       if (b.cfg.lod.enabled && this.camera) {
         const centerWorld = c.center.clone().applyMatrix4(groupMW);
-        d = camPos.distanceTo(centerWorld);
+        d = lodAnchorPos.distanceTo(centerWorld);
         const n = Math.max(0, b.cfg.lod.near);
         const f = Math.max(n + 1e-6, b.cfg.lod.far);
         const t = THREE.MathUtils.clamp((d - n) / (f - n), 0, 1);
@@ -925,7 +1015,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       }
       for (const part of b.parts) {
         part.mesh.count = 0;
-        part.mesh.instanceMatrix.addUpdateRange(0, 0)
+        part.mesh.instanceMatrix.addUpdateRange(0, 0);
         part.mesh.instanceMatrix.needsUpdate = true;
       }
       return;
@@ -958,7 +1048,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
           part.mesh.setMatrixAt(i, tmp);
         }
         part.mesh.count = aliveCount;
-        part.mesh.instanceMatrix.addUpdateRange(0, Math.max(1, aliveCount * 16))
+        part.mesh.instanceMatrix.addUpdateRange(0, Math.max(1, aliveCount * 16));
         part.mesh.instanceMatrix.needsUpdate = true;
       }
 
@@ -995,7 +1085,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
         const offsetElems = minTouched * 16;
         const countElems  = (maxTouched - minTouched + 1) * 16;
         for (const part of b.parts) {
-          part.mesh.instanceMatrix.addUpdateRange(offsetElems, countElems)
+          part.mesh.instanceMatrix.addUpdateRange(offsetElems, countElems);
           part.mesh.instanceMatrix.needsUpdate = true;
           // 컴팩션 안 했으므로 전체 슬롯 유지
           part.mesh.count = b.totalCount;

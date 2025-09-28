@@ -281,7 +281,7 @@ export class RunZState extends MonState implements IMonsterAction {
         this.zombie.Meshs.quaternion.copy(qt)
 
         // ✅ 이동 처리
-        const dis = this.gphysic.CheckDirection(this.zombie, this.dir.copy(v));
+        const dis = this.gphysic.CheckDirection(this.zombie, this.dir.copy(v), this.speed);
         const moveAmount = v.clone().multiplyScalar(delta * this.speed);
         const moveDis = moveAmount.length();
         // console.log(moveDis, " / ", dis.distance, " / ", dis.move)

@@ -33,16 +33,16 @@ export default class OptPhysics implements IGPhysic {
             this.planeHeightMap = new PlaneHeightMap(obj)
             this.octreenode = new OctreeNode(OctreeNode.computeWorldBounds(obj, 100))
         })
-        eventCtrl.RegisterEventListener(EventTypes.RegisterPhysic, (obj: THREE.Object3D, raycastOn = false) => {
-            this.targetObjs.push(obj)
+        eventCtrl.RegisterEventListener(EventTypes.RegisterPhysic, (obj: THREE.Object3D, raycastOn = false, box3: THREE.Box3) => {
+            if (this.targetObjs.findIndex(o => o.uuid == obj.uuid) < 0) this.targetObjs.push(obj)
             const spatialObj: SpatialObject = {
-                id: obj.uuid, object3d:obj, box: new THREE.Box3().setFromObject(obj), raycastOn
+                id: obj.uuid, object3d: obj, box: box3 ?? new THREE.Box3().setFromObject(obj), raycastOn
             }
             this.visualizeBox3(spatialObj.box)
             this.octreenode!.insert(spatialObj)
             obj.userData.spatialObj = spatialObj
         })
-        eventCtrl.RegisterEventListener(EventTypes.RegisterPhysicBox, (obj: THREE.Box3, uuid:string, raycastOn = false) => {
+        eventCtrl.RegisterEventListener(EventTypes.RegisterPhysicBox, (obj: THREE.Box3, uuid: string, raycastOn = false) => {
         })
         eventCtrl.RegisterEventListener(EventTypes.DeregisterPhysic, (obj: THREE.Object3D) => {
             const spatialObj = obj.userData.spatialObj
@@ -67,29 +67,32 @@ export default class OptPhysics implements IGPhysic {
     GetObjects(): THREE.Object3D[] {
         return this.targetObjs
     }
-    CheckDirection(obj: IPhysicsObject, dir: THREE.Vector3) {
-        const ret = this.checkRayBox(obj, obj.Meshs.getWorldDirection(new THREE.Vector3()))
-        if(ret.obj) return ret
-        return {obj:undefined, ...this.planeHeightMap!.checkDirection(obj, dir)}
+    CheckDirection(obj: IPhysicsObject, dir: THREE.Vector3, speed: number = 0) {
+        // ✅ 반드시 외부에서 받은 dir 사용
+        const ret = this.checkRayBox(obj, dir, speed);
+        if (ret.obj) return ret;
+        // 지형 샘플링 쪽도 같은 dir을 넘김
+        return { obj: undefined, ...this.planeHeightMap!.checkDirection(obj, dir) };
     }
+
     Check(obj: IPhysicsObject): boolean {
         if (this.CheckDown(obj) < 0) return true
         return this.CheckBoxs(obj)
     }
     CheckDown(obj: IPhysicsObject): number {
         const ret = this.checkRayBox(obj, this.downDir)
-        if(ret.distance < 0) return 0
+        if (ret.distance < 0) return 0
         // 중력 처리 전/후 등에 호출
         const x = obj.Pos.x;
         const z = obj.Pos.z;
         const terrainY = this.planeHeightMap!.getHeightAt(x, z);
         // console.log("Player:" + obj.Pos.y + " - " + terrainY + " = " + (obj.Pos.y - terrainY ))
         const dis = obj.Pos.y - terrainY - 0.01
-        if(!ret.obj) {
+        if (!ret.obj) {
             return dis
         }
         // 플레이어 발이 terrainY 위에 있어야 한다고 가정
-        return  (dis > ret.distance) ? ret.distance : dis
+        return (dis > ret.distance) ? ret.distance : dis
     }
 
     CheckDownAABB(obj: IPhysicsObject): number {
@@ -118,57 +121,83 @@ export default class OptPhysics implements IGPhysic {
 
         return (minDist < Infinity) ? minDist : 5; // 5는 raycast.far과 동일한 fallback
     }
-    checkRayBox(obj: IPhysicsObject, dir: THREE.Vector3) {
-        obj.Box.getCenter(this.center)
-        // 3) 브로드페이즈: AABB 교차로 후보 수집
-        const candidates = this.octreenode!.getCandidatesInBox(obj.Box, { 
-            origin: this.center, dir: dir, maxDist: 8
-        });
+    checkRayBox(obj: IPhysicsObject, dir: THREE.Vector3, speed: number = 0) {
+        // ✅ 이동 방향은 반드시 외부에서 받은 dir을 사용
+        const rayDir = dir.clone().normalize();
+        if (rayDir.lengthSq() === 0) return { obj: undefined, distance: this.raycast.far };
 
-        if(candidates.length == 0) return { obj: undefined, distance: this.raycast.far }
+        // ✅ 레이 시작점은 "복사본"에서 보정 (누적 금지)
+        const tmpCenter = new THREE.Vector3();
+        obj.Box.getCenter(tmpCenter);
 
-        const rayObj = candidates.filter(o => o.raycastOn).map(o => o.object3d)
-        if(rayObj.length == 0) {
-            if(candidates.length > 0) {
-                return { obj: candidates[0].object3d, distance: 0 }
-            }
-            return { obj: undefined, distance: this.raycast.far }
-        }
+        // 플레이어 캡슐/실린더의 절반높이(발 위치 근사). 누적 금지!
+        const halfHeight = Math.max(obj.Size.y * 0.5 - 0.2, 0);
+        const origin = tmpCenter.clone();
+        origin.y -= halfHeight;
 
-        // 4) 내로페이즈: Raycaster로 정밀 충돌
-        const height = (Math.floor(obj.Size.y * 100) / 100) / 2 - 0.2
-        this.center.y -= height
-        this.raycast.set(this.center, dir)
-        const intersects = this.raycast.intersectObjects( rayObj, true); 
-        let adjustedMoveVector
+        // ✅ 이동 1프레임 거리 + 여유 거리만큼 ray 길이 동적 설정(터널링 방지)
+        const moveStep = (this.timeScale || 1) * (speed ?? 0);  // obj.Speed가 없다면 외부 주입
+        const radius = Math.max(obj.Size.x, obj.Size.z) * 0.5;      // 방향 무관 최소 반경
+        const margin = 0.05;
+        const dynamicFar = Math.max(this.raycast.far, moveStep + radius + 0.5);
+        this.raycast.far = dynamicFar;
 
-        const candidatePoint = obj.Pos.clone().add(dir.clone().multiplyScalar(2));
-        this.marker.position.copy(candidatePoint);
+        // ✅ 브로드페이즈: AABB 후보만 (raycastOn 우선)
+        const candidates = this.octreenode!.getCandidatesInBox(obj.Box, { origin, dir: rayDir, maxDist: dynamicFar + radius });
+        if (candidates.length === 0) return { obj: undefined, distance: this.raycast.far };
 
-        if (intersects.length > 0) {
-            const width = (Math.floor(obj.Size.z * 100) / 100) / 2
-            const intersect = intersects[0];
-            const ret = intersect.distance - width
+        const rayObjs = candidates.filter(c => c.raycastOn).map(c => c.object3d);
 
-            if(ret < width && intersect.face) {
-                const normal = intersect.face.normal.clone().normalize(); // 충돌 면의 법선 벡터
-                const slopeAngle = Math.acos(normal.dot(new THREE.Vector3(0, 1, 0))) * (180 / Math.PI); // 경사 각도 계산
-
-                console.log(`경사면 감지! 각도: ${slopeAngle.toFixed(2)}도`);
-
-                // 가파른 경사(예: 45도 이상)에서는 이동 불가
-                if (slopeAngle > 45) {
-                    console.log("경사가 너무 가파름! 이동 제한");
-                    return { obj: intersects[0].object, distance: -1}
+        // raycastOn이 하나도 없으면 AABB 근사 거리로 반환(끼임 방지)
+        if (rayObjs.length === 0) {
+            let minPen = Infinity;
+            let hitObj: THREE.Object3D | undefined;
+            // 이동방향으로 obj.Box를 약간 확장한 뒤 후보와의 겹침 체크
+            const swept = obj.Box.clone().expandByVector(new THREE.Vector3(radius, 0, radius));
+            for (const c of candidates) {
+                const box = c.box; // 등록 시 저장해둔 Box3
+                if (swept.intersectsBox(box)) {
+                    // 간단한 거리: 레이 시작점에서 상자까지의 최근접 거리 근사
+                    const closest = new THREE.Vector3(
+                        THREE.MathUtils.clamp(origin.x, box.min.x, box.max.x),
+                        THREE.MathUtils.clamp(origin.y, box.min.y, box.max.y),
+                        THREE.MathUtils.clamp(origin.z, box.min.z, box.max.z),
+                    );
+                    const d = origin.distanceTo(closest) - radius;
+                    if (d < minPen) { minPen = d; hitObj = c.object3d; }
                 }
-
-                // 경사면을 따라 이동하도록 벡터 조정
-                adjustedMoveVector = dir.clone().projectOnPlane(normal); // 경사면에 투영
             }
-            console.log("move", ret, width, this.center)
-            return { obj: intersects[0].object, distance: (ret < 0) ? -1 : ret, move: adjustedMoveVector }
+            if (hitObj) return { obj: hitObj, distance: Math.max(minPen, -1) };
+            return { obj: undefined, distance: this.raycast.far };
         }
-        return { obj: undefined, distance: this.raycast.far }
+
+        // ✅ 내로페이즈: Raycast
+        this.raycast.set(origin, rayDir);
+        const hits = this.raycast.intersectObjects(rayObjs, true);
+        if (hits.length === 0) return { obj: undefined, distance: this.raycast.far };
+
+        // 가장 가까운 히트
+        const hit = hits[0];
+
+        // ✅ 월드 법선으로 변환(경사 각 계산 정확화)
+        let n = hit.face?.normal?.clone() ?? new THREE.Vector3(0, 1, 0);
+        const normalMatrix = new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld);
+        n.applyNormalMatrix(normalMatrix).normalize();
+
+        // ✅ 충돌 여유: 중심→히트까지 거리 - 캐릭터 반경
+        const raw = hit.distance - (radius + margin);
+
+        // ✅ 경사면 처리: 너무 가파르면 이동 불가, 아니면 면에 투영한 이동벡터 제공
+        let adjustedMove: THREE.Vector3 | undefined;
+        const slopeAngleDeg = Math.acos(THREE.MathUtils.clamp(n.dot(new THREE.Vector3(0, 1, 0)), -1, 1)) * 180 / Math.PI;
+        const maxSlope = 45; // 필요시 옵션화
+        if (slopeAngleDeg > maxSlope) {
+            return { obj: hit.object, distance: -1 };
+        } else {
+            adjustedMove = rayDir.clone().projectOnPlane(n).normalize();
+        }
+
+        return { obj: hit.object, distance: raw < 0 ? -1 : raw, move: adjustedMove };
     }
 
     CheckBox(pos: THREE.Vector3, box: THREE.Box3): boolean {
@@ -187,7 +216,7 @@ export default class OptPhysics implements IGPhysic {
         return [undefined, []]
     }
     DeleteBox(keys: string[], b: IBuildingObject): void {
-        
+
     }
     clock = new THREE.Clock()
     update() {
@@ -199,87 +228,87 @@ export default class OptPhysics implements IGPhysic {
 }
 
 class PlaneHeightMap {
-  
-  private heights: number[][];
-  private mesh: THREE.Mesh<THREE.PlaneGeometry>;
-  private width: number;
-  private depth: number;
-  private segX: number;
-  private segY: number;
 
-  constructor(mesh: THREE.Mesh<THREE.PlaneGeometry>) {
-    this.mesh = mesh;
-    const geom = mesh.geometry;
-    const p = (geom as any).parameters;
-    this.width = p.width;
-    this.depth = p.height;
-    this.segX = p.widthSegments;
-    this.segY = p.heightSegments;
+    private heights: number[][];
+    private mesh: THREE.Mesh<THREE.PlaneGeometry>;
+    private width: number;
+    private depth: number;
+    private segX: number;
+    private segY: number;
 
-    this.heights = [];
-    const posAttr = geom.attributes.position as THREE.BufferAttribute;
-    for (let j = 0; j <= this.segY; j++) {
-      this.heights[j] = [];
-      for (let i = 0; i <= this.segX; i++) {
-        const idx = j * (this.segX + 1) + i;
-        this.heights[j][i] = posAttr.getY(idx);
-      }
+    constructor(mesh: THREE.Mesh<THREE.PlaneGeometry>) {
+        this.mesh = mesh;
+        const geom = mesh.geometry;
+        const p = (geom as any).parameters;
+        this.width = p.width;
+        this.depth = p.height;
+        this.segX = p.widthSegments;
+        this.segY = p.heightSegments;
+
+        this.heights = [];
+        const posAttr = geom.attributes.position as THREE.BufferAttribute;
+        for (let j = 0; j <= this.segY; j++) {
+            this.heights[j] = [];
+            for (let i = 0; i <= this.segX; i++) {
+                const idx = j * (this.segX + 1) + i;
+                this.heights[j][i] = posAttr.getY(idx);
+            }
+        }
     }
-  }
 
-  getHeightAt(worldX: number, worldZ: number): number {
-    const local = new THREE.Vector3(worldX, 0, worldZ);
-    this.mesh.worldToLocal(local);
+    getHeightAt(worldX: number, worldZ: number): number {
+        const local = new THREE.Vector3(worldX, 0, worldZ);
+        this.mesh.worldToLocal(local);
 
-    const fx = (local.x + this.width * 0.5) / this.width * this.segX;
-    const fz = (local.z + this.depth * 0.5) / this.depth * this.segY;
-    const i = Math.floor(fx), j = Math.floor(fz);
-    const tx = fx - i, tz = fz - j;
+        const fx = (local.x + this.width * 0.5) / this.width * this.segX;
+        const fz = (local.z + this.depth * 0.5) / this.depth * this.segY;
+        const i = Math.floor(fx), j = Math.floor(fz);
+        const tx = fx - i, tz = fz - j;
 
-    const i0 = THREE.MathUtils.clamp(i, 0, this.segX);
-    const j0 = THREE.MathUtils.clamp(j, 0, this.segY);
-    const i1 = THREE.MathUtils.clamp(i + 1, 0, this.segX);
-    const j1 = THREE.MathUtils.clamp(j + 1, 0, this.segY);
+        const i0 = THREE.MathUtils.clamp(i, 0, this.segX);
+        const j0 = THREE.MathUtils.clamp(j, 0, this.segY);
+        const i1 = THREE.MathUtils.clamp(i + 1, 0, this.segX);
+        const j1 = THREE.MathUtils.clamp(j + 1, 0, this.segY);
 
-    const h00 = this.heights[j0][i0];
-    const h10 = this.heights[j0][i1];
-    const h01 = this.heights[j1][i0];
-    const h11 = this.heights[j1][i1];
+        const h00 = this.heights[j0][i0];
+        const h10 = this.heights[j0][i1];
+        const h01 = this.heights[j1][i0];
+        const h11 = this.heights[j1][i1];
 
-    const h0 = h00 * (1 - tx) + h10 * tx;
-    const h1 = h01 * (1 - tx) + h11 * tx;
-    const localY = h0 * (1 - tz) + h1 * tz;
+        const h0 = h00 * (1 - tx) + h10 * tx;
+        const h1 = h01 * (1 - tx) + h11 * tx;
+        const localY = h0 * (1 - tz) + h1 * tz;
 
-    return this.mesh.position.y + localY * this.mesh.scale.y;
-  }
+        return this.mesh.position.y + localY * this.mesh.scale.y;
+    }
 
-  checkDirection(
-    obj: { Box: THREE.Box3; Size: THREE.Vector3 },
-    dir: THREE.Vector3,
-    maxDist = 2,
-    slopeLimit = 45
-  ): { distance: number; move?: THREE.Vector3 } {
-    const center = new THREE.Vector3();
-    obj.Box.getCenter(center);
-    center.y -= obj.Size.y / 2 - 0.2;
+    checkDirection(
+        obj: { Box: THREE.Box3; Size: THREE.Vector3 },
+        dir: THREE.Vector3,
+        maxDist = 2,
+        slopeLimit = 45
+    ): { distance: number; move?: THREE.Vector3 } {
+        const center = new THREE.Vector3();
+        obj.Box.getCenter(center);
+        center.y -= obj.Size.y / 2 - 0.2;
 
-    const fdir = dir.clone().setY(0);
-    if (fdir.lengthSq() === 0) return { distance: maxDist };
-    fdir.normalize();
+        const fdir = dir.clone().setY(0);
+        if (fdir.lengthSq() === 0) return { distance: maxDist };
+        fdir.normalize();
 
-    const h1 = this.getHeightAt(center.x, center.z);
-    const p2 = center.clone().add(fdir.multiplyScalar(maxDist));
-    const h2 = this.getHeightAt(p2.x, p2.z);
+        const h1 = this.getHeightAt(center.x, center.z);
+        const p2 = center.clone().add(fdir.multiplyScalar(maxDist));
+        const h2 = this.getHeightAt(p2.x, p2.z);
 
-    const dh = h2 - h1;
-    const angle = Math.atan2(dh, maxDist) * THREE.MathUtils.RAD2DEG;
-    if (Math.abs(angle) > slopeLimit) return { distance: -1 };
+        const dh = h2 - h1;
+        const angle = Math.atan2(dh, maxDist) * THREE.MathUtils.RAD2DEG;
+        if (Math.abs(angle) > slopeLimit) return { distance: -1 };
 
-    const grad = dh / maxDist;
-    const normal = new THREE.Vector3(-fdir.x * grad, 1, -fdir.z * grad).normalize();
-    const move = dir.clone().projectOnPlane(normal).normalize();
+        const grad = dh / maxDist;
+        const normal = new THREE.Vector3(-fdir.x * grad, 1, -fdir.z * grad).normalize();
+        const move = dir.clone().projectOnPlane(normal).normalize();
 
-    const dist = maxDist - obj.Size.z / 2;
-    return { distance: dist, move };
-  }
+        const dist = maxDist - obj.Size.z / 2;
+        return { distance: dist, move };
+    }
 }

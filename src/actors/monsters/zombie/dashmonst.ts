@@ -139,7 +139,7 @@ export class DashRunState extends MonState implements IMonsterAction {
         }
 
         // ✅ 이동 처리
-        const dis = this.gphysic.CheckDirection(this.zombie, this.dir.copy(v));
+        const dis = this.gphysic.CheckDirection(this.zombie, this.dir.copy(v), this.speed);
         const moveAmount = v.clone().multiplyScalar(delta * this.speed);
         const moveDis = moveAmount.length();
         // console.log(moveDis, " / ", dis.distance, " / ", dis.move)
@@ -218,7 +218,7 @@ export class FastDashRunState extends MonState implements IMonsterAction {
         }
 
         // ✅ 이동 처리
-        const dis = this.gphysic.CheckDirection(this.zombie, this.dir.copy(this.v));
+        const dis = this.gphysic.CheckDirection(this.zombie, this.dir.copy(this.v), this.speed);
         const moveAmount = this.v.clone().multiplyScalar(delta * this.speed * 10);
 
         if (dis.move) {

@@ -25,6 +25,7 @@ import { WaterFoamRipples } from '../ocean/wavefoam';
 import { WindyInstancedVegetation } from '../fluffynature/massfluffy';
 import { InstancedVegetation } from '../fluffynature/massstatic';
 import { Beach } from '../ocean/beach';
+import { DungeonMapObject } from '../dungeon/dungeonbuilder';
 
 
 export default class WorldMap {
@@ -57,6 +58,7 @@ export default class WorldMap {
         InstancedVegetation: InstancedVegetation,
         WindyInstancedVegetation: WindyInstancedVegetation,
         Beach: Beach,
+        DungeonMapObject: DungeonMapObject,
     };
     private worldMapTypes: Record<string, any> = {
         CustomGround: { scene: this.scene, eventCtrl: this.eventCtrl },
@@ -77,6 +79,7 @@ export default class WorldMap {
         InstancedVegetation: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl, camera: this.camera },
         WindyInstancedVegetation: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl, camera: this.camera },
         Beach: { scene: this.scene, eventCtrl: this.eventCtrl },
+        DungeonMapObject: {  },
     }
 
     constructor(

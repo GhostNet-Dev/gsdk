@@ -29,8 +29,10 @@ export interface BeachSlopeOptions {
 }
 export interface PatternBandSplatOptions {
   /** 0..1: 수직 밴드(돌바닥 메인 영역) */
-  startPercent: number;
-  endPercent: number;
+  top: number
+  left: number
+  right: number
+  bottom: number
 
   /** 돌 텍스처 타일링(기존 applyPatternAtUV와 동일한 ‘픽셀 모듈로’ 방식) */
   patternScalePxX?: number;   // default 1
@@ -636,13 +638,15 @@ export default class CustomGround implements IWorldMapObject {
       this.blendMap.needsUpdate = true;
     }
   }
-  /** 수직 밴드(돌바닥) + 경계 스플랫 섞임: 물방울 튀듯 불규칙한 교환 */
-applyPatternVerticalBandSplat(pattern: THREE.DataTexture, opts: PatternBandSplatOptions) {
+
+// NEW: 함수 이름을 좀 더 명확하게 변경했습니다.
+applyPatternRectSplat(pattern: THREE.DataTexture, opts: PatternBandSplatOptions) {
   if (!this.blendMapData || !this.width || !this.height) return;
 
   // ---- 옵션 & 기본 ----
+  // CHANGED: start/endPercent -> top/left/bottom/right
   let {
-    startPercent, endPercent,
+    top, left, bottom, right,
     patternScalePxX = 1, patternScalePxY = 1,
     patternOffsetPxX = 0, patternOffsetPxY = 0,
     exchangeBandPx = 12,
@@ -663,14 +667,19 @@ applyPatternVerticalBandSplat(pattern: THREE.DataTexture, opts: PatternBandSplat
   } = opts;
 
   const clamp01 = (v:number)=>Math.max(0,Math.min(1,v));
-  startPercent = clamp01(startPercent);
-  endPercent   = clamp01(endPercent);
-  if (endPercent < startPercent) [startPercent, endPercent] = [endPercent, startPercent];
-  if (endPercent === startPercent) endPercent = Math.min(1, startPercent + 1e-4);
+  // NEW: 4방향 값 클램핑 및 정렬
+  top    = clamp01(top);
+  left   = clamp01(left);
+  bottom = clamp01(bottom);
+  right  = clamp01(right);
+  if (bottom < top) [top, bottom] = [bottom, top];
+  if (right < left) [left, right] = [right, left];
+  if (bottom === top) bottom = Math.min(1, top + 1e-4);
+  if (right === left) right = Math.min(1, left + 1e-4);
 
   // --- 돌 텍스처 샘플 (픽셀 모듈로) ---
   const pSrc = pattern.image.data as Uint8Array | Uint8ClampedArray;
-  const pData = toU8(pSrc);
+  const pData = (pSrc.constructor === Uint8Array) ? pSrc : new Uint8Array(pSrc.buffer); // toU8 대신 안전한 타입 변환
   const pw = pattern.image.width, ph = pattern.image.height;
   const wrap = (v:number,m:number)=>((v % m)+m)%m;
   const samplePatternByPixel = (px:number, py:number) => {
@@ -683,12 +692,15 @@ applyPatternVerticalBandSplat(pattern: THREE.DataTexture, opts: PatternBandSplat
   };
 
   // --- 밴드(돌바닥) 메인 영역: 하드 오버라이드 ---
-  const yTopBase = startPercent * (this.height - 1);
-  const yBotBase = endPercent   * (this.height - 1);
-  for (let xi=0; xi<this.width; xi++){
-    const yiStart = Math.max(0, Math.floor(yTopBase));
-    const yiEnd   = Math.min(this.height - 1, Math.ceil(yBotBase));
-    for (let yi=yiStart; yi<=yiEnd; yi++){
+  // CHANGED: 사각형의 픽셀 좌표 계산
+  const yTopPx = top * (this.height - 1);
+  const yBotPx = bottom * (this.height - 1);
+  const xLeftPx = left * (this.width - 1);
+  const xRightPx = right * (this.width - 1);
+
+  // CHANGED: 반복문을 사각형 영역으로 수정
+  for (let yi = Math.max(0, Math.floor(yTopPx)); yi <= Math.min(this.height - 1, Math.ceil(yBotPx)); yi++){
+    for (let xi = Math.max(0, Math.floor(xLeftPx)); xi <= Math.min(this.width - 1, Math.ceil(xRightPx)); xi++){
       const [pr,pg,pb,pa] = samplePatternByPixel(xi, yi);
       if (pa===0) continue;
       const bi = (yi*this.width+xi)*4;
@@ -699,66 +711,89 @@ applyPatternVerticalBandSplat(pattern: THREE.DataTexture, opts: PatternBandSplat
   }
 
   // --- 경계 대역을 기준으로 스플랫 씨앗 생성 ---
-  const bandH = Math.max(1e-6, yBotBase - yTopBase);
-  const edgeTopY = yTopBase;
-  const edgeBotY = yBotBase;
+  // NEW: 사각형 둘레 기반으로 씨앗 수 계산
+  const rectW = Math.max(1, xRightPx - xLeftPx);
+  const rectH = Math.max(1, yBotPx - yTopPx);
+  const perimeter = 2 * (rectW + rectH);
+  const approxSeeds = Math.max(1, Math.floor(perimeter * exchangeBandPx * splatDensity));
 
-  // 예상 씨앗 수(가이드): 폭 * (양쪽 대역 두께) * 밀도
-  const approxSeeds = Math.max(1, Math.floor(this.width * (exchangeBandPx*2) * splatDensity));
-
-  // 난수 유틸 (해시 기반: 안정적 분포)
-  const hash = (x:number,y:number)=>{
-    let h = ((x*374761393) ^ (y*668265263)) >>> 0;
-    h = (h ^ (h>>>13)) * 1274126177 >>> 0;
-    return (h & 0xffff)/0xffff;
-  };
+  // 난수 유틸 (이전과 동일)
   const randRange = (r:number)=> (a:number,b:number)=> a + (b-a)*r;
 
-  // 잡음(워블) — ImprovedNoise 사용
+  // 잡음(워블) (이전과 동일)
   const n = this.noise;
-  const wobble = (x:number,y:number)=> {
-    const w = n.noise(x*warpFreq, y*warpFreq, 0);
-    return (w*2-1)*warpAmpPx;
-  };
+  const wobble = (x:number,y:number)=> (n.noise(x*warpFreq, y*warpFreq, 0) * 2 - 1) * warpAmpPx;
 
   // 스플랫 씨앗 만들기
   type Seed = {
-    cx:number; cy:number; r:number; rot:number; lobes:number; // 중심/반경/회전/로브 수
-    type:'dot'|'hole'; // dot: 풀쪽 돌 점(돌을 칠함), hole: 돌쪽 풀 구멍(풀 칠함)
+    cx:number; cy:number; r:number; rot:number; lobes:number;
+    type:'dot'|'hole';
   };
   const seeds: Seed[] = [];
+  
+  // NEW: 사각형 둘레에 씨앗을 배치하는 로직
   for (let i=0;i<approxSeeds;i++){
-    const xr = Math.random();
-    const yr = Math.random();
+    const p = Math.random() * perimeter; // 둘레 위의 한 점 선택
 
-    const cx = Math.floor(xr * this.width);
-    // 경계선 근처(위/아래 중 하나)로 배치
-    const side = (Math.random()<0.5) ? -1 : +1; // -1: 위쪽 경계 근처, +1: 아래쪽 경계 근처
-    const baseY = (side<0 ? edgeTopY : edgeBotY);
-    // 대역 안에서 균등 + 워블
-    const cy0 = baseY + side * (yr * exchangeBandPx);
-    const cy = Math.max(0, Math.min(this.height-1, cy0 + wobble(cx, cy0)));
+    let cx0=0, cy0=0;
+    let isHorizontalEdge = false; // 수평(상/하) 에지인가?
+    let insideSign = 0; // 사각형 안쪽 방향 (+1 또는 -1)
+
+    if (p < rectW) { // 1. 상단 에지
+      cx0 = xLeftPx + p;
+      cy0 = yTopPx;
+      isHorizontalEdge = true;
+      insideSign = 1; // y가 증가하는 방향이 안쪽
+    } else if (p < rectW + rectH) { // 2. 우측 에지
+      cx0 = xRightPx;
+      cy0 = yTopPx + (p - rectW);
+      insideSign = -1; // x가 감소하는 방향이 안쪽
+    } else if (p < 2 * rectW + rectH) { // 3. 하단 에지
+      cx0 = xLeftPx + (p - (rectW + rectH));
+      cy0 = yBotPx;
+      isHorizontalEdge = true;
+      insideSign = -1; // y가 감소하는 방향이 안쪽
+    } else { // 4. 좌측 에지
+      cx0 = xLeftPx;
+      cy0 = yTopPx + (p - (2 * rectW + rectH));
+      insideSign = 1; // x가 증가하는 방향이 안쪽
+    }
+
+    // 경계선에서 안/밖으로 랜덤한 오프셋 적용
+    const offsetDir = (Math.random() < 0.5) ? -1 : 1; // -1: 밖, +1: 안
+    const offsetVal = Math.random() * exchangeBandPx;
+    
+    let cx = cx0, cy = cy0;
+    if (isHorizontalEdge) {
+      cy += insideSign * offsetDir * offsetVal;
+    } else {
+      cx += insideSign * offsetDir * offsetVal;
+    }
+    
+    // 워블 추가
+    const wobbleOffset = wobble(cx0, cy0);
+    if (isHorizontalEdge) cy += wobbleOffset;
+    else cx += wobbleOffset;
+    
+    cx = Math.max(0, Math.min(this.width - 1, cx));
+    cy = Math.max(0, Math.min(this.height - 1, cy));
 
     const r  = randRange(Math.random())(splatRadiusMinPx, splatRadiusMaxPx);
     const rot= randRange(Math.random())(rotateMinDeg, rotateMaxDeg) * Math.PI/180;
     const lobes = Math.floor(randRange(Math.random())(splatLobesMin, splatLobesMax+0.999));
 
-    // 타입 결정: 돌 안 구멍 vs 풀쪽 점 (확률 편향)
-    const type:Seed['type'] = (side>0)  // 아래쪽 대역이면 보통 돌 안쪽에 가깝다고 봄
-      ? (Math.random()<biasInsideHole? 'hole':'dot')
-      : (Math.random()<biasOutsideDot? 'dot' :'hole');
+    // 타입 결정: 씨앗이 사각형 안쪽에 가까운가, 바깥쪽에 가까운가?
+    const type:Seed['type'] = (offsetDir > 0) // 안쪽으로 오프셋 되었으면
+      ? (Math.random() < biasInsideHole ? 'hole' : 'dot') // 'hole'일 확률 증가
+      : (Math.random() < biasOutsideDot ? 'dot'  : 'hole'); // 'dot'일 확률 증가
 
     seeds.push({cx,cy,r,rot,lobes,type});
   }
 
-  // 스플랫 도형 경계: r(θ) = r * (1 + irr * noise(θ*lobes))
+  // 스플랫 도형 경계 계산 및 페인팅 (이하 로직 대부분 재사용)
   const irr = splatIrregularity;
-  const angleStep = Math.PI/24; // 샘플 각도 해상도 (빠르고 충분히 거칠게)
   const cos = Math.cos, sin = Math.sin;
-
-  // 각 스플랫을 자신 주변 박스만 페인트
   const gR = (c:THREE.Color)=>[Math.round(c.r*255), Math.round(c.g*255), Math.round(c.b*255)] as [number,number,number];
-
   const [grR,grG,grB] = gR(grassFallback);
 
   for (const s of seeds){
@@ -767,63 +802,55 @@ applyPatternVerticalBandSplat(pattern: THREE.DataTexture, opts: PatternBandSplat
     const x1 = Math.min(this.width-1, Math.ceil (s.cx + rMax + splatFeatherPx));
     const y0 = Math.max(0, Math.floor(s.cy - rMax - splatFeatherPx));
     const y1 = Math.min(this.height-1, Math.ceil (s.cy + rMax + splatFeatherPx));
-
-    // 미리 각도별 목표 반지표 제작 (회전·워블 반영)
-    // θ' = atan2(dy,dx) - rot
+    
     const radial = (theta:number)=>{
-      // 리지드풍 각방향 요철: noise(θ*lobes, 0)
       const k = s.lobes * 0.75;
-      const t = n.noise(Math.cos(theta)*k, Math.sin(theta)*k, 0); // -1..1
-      const bump = (t*0.5+0.5); // 0..1
-      return s.r * (1 + irr*(bump*2-1)); // r * (1 + irr*( -1..1 ))
+      const t = n.noise(cos(theta)*k, sin(theta)*k, 0);
+      const bump = (t*0.5+0.5);
+      return s.r * (1 + irr*(bump*2-1));
     };
 
     for (let y=y0; y<=y1; y++){
       for (let x=x0; x<=x1; x++){
-        // 경계 대역 내에서만 스플랫 적용
-        const distTop = Math.abs(y - edgeTopY);
-        const distBot = Math.abs(y - edgeBotY);
-        if (Math.min(distTop, distBot) > exchangeBandPx) continue;
+        // CHANGED: 가장 가까운 사각형 경계선까지의 거리를 계산하여 스플랫 적용 여부 결정
+        const distTop = Math.abs(y - yTopPx);
+        const distBot = Math.abs(y - yBotPx);
+        const distLeft = Math.abs(x - xLeftPx);
+        const distRight = Math.abs(x - xRightPx);
+        const minEdgeDist = Math.min(distTop, distBot, distLeft, distRight);
+        
+        // 점(x,y)이 사각형 내부에 있는지 여부 판단
+        const isInsideRect = (x >= xLeftPx && x <= xRightPx && y >= yTopPx && y <= yBotPx);
+        
+        // 현재 픽셀이 경계 대역 내에 있을 때만 스플랫을 그립니다.
+        // 대역은 사각형 안과 밖 양쪽에 걸쳐 있습니다.
+        if (minEdgeDist > exchangeBandPx) continue;
 
         const dx = x - s.cx, dy = y - s.cy;
         const d  = Math.hypot(dx,dy);
         if (d > rMax + splatFeatherPx) continue;
-
-        // 로컬 각도
+        
         const th = Math.atan2(dy, dx) - s.rot;
-        // 현재 방향의 기준 반지
-        let rDir = 0;
-        // 근사: 몇 개 각도만 샘플해 보간(빠르게)
-        // 정밀 보간 없이 바로 호출 (noise 사용이라 충분히 자연스럽습니다)
-        rDir = radial(th);
+        const rDir = radial(th);
 
-        // 가장자리 feather
-        const edge = (rDir - d) / Math.max(1e-6, splatFeatherPx); // >0: 내부
+        const edge = (rDir - d) / Math.max(1e-6, splatFeatherPx);
         if (edge <= -1) continue;
-        const w = Math.max(0, Math.min(1, edge + 1)); // -1..0..1 → 0..1
+        const w = Math.max(0, Math.min(1, edge + 1));
         if (w <= 0) continue;
 
         const bi = (y*this.width + x)*4;
         if (s.type === 'dot') {
-          // 풀쪽에 생성되는 작은 돌 조각 → 돌 텍스처로 살짝/완전 덮기 (w 기반)
           const [pr,pg,pb,pa] = samplePatternByPixel(x, y);
           if (pa===0) continue;
-          const sr = this.blendMapData[bi+0];
-          const sg = this.blendMapData[bi+1];
-          const sb = this.blendMapData[bi+2];
-          const ww = w; // 0..1
-          this.blendMapData[bi+0] = Math.round(sr*(1-ww) + pr*ww);
-          this.blendMapData[bi+1] = Math.round(sg*(1-ww) + pg*ww);
-          this.blendMapData[bi+2] = Math.round(sb*(1-ww) + pb*ww);
-        } else {
-          // 돌 영역 내부의 ‘풀 구멍’ → grassFallback으로 되칠하기 (w 기반)
-          const sr = this.blendMapData[bi+0];
-          const sg = this.blendMapData[bi+1];
-          const sb = this.blendMapData[bi+2];
-          const ww = w;
-          this.blendMapData[bi+0] = Math.round(sr*(1-ww) + grR*ww);
-          this.blendMapData[bi+1] = Math.round(sg*(1-ww) + grG*ww);
-          this.blendMapData[bi+2] = Math.round(sb*(1-ww) + grB*ww);
+          const [sr,sg,sb] = [this.blendMapData[bi], this.blendMapData[bi+1], this.blendMapData[bi+2]];
+          this.blendMapData[bi+0] = Math.round(sr*(1-w) + pr*w);
+          this.blendMapData[bi+1] = Math.round(sg*(1-w) + pg*w);
+          this.blendMapData[bi+2] = Math.round(sb*(1-w) + pb*w);
+        } else { // 'hole'
+          const [sr,sg,sb] = [this.blendMapData[bi], this.blendMapData[bi+1], this.blendMapData[bi+2]];
+          this.blendMapData[bi+0] = Math.round(sr*(1-w) + grR*w);
+          this.blendMapData[bi+1] = Math.round(sg*(1-w) + grG*w);
+          this.blendMapData[bi+2] = Math.round(sb*(1-w) + grB*w);
         }
       }
     }
@@ -831,7 +858,6 @@ applyPatternVerticalBandSplat(pattern: THREE.DataTexture, opts: PatternBandSplat
 
   this.blendMap.needsUpdate = true;
 }
-
 
   /* -------------------------------- 정리 -------------------------------- */
   Dispose() {

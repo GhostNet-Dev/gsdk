@@ -29,10 +29,10 @@ export class State {
         const checkRun = (run) ? this.CheckRun() : undefined
         if (checkRun != undefined) return checkRun
 
-        const checkRoll = (roll) ? this.CheckRoll(): undefined
+        const checkRoll = (roll) ? this.CheckRoll() : undefined
         if (checkRoll != undefined) return checkRoll
 
-        const checkAtt = (attack) ? this.CheckAttack(): undefined
+        const checkAtt = (attack) ? this.CheckAttack() : undefined
         if (checkAtt != undefined) return checkAtt
 
         const checkJump = (jump) ? this.CheckJump() : undefined
@@ -55,17 +55,17 @@ export class State {
         if (this.playerCtrl.KeyState[KeyType.Action1]) {
             if (this.playerCtrl.mode == AppMode.Play) {
                 const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
-                const state = (handItem?.ItemType == "meleeattack") ? 
+                const state = (handItem?.ItemType == "meleeattack") ?
                     this.playerCtrl.ComboMeleeSt : this.playerCtrl.RangeAttackSt
                 state.Init()
                 return state
-            } else if(this.playerCtrl.mode == AppMode.Weapon) {
+            } else if (this.playerCtrl.mode == AppMode.Weapon) {
                 this.playerCtrl.DeckSt.Init()
                 return this.playerCtrl.DeckSt
             } else {
                 this.playerCtrl.PlantASt.Init()
                 return this.playerCtrl.PlantASt
-            } 
+            }
         }
     }
     CheckRoll() {
@@ -111,15 +111,15 @@ export class State {
             return this.playerCtrl.JumpSt
         } else {
             this.player.Pos.y += -distance
-        } 
+        }
     }
     CheckEnermyInRange() {
         const attackRange = this.playerCtrl.baseSpec.stats.getStat("attackRange")
         for (const v of this.playerCtrl.targets) {
             const dis = this.player.CenterPos.distanceTo(v.position)
-            if(attackRange > dis) {
+            if (attackRange > dis) {
                 const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
-                const state = (handItem?.ItemType == "meleeattack") ? 
+                const state = (handItem?.ItemType == "meleeattack") ?
                     this.playerCtrl.ComboMeleeSt : this.playerCtrl.RangeAttackSt
                 state.Init()
                 return state
@@ -137,9 +137,9 @@ export class RollState extends State implements IPlayerAction {
     private rollDirection = new THREE.Vector3()
 
     constructor(
-        playerPhy: PlayerCtrl, 
-        player: Player, 
-        gphysic: IGPhysic, 
+        playerPhy: PlayerCtrl,
+        player: Player,
+        gphysic: IGPhysic,
         eventCtrl: IEventController, // eventCtrl은 필요 없을 수 있지만 구조적 일관성을 위해 유지
         baseSpec: BaseSpec,
     ) {
@@ -179,16 +179,38 @@ export class RollState extends State implements IPlayerAction {
         const checkGravity = this.CheckGravity()
         if (checkGravity != undefined) return checkGravity
 
-        // ✅ 이동 처리
-        // Init에서 설정된 고정된 방향(rollDirection)으로 이동합니다.
-        const moveAmount = this.rollDirection.clone().multiplyScalar(delta * this.rollSpeed)
-        const moveDis = moveAmount.length()
-        const dis = this.gphysic.CheckDirection(this.player, this.rollDirection)
+        const skin = 0.02; // 살짝 여유
+        const rollDir = this.rollDirection.clone().setY(0).normalize(); // 반드시 정규화
+        const totalDist = this.rollSpeed * delta;
 
-        if (dis.move) {
-            this.player.Pos.add(dis.move.normalize().multiplyScalar(delta * this.rollSpeed))
-        } else if (moveDis < dis.distance) {
-            this.player.Pos.add(moveAmount)
+        // 스텝 크기: 반경/속도에 따라 자동 분할 (너무 크면 벽을 뚫을 수 있음)
+        const radius = Math.max(this.player.Size.x, this.player.Size.z) * 0.5;
+        const maxStep = Math.max(0.15, radius * 0.5); // 상황에 따라 조절
+        const steps = Math.max(1, Math.ceil(totalDist / maxStep));
+        const stepLen = totalDist / steps;
+
+        for (let i = 0; i < steps; i++) {
+            // 현재 스텝에서의 충돌 체크 (반드시 외부 speed를 전달)
+            const dis = this.gphysic.CheckDirection(this.player, rollDir, this.rollSpeed);
+
+            if (dis.move) {
+                // 경사면: 면에 투영된 방향으로 굴리기
+                this.player.Pos.add(dis.move.normalize().multiplyScalar(stepLen));
+                continue;
+            }
+
+            if (dis.distance <= 0) {
+                // 바로 앞이 막힘 → 정지(더 진행하지 않음)
+                break;
+            }
+
+            // 해당 스텝에서 실제 이동 가능한 거리 (벽 직전까지만)
+            const canMove = Math.min(stepLen, dis.distance - skin);
+            if (canMove > 0) {
+                this.player.Pos.add(rollDir.clone().multiplyScalar(canMove));
+            } else {
+                break;
+            }
         }
 
         // 구르기 상태를 유지합니다.
@@ -196,7 +218,7 @@ export class RollState extends State implements IPlayerAction {
     }
 }
 export class MagicH2State extends State implements IPlayerAction {
-    keytimeout?:NodeJS.Timeout
+    keytimeout?: NodeJS.Timeout
     next: IPlayerAction = this
 
     constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
@@ -217,7 +239,7 @@ export class MagicH2State extends State implements IPlayerAction {
     }
     Update(): IPlayerAction {
         const d = this.DefaultCheck()
-        if(d != undefined) {
+        if (d != undefined) {
             this.Uninit()
             return d
         }
@@ -226,7 +248,7 @@ export class MagicH2State extends State implements IPlayerAction {
     }
 }
 export class MagicH1State extends State implements IPlayerAction {
-    keytimeout?:NodeJS.Timeout
+    keytimeout?: NodeJS.Timeout
     next: IPlayerAction = this
 
     constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
@@ -265,7 +287,7 @@ export class DeadState extends State implements IPlayerAction {
         this.player.ChangeAction(ActionType.Dying)
     }
     Uninit(): void {
-        
+
     }
     Update(): IPlayerAction {
         return this
@@ -283,11 +305,11 @@ export class IdleState extends State implements IPlayerAction {
         console.log("Idle!!")
     }
     Uninit(): void {
-        
+
     }
     Update(): IPlayerAction {
         const d = this.DefaultCheck()
-        if(d != undefined) return d
+        if (d != undefined) return d
 
         const checkGravity = this.CheckGravity()
         if (checkGravity != undefined) return checkGravity
@@ -318,10 +340,10 @@ export class IdleState extends State implements IPlayerAction {
 export class RunState extends State implements IPlayerAction {
     speed = 7
     constructor(
-        playerPhy: PlayerCtrl, 
-        player: Player, 
-        private camera: THREE.Camera, 
-        gphysic: IGPhysic, 
+        playerPhy: PlayerCtrl,
+        player: Player,
+        private camera: THREE.Camera,
+        gphysic: IGPhysic,
         private eventCtrl: IEventController,
         baseSpec: BaseSpec,
     ) {
@@ -380,30 +402,40 @@ export class RunState extends State implements IPlayerAction {
         this.player.Meshs.quaternion.copy(qt);
 
         // ✅ 이동 처리
-        const dis = this.gphysic.CheckDirection(this.player, this.dir.copy(worldDir));
-        const moveAmount = worldDir.clone().multiplyScalar(delta * this.speed);
-        const moveDis = moveAmount.length();
+        // 한 프레임 이동을 두 번으로 쪼개 간이 CCD
+        const stepCount = 2;
+        for (let i = 0; i < stepCount; i++) {
+            const stepDir = worldDir.clone().normalize();
+            const dis = this.gphysic.CheckDirection(this.player, stepDir, this.speed);
 
-        if (dis.move) {
-            this.player.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
-        } else if (moveDis < dis.distance) {
-            this.player.Pos.add(moveAmount);
+            const step = (delta * this.speed) / stepCount;
+            if (dis.move) {
+                this.player.Pos.add(dis.move.multiplyScalar(step));
+            } else if (dis.distance > 0) {
+                const canMove = Math.min(step, dis.distance - 0.01);
+                if (canMove > 0) this.player.Pos.add(stepDir.multiplyScalar(canMove));
+                else break;
+            } else {
+                // 막힘(-1) 또는 0 → 정지
+                break;
+            }
         }
+
         // if (moveDis < dis.distance) {
         //     this.player.Pos.add(moveAmount);
         // } else if (dis.move) {
         //     this.player.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
         // } else {
         //     // this.player.Meshs.position.y += 1 // 계단 체크
-            // const dis = this.gphysic.CheckDirection(this.player, this.dir.set(v.x, 0, v.z))
-            // if (moveDis > dis.distance) {
-            //     this.player.Pos.add(moveAmount)
-            //     console.log("계단 ", moveAmount)
-            //     // this.player.Meshs.position.x -= movX
-            //     // this.player.Meshs.position.z -= movZ
-            // } else {
-            //     this.player.Meshs.position.y -= 1
-            // }
+        // const dis = this.gphysic.CheckDirection(this.player, this.dir.set(v.x, 0, v.z))
+        // if (moveDis > dis.distance) {
+        //     this.player.Pos.add(moveAmount)
+        //     console.log("계단 ", moveAmount)
+        //     // this.player.Meshs.position.x -= movX
+        //     // this.player.Meshs.position.z -= movZ
+        // } else {
+        //     this.player.Meshs.position.y -= 1
+        // }
         // }
         return this
     }
@@ -471,7 +503,7 @@ export class JumpState implements IPlayerAction {
         }
 
         // ✅ 이동 처리 (카메라 기준 방향 적용)
-        const dirdis = this.gphysic.CheckDirection(this.player, this.dir.copy(worldDir));
+        const dirdis = this.gphysic.CheckDirection(this.player, this.dir.copy(worldDir), this.speed);
         const moveAmount = worldDir.clone().multiplyScalar(delta * this.speed);
         const moveDis = moveAmount.length();
 
@@ -512,11 +544,11 @@ export class SleepingIdleState extends State implements IPlayerAction {
         console.log("Idle!!")
     }
     Uninit(): void {
-        
+
     }
     Update(): IPlayerAction {
         const d = this.DefaultCheck()
-        if(d != undefined) return d
+        if (d != undefined) return d
 
         const checkGravity = this.CheckGravity()
         if (checkGravity != undefined) return checkGravity

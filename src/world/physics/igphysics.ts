@@ -13,7 +13,7 @@ export interface IGPhysic {
     add(...models: IPhysicsObject[]): void
     GetObjects(): THREE.Object3D[]
     Check(obj: IPhysicsObject): boolean
-    CheckDirection(obj: IPhysicsObject, dir: THREE.Vector3): ObjectInfo 
+    CheckDirection(obj: IPhysicsObject, dir: THREE.Vector3, number: number): ObjectInfo 
     CheckDown(obj: IPhysicsObject): number
     CheckBoxs(obj: IPhysicsObject): boolean
     CheckBox(pos: THREE.Vector3, box: THREE.Box3): boolean
