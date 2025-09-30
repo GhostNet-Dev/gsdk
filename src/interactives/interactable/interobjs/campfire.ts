@@ -371,7 +371,7 @@ export class ToonCampfire {
       glowAlpha: 0.46,
       triangles: { max: 160, count: 150, rise: 1.8, curl: 0.22, alpha: 0.78 },
       smoke: { enabled: true, alpha: 0.34 },
-      light: { enabled: true, color: 0xffb15a, intensity: 1.5, distance: 10, decay: 2.0, flicker: true },
+      light: { enabled: true, color: 0xffb15a, intensity: 2.5, distance: 20, decay: 0.5, flicker: true },
       fire: { enabled: true, amount: 1, transitionSec: 0.35 },
     };
     // merge

@@ -1,4 +1,4 @@
-// DayNightRig.ts
+// DayNightRig.ts — Sky/Light hard sync v2.2 (fix: skyTime logic, light access, sun color)
 import * as THREE from "three";
 import { gui } from "@Glibs/helper/helper";
 import { SkyBoxAllTime } from "./skyboxalltime";
@@ -8,194 +8,266 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 
 export interface DayNightRigOptions {
   debug?: boolean;
-  /** 밤의 어두움 강도 (노출 낮춤량). 1.0이면 기본, 0.4면 밤에 더 어둡게 보임 */
-  nightExposureFactor?: number;  // default 0.55
-  /** 감쇠(스무딩) 계수: 값이 낮을수록 반응 빠름 */
-  damping?: number;              // default 0.15
-  /** 낮 최대/최소 조도 */
-  sunDayIntensity?: number;      // default 1.0
-  sunNightIntensity?: number;    // default 0.08
-  ambDayIntensity?: number;      // default 1.0
-  ambNightIntensity?: number;    // default 0.10
-  hemiDayIntensity?: number;     // default 0.8
-  hemiNightIntensity?: number;   // default 0.05
-  fillDayIntensity?: number;     // default 0.25
-  fillNightIntensity?: number;   // default 0.04
-  /** 하루 길이(초) */
-  dayLengthSec?: number;         // default 120
+
+  nightExposureFactor?: number;     // default 0.55
+  damping?: number;                 // default 0.15
+  dayLengthSec?: number;            // default 120
+
+  sunDayIntensity?: number;         // default 1.0
+  sunNightIntensity?: number;       // default 0.08
+  ambDayIntensity?: number;         // default 1.0
+  ambNightIntensity?: number;       // default 0.10
+  hemiDayIntensity?: number;        // default 0.8
+  hemiNightIntensity?: number;      // default 0.05
+  fillDayIntensity?: number;        // default 0.25
+  fillNightIntensity?: number;      // default 0.04
+
+  portions?: Partial<Portions>;
+  lightEase?: "linear" | "smooth";  // default 'linear'
+  auto?: boolean
 }
+
+export interface Portions {
+  dayCore: number;
+  sunset: number;
+  nightCore: number;
+  sunrise: number;
+}
+
+type Range = { start: number; len: number };
 
 export class DayNightRig implements ILoop {
   LoopId: number = 0;
-  private _t = 0.0;         // 현재 시간 (0..1)
-  private _targetT = 0.0;   // 목표 시간 (0..1)
+
+  private _t = 0.0;
+  private _targetT = 0.0;
   private _exposure = 1.0;
+
+  private P: Portions;
+  private ranges!: { day: Range; sunset: Range; night: Range; sunrise: Range; };
 
   constructor(
     private eventCtrl: IEventController,
     private sky: SkyBoxAllTime,
-    private lights: DefaultLights,             // DefaultLights는 DirectionalLight를 상속
+    private lights: DefaultLights,
     private renderer: THREE.WebGLRenderer,
     private opts: DayNightRigOptions = {}
   ) {
     const o = this.opts;
     o.nightExposureFactor ??= 0.55;
     o.damping ??= 0.15;
-
-    o.sunDayIntensity ??= 1.0;
-    o.sunNightIntensity ??= 0.08;
-    o.ambDayIntensity ??= 1.0;
-    o.ambNightIntensity ??= 0.10;
-    o.hemiDayIntensity ??= 0.8;
-    o.hemiNightIntensity ??= 0.05;
-    o.fillDayIntensity ??= 0.25;
-    o.fillNightIntensity ??= 0.04;
     o.dayLengthSec ??= 120;
+
+    o.sunDayIntensity ??= 1.5;
+    o.sunNightIntensity ??= 0.08;
+    o.ambDayIntensity ??= 1.2;
+    o.ambNightIntensity ??= 0.10;
+    o.hemiDayIntensity ??= 1.0;
+    o.hemiNightIntensity ??= 0.05;
+    o.fillDayIntensity ??= 0.35;
+    o.fillNightIntensity ??= 0.04;
+    o.lightEase ??= "linear";
+    o.auto ??= true;
+
+    this.P = normalizePortions({
+      dayCore: o.portions?.dayCore ?? 0.40,
+      sunset: o.portions?.sunset ?? 0.10,
+      nightCore: o.portions?.nightCore ?? 0.40,
+      sunrise: o.portions?.sunrise ?? 0.10,
+    });
+    this.recomputeRanges();
 
     if (o.debug) {
       const f = gui.addFolder("DayNight");
       f.add(this, "timeOfDay", 0, 1, 0.001).name("timeOfDay");
+
+      const pf = f.addFolder("Portions (sum=1)");
+      const proxy = { ...this.P };
+      pf.add(proxy, "dayCore", 0.0, 1.0, 0.001).onChange((v: number) => this.setPortion("dayCore", v));
+      pf.add(proxy, "sunset", 0.0, 1.0, 0.001).onChange((v: number) => this.setPortion("sunset", v));
+      pf.add(proxy, "nightCore", 0.0, 1.0, 0.001).onChange((v: number) => this.setPortion("nightCore", v));
+      pf.add(proxy, "sunrise", 0.0, 1.0, 0.001).onChange((v: number) => this.setPortion("sunrise", v));
+
+      f.add(this.opts, "lightEase", ["linear", "smooth"]).name("Light Ease");
     }
 
-    // 초기 적용: 정오(밝은 낮)
-    this.applyNow(0.0);
-
-    // 루프 등록
-    this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
+    this.applyNow(0.25); // Start at morning
+    if (o.auto) this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
   }
 
-  /** 외부에서 시간 지정 (0=낮 → 0.5=노을 → 1=밤) */
-  set timeOfDay(v: number) {
-    this._targetT = wrap01(v);
+  private setPortion(key: keyof Portions, value: number) {
+    this.P = normalizePortions({ ...this.P, [key]: value });
+    this.recomputeRanges();
   }
+
+  set timeOfDay(v: number) { this._targetT = wrap01(v); }
   get timeOfDay() { return this._targetT; }
 
-  /** 즉시 반영하고 싶을 때 */
   applyNow(v: number) {
     this._t = wrap01(v);
     this._targetT = this._t;
     this.apply(this._t, true);
   }
 
-  /** 매 프레임 호출 */
   update(dt: number) {
-    // 자동 진행: 목표 시간(t_target)을 원형 누적
-    const dayLen = this.opts.dayLengthSec!;
-    const inc = (dt / dayLen) % 1;
+    const inc = (dt / this.opts.dayLengthSec!) % 1;
     this._targetT = wrap01(this._targetT + inc);
 
-    // 랩 보간 (가장 짧은 원호)
     const k = this.opts.damping!;
-    const delta = shortestWrapDelta(this._t, this._targetT); // [-0.5, +0.5]
+    const delta = shortestWrapDelta(this._t, this._targetT);
     const smoothing = 1 - Math.pow(1 - k, Math.max(dt * 60, 1));
     this._t = wrap01(this._t + delta * smoothing);
 
     this.apply(this._t, false);
   }
 
-  /** 내부 적용 로직 */
+  // DayNightRig.ts 파일 내의 apply 함수만 이 코드로 교체하세요.
+
   private apply(t: number, immediate: boolean) {
-    // 하늘 셰이더 갱신
-    this.sky.setTimeOfDay(t);
+    // 1) skyTime & 진행도
+    const dPos = segmentPos(t, this.ranges.day.start, this.ranges.day.len);
+    const suPos = segmentPos(t, this.ranges.sunset.start, this.ranges.sunset.len);
+    const nPos = segmentPos(t, this.ranges.night.start, this.ranges.night.len);
+    const srPos = segmentPos(t, this.ranges.sunrise.start, this.ranges.sunrise.len);
 
-    // ---- 컬러 팔레트(웜톤) ----
-    const daySunColor   = new THREE.Color(0xfff2e0); // 약간 웜톤
-    const sunsetSunA    = new THREE.Color(0xff8a33); // 오렌지
-    const sunsetSunB    = new THREE.Color(0xaa4488); // 퍼플 기
-    const nightSunColor = new THREE.Color(0x224466); // 밤 푸른기(약한)
+    let skyTime = 0.0;
+    let nightness = 0.0;
 
-    // 일몰/일출 펄스 (원형)
-    // - 일몰 중심: 0.525 (대략 0.35~0.70의 중간)
-    // - 일출 중심: 0.025 (랩 경계: 0.95~0.10)
-    const sunsetSpan  = wrapPulse(t, 0.525, 0.35); // width = 0.35
-    const sunriseSpan = wrapPulse(t, 0.025, 0.25); // width = 0.25
+    if (dPos >= 0) {
+      // 낮
+      skyTime = 0.0;
+      nightness = 0.0;
+    } else if (suPos >= 0) {
+      // 석양: skyTime 0.0 -> 0.5 (가장 붉은 노을)
+      const progress = suPos / this.ranges.sunset.len;
+      skyTime = 0.5 * progress;
+      nightness = ease(noneOrSmooth(this.opts.lightEase!), progress);
+    } else if (nPos >= 0) {
+      // [수정됨] 밤: skyTime 0.5 -> 1.0 (붉은 노을이 어두운 밤으로)
+      const progress = nPos / this.ranges.night.len;
+      skyTime = 0.5 + 0.5 * progress;
+      nightness = 1.0; // 밤 시간 동안 조명은 계속 어두운 상태
+    } else if (srPos >= 0) {
+      // 일출: skyTime 1.0 -> 0.0
+      const progress = srPos / this.ranges.sunrise.len;
+      skyTime = 1.0 - progress;
+      nightness = 1.0 - ease(noneOrSmooth(this.opts.lightEase!), progress);
+    }
 
-    const sunsetColor  = daySunColor.clone().lerp(sunsetSunA, sunsetSpan)
-                                    .lerp(sunsetSunB, sunsetSpan * 0.35);
-    const sunriseColor = daySunColor.clone().lerp(sunsetSunA, sunriseSpan * 0.6);
+    this.sky.setTimeOfDay(skyTime);
 
-    // 최종 Sun 색 (낮→일출/일몰 강조→밤)
-    const sunColor = daySunColor.clone()
-      .lerp(sunriseColor, sunriseSpan)
-      .lerp(sunsetColor,  sunsetSpan)
-      .lerp(nightSunColor, smoothstep(0.60, 1.00, nightness(t)));
+    // 2) 조명 색/강도 (이하 로직은 변경할 필요 없습니다)
+    const daySunColor = new THREE.Color(0xfff2e0);
+    const sunsetSunA = new THREE.Color(0xff8a33); // Orange
+    const sunsetSunB = new THREE.Color(0xaa4488); // Purple hint
+    const nightSunColor = new THREE.Color(0x224466);
 
-    // 세기: 낮(강) → 일출/일몰(중) → 밤(약)
-    const sunI = THREE.MathUtils.lerp(
-      this.opts.sunDayIntensity!,
-      this.opts.sunNightIntensity!,
-      smoothstep(0.45, 1.0, nightness(t))
-    );
+    const sunColor = new THREE.Color();
 
-    // Ambient/Hemisphere/Fill 세기
-    const ambI  = THREE.MathUtils.lerp(this.opts.ambDayIntensity!,  this.opts.ambNightIntensity!,  smoothstep(0.55, 1.0, nightness(t)));
-    const hemiI = THREE.MathUtils.lerp(this.opts.hemiDayIntensity!, this.opts.hemiNightIntensity!, smoothstep(0.55, 1.0, nightness(t)));
-    const fillI = THREE.MathUtils.lerp(this.opts.fillDayIntensity!, this.opts.fillNightIntensity!, smoothstep(0.55, 1.0, nightness(t)));
+    if (dPos >= 0) {
+      sunColor.copy(daySunColor);
+    } else if (suPos >= 0) {
+      const k = ease(noneOrSmooth(this.opts.lightEase!), suPos / this.ranges.sunset.len);
+      sunColor.copy(daySunColor).lerp(sunsetSunA, k).lerp(sunsetSunB, k * 0.35);
+    } else if (nPos >= 0) {
+      sunColor.copy(nightSunColor);
+    } else if (srPos >= 0) {
+      const k = ease(noneOrSmooth(this.opts.lightEase!), srPos / this.ranges.sunrise.len);
+      if (k < 0.5) {
+        sunColor.copy(nightSunColor).lerp(sunsetSunA, k * 2.0);
+      } else {
+        sunColor.copy(sunsetSunA).lerp(daySunColor, (k - 0.5) * 2.0);
+      }
+    }
 
-    // DefaultLights 구성요소
-    const sun  = this.lights as THREE.DirectionalLight;
-    const amb  = this.lights.ambient as THREE.AmbientLight;
+    const sun = this.lights as THREE.DirectionalLight;
+    const amb = this.lights.ambient as THREE.AmbientLight;
     const hemi = this.lights.hemi as THREE.HemisphereLight;
     const fill = this.lights.fill as THREE.DirectionalLight;
 
+    const lerp = THREE.MathUtils.lerp;
+    const sunI = lerp(this.opts.sunDayIntensity!, this.opts.sunNightIntensity!, nightness);
+    const ambI = lerp(this.opts.ambDayIntensity!, this.opts.ambNightIntensity!, nightness);
+    const hemiI = lerp(this.opts.hemiDayIntensity!, this.opts.hemiNightIntensity!, nightness);
+    const fillI = lerp(this.opts.fillDayIntensity!, this.opts.fillNightIntensity!, nightness);
+
     sun.color.copy(sunColor);
-    sun.intensity  = sunI;
-    amb.intensity  = ambI;
+    sun.intensity = sunI;
+    amb.intensity = ambI;
     hemi.intensity = hemiI;
     fill.intensity = fillI;
 
-    // 노출: 밤에 낮춤 (일출 구간도 자연스럽게 상승)
-    const targetExposure = THREE.MathUtils.lerp(
-      1.0,
-      this.opts.nightExposureFactor!,
-      smoothstep(0.60, 1.0, nightness(t))
-    );
-
-    if (immediate) {
-      this._exposure = targetExposure;
-    } else {
-      this._exposure += (targetExposure - this._exposure) * 0.1;
-    }
+    // 3) 노출
+    const targetExposure = lerp(1.0, this.opts.nightExposureFactor!, nightness);
+    if (immediate) this._exposure = targetExposure;
+    else this._exposure += (targetExposure - this._exposure) * 0.2; // Smooth transition
+    this._exposure = THREE.MathUtils.clamp(this._exposure, 0.01, 4.0);
     this.renderer.toneMappingExposure = this._exposure;
+  }
+
+  private recomputeRanges() {
+    const Ld = this.P.dayCore;
+    const Lsu = this.P.sunset;
+    const Ln = this.P.nightCore;
+    const Lsr = this.P.sunrise;
+
+    const dayStart = 0.0;
+    const sunsetStart = wrap01(dayStart + Ld);
+    const nightStart = wrap01(sunsetStart + Lsu);
+    const sunriseStart = wrap01(nightStart + Ln);
+
+    this.ranges = {
+      day: { start: dayStart, len: Ld },
+      sunset: { start: sunsetStart, len: Lsu },
+      night: { start: nightStart, len: Ln },
+      sunrise: { start: sunriseStart, len: Lsr },
+    };
   }
 }
 
-/* -------------------- 유틸 -------------------- */
+/* ==================== 유틸 ==================== */
+function normalizePortions(p: Portions): Portions {
+  const sum = p.dayCore + p.sunset + p.nightCore + p.sunrise;
+  const s = sum > 1e-6 ? sum : 1;
+  return {
+    dayCore: p.dayCore / s,
+    sunset: p.sunset / s,
+    nightCore: p.nightCore / s,
+    sunrise: p.sunrise / s,
+  };
+}
 function wrap01(x: number) {
   x = x % 1;
   return x < 0 ? x + 1 : x;
 }
-
-/** 현재→목표의 "가장 짧은" 원형 차이: 결과 범위 [-0.5, +0.5] */
 function shortestWrapDelta(curr: number, target: number) {
   let d = (target - curr) % 1;
   if (d > 0.5) d -= 1;
   if (d < -0.5) d += 1;
   return d;
 }
-
-function smoothstep(a: number, b: number, x: number) {
-  const t = THREE.MathUtils.clamp((x - a) / (b - a), 0, 1);
-  return t * t * (3 - 2 * t);
+/** 랩 구간 내 위치: [start, start+len)면 0..len, 아니면 -1 */
+function segmentPos(t: number, start: number, len: number): number {
+  const end = start + len;
+  if (len <= 1e-6) return -1; //
+  if (end <= 1) { // 구간이 래핑되지 않는 경우
+    if (t >= start && t < end) return t - start;
+  } else { // 구간이 1.0을 넘어 0.0으로 래핑되는 경우
+    const endWrapped = end % 1;
+    if (t >= start || t < endWrapped) {
+      if (t >= start) return t - start;
+      else return t + (1 - start);
+    }
+  }
+  return -1;
 }
-
-/** 원형 기반 "밤 성분" (정오=0, 자정=최대) → 0..1 */
-function nightness(t: number) {
-  // 정오(0)로부터의 원형 거리: 0..0.5
-  const dRaw = Math.abs(t - 0) % 1;
-  const d = Math.min(dRaw, 1 - dRaw);      // 0 at noon, 0.5 at midnight
-  // 0.25 근처부터 밤 성분이 증가 (가중치 곡선)
-  return THREE.MathUtils.clamp((d - 0.25) / (0.5 - 0.25), 0, 1);
+function noneOrSmooth(mode: "linear" | "smooth") {
+  return mode === "smooth" ? "smooth" : "linear";
 }
-
-/** 원형 펄스: center±width 구간에서 smoothstep 모양 가중치(0..1) */
-function wrapPulse(t: number, center: number, width: number) {
-  // 원형 거리
-  let d = Math.abs(t - center) % 1;
-  d = Math.min(d, 1 - d);
-  if (d >= width) return 0;
-  const x = 1 - (d / width); // 0..1
-  return x * x * (3 - 2 * x);
+function ease(mode: "linear" | "smooth", x: number) {
+  x = THREE.MathUtils.clamp(x, 0, 1);
+  if (mode === "linear") return x;
+  return x * x * (3 - 2 * x); // smoothstep
 }
 
 export default DayNightRig;
