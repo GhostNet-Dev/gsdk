@@ -49,10 +49,21 @@ export enum EventTypes {
     BrickInfo = "bsize",
     TerrainInfo = "tsize",
 
+    // Battle
     Attack = "attack",
     AreaOfEffect = "AOE",
     UpdateBuff = "updatebuff",
     RemoveBuff = "removebuff",
+    // player와 상호작용하는 객체 Attackable, Interatable
+    AddInteractive = "addinter",
+    DelInteractive = "delinter",
+    // 상호작용에 의해 Player 모드 변경 
+    ChangePlayerMode = "chgplayermod",
+    // player와 상호작용하는 객체 interatable
+    CheckInteraction = "checkinter",
+    DoInteraction = "dointer",
+    ActiveInteraction = "actinter",
+
 
     SceneClear = "clear",
     Reload = "reload",
@@ -74,18 +85,6 @@ export enum EventTypes {
     Toast = "toast",
     Spinner = "spin",
     DebugOut = "debugout",
-
-    // player와 상호작용하는 객체 Attackable, Interatable
-    AddInteractive = "addinter",
-    DelInteractive = "delinter",
-
-    // player와 상호작용하는 객체 interatable
-    CheckInteraction = "checkinter",
-    DoInteraction = "dointer",
-    ActiveInteraction = "actinter",
-
-    // 상호작용에 의해 Player 모드 변경 
-    ChangePlayerMode = "chgplayermod",
 
     // Quest Event
     QuestStateChanged = "queststate",
@@ -113,17 +112,20 @@ export enum EventTypes {
     RegisterLoadingItems = "regloaditems",
     ShowProgress = "showprogress",
 
+    // Sounds
     RegisterSound = "sound",
     RegisterSoundListener = "soundlis",
     PlaySound = "soundplay",
     PlayBGM = "soundbgm",
     StopBGM = "stopbgm",
     AllStopBGM = "allstopbgm",
+    // Environment
+    DayNightCtrl = "daynight",
     
     // VFX
     GlobalEffect = "globaleffect",
     
-    // Actor를 제어하는 함수들
+    // Interactor를 제어하는 함수들
     CampfireCtrl = "campfire",
     CampfireInteract = "campfireinter",
     DarkParticle = "darkparticle",

@@ -93,6 +93,10 @@ export class DayNightRig implements ILoop {
 
     this.applyNow(0.25); // Start at morning
     if (o.auto) this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
+    this.eventCtrl.RegisterEventListener(EventTypes.DayNightCtrl, ({ v = 0, auto = false } = {}) => {
+      this.applyNow(v)
+      if (auto) this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
+    })
   }
 
   private setPortion(key: keyof Portions, value: number) {
