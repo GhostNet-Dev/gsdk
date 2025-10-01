@@ -20,7 +20,7 @@ export const itemDefs = {
     assetKey: Char.ItemsBat,
     level: "common",
     stackable: false,
-    binding: true,
+    binding: true, autoAttack: true,
     stats: { "damageMin": 3, "damageMax": 5, "speed": 1, "attackRange": 2 },
     actions: [ActionDefs.FireFlame],
   },
