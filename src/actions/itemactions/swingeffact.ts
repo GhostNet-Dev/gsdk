@@ -17,6 +17,14 @@ export default class SwingEffectAction implements IActionComponent, ILoop {
 
     apply(target: any) {
     }
+    trigger(target: IActionUser, triggerType: TriggerType, context?: ActionContext | undefined): void {
+        if(triggerType === "onUse") {
+            this.trail!.startTrail()
+
+        } else if(triggerType === "onUnuse") {
+            this.trail!.stopTrail()
+        }
+    }
     activate(target: IActionUser, context?: ActionContext | undefined): void {
         const obj = target.objs
         if (!obj) return
@@ -25,12 +33,10 @@ export default class SwingEffectAction implements IActionComponent, ILoop {
 
         if(!this.trail)
             this.trail = new WeaponTrail(this.scene, objA, objB)
-        this.trail.startTrail()
         this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         console.log("Swing Effect Activated")
     }
     deactivate(target: IActionUser, context?: ActionContext | undefined): void {
-        this.trail!.stopTrail()
         this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
         console.log("Swing Effect Deactivated")
     }

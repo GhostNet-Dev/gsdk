@@ -10,8 +10,10 @@ import { FluffyAction } from "./itemactions/fluffyact";
 import SwingEffectAction from "./itemactions/swingeffact";
 import { DarkAction } from "./visualactions/darkact";
 import { StunStarsAction } from "./visualactions/stunstar";
+import { FireAction } from "./visualactions/fireact";
+import { Camera } from "@Glibs/systems/camera/camera";
 
-export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scene) {
+export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scene, camera: Camera) {
     ActionRegistry.register("statBoost", def => new StatBoostAction(def.stats))
     ActionRegistry.register("fireball", def => new FireballAction())
     ActionRegistry.register("casing", def => new BulletCasingAct(eventCtrl, scene, def.socket))
@@ -24,5 +26,6 @@ export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scen
     ActionRegistry.register("swing", def => new SwingEffectAction(eventCtrl, scene, def.socketA, def.socketB, ))
     ActionRegistry.register("darkparticle", def => new DarkAction(eventCtrl, scene))
     ActionRegistry.register("stunstars", def => new StunStarsAction(eventCtrl, scene))
+    ActionRegistry.register("fireflame", def => new FireAction(eventCtrl, scene, camera))
 }
 

@@ -22,14 +22,7 @@ export const itemDefs = {
     stackable: false,
     binding: true,
     stats: { "damageMin": 3, "damageMax": 5, "speed": 1, "attackRange": 2 },
-    actions: [
-      {
-        "type": "statBoost",
-        "stats": {
-          "attack": 2
-        }
-      }
-    ],
+    actions: [ActionDefs.FireFlame],
   },
   Sword: {
     id: "Sword",

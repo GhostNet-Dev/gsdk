@@ -68,7 +68,7 @@ export abstract class AttackState extends State implements IPlayerAction {
         })
         this.keytimeout = []
         const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
-        if (handItem) (handItem as Item).deactivate()
+        if (handItem) (handItem as Item).trigger("onUnuse")
         this.player.releaseDashsedCircle()
     }
     autoDirection() {

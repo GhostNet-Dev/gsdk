@@ -35,7 +35,7 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
             this.player.ChangeAction(anim, this.attackSpeed)
             if (handItem.AutoAttack) this.autoDirection();
 
-            (handItem as Item).activate()
+            (handItem as Item).trigger("onUse")
             if (handItem.Sound) this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, handItem.Mesh, handItem.Sound)
         }
         

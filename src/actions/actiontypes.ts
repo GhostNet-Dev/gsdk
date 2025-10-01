@@ -32,7 +32,7 @@ export type TriggerType =
   | "onEnterArea"
   | "onAttackHit"
   | "onAttack"
-  | "onUse"
+  | "onUse" | "onUnuse"
   | "onFire"
   | "onHit"
   | "onActivate"
@@ -101,7 +101,7 @@ export const ActionDefs = {
   },
   Swing: {
     type: "swing",
-    trigger: "onActivate",
+    trigger: "onUse",
     socketA: "localTipAOffset",
     socketB: "localTipBOffset",
   },
@@ -111,6 +111,10 @@ export const ActionDefs = {
   },
   DarkParticle: {
     type: "darkparticle",
+    trigger: "onActivate",
+  },
+  FireFlame: {
+    type: "fireflame",
     trigger: "onActivate",
   },
   StatBoost: {
