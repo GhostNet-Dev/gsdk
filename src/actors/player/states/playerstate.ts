@@ -371,6 +371,11 @@ export class RunState extends State implements IPlayerAction {
             this.Uninit()
             return d
         }
+        const checkGravity = this.CheckGravity()
+        if (checkGravity != undefined) {
+            this.Uninit()
+            return checkGravity
+        }
 
         this.CheckInteraction()
 
@@ -404,22 +409,40 @@ export class RunState extends State implements IPlayerAction {
         // ✅ 이동 처리
         // 한 프레임 이동을 두 번으로 쪼개 간이 CCD
         const stepCount = 2;
+        const EPS = 1e-6;
+
         for (let i = 0; i < stepCount; i++) {
             const stepDir = worldDir.clone().normalize();
             const dis = this.gphysic.CheckDirection(this.player, stepDir, this.speed);
-
             const step = (delta * this.speed) / stepCount;
-            if (dis.move) {
-                this.player.Pos.add(dis.move.multiplyScalar(step));
-            } else if (dis.distance > 0) {
+
+            let moved = false;
+
+            // --- 1) 수평(XZ) 이동: distance 기반 ---
+            // stepDir에서 XZ만 추출해 정규화
+            const xz = new THREE.Vector3(stepDir.x, 0, stepDir.z);
+            const xzLen = xz.length();
+            if (dis.distance > 0 && xzLen > EPS) {
+                xz.divideScalar(xzLen); // 정규화
                 const canMove = Math.min(step, dis.distance - 0.01);
-                if (canMove > 0) this.player.Pos.add(stepDir.multiplyScalar(canMove));
-                else break;
-            } else {
-                // 막힘(-1) 또는 0 → 정지
-                break;
+                if (canMove > 0) {
+                    this.player.Pos.add(xz.multiplyScalar(canMove));
+                    moved = true;
+                }
             }
+
+            // --- 2) 수직(Y) 이동: move.y 기반 ---
+            if (dis.move && Math.abs(dis.move.y) > EPS) {
+                // dis.move는 정규화된 y-only 벡터(위/아래 부호만 사용)
+                const yStep = Math.sign(dis.move.y) * step;
+                this.player.Pos.y += yStep;
+                moved = true;
+            }
+
+            // 아무 이동도 못했으면 중단
+            if (!moved) break;
         }
+
 
         // if (moveDis < dis.distance) {
         //     this.player.Pos.add(moveAmount);

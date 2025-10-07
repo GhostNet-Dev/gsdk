@@ -124,7 +124,7 @@ export default class OptPhysics implements IGPhysic {
     checkRayBox(obj: IPhysicsObject, dir: THREE.Vector3, speed: number = 0) {
         // ✅ 이동 방향은 반드시 외부에서 받은 dir을 사용
         const rayDir = dir.clone().normalize();
-        if (rayDir.lengthSq() === 0) return { obj: undefined, distance: this.raycast.far };
+        if (rayDir.lengthSq() === 0) return { obj: undefined, distance: this.raycast.far, debug: "lengthSq" };
 
         // ✅ 레이 시작점은 "복사본"에서 보정 (누적 금지)
         const tmpCenter = new THREE.Vector3();
@@ -138,13 +138,13 @@ export default class OptPhysics implements IGPhysic {
         // ✅ 이동 1프레임 거리 + 여유 거리만큼 ray 길이 동적 설정(터널링 방지)
         const moveStep = (this.timeScale || 1) * (speed ?? 0);  // obj.Speed가 없다면 외부 주입
         const radius = Math.max(obj.Size.x, obj.Size.z) * 0.5;      // 방향 무관 최소 반경
-        const margin = 0.05;
+        const margin = 0.1;
         const dynamicFar = Math.max(this.raycast.far, moveStep + radius + 0.5);
         this.raycast.far = dynamicFar;
 
         // ✅ 브로드페이즈: AABB 후보만 (raycastOn 우선)
         const candidates = this.octreenode!.getCandidatesInBox(obj.Box, { origin, dir: rayDir, maxDist: dynamicFar + radius });
-        if (candidates.length === 0) return { obj: undefined, distance: this.raycast.far };
+        if (candidates.length === 0) return { obj: undefined, distance: this.raycast.far, debug: "candidates.length 0" };
 
         const rayObjs = candidates.filter(c => c.raycastOn).map(c => c.object3d);
 
@@ -167,14 +167,14 @@ export default class OptPhysics implements IGPhysic {
                     if (d < minPen) { minPen = d; hitObj = c.object3d; }
                 }
             }
-            if (hitObj) return { obj: hitObj, distance: Math.max(minPen, -1) };
-            return { obj: undefined, distance: this.raycast.far };
+            if (hitObj) return { obj: hitObj, distance: Math.max(minPen, -1), debug: "AABB hit" };
+            return { obj: undefined, distance: this.raycast.far, debug: "AABB no hit" };
         }
 
         // ✅ 내로페이즈: Raycast
         this.raycast.set(origin, rayDir);
         const hits = this.raycast.intersectObjects(rayObjs, true);
-        if (hits.length === 0) return { obj: undefined, distance: this.raycast.far };
+        if (hits.length === 0) return { obj: undefined, distance: this.raycast.far, debug: "ray no hit" };
 
         // 가장 가까운 히트
         const hit = hits[0];
@@ -187,17 +187,39 @@ export default class OptPhysics implements IGPhysic {
         // ✅ 충돌 여유: 중심→히트까지 거리 - 캐릭터 반경
         const raw = hit.distance - (radius + margin);
 
-        // ✅ 경사면 처리: 너무 가파르면 이동 불가, 아니면 면에 투영한 이동벡터 제공
+        // ✅ 경사면/수직면 처리: 너무 가파르면 정지, 아니면 "세로 보정만" 반환
         let adjustedMove: THREE.Vector3 | undefined;
-        const slopeAngleDeg = Math.acos(THREE.MathUtils.clamp(n.dot(new THREE.Vector3(0, 1, 0)), -1, 1)) * 180 / Math.PI;
+        const up = new THREE.Vector3(0, 1, 0);
+        const slopeAngleDeg = Math.acos(THREE.MathUtils.clamp(n.dot(up), -1, 1)) * 180 / Math.PI;
         const maxSlope = 45; // 필요시 옵션화
-        if (slopeAngleDeg > maxSlope) {
-            return { obj: hit.object, distance: -1 };
+
+        if (slopeAngleDeg > maxSlope && raw <= 0) {
+            // 벽에 가까운 면(가파른 각도)이고 파고들었다면 이동 불가
+            return { obj: hit.object, distance: -1, debug: "slope" };
         } else {
-            adjustedMove = rayDir.clone().projectOnPlane(n).normalize();
+            // 1) 원래는 면에 "미끄러지는" 방향: t
+            const t = rayDir.clone().projectOnPlane(n);
+            if (t.lengthSq() > 1e-8) t.normalize();
+
+            // 2) 하지만 옆(XZ)으로는 이동 원하지 않으므로 '세로 성분'만 취함
+            //    - 일반 경사면: t.y 를 사용 (경사에 따른 오르/내리막)
+            //    - 수직/수평 특이면 폴백도 제공
+            let yOnly = new THREE.Vector3(0, t.y, 0);
+
+            // 폴백 A: 수평면(바닥/천장)에서 t.y≈0 이면 입력된 ray의 y 성분을 사용
+            if (yOnly.lengthSq() < 1e-8) {
+                yOnly.set(0, rayDir.y, 0);
+            }
+
+            // 폴백 B: 거의 수직 벽(n.y≈0)에서는 y 보정이 사실상 0 → 그대로 0 유지
+            // (원치 않는 옆 미끄러짐을 막기 위해 XZ는 끝까지 0을 유지)
+
+            // 정규화(상위 코드에서 delta*speed로 스케일링하므로 방향만 넘김)
+            if (yOnly.lengthSq() > 1e-8) yOnly.normalize();
+            adjustedMove = yOnly;
         }
 
-        return { obj: hit.object, distance: raw < 0 ? -1 : raw, move: adjustedMove };
+        return { obj: hit.object, distance: raw < 0 ? -1 : raw, move: adjustedMove, debug: "ray hit" };
     }
 
     CheckBox(pos: THREE.Vector3, box: THREE.Box3): boolean {
@@ -287,7 +309,7 @@ class PlaneHeightMap {
         dir: THREE.Vector3,
         maxDist = 2,
         slopeLimit = 45
-    ): { distance: number; move?: THREE.Vector3 } {
+    ): { distance: number; move?: THREE.Vector3; debug?: string } {
         const center = new THREE.Vector3();
         obj.Box.getCenter(center);
         center.y -= obj.Size.y / 2 - 0.2;
@@ -302,13 +324,13 @@ class PlaneHeightMap {
 
         const dh = h2 - h1;
         const angle = Math.atan2(dh, maxDist) * THREE.MathUtils.RAD2DEG;
-        if (Math.abs(angle) > slopeLimit) return { distance: -1 };
+        if (Math.abs(angle) > slopeLimit) return { distance: -1 , debug: "dir-slopelimit"};
 
         const grad = dh / maxDist;
         const normal = new THREE.Vector3(-fdir.x * grad, 1, -fdir.z * grad).normalize();
         const move = dir.clone().projectOnPlane(normal).normalize();
 
         const dist = maxDist - obj.Size.z / 2;
-        return { distance: dist, move };
+        return { distance: dist, move, debug: "dir-move" };
     }
 }
