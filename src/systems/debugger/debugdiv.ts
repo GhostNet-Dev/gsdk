@@ -4,6 +4,7 @@ import { EventTypes } from "@Glibs/types/globaltypes"
 export class DebugDiv {
     dom = document.createElement("div")
     textQueue: string[] = []
+    valueView = new Map<string, string>()
     constructor(private eventCtrl: IEventController) {
         this.dom.classList.add("debugdiv")
         Object.assign(this.dom.style, {
@@ -15,11 +16,21 @@ export class DebugDiv {
             opacity: "0.5",
         })
         document.body.appendChild(this.dom)
+        this.eventCtrl.RegisterEventListener(EventTypes.DebugVar, (name, value: string) => {
+            this.valueView.set(name, value)
+            this.updateText()
+        })
         this.eventCtrl.RegisterEventListener(EventTypes.DebugOut, (msg: string) => {
             if (this.textQueue.length > 4) this.textQueue.shift()
             this.textQueue.push(msg)
-            this.dom.style.display = "block"
-            this.dom.innerText = this.textQueue.join("\n")
+            this.updateText()
         })
+    }
+    updateText() {
+        let text = ""
+        for (const [k, v] of this.valueView) text += `${k}: ${v}\n`
+        text = text + "\n" + this.textQueue.join("\n")
+        this.dom.style.display = "block"
+        this.dom.innerText = text
     }
 }

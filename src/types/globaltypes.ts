@@ -85,6 +85,7 @@ export enum EventTypes {
     Toast = "toast",
     Spinner = "spin",
     DebugOut = "debugout",
+    DebugVar = "debugv",
 
     // Quest Event
     QuestStateChanged = "queststate",
