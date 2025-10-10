@@ -33,4 +33,17 @@ export class DebugDiv {
         this.dom.style.display = "block"
         this.dom.innerText = text
     }
+
+    lastTime = 0
+    frameCnt = 0
+    defaultFps() {
+        const now = performance.now()
+        if(now - this.lastTime < 1000) {
+            this.frameCnt++
+        } else {
+            this.lastTime = now
+            this.eventCtrl.SendEventMessage(EventTypes.DebugVar, "fps", this.frameCnt.toString())
+            this.frameCnt = 0
+        }
+    }
 }
