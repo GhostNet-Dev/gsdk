@@ -74,6 +74,9 @@ export class QuestManager {
             }
         }
     }
+    public getActiveQuests() {
+        return this.activeQuests;
+    }
 
     /**
      * 외부에서 새로운 퀘스트 정의를 추가합니다. (예: DLC, 지역 로딩)

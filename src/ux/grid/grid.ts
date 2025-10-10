@@ -53,4 +53,22 @@ export class Grid extends GUX {
         col.appendChild(dom)
         this.Dom.appendChild(col)
     }
+    dispose(): void {
+        // 1. 모든 자식 UI 요소의 dispose 함수를 호출합니다.
+        this.child.forEach(element => {
+            // 자식에게 dispose 함수가 있는지 확인하고 호출합니다.
+            if (typeof (element.ui as any).dispose === 'function') {
+                (element.ui as any).dispose();
+            }
+        });
+
+        // 2. 자식 배열을 비워 참조를 제거합니다.
+        this.child = [];
+
+        // 3. Grid가 생성한 DOM 내부를 비웁니다.
+        this.Dom.innerHTML = '';
+
+        // 4. Grid의 DOM 요소 자체를 부모로부터 제거합니다.
+        // this.Dom.parentElement?.removeChild(this.Dom);
+    }
 }
