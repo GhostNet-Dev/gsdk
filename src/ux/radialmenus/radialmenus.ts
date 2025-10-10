@@ -369,6 +369,11 @@ export class RadialMenuUI implements ILoop {
   mount(parent: HTMLElement) {
     if (this.root.parentElement !== parent) parent.appendChild(this.root);
   }
+  unmount() {
+    if (this.root.parentElement) {
+      this.root.parentElement.removeChild(this.root);
+    }
+  }
 
   /** Update per-frame (call in your game loop). */
   update() {
