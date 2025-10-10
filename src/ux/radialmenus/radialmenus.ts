@@ -19,6 +19,21 @@ export type IconDef =
   | { type: 'webfontFA'; value: string } // e.g. "fa-solid fa-shield-halved"
   | { type: 'webfontMS'; value: string } // e.g. "explore"
 
+/** 아이콘 + 콜백/메타 확장 정의 */
+export type MenuItemDef =
+  | IconDef
+  | {
+      icon: IconDef;
+      id?: string;
+      ariaLabel?: string;
+      hotkey?: string;                 // 예: "KeyQ", "Digit1", "Space"
+      disabled?: boolean;
+      keepOpen?: boolean;              // 선택 후 닫지 않기
+      onSelect?: (def: IconDef, index: number) => void;
+      onFocus?: (def: IconDef, index: number) => void;
+      data?: any;                      // 임의 확장 데이터
+    };
+
 export interface RadialMenuOptions {
   // appearance & layout
   radius: number;           // final radius (px)
@@ -46,7 +61,7 @@ export interface RadialMenuOptions {
   parent?: HTMLElement;     // container to mount overlay into (default: document.body)
   injectStyles: boolean;    // injects <style> once
   pollGamepad: boolean;     // enable gamepad navigation poll in update()
-  onSelect?: (def: IconDef, index: number) => void;
+  onSelect?: (def: IconDef, index: number) => void; // 전역 훅 (아이템 onSelect 이후 호출)
 }
 
 type ThemeVars = {
@@ -187,6 +202,7 @@ const CSS_TEXT = `
 .rm-item:active{transform:translate(-50%,-50%) scale(0.96)}
 .rm-item:focus-visible{box-shadow:0 0 0 2px color-mix(in srgb, var(--item-fg) 60%, transparent), var(--item-shadow)}
 .rm-item.rm-focused{transform:translate(-50%,-50%) scale(1.08)}
+.rm-item[aria-disabled="true"]{opacity:.5;filter:saturate(.7);cursor:not-allowed;pointer-events:none}
 .rm-ic{display:inline-grid;place-items:center}
 .rm-emoji,.rm-text{font-size:36px;line-height:1;color:var(--item-fg)}
 .rm-img{width:70%;height:70%;object-fit:contain;display:block;pointer-events:none;-webkit-user-drag:none;user-drag:none}
@@ -198,6 +214,11 @@ const CSS_TEXT = `
 .rm-shape-square .rm-item{border-radius:8px}
 .rm-shape-hex .rm-item{border-radius:0;clip-path:polygon(25% 6.7%,75% 6.7%,100% 50%,75% 93.3%,25% 93.3%,0% 50%)}
 .rm-animating .rm-item{pointer-events:none}
+
+/* ✅ 안전 대안: 플래시를 클래스 애니메이션으로, 닫힘 강제 투명 처리 */
+@keyframes rm-flash { 0%{opacity:1} 50%{opacity:.5} 100%{opacity:1} }
+.rm-flashing { animation: rm-flash .22s ease-out; }
+.rm-closing .rm-item { opacity: 0 !important; }
 `.trim();
 
 function injectStylesOnce() {
@@ -291,6 +312,22 @@ function createIconNode(def: IconDef, baseSize: number, fontScale: number): HTML
   return wrap;
 }
 
+/** 내부 표준화된 아이템 엔트리 */
+type ItemEntry = {
+  el: HTMLButtonElement;
+  def: IconDef;
+  meta: {
+    id?: string;
+    ariaLabel?: string;
+    hotkey?: string;
+    disabled?: boolean;
+    keepOpen?: boolean;
+    onSelect?: (def: IconDef, index: number) => void;
+    onFocus?: (def: IconDef, index: number) => void;
+    data?: any;
+  };
+};
+
 export class RadialMenuUI implements ILoop {
   LoopId: number = 0;
   readonly opts: RadialMenuOptions;
@@ -299,11 +336,10 @@ export class RadialMenuUI implements ILoop {
   readonly ring: HTMLElement;
   readonly ring2: HTMLElement;
 
-  private items: { el: HTMLButtonElement; def: IconDef }[] = [];
+  private items: ItemEntry[] = [];
   private isOpen = false;
   private progress = 0;
   private t0 = 0;
-  private rotBase = 0;
   private focusIndex = 0;
   private lastPadMoveAt = 0;
   private destroyed = false;
@@ -399,7 +435,12 @@ export class RadialMenuUI implements ILoop {
       this.updateRing(r);
       this.layout(r, 0);
       if (this.progress <= 0) {
-        this.radial.classList.remove('open', 'rm-animating');
+        this.radial.classList.remove('open', 'rm-animating', 'rm-closing'); // ✅ 닫힘 상태 해제
+        // 혹시 남은 플래시/투명도 흔적 정리
+        for (const it of this.items) {
+          it.el.classList.remove('rm-flashing');
+          (it.el.style as any).opacity = '0';
+        }
         (this.root.style as any).pointerEvents = 'none';
       }
     }
@@ -445,30 +486,61 @@ export class RadialMenuUI implements ILoop {
   }
 
   // ---------- Public API ----------
-  setItems(iconDefs: IconDef[] | string[]) {
+  /** 아이템 + 콜백 동시 등록 (기존 IconDef[]도 지원) */
+  setItems(defs: (MenuItemDef | string)[]) {
     // cleanup
     for (const it of this.items) it.el.remove();
     this.items.length = 0;
 
-    for (const def of iconDefs as IconDef[]) {
+    const normalized = defs.map<MenuItemDef>(d => typeof d === 'string' || this.isIconDef(d) ? d as IconDef : d as any);
+
+    normalized.forEach((src, idx) => {
+      const icon = (this.isIconDef(src) ? src : src.icon) as IconDef;
+      const meta = this.isIconDef(src)
+        ? { id: undefined, ariaLabel: undefined, hotkey: undefined, disabled: false, keepOpen: false } 
+        : {
+            id: src.id,
+            ariaLabel: src.ariaLabel,
+            hotkey: src.hotkey,
+            disabled: !!src.disabled,
+            keepOpen: !!src.keepOpen,
+            onSelect: src.onSelect,
+            onFocus: src.onFocus,
+            data: src.data
+          };
+
       const el = document.createElement('button');
       el.className = 'rm-item';
       el.tabIndex = -1;
       el.style.width = el.style.height = this.opts.itemSize + 'px';
+      if (meta.ariaLabel) el.setAttribute('aria-label', meta.ariaLabel);
+      if (meta.disabled) el.setAttribute('aria-disabled', 'true');
 
-      const node = createIconNode(def, this.opts.itemSize, this.opts.fontScale);
+      const node = createIconNode(icon, this.opts.itemSize, this.opts.fontScale);
       el.appendChild(node);
 
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         if (this.progress < 1) return;
-        this.flash(el);
-        this.opts.onSelect?.(def, this.items.findIndex(i => i.el === el));
+        if (meta.disabled) return;
+        this.flash(el);                          // ✅ 클래스 기반 플래시
+        meta.onSelect?.(icon, idx);              // 1) 아이템 onSelect
+        this.opts.onSelect?.(icon, idx);         // 2) 전역 onSelect
+        if (!meta.keepOpen) this.close();        // 닫기 → rm-closing 강제 투명 처리
+      });
+
+      el.addEventListener('pointerenter', () => {
+        const i = this.items.findIndex(it => it.el === el);
+        if (i >= 0) {
+          this.focusIndex = i;
+          this.applyFocus(false);
+          meta.onFocus?.(icon, i);
+        }
       });
 
       this.radial.appendChild(el);
-      this.items.push({ el, def });
-    }
+      this.items.push({ el, def: icon, meta });
+    });
 
     this.updateRing(this.opts.radius);
     this.layout(0, 0);
@@ -476,15 +548,41 @@ export class RadialMenuUI implements ILoop {
     this.applyFocus();
   }
 
-  addItem(def: IconDef | string = '🗺️') {
-    const list = this.items.map(i => i.def);
-    list.push(def as IconDef);
+  /** 개별 추가 (아이콘 또는 MenuItemDef) */
+  addItem(def: MenuItemDef | string = '🗺️') {
+    const list = this.getItemDefs();
+    list.push(def as any);
     this.setItems(list);
   }
 
+  /** 마지막 아이템 제거 */
   removeLast() {
     if (this.items.length <= 1) return;
-    this.setItems(this.items.slice(0, -1).map(i => i.def));
+    const list = this.getItemDefs().slice(0, -1);
+    this.setItems(list);
+  }
+
+  /** 특정 인덱스 제거 */
+  removeAt(index: number) {
+    const list = this.getItemDefs();
+    if (index < 0 || index >= list.length) return;
+    list.splice(index, 1);
+    this.setItems(list);
+  }
+
+  /** 특정 인덱스 패치 (enable/disable, hotkey 변경 등) */
+  updateItem(index: number, patch: Partial<Omit<NonNullable<Extract<MenuItemDef, object>>, 'icon'>> & { icon?: IconDef }) {
+    const list = this.getItemDefs();
+    if (index < 0 || index >= list.length) return;
+    let cur = list[index];
+
+    // 아이콘만 있었던 경우를 객체형으로 승격
+    if (typeof cur === 'string' || this.isIconDef(cur)) {
+      cur = { icon: cur as IconDef };
+    }
+    const merged = { ...(cur as any), ...(patch ?? {}) };
+    list[index] = merged;
+    this.setItems(list);
   }
 
   open() {
@@ -492,6 +590,7 @@ export class RadialMenuUI implements ILoop {
     this.isOpen = true;
     this.t0 = performance.now();
     this.progress = 0;
+    this.radial.classList.remove('rm-closing'); // 혹시 이전 상태 잔여 제거
     this.radial.classList.add('open', 'rm-animating');
     (this.root.style as any).pointerEvents = 'auto';
     this.layout(0, this.opts.spinOnOpen);
@@ -513,7 +612,7 @@ export class RadialMenuUI implements ILoop {
     this.isOpen = false;
     this.t0 = performance.now();
     this.progress = 1;
-    this.radial.classList.add('rm-animating');
+    this.radial.classList.add('rm-animating', 'rm-closing'); // ✅ 닫힘 상태 표시 → 강제 투명
   }
 
   updateOptions(patch: Partial<RadialMenuOptions>) {
@@ -526,7 +625,7 @@ export class RadialMenuUI implements ILoop {
 
     // re-measure items if size/fontScale changed
     if (patch.itemSize !== undefined || patch.fontScale !== undefined) {
-      this.setItems(this.items.map(i => i.def));
+      this.setItems(this.getItemDefs());
     } else {
       this.updateRing(this.opts.radius);
       this.layout(this.opts.radius * this.progress, 0);
@@ -574,13 +673,27 @@ export class RadialMenuUI implements ILoop {
       const y = Math.sin(ang) * r;
       const el = this.items[i].el;
       el.style.transform = `translate(-50%,-50%) translate(${x}px,${y}px)`;
+      // 기본: 열릴 때만 보이고, 닫힐 때는 0
       el.style.opacity = r > 0 ? '1' : '0';
+      if (!this.isOpen) el.style.opacity = '0'; // ✅ 초간단 보강: 닫힘 강제 0
     }
   }
 
   private onKey(e: KeyboardEvent) {
+    // 메뉴 열렸을 때만 처리
     if (!this.isOpen || this.progress < 1) return;
+
     const N = this.items.length; if (!N) return;
+
+    // 단축키 매칭
+    const hk = this.items.findIndex(it => !!it.meta.hotkey && e.code === it.meta.hotkey);
+    if (hk >= 0) {
+      e.preventDefault();
+      const target = this.items[hk];
+      if (!target.meta.disabled) target.el.click();
+      return;
+    }
+
     if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' '].includes(e.key)) e.preventDefault();
 
     if (e.key === 'ArrowRight') this.moveFocus(1);
@@ -594,6 +707,9 @@ export class RadialMenuUI implements ILoop {
     const N = this.items.length;
     this.focusIndex = (this.focusIndex + delta + N) % N;
     this.applyFocus(true);
+    // 아이템 onFocus 콜백
+    const it = this.items[this.focusIndex];
+    it.meta.onFocus?.(it.def, this.focusIndex);
   }
 
   private applyFocus(focusEl = false) {
@@ -614,13 +730,33 @@ export class RadialMenuUI implements ILoop {
     return Math.round(rel / step) % N;
   }
 
+  /** ✅ 클래스 기반 플래시: 인라인 opacity 건드리지 않음 */
   private flash(el: HTMLElement) {
-    const dur = 220, t0 = performance.now();
-    const tick = () => {
-      const k = Math.min(1, (performance.now() - t0) / dur);
-      (el.style as any).opacity = String(1 - 0.5 * Math.sin(k * Math.PI));
-      if (k < 1) requestAnimationFrame(tick); else (el.style as any).opacity = '1';
-    };
-    requestAnimationFrame(tick);
+    el.classList.remove('rm-flashing');
+    // 강제 리플로우로 애니메이션 재시작 가능
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    (el as any).offsetWidth;
+    el.classList.add('rm-flashing');
+    // 애니메이션 종료 후 정리(중첩 호출 대비)
+    setTimeout(() => el.classList.remove('rm-flashing'), 240);
+  }
+
+  // ---- helpers ----
+  private isIconDef(d: any): d is IconDef {
+    if (typeof d === 'string') return true;
+    if (d && typeof d === 'object' && 'type' in d && 'value' in d) return true;
+    return false;
+  }
+
+  /** 현재 아이템들을 MenuItemDef 배열 형태로 다시 추출 (상태 보존용) */
+  private getItemDefs(): MenuItemDef[] {
+    return this.items.map<MenuItemDef>(({ def, meta }) => {
+      // 순수 아이콘만 있었고 메타도 없는 경우엔 IconDef로 반환
+      const pure =
+        !meta.id && !meta.ariaLabel && !meta.hotkey && !meta.disabled &&
+        !meta.keepOpen && !meta.onSelect && !meta.onFocus && meta.data === undefined;
+
+      return pure ? def : { icon: def, ...meta };
+    });
   }
 }
