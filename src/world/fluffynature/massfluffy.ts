@@ -8,11 +8,11 @@ import { IPhysicsObject } from "@Glibs/interface/iobject";
 
 /**
  * WindyInstancedVegetation — 안정화 통합본 (Focus-anchored 거리 LOD/culling)
- * - 프러스텀 컬링(클러스터 구체) + 거리 LOD
+ * - 프러스텀 컬링(클러스터 구체) + 앵커 반경 컬링 + 거리 LOD
  * - iRand(인스턴스 고유 난수) + 히스테리시스(경계 떨림 억제)
  * - 조건부 컴팩션: 주기(repackEveryNFrames)/강제 시만 재배열, 그 외엔 부분 갱신
  * - 카메라/포커스 더티 즉시 재계산, aliveCount 로깅(디버그)
- * - 거리 기준 앵커(anchor): camera | focus (기본 focus)
+ * - 거리/컬링 기준 앵커(anchor): camera | focus (기본 focus)
  */
 
 export type TRS = {
@@ -77,8 +77,16 @@ export interface WindyVegetationConfig {
     distanceAnchor?: 'camera' | 'focus';
   };
   culling: {
-    enabled: boolean;   // 프러스텀 컬링
+    enabled: boolean;   // 컬링 스위치
     everyNFrames: number;
+    /** 컬링 기준 모드 */
+    mode?: 'frustum' | 'anchorRange' | 'both';   // default 'both'
+    /** 앵커 반경 컬링: 앵커로부터 이 거리 밖이면 컷(클러스터 반경 고려) */
+    anchorRange?: number;                        // default 60
+    /** 컬링 기준 앵커 선택 */
+    distanceAnchor?: 'camera' | 'focus';         // default 'focus'
+    /** 경계 떨림 억제(이전에 살아있던 클러스터에 여유거리 추가) */
+    cullHysteresis?: number;                     // default 2
   };
   ampDistance: {
     enabled: boolean;
@@ -91,6 +99,8 @@ export interface WindyVegetationConfig {
   hardMode?: {
     compactionEnabled: boolean;       // 유지(옵션), 기본은 조건부 컴팩션으로 동작
     repackEveryNFrames?: number;
+    /** 살아남은 비율이 이 값보다 작으면 즉시 컴팩션 */
+    forceRepackCullRatio?: number; // 기본 0.25 (25%만 살아남으면 강제)
   };
 
   /** 포커스 관련 설정(포커스 미지정 시 사용) */
@@ -149,6 +159,10 @@ const DEFAULT_CONFIG: WindyVegetationConfig = {
   culling: {
     enabled: true,
     everyNFrames: 4,
+    mode: 'both',
+    anchorRange: 60,
+    distanceAnchor: 'focus',
+    cullHysteresis: 2,
   },
   ampDistance: {
     enabled: true,
@@ -160,6 +174,7 @@ const DEFAULT_CONFIG: WindyVegetationConfig = {
   hardMode: {
     compactionEnabled: false,
     repackEveryNFrames: 6, // 컴팩션 주기 기본값
+    forceRepackCullRatio: 0.25,
   },
   focus: {
     defaultDistance: 10,
@@ -318,7 +333,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
     this.forceUpdate = true;
   }
 
-  /** 현재 거리 기준 앵커 포인트(world)를 얻는다 */
+  /** 현재 거리/컬링 기준 앵커 포인트(world)를 얻는다 */
   private getAnchorPoint(out = new THREE.Vector3()): THREE.Vector3 {
     if (this.focusTargetObj) {
       this.focusTargetObj.updateMatrixWorld(true);
@@ -876,10 +891,10 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
   }
 
   /**
-   * 프러스텀 컬링 + 거리 LOD
+   * 프러스텀 컬링 + 앵커 반경 컬링 + 거리 LOD
    * - iRand + 히스테리시스(±hys)로 경계 떨림 억제
    * - 조건부 컴팩션: repackEveryNFrames/강제시에만 재배열, 그 외엔 부분 갱신
-   * - 거리 기준 앵커: camera | focus (기본 focus)
+   * - 거리/컬링 기준 앵커: camera | focus (기본 focus)
    */
   private applyCullLODInPlace(b: Batch, initial: boolean) {
     if (!b || !b.baseMatrices || b.parts.length === 0) return;
@@ -929,27 +944,51 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
 
     let clusterIndex = -1;
 
-    // 거리 앵커(LOD 계산용)
+    // 거리 LOD 앵커(계산용)
     const lodAnchorChoice = (b.cfg.lod.distanceAnchor ?? this.cfg.lod.distanceAnchor) === 'camera' ? 'camera' : 'focus';
     const lodAnchorPos = lodAnchorChoice === 'camera' ? camPos : this.getAnchorPoint(new THREE.Vector3());
+
+    // ⬇ 추가: 컬링 앵커/파라미터
+    const cullingCfg = b.cfg.culling;
+    const cullMode = cullingCfg.mode ?? 'both';
+    const cullAnchorChoice = (cullingCfg.distanceAnchor ?? this.cfg.culling.distanceAnchor ?? 'focus') === 'camera' ? 'camera' : 'focus';
+    const cullAnchorPos = cullAnchorChoice === 'camera' ? camPos : this.getAnchorPoint(new THREE.Vector3());
+    const anchorRange = cullingCfg.anchorRange ?? 60;
+    const cullHys = cullingCfg.cullHysteresis ?? 2;
 
     for (const c of b.clusters) {
       clusterIndex++;
 
-      // 1) 클러스터 프러스텀 컬링(카메라 뷰 기준 유지)
-      let culled = false;
-      if (b.cfg.culling.enabled && frustum) {
-        const centerWorld = c.center.clone().applyMatrix4(groupMW);
-        const radiusWorld = c.radius * sMax * 1.1;
-        const sphere = new THREE.Sphere(centerWorld, radiusWorld);
-        culled = !frustum.intersectsSphere(sphere);
+      // 클러스터 중심/반경 (월드)
+      const centerWorld = c.center.clone().applyMatrix4(groupMW);
+      const radiusWorld = c.radius * sMax * 1.1;
+
+      // 1) 프러스텀 컬링 (옵션)
+      let frustumCulled = false;
+      if ((cullMode === 'frustum' || cullMode === 'both') && cullingCfg.enabled && frustum) {
+        frustumCulled = !frustum.intersectsSphere(new THREE.Sphere(centerWorld, radiusWorld));
       }
 
-      // 2) 거리 LOD 밀도 (앵커 기준)
+      // 2) 앵커 반경 컬링 (옵션)
+      let anchorCulled = false;
+      if ((cullMode === 'anchorRange' || cullMode === 'both') && cullingCfg.enabled) {
+        const distToAnchor = cullAnchorPos.distanceTo(centerWorld);
+        // 이전 프레임에 살아있던 인스턴스가 있었는지
+        let clusterHadAlive = false;
+        for (let j = 0; j < c.count; j++) {
+          if (b.keepMask[c.start + j] === 1) { clusterHadAlive = true; break; }
+        }
+        const effectiveRange = clusterHadAlive ? (anchorRange + cullHys) : anchorRange;
+        // 클러스터 전체가 원 밖에 있는지(반경 고려)
+        anchorCulled = (distToAnchor - radiusWorld) > effectiveRange;
+      }
+
+      const culled = frustumCulled || anchorCulled;
+
+      // 3) 거리 LOD 밀도 (앵커 기준)
       let density = 1.0;
       let d = 0;
       if (b.cfg.lod.enabled && this.camera) {
-        const centerWorld = c.center.clone().applyMatrix4(groupMW);
         d = lodAnchorPos.distanceTo(centerWorld);
         const n = Math.max(0, b.cfg.lod.near);
         const f = Math.max(n + 1e-6, b.cfg.lod.far);
@@ -961,7 +1000,7 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
         density = THREE.MathUtils.clamp(density, 0, 1);
       }
 
-      // 3) 인스턴스 선별 + 히스테리시스
+      // 4) 인스턴스 선별 + 히스테리시스(LOD 밀도 경계 떨림 억제)
       for (let j = 0; j < c.count; j++) {
         const idx = c.start + j;
         const r = iRandAttr.getX(idx); // 고정 난수
@@ -992,7 +1031,8 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
         const shouldSample = initial || (this.frame % dbg.logEveryNFrames === 0);
         if (shouldSample && clusterIndex < dbg.samplesPerBatch) {
           this.dlog(
-            `[cluster] f=${this.frame} idx=${clusterIndex} culled=${culled} ` +
+            `[cluster] f=${this.frame} idx=${clusterIndex} ` +
+            `frustumCulled=${frustumCulled} anchorCulled=${anchorCulled} ` +
             `near=${b.cfg.lod.near.toFixed(1)} far=${b.cfg.lod.far.toFixed(1)} ` +
             `hardFar=${(b.cfg.lod.far * 1.2).toFixed(1)}`
           );
@@ -1021,9 +1061,11 @@ export class WindyInstancedVegetation implements IWorldMapObject, ILoop {
       return;
     }
 
-    // 조건부 컴팩션(주기/강제 시에만)
     const repackN = b.cfg.hardMode?.repackEveryNFrames ?? b.cfg.culling.everyNFrames;
-    const allowRepackNow = initial || this.forceUpdate || (this.frame % Math.max(1, repackN) === 0);
+    const culledRatio = 1 - (aliveCount / b.totalCount);
+    const forceByCull = culledRatio >= (b.cfg.hardMode?.forceRepackCullRatio ?? 0.25);
+    // 조건부 컴팩션(주기/강제 시에만)
+    const allowRepackNow = initial || this.forceUpdate || forceByCull || (this.frame % Math.max(1, repackN) === 0);
 
     if (allowRepackNow) {
       // ----- 컴팩션 -----
