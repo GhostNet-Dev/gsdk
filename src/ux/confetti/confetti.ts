@@ -1,5 +1,6 @@
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { UxLayerIndex } from "../gux";
 
 
 export default class Confetti {
@@ -22,6 +23,7 @@ export default class Confetti {
 
         this.el = document.createElement("div");
         this.el.classList.add("js-container", "_container")
+        this.el.style.zIndex = UxLayerIndex.Confetti.toString()
 
         this._setupElements();
     }

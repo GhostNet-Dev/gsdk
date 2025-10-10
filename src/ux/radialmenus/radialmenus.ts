@@ -4,6 +4,7 @@
 
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { UxLayerIndex } from "../gux";
 
 type RingStyle = 'none' | 'solid' | 'line';
 type Shape = 'circle' | 'rounded' | 'square' | 'hex';
@@ -322,6 +323,7 @@ export class RadialMenuUI implements ILoop {
 
     const root = document.createElement('div');
     root.className = 'rm-root';
+    root.style.zIndex = UxLayerIndex.RingMenu.toString()
     parent.appendChild(root);
     this.root = root;
 

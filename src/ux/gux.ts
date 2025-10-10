@@ -1,3 +1,13 @@
+export enum UxLayerIndex {
+    default = 0,
+    RingMenu,
+    Confetti,
+    Tap = 10,
+    Modal,
+    List,
+    Button,
+}
+
 export interface IGUX {
     Dom: HTMLElement
     Show(): void
