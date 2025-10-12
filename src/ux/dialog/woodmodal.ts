@@ -1,6 +1,6 @@
 import { gsap } from "gsap";
 import IDialog from "./idialog"
-import { IGUX } from "../gux";
+import { IGUX, UxLayerIndex } from "../gux";
 
 export default class WoodModal implements IDialog {
     dom = document.createElement("div")
@@ -13,6 +13,7 @@ export default class WoodModal implements IDialog {
         this.dom.style.width = width
         this.dom.style.height = height
         this.dom.style.opacity = "0"
+        this.dom.style.zIndex = UxLayerIndex.Modal.toString()
         this.titleDom.classList.add("woodmodal_title", "gfont")
         this.dom.appendChild(this.titleDom)
         this.container.classList.add("container", "p-0")

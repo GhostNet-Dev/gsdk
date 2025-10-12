@@ -1,4 +1,4 @@
-import { GUX, IGUX } from "../gux"
+import { GUX, IGUX, UxLayerIndex } from "../gux"
 
 export class GameButton extends GUX {
   Dom = document.createElement("div")
@@ -7,6 +7,7 @@ export class GameButton extends GUX {
     this.applyDynamicStyle("gamebutton", getCSS())
     this.Dom.classList.add("game-button", color ?? "green", "m-1")
     this.Dom.innerHTML = title
+    this.Dom.style.zIndex = UxLayerIndex.Button.toString()
     this.Dom.onclick = () => { click() }
   }
   GetContentElement() {

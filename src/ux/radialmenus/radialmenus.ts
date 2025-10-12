@@ -1,6 +1,6 @@
 // RadialMenuUI.ts
 // A drop-in HTML radial menu overlay for any Three.js game.
-// by you + ChatGPT
+// by you + ChatGPT (safe center-click + blocker fix)
 
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
@@ -12,56 +12,68 @@ type Easing = 'outBack' | 'outCubic';
 type OpenAt = 'center' | 'pointer';
 
 export type IconDef =
-  | string // shorthand emoji/text
+  | string
   | { type: 'emoji' | 'text'; value: string }
   | { type: 'img'; value: string; alt?: string }
-  | { type: 'svgInline'; value: string } // ⚠️ only from trusted sources
+  | { type: 'svgInline'; value: string } // ⚠ trusted only
   | { type: 'webfontFA'; value: string } // e.g. "fa-solid fa-shield-halved"
-  | { type: 'webfontMS'; value: string } // e.g. "explore"
+  | { type: 'webfontMS'; value: string }; // e.g. "explore"
 
-/** 아이콘 + 콜백/메타 확장 정의 */
 export type MenuItemDef =
   | IconDef
   | {
       icon: IconDef;
       id?: string;
       ariaLabel?: string;
-      hotkey?: string;                 // 예: "KeyQ", "Digit1", "Space"
+      hotkey?: string;
       disabled?: boolean;
-      keepOpen?: boolean;              // 선택 후 닫지 않기
+      keepOpen?: boolean;
       onSelect?: (def: IconDef, index: number) => void;
       onFocus?: (def: IconDef, index: number) => void;
-      data?: any;                      // 임의 확장 데이터
+      data?: any;
     };
 
+/** Center-click 안전 옵션 포함 */
 export interface RadialMenuOptions {
   // appearance & layout
-  radius: number;           // final radius (px)
-  itemSize: number;         // item diameter/size (px)
-  startAngleDeg: number;    // first item angle (deg). -90 === up
-  shape: Shape;             // item shape
-  ringStyle: RingStyle;     // 'none' | 'solid' | 'line'
-  fontScale: number;        // emoji/webfont scale relative to item size
+  radius: number;
+  itemSize: number;
+  startAngleDeg: number;
+  shape: Shape;
+  ringStyle: RingStyle;
+  fontScale: number;
 
-  // theme variables (CSS custom properties)
+  // theme
   theme: keyof typeof DEFAULT_THEMES | 'custom';
   themeVars?: Partial<ThemeVars>;
-  pageBg?: string;          // optional page background color
+  pageBg?: string;
 
   // behavior
   animateMs: number;
-  spinOnOpen: number;       // radians spin while opening
+  spinOnOpen: number;
   easing: Easing;
   autoCloseOnMiss: boolean;
-  openAt: OpenAt;           // 'center' | 'pointer'
+  openAt: OpenAt;
   centerClickThresholdPx: number;
-  enableGlobalCenterClick: boolean; // listen window pointerdown to open
+  enableGlobalCenterClick: boolean;
 
   // integration
-  parent?: HTMLElement;     // container to mount overlay into (default: document.body)
-  injectStyles: boolean;    // injects <style> once
-  pollGamepad: boolean;     // enable gamepad navigation poll in update()
-  onSelect?: (def: IconDef, index: number) => void; // 전역 훅 (아이템 onSelect 이후 호출)
+  parent?: HTMLElement;
+  injectStyles: boolean;
+  pollGamepad: boolean;
+  onSelect?: (def: IconDef, index: number) => void;
+
+  /** 전역 열림 차단: 문서에 이 셀렉터 중 하나라도 "보이게" 존재하면 열지 않음 */
+  modalOpenQuery: string;
+
+  /** 클릭 경로에 아래 셀렉터가 하나라도 있으면 열지 않음 */
+  blockerSelectors: string[];
+
+  /** 이 컨테이너 내부 클릭일 때만 열기 (선택): HTMLElement 또는 selector */
+  onlyWhenTargetWithin?: HTMLElement | string;
+
+  /** 최종 커스텀 가드: false를 반환하면 열지 않음 */
+  openGuard?: (e: PointerEvent) => boolean;
 }
 
 type ThemeVars = {
@@ -187,6 +199,30 @@ const DEFAULT_OPTIONS: RadialMenuOptions = {
   injectStyles: true,
   pollGamepad: true,
   onSelect: undefined,
+
+  // 안전 기본값들
+  modalOpenQuery: [
+    '[aria-modal="true"]',
+    '.modal[open]', '.modal.open',
+    '.dialog[open]', '.dialog.open',
+    '[role="dialog"].open',
+    '[data-dialog-open="true"]',
+    '.MuiModal-root', '.ant-modal-root',
+    '.swal2-container', '.sweet-alert'
+  ].join(','),
+
+  blockerSelectors: [
+    'input', 'textarea', 'select', 'button', 'a',
+    '[contenteditable="true"]',
+    '[role="menu"]', '[role="listbox"]',
+    '[role="dialog"]', '[aria-modal="true"]',
+    '.overlay', '.modal', '.dialog',
+    '.ui-block', '.hud-block',
+    '[data-rm-no-open]'
+  ],
+
+  onlyWhenTargetWithin: undefined,
+  openGuard: undefined
 };
 
 let STYLE_INJECTED = false;
@@ -215,7 +251,15 @@ const CSS_TEXT = `
 .rm-shape-hex .rm-item{border-radius:0;clip-path:polygon(25% 6.7%,75% 6.7%,100% 50%,75% 93.3%,25% 93.3%,0% 50%)}
 .rm-animating .rm-item{pointer-events:none}
 
-/* ✅ 안전 대안: 플래시를 클래스 애니메이션으로, 닫힘 강제 투명 처리 */
+/* ✅ 닫힘 상태에서는 완전 비히트 처리 */
+.rm-radial:not(.open) .rm-item,
+.rm-radial:not(.open) .rm-ring,
+.rm-radial:not(.open) .rm-ring2 {
+  pointer-events: none !important;
+  cursor: default !important;
+}
+
+/* ✅ 클래스 기반 플래시 */
 @keyframes rm-flash { 0%{opacity:1} 50%{opacity:.5} 100%{opacity:1} }
 .rm-flashing { animation: rm-flash .22s ease-out; }
 .rm-closing .rm-item { opacity: 0 !important; }
@@ -230,86 +274,32 @@ function injectStylesOnce() {
 }
 
 function clamp01(t: number) { return Math.max(0, Math.min(1, t)); }
-
 function ease(t: number, easing: Easing): number {
   t = clamp01(t);
   if (easing === 'outCubic') return 1 - Math.pow(1 - t, 3);
   const c1 = 1.70158, c3 = c1 + 1; // outBack
   return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
 }
-
 function isCenterClick(x: number, y: number, thresholdPx: number): boolean {
-  const dx = x - innerWidth / 2;
-  const dy = y - innerHeight / 2;
+  const dx = x - innerWidth / 2, dy = y - innerHeight / 2;
   return Math.hypot(dx, dy) < thresholdPx * 0.25;
 }
 
-function createIconNode(def: IconDef, baseSize: number, fontScale: number): HTMLElement {
-  const wrap = document.createElement('span');
-  wrap.className = 'rm-ic';
-
-  const sizePx = Math.round(baseSize * fontScale);
-  const svgSize = '70%';
-
-  const d = typeof def === 'string' ? { type: 'emoji', value: def } as any : def;
-
-  switch (d.type) {
-    case 'emoji':
-    case 'text': {
-      const s = document.createElement('span');
-      s.className = d.type === 'emoji' ? 'rm-emoji' : 'rm-text';
-      s.textContent = d.value || '★';
-      s.style.fontSize = sizePx + 'px';
-      wrap.appendChild(s);
-      break;
-    }
-    case 'img': {
-      const img = document.createElement('img');
-      img.className = 'rm-img';
-      img.alt = d.alt || '';
-      img.src = d.value;
-      wrap.appendChild(img);
-      break;
-    }
-    case 'svgInline': {
-      const div = document.createElement('div');
-      div.innerHTML = (d.value || '').trim(); // ⚠️ trusted source only
-      const svg = div.querySelector('svg');
-      if (svg) {
-        svg.classList.add('rm-svg');
-        svg.setAttribute('width', svgSize);
-        svg.setAttribute('height', svgSize);
-        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-        wrap.appendChild(svg);
-      } else {
-        wrap.textContent = 'SVG?';
-      }
-      break;
-    }
-    case 'webfontFA': {
-      const i = document.createElement('i');
-      i.className = `rm-fa ${d.value}`;
-      i.style.fontSize = sizePx + 'px';
-      wrap.appendChild(i);
-      break;
-    }
-    case 'webfontMS': {
-      const s = document.createElement('span');
-      s.className = 'rm-ms material-symbols-outlined';
-      s.textContent = d.value || 'star';
-      s.style.fontSize = sizePx + 'px';
-      wrap.appendChild(s);
-      break;
-    }
-    default: {
-      const s = document.createElement('span');
-      s.className = 'rm-text';
-      s.textContent = String((d as any)?.value ?? '★');
-      s.style.fontSize = sizePx + 'px';
-      wrap.appendChild(s);
-    }
+/** 보이는 요소인지 대략 판정 */
+function isVisible(el: Element): boolean {
+  const r = (el as HTMLElement).getBoundingClientRect();
+  if (r.width <= 0 || r.height <= 0) return false;
+  const style = getComputedStyle(el as HTMLElement);
+  return style.visibility !== 'hidden' && style.display !== 'none' && style.pointerEvents !== 'none';
+}
+/** composedPath에서 selector에 매칭되는 가장 가까운 요소 */
+function closestInPath(path: EventTarget[], selector: string): Element | null {
+  for (const t of path) {
+    if (!(t instanceof Element)) continue;
+    const m = t.closest(selector);
+    if (m) return m;
   }
-  return wrap;
+  return null;
 }
 
 /** 내부 표준화된 아이템 엔트리 */
@@ -345,12 +335,21 @@ export class RadialMenuUI implements ILoop {
   private destroyed = false;
 
   private pointerOpenHandler?: (e: PointerEvent) => void;
+  private openWithinEl: HTMLElement | null = null;
+  private hardBlocked = false; // 프로그래매틱 강제 차단
 
   constructor(
     eventCtrl: IEventController,
     options?: Partial<RadialMenuOptions>
   ) {
     this.opts = { ...DEFAULT_OPTIONS, ...options };
+
+    // resolve onlyWhenTargetWithin
+    if (typeof this.opts.onlyWhenTargetWithin === 'string') {
+      this.openWithinEl = document.querySelector(this.opts.onlyWhenTargetWithin) as HTMLElement | null;
+    } else {
+      this.openWithinEl = this.opts.onlyWhenTargetWithin ?? null;
+    }
 
     if (this.opts.injectStyles) injectStylesOnce();
 
@@ -359,21 +358,23 @@ export class RadialMenuUI implements ILoop {
 
     const root = document.createElement('div');
     root.className = 'rm-root';
-    root.style.zIndex = UxLayerIndex.RingMenu.toString()
+    root.style.zIndex = UxLayerIndex.RingMenu.toString();
     parent.appendChild(root);
     this.root = root;
 
     const radial = document.createElement('div');
     radial.className = `rm-radial rm-shape-${this.opts.shape}`;
-    // default CSS variable fallback; theme applied later
     radial.style.setProperty('--ring-width', DEFAULT_THEMES['Dark Neon'].vars['--ring-width']);
     root.appendChild(radial);
     this.radial = radial;
 
-    const ring = document.createElement('div'); ring.className = 'rm-ring';
-    const ring2 = document.createElement('div'); ring2.className = 'rm-ring2';
-    radial.appendChild(ring); radial.appendChild(ring2);
-    this.ring = ring; this.ring2 = ring2;
+    // rings
+    this.ring = document.createElement('div');
+    this.ring.className = 'rm-ring';
+    this.ring2 = document.createElement('div');
+    this.ring2.className = 'rm-ring2';
+    radial.appendChild(this.ring);
+    radial.appendChild(this.ring2);
 
     // theme & ring style
     this.applyTheme(this.opts.theme, this.opts.themeVars, this.opts.pageBg);
@@ -383,13 +384,18 @@ export class RadialMenuUI implements ILoop {
     // input
     if (this.opts.enableGlobalCenterClick) {
       this.pointerOpenHandler = (e: PointerEvent) => {
-        if (this.isOpen && this.opts.autoCloseOnMiss && !e.composedPath().includes(this.radial)) {
-          this.close(); return;
-        }
+        const path = (e.composedPath?.() ?? []) as EventTarget[];
+
+        // 이미 열려 있고, 메뉴 바깥 클릭이면 닫기
+        if (this.isOpen && this.opts.autoCloseOnMiss && !path.includes(this.radial)) { this.close(); return; }
         if (this.isOpen) return;
+
+        // 열림 가드
+        if (this.shouldBlockOpen(e, path)) return;
+
         if (this.opts.openAt === 'center') {
           if (isCenterClick(e.clientX, e.clientY, this.opts.centerClickThresholdPx)) this.open();
-        } else { // 'pointer'
+        } else {
           this.openAt(e.clientX, e.clientY);
         }
       };
@@ -401,22 +407,18 @@ export class RadialMenuUI implements ILoop {
     eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
   }
 
+  /** 외부에서 전역 차단/허용 */
+  setBlocked(block: boolean) { this.hardBlocked = !!block; }
+
   /** Mount under a different parent (optional). */
-  mount(parent: HTMLElement) {
-    if (this.root.parentElement !== parent) parent.appendChild(this.root);
-  }
-  unmount() {
-    if (this.root.parentElement) {
-      this.root.parentElement.removeChild(this.root);
-    }
-  }
+  mount(parent: HTMLElement) { if (this.root.parentElement !== parent) parent.appendChild(this.root); }
+  unmount() { if (this.root.parentElement) this.root.parentElement.removeChild(this.root); }
 
   /** Update per-frame (call in your game loop). */
   update() {
-    const now = performance.now()
+    const now = performance.now();
     if (this.destroyed) return;
 
-    // animation
     if (this.isOpen && this.progress < 1) {
       const t = (now - this.t0) / this.opts.animateMs;
       this.progress = Math.min(1, t);
@@ -435,11 +437,12 @@ export class RadialMenuUI implements ILoop {
       this.updateRing(r);
       this.layout(r, 0);
       if (this.progress <= 0) {
-        this.radial.classList.remove('open', 'rm-animating', 'rm-closing'); // ✅ 닫힘 상태 해제
-        // 혹시 남은 플래시/투명도 흔적 정리
+        this.radial.classList.remove('open', 'rm-animating', 'rm-closing');
         for (const it of this.items) {
           it.el.classList.remove('rm-flashing');
           (it.el.style as any).opacity = '0';
+          it.el.style.pointerEvents = 'none';
+          it.el.style.cursor = 'default';
         }
         (this.root.style as any).pointerEvents = 'none';
       }
@@ -486,7 +489,6 @@ export class RadialMenuUI implements ILoop {
   }
 
   // ---------- Public API ----------
-  /** 아이템 + 콜백 동시 등록 (기존 IconDef[]도 지원) */
   setItems(defs: (MenuItemDef | string)[]) {
     // cleanup
     for (const it of this.items) it.el.remove();
@@ -497,16 +499,10 @@ export class RadialMenuUI implements ILoop {
     normalized.forEach((src, idx) => {
       const icon = (this.isIconDef(src) ? src : src.icon) as IconDef;
       const meta = this.isIconDef(src)
-        ? { id: undefined, ariaLabel: undefined, hotkey: undefined, disabled: false, keepOpen: false } 
+        ? { id: undefined, ariaLabel: undefined, hotkey: undefined, disabled: false, keepOpen: false }
         : {
-            id: src.id,
-            ariaLabel: src.ariaLabel,
-            hotkey: src.hotkey,
-            disabled: !!src.disabled,
-            keepOpen: !!src.keepOpen,
-            onSelect: src.onSelect,
-            onFocus: src.onFocus,
-            data: src.data
+            id: src.id, ariaLabel: src.ariaLabel, hotkey: src.hotkey, disabled: !!src.disabled,
+            keepOpen: !!src.keepOpen, onSelect: src.onSelect, onFocus: src.onFocus, data: src.data
           };
 
       const el = document.createElement('button');
@@ -521,21 +517,16 @@ export class RadialMenuUI implements ILoop {
 
       el.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (this.progress < 1) return;
-        if (meta.disabled) return;
-        this.flash(el);                          // ✅ 클래스 기반 플래시
-        meta.onSelect?.(icon, idx);              // 1) 아이템 onSelect
-        this.opts.onSelect?.(icon, idx);         // 2) 전역 onSelect
-        if (!meta.keepOpen) this.close();        // 닫기 → rm-closing 강제 투명 처리
+        if (this.progress < 1 || meta.disabled) return;
+        this.flash(el);
+        meta.onSelect?.(icon, idx);
+        this.opts.onSelect?.(icon, idx);
+        if (!meta.keepOpen) this.close();
       });
 
       el.addEventListener('pointerenter', () => {
         const i = this.items.findIndex(it => it.el === el);
-        if (i >= 0) {
-          this.focusIndex = i;
-          this.applyFocus(false);
-          meta.onFocus?.(icon, i);
-        }
+        if (i >= 0) { this.focusIndex = i; this.applyFocus(false); meta.onFocus?.(icon, i); }
       });
 
       this.radial.appendChild(el);
@@ -548,38 +539,27 @@ export class RadialMenuUI implements ILoop {
     this.applyFocus();
   }
 
-  /** 개별 추가 (아이콘 또는 MenuItemDef) */
   addItem(def: MenuItemDef | string = '🗺️') {
     const list = this.getItemDefs();
     list.push(def as any);
     this.setItems(list);
   }
-
-  /** 마지막 아이템 제거 */
   removeLast() {
     if (this.items.length <= 1) return;
     const list = this.getItemDefs().slice(0, -1);
     this.setItems(list);
   }
-
-  /** 특정 인덱스 제거 */
   removeAt(index: number) {
     const list = this.getItemDefs();
     if (index < 0 || index >= list.length) return;
     list.splice(index, 1);
     this.setItems(list);
   }
-
-  /** 특정 인덱스 패치 (enable/disable, hotkey 변경 등) */
   updateItem(index: number, patch: Partial<Omit<NonNullable<Extract<MenuItemDef, object>>, 'icon'>> & { icon?: IconDef }) {
     const list = this.getItemDefs();
     if (index < 0 || index >= list.length) return;
     let cur = list[index];
-
-    // 아이콘만 있었던 경우를 객체형으로 승격
-    if (typeof cur === 'string' || this.isIconDef(cur)) {
-      cur = { icon: cur as IconDef };
-    }
+    if (typeof cur === 'string' || this.isIconDef(cur)) cur = { icon: cur as IconDef };
     const merged = { ...(cur as any), ...(patch ?? {}) };
     list[index] = merged;
     this.setItems(list);
@@ -590,7 +570,7 @@ export class RadialMenuUI implements ILoop {
     this.isOpen = true;
     this.t0 = performance.now();
     this.progress = 0;
-    this.radial.classList.remove('rm-closing'); // 혹시 이전 상태 잔여 제거
+    this.radial.classList.remove('rm-closing');
     this.radial.classList.add('open', 'rm-animating');
     (this.root.style as any).pointerEvents = 'auto';
     this.layout(0, this.opts.spinOnOpen);
@@ -600,7 +580,6 @@ export class RadialMenuUI implements ILoop {
 
   /** Open with radial centered at given page coords. */
   openAt(pageX: number, pageY: number) {
-    // move anchor to clicked point
     this.radial.style.left = `${pageX}px`;
     this.radial.style.top = `${pageY}px`;
     this.radial.style.transform = `translate(-50%,-50%)`;
@@ -612,18 +591,20 @@ export class RadialMenuUI implements ILoop {
     this.isOpen = false;
     this.t0 = performance.now();
     this.progress = 1;
-    this.radial.classList.add('rm-animating', 'rm-closing'); // ✅ 닫힘 상태 표시 → 강제 투명
+    this.radial.classList.add('rm-animating', 'rm-closing');
   }
 
   updateOptions(patch: Partial<RadialMenuOptions>) {
     Object.assign(this.opts, patch);
-
-    // reflect critical changes
+    if (patch.onlyWhenTargetWithin !== undefined) {
+      this.openWithinEl = typeof patch.onlyWhenTargetWithin === 'string'
+        ? (document.querySelector(patch.onlyWhenTargetWithin) as HTMLElement | null)
+        : (patch.onlyWhenTargetWithin ?? null);
+    }
     this.applyShape(this.opts.shape);
     this.applyRingStyle(this.opts.ringStyle);
     this.applyTheme(this.opts.theme, this.opts.themeVars, this.opts.pageBg);
 
-    // re-measure items if size/fontScale changed
     if (patch.itemSize !== undefined || patch.fontScale !== undefined) {
       this.setItems(this.getItemDefs());
     } else {
@@ -639,7 +620,6 @@ export class RadialMenuUI implements ILoop {
       ...(theme ? theme.vars : DEFAULT_THEMES['Dark Neon'].vars),
       ...(override ?? {}),
     } as ThemeVars;
-
     for (const [k, v] of Object.entries(vars)) this.radial.style.setProperty(k, v);
     const bg = pageBg ?? (theme?.bg);
     if (bg) (document.documentElement.style as any).setProperty('--bg', bg);
@@ -672,15 +652,17 @@ export class RadialMenuUI implements ILoop {
       const x = Math.cos(ang) * r;
       const y = Math.sin(ang) * r;
       const el = this.items[i].el;
+
       el.style.transform = `translate(-50%,-50%) translate(${x}px,${y}px)`;
-      // 기본: 열릴 때만 보이고, 닫힐 때는 0
-      el.style.opacity = r > 0 ? '1' : '0';
-      if (!this.isOpen) el.style.opacity = '0'; // ✅ 초간단 보강: 닫힘 강제 0
+
+      const visible = r > 0 && this.isOpen;
+      el.style.opacity = visible ? '1' : '0';
+      el.style.pointerEvents = visible ? 'auto' : 'none';   // ✅ 보강
+      el.style.cursor = visible ? 'pointer' : 'default';    // ✅ 보강
     }
   }
 
   private onKey(e: KeyboardEvent) {
-    // 메뉴 열렸을 때만 처리
     if (!this.isOpen || this.progress < 1) return;
 
     const N = this.items.length; if (!N) return;
@@ -707,7 +689,6 @@ export class RadialMenuUI implements ILoop {
     const N = this.items.length;
     this.focusIndex = (this.focusIndex + delta + N) % N;
     this.applyFocus(true);
-    // 아이템 onFocus 콜백
     const it = this.items[this.focusIndex];
     it.meta.onFocus?.(it.def, this.focusIndex);
   }
@@ -730,33 +711,126 @@ export class RadialMenuUI implements ILoop {
     return Math.round(rel / step) % N;
   }
 
-  /** ✅ 클래스 기반 플래시: 인라인 opacity 건드리지 않음 */
+  /** 클래스 기반 플래시 */
   private flash(el: HTMLElement) {
     el.classList.remove('rm-flashing');
-    // 강제 리플로우로 애니메이션 재시작 가능
+    // 강제 리플로우로 애니메이션 재시작
     // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     (el as any).offsetWidth;
     el.classList.add('rm-flashing');
-    // 애니메이션 종료 후 정리(중첩 호출 대비)
     setTimeout(() => el.classList.remove('rm-flashing'), 240);
   }
 
-  // ---- helpers ----
   private isIconDef(d: any): d is IconDef {
     if (typeof d === 'string') return true;
-    if (d && typeof d === 'object' && 'type' in d && 'value' in d) return true;
-    return false;
+    return !!(d && typeof d === 'object' && 'type' in d && 'value' in d);
   }
 
-  /** 현재 아이템들을 MenuItemDef 배열 형태로 다시 추출 (상태 보존용) */
   private getItemDefs(): MenuItemDef[] {
     return this.items.map<MenuItemDef>(({ def, meta }) => {
-      // 순수 아이콘만 있었고 메타도 없는 경우엔 IconDef로 반환
       const pure =
         !meta.id && !meta.ariaLabel && !meta.hotkey && !meta.disabled &&
         !meta.keepOpen && !meta.onSelect && !meta.onFocus && meta.data === undefined;
-
       return pure ? def : { icon: def, ...meta };
     });
   }
+
+  /** 최종 열림 차단 로직 — 메뉴 자신은 검사에서 제외 */
+  private shouldBlockOpen(e: PointerEvent, path: EventTarget[]): boolean {
+    if (this.hardBlocked) return true;
+
+    // 1) 모달/다이얼로그가 열려 있고 "보이면" 차단
+    const modalCandidates = Array.from(document.querySelectorAll(this.opts.modalOpenQuery));
+    if (modalCandidates.some(isVisible)) return true;
+
+    // 2) 클릭 경로가 차단 셀렉터에 속하면 차단 (단, 메뉴 자기자신은 제외)
+    const els = path.filter((t): t is Element => t instanceof Element);
+    const outsideMenu = els.filter(el => !this.radial.contains(el));
+
+    for (const sel of this.opts.blockerSelectors) {
+      if (outsideMenu.some(el => el.matches(sel) || el.closest(sel))) return true;
+    }
+
+    // 3) 범위 제한: 지정된 컨테이너 내부 클릭만 허용
+    if (this.openWithinEl) {
+      const hit = els[0];
+      if (!hit || !this.openWithinEl.contains(hit)) return true;
+    }
+
+    // 4) 사용자 커스텀 가드
+    if (typeof this.opts.openGuard === 'function') {
+      try { if (!this.opts.openGuard(e)) return true; } catch { return true; }
+    }
+
+    return false;
+  }
+}
+
+// ---------- icon factory ----------
+function createIconNode(def: IconDef, baseSize: number, fontScale: number): HTMLElement {
+  const wrap = document.createElement('span');
+  wrap.className = 'rm-ic';
+
+  const sizePx = Math.round(baseSize * fontScale);
+  const svgSize = '70%';
+
+  const d = typeof def === 'string' ? ({ type: 'emoji', value: def } as any) : def;
+
+  switch (d.type) {
+    case 'emoji':
+    case 'text': {
+      const s = document.createElement('span');
+      s.className = d.type === 'emoji' ? 'rm-emoji' : 'rm-text';
+      s.textContent = d.value || '★';
+      s.style.fontSize = sizePx + 'px';
+      wrap.appendChild(s);
+      break;
+    }
+    case 'img': {
+      const img = document.createElement('img');
+      img.className = 'rm-img';
+      img.alt = d.alt || '';
+      img.src = d.value;
+      wrap.appendChild(img);
+      break;
+    }
+    case 'svgInline': {
+      const div = document.createElement('div');
+      div.innerHTML = (d.value || '').trim(); // ⚠ trusted only
+      const svg = div.querySelector('svg');
+      if (svg) {
+        svg.classList.add('rm-svg');
+        svg.setAttribute('width', svgSize);
+        svg.setAttribute('height', svgSize);
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        wrap.appendChild(svg);
+      } else {
+        wrap.textContent = 'SVG?';
+      }
+      break;
+    }
+    case 'webfontFA': {
+      const i = document.createElement('i');
+      i.className = `rm-fa ${d.value}`;
+      i.style.fontSize = sizePx + 'px';
+      wrap.appendChild(i);
+      break;
+    }
+    case 'webfontMS': {
+      const s = document.createElement('span');
+      s.className = 'rm-ms material-symbols-outlined';
+      s.textContent = d.value || 'star';
+      s.style.fontSize = sizePx + 'px';
+      wrap.appendChild(s);
+      break;
+    }
+    default: {
+      const s = document.createElement('span');
+      s.className = 'rm-text';
+      s.textContent = String((d as any)?.value ?? '★');
+      s.style.fontSize = sizePx + 'px';
+      wrap.appendChild(s);
+    }
+  }
+  return wrap;
 }

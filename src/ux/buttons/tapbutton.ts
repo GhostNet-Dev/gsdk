@@ -28,7 +28,7 @@ export default class TapButton extends GUX{
         //     const index = Number(topDom.style.zIndex)
         //     this.dom.style.zIndex = ((index > 0) ? index - 1 : 0).toString()
         // }
-        this.Dom.onclick = () => { if (fullScreen) this.toggleFullScreen(); click(); this.Hide() }
+        this.Dom.onclick = (e) => { if (fullScreen) this.toggleFullScreen(); e.stopPropagation(); click(); this.Hide() }
         this.Dom.addEventListener("click", (e) => { e.stopPropagation() })
 
         this.textDom.style.position = "relative"
