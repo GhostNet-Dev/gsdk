@@ -31,7 +31,7 @@ export default class StatusBar {
 
         // value set
         if (lolliBar) {
-            this.lbar = new LolliBar(undefined, { width: "50px", initValue: 0.0 })
+            this.lbar = new LolliBar(this.dom, { width: "60px", initValue: 0.0 })
             this.lbar.RenderHTML()
             content.push(this.lbar.dom!)
         } else {
@@ -69,6 +69,10 @@ export default class StatusBar {
         this.dom.appendChild(container)
     }
     UpdateStatus(value: number) {
+        if(this.lbar) {
+            this.lbar.updateValue(value, this.max)
+            return
+        }
         let text = value.toString()
         if (this.max > 0) text += "/" + this.max
         this.textDom.innerText = text

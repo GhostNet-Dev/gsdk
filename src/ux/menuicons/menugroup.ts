@@ -38,12 +38,14 @@ export default class MenuGroup {
             if (nowrap) this.row.classList.add("flex-nowrap")
             this.dom.appendChild(this.row)
         }
+        this.parent.appendChild(this.dom)
+        this.dom.style.display = "block"
     }
     Show() {
-        this.parent.appendChild(this.dom)
+        this.dom.style.display = "block"
     }
     Hide() {
-        this.parent.removeChild(this.dom)
+        this.dom.style.display = "none"
     }
     addMenu(menu: IMenuItem) {
         const col = document.createElement("div")
