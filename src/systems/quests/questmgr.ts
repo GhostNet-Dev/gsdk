@@ -9,6 +9,7 @@ import {
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { ItemId } from "@Glibs/inventory/items/itemdefs";
 import { AttackOption, AttackType } from "@Glibs/types/playertypes";
+import { MonsterId } from "@Glibs/types/monstertypes";
 
 export class QuestManager {
     // 모든 퀘스트 '정의'를 저장 (Key: QuestId, Value: Quest)
@@ -33,12 +34,8 @@ export class QuestManager {
         this.eventCtrl.RegisterEventListener(EventTypes.Pickup, (itemId: ItemId) => {
             this.handleGameEvent({ type: 'pickup', targetId: itemId });
         });
-        this.eventCtrl.RegisterEventListener(EventTypes.Attack + 'player', (opts: AttackOption[]) => {
-            opts.forEach(opt => {
-                if (opt.type == AttackType.Exp && opt.srcMonsterId) {
-                    this.handleGameEvent({type: 'kill', targetId: opt.srcMonsterId});
-                }
-            })
+        this.eventCtrl.RegisterEventListener(EventTypes.Death, (id: string) => {
+            this.handleGameEvent({ type: 'kill', targetId: id });
         });
         this.eventCtrl.RegisterEventListener(EventTypes.ActiveInteraction, (id: string) => {
             this.handleGameEvent({ type: 'interactive', targetId: id });

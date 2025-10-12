@@ -10,6 +10,7 @@ import { ActionDef } from "@Glibs/actions/actiontypes"
 
 export class MonsterId {
     public static Zombie = "Zombie"
+    public static DashZombie = "DashZombie"
     public static Minotaur = "Minataur"
     public static Batpig = "Batpig"
     public static Bilby = "Bilby"

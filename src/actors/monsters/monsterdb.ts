@@ -22,9 +22,18 @@ export class MonsterDb {
             model: Char.CharMonZombie,
             drop: [
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
-                { itemId: itemDefs.ZombieDeck.id, ratio: 0.1 }
             ],
             stats: baseStatPresets[MonsterId.Zombie],
+            idleStates: NewDefaultMonsterState,
+        })
+        this.monDb.set(MonsterId.DashZombie, {
+            id: MonsterId.DashZombie,
+            type: MonsterType.Undead,
+            model: Char.CharMonZombie,
+            drop: [
+                { itemId: itemDefs.Leather.id, ratio: 0.5 },
+            ],
+            stats: baseStatPresets[MonsterId.DashZombie],
             idleStates: NewDashMonsterState,
         })
         this.monDb.set(MonsterId.Minotaur, {

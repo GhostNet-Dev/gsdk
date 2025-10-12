@@ -39,7 +39,7 @@ export default class MenuGroup {
             this.dom.appendChild(this.row)
         }
         this.parent.appendChild(this.dom)
-        this.dom.style.display = "block"
+        this.dom.style.display = "none"
     }
     Show() {
         this.dom.style.display = "block"

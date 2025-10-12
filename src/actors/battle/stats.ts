@@ -15,6 +15,17 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
     lifeSteal: 0.1,
     attackSpeed: 2,
   },
+  [MonsterId.DashZombie]: {
+    hp: 10,
+    mp: 0,
+    expBonus: 20,
+    attack: 12,
+    defense: 8,
+    intelligence: 2,
+    speed: 0.6,
+    lifeSteal: 0.1,
+    attackSpeed: 2,
+  },
   'Minotaur': {
     'hp': 200,
     'attack': 20,

@@ -107,8 +107,9 @@ export class Monsters {
             z.deadtime = new Date().getTime()
             this.eventCtrl.SendEventMessage(EventTypes.Drop,
                 new THREE.Vector3(z.monModel.Meshs.position.x, this.player.CenterPos.y, z.monModel.Meshs.position.z), 
-                z.monCtrl.Drop
+                z.monCtrl.Drop, z.monCtrl.MonsterBox.MonId
             )
+            this.eventCtrl.SendEventMessage(EventTypes.Death, z.monCtrl.MonsterBox.MonId)
             this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, z.monCtrl.MonsterBox)
             this.respawntimeout = setTimeout(() => {
                 if(z.respawn) {
