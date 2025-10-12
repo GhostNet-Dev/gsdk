@@ -64,6 +64,7 @@ export class QuestManager {
                     if (currentProgress < requiredAmount) {
                         activeQuest.progress[objectiveKey] = currentProgress + 1;
                         console.log(`[${questDef.title}] 진행도: ${objectiveKey} (${activeQuest.progress[objectiveKey]}/${requiredAmount})`);
+                        this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `[${questDef.title}] 진행도: (${activeQuest.progress[objectiveKey]}/${requiredAmount}`);
                     }
                     
                     this.checkQuestCompletion(questId);
