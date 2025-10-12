@@ -5,28 +5,42 @@ import { CustomGroundData } from '@Glibs/types/worldmaptypes';
 import IEventController from '@Glibs/interface/ievent';
 import { EventTypes } from '@Glibs/types/globaltypes';
 
+/* ----------------------------- Helpers ----------------------------- */
 function toU8(a: Uint8Array | Uint8ClampedArray): Uint8Array {
   return a instanceof Uint8Array ? a : new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
 }
+function smootherstep(edge0: number, edge1: number, x: number): number {
+  const t = Math.max(0, Math.min(1, x));
+  const s = t * t * t * (t * (t * 6 - 15) + 10);
+  return edge0 + (edge1 - edge0) * s;
+}
 
+/* ----------------------- Types & Options ----------------------- */
 type BeachSide = 'north' | 'south' | 'east' | 'west';
 type BeachColorMode = 'none' | 'sand' | 'sandToGrass';
 
 export interface BeachSlopeOptions {
   side: BeachSide;
+  /** 해변 시작 위치(가장자리→내륙 방향 비율 0..1) */
   startFraction: number;
+  /** 최대 낙차(월드 단위) */
   maxDrop: number;
+  /** 해안선 요철(월드 단위) */
   noiseAmplitude: number;
+  /** 해안선 요철 주파수(정규화 좌표 기준) */
   noiseFrequency: number;
+  /** 경사 프로파일 지수(높이/색상 공용) */
   profilePower: number;
+
+  /** 색상 모드 */
   colorMode: BeachColorMode;
   sandColor: THREE.Color;
   grassColor: THREE.Color;
-  colorBlendPower: number;
-  edgeSharpness: number;
-  colorNoiseFrequency: number;
-  colorJitterAmplitude: number;
+
+  /** 색상 노이즈(블렌드 가중치에 소량 가감) 0..1 권장: 0~0.2 */
+  colorNoiseAmp?: number; // default 0.12
 }
+
 export interface PatternBandSplatOptions {
   /** 0..1: 수직 밴드(돌바닥 메인 영역) */
   top: number
@@ -74,7 +88,7 @@ export interface PatternBandSplatOptions {
   grassFallback?: THREE.Color;  // default new Color(0xA6C954)
 }
 
-
+/* ============================ Class ============================ */
 export default class CustomGround implements IWorldMapObject {
   Type: MapEntryType = MapEntryType.CustomGround;
 
@@ -187,19 +201,16 @@ export default class CustomGround implements IWorldMapObject {
     ground.userData.mapObj = this;
 
     this.obj = ground;
-    this.applyBeachSlope();
+    this.applyBeachSlope(); // 기본 옵션으로 자동 적용
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLandPhysic, this.obj);
     return ground;
   }
-  Delete(...param: any) {
 
+  Delete(...param: any) {
+    // 필요 시 구현
   }
 
-  /* --------------------------- 런타임 갱신(리샘플) --------------------------- */
-  /**
-   * 지오메트리 크기/세그먼트/텍셀밀도 변경 및 blendMap 해상도 자동 갱신
-   * 기존 페인트는 UV 기준으로 바이리니어 리샘플하여 보존
-   */
+  /* --------------------------- 리샘플 & 재구성 --------------------------- */
   updateGeometryAndBlendMap({
     planeWidth, planeHeight, segmentsX, segmentsZ,
     texelDensity, texelDensityX, texelDensityZ,
@@ -364,7 +375,7 @@ export default class CustomGround implements IWorldMapObject {
 
     const maxR = 255, maxG = 204, maxB = 102;
 
-    // 루프의 범위를 radius보다 약간 넓게 잡아 가장자리가 잘리는 현상을 방지합니다.
+    // 루프의 범위를 radius보다 약간 넓게 잡아 가장자리가 잘리는 현상을 방지
     const loopRadius = Math.floor(this.radius * 1.5);
 
     for (let y = -loopRadius; y <= loopRadius; y++) {
@@ -374,16 +385,11 @@ export default class CustomGround implements IWorldMapObject {
 
         const d = Math.hypot(x, y);
 
-        // 1. 노이즈 계산을 먼저 수행합니다.
+        // 노이즈 기반 반경 왜곡
         const n = this.noise.noise(tx / this.noiseScale, ty / this.noiseScale, 0);
-
-        // 2. 노이즈를 이용해 실제 적용될 반경을 왜곡시킵니다.
-        // noiseStrength가 클수록 경계가 더 불규칙해집니다.
         const distortedRadius = this.radius * (1.0 + n * this.noiseStrength);
 
-        // 3. 왜곡된 반경을 기준으로 거리를 판단하고, 경계를 부드럽게 처리합니다.
         if (d < distortedRadius) {
-          // Smoothstep 함수를 적용하여 가장자리를 매우 부드럽게 만듭니다.
           const falloff = 1.0 - d / distortedRadius;
           const t = falloff * falloff * (3.0 - 2.0 * falloff);
 
@@ -489,6 +495,7 @@ export default class CustomGround implements IWorldMapObject {
   /* --------------------- 해변 경사 + 색상(2색 그라디언트) -------------------- */
   applyBeachSlope(opts: Partial<BeachSlopeOptions> = {}) {
     if (!this.obj) return;
+
     const {
       side = 'south',
       startFraction = 0.20,
@@ -496,13 +503,11 @@ export default class CustomGround implements IWorldMapObject {
       noiseAmplitude = 2.0,
       noiseFrequency = 1.2,
       profilePower = 1.0,
+
       colorMode = 'sandToGrass',
       sandColor = new THREE.Color(0xE2CDA5),
       grassColor = new THREE.Color(0xA6C954),
-      colorBlendPower = 1.0,
-      edgeSharpness = 1.8,
-      colorNoiseFrequency = 3.0,
-      colorJitterAmplitude = 0.12,
+      colorNoiseAmp = 0.12,
     } = opts;
 
     const pos = this.geometry.getAttribute('position') as THREE.BufferAttribute;
@@ -516,47 +521,57 @@ export default class CustomGround implements IWorldMapObject {
     const noiseAmpLocal = noiseAmplitude / s;
 
     const alongAxis: 'x' | 'z' = (side === 'east' || side === 'west') ? 'z' : 'x';
-    const perpAxis: 'x' | 'z' = (alongAxis === 'x') ? 'z' : 'x';
+    const perpAxis: 'x' | 'z'  = (alongAxis === 'x') ? 'z' : 'x';
 
     const edgeCoord =
       side === 'south' ? -halfH :
-        side === 'north' ? halfH :
-          side === 'west' ? -halfW : halfW;
+      side === 'north' ?  halfH :
+      side === 'west'  ? -halfW :  halfW;
 
-    const baseStart = (side === 'south' || side === 'west')
-      ? edgeCoord + (side === 'south' ? this.planeHeight : this.planeWidth) * startFraction
-      : edgeCoord - (side === 'north' ? this.planeHeight : this.planeWidth) * startFraction;
+    const domainLen = (side === 'south' || side === 'north') ? this.planeHeight : this.planeWidth;
 
-    const coastNoise1D = (v: number) => {
-      const u = (alongAxis === 'x')
-        ? (v + halfW) / this.planeWidth
-        : (v + halfH) / this.planeHeight;
-      return this.noise.noise(u * noiseFrequency * 10.0, 0, 0);
-    };
+    // 내륙으로 startFraction만큼 떨어진 기준선(기본)
+    const baseStart =
+      (side === 'south' || side === 'west')
+        ? edgeCoord + domainLen * startFraction
+        : edgeCoord - domainLen * startFraction;
 
+    // 0..1 smoother + pow
     const smootherPow = (t: number, p: number) => {
-      const tt = Math.max(0, Math.min(1, t));
+      const tt = Math.min(1, Math.max(0, t));
       const s5 = tt * tt * tt * (tt * (tt * 6 - 15) + 10);
       return Math.pow(s5, p);
     };
 
+    // 연속성 보장을 위해 along 좌표를 [0,1]로 정규화하여 같은 노이즈를 사용
+    const coastNoise1D = (alongWorld: number) => {
+      const u = (alongAxis === 'x')
+        ? (alongWorld + halfW) / this.planeWidth
+        : (alongWorld + halfH) / this.planeHeight;
+      return this.noise.noise(u * noiseFrequency * 10.0, 0, 0);
+    };
+
+    const coastStart = (alongWorld: number) => baseStart + noiseAmpLocal * coastNoise1D(alongWorld);
+
+    /* -------------------- 1) 높이(지오메트리) -------------------- */
     for (let i = 0; i < arr.length; i += 3) {
       const vx = arr[i + 0], vy = arr[i + 1], vz = arr[i + 2];
       const along = (alongAxis === 'x') ? vx : vz;
-      const perp = (perpAxis === 'x') ? vx : vz;
+      const perp  = (perpAxis  === 'x') ? vx : vz;
 
-      const startLine = baseStart + noiseAmpLocal * coastNoise1D(along);
-      const slopeWidth = Math.max(1e-6, Math.abs(startLine - edgeCoord));
+      const startLine = coastStart(along);
+      const localSlopeW = Math.max(1e-6, Math.abs(startLine - edgeCoord));
 
-      let t: number;
-      if (side === 'south' || side === 'west') t = (startLine - perp) / slopeWidth;
-      else t = (perp - startLine) / slopeWidth;
-      t = Math.max(0, Math.min(1, t));
-      if (t <= 0) continue;
+      // side별 t 정의 동일화
+      let t = (side === 'south' || side === 'west')
+        ? (startLine - perp) / localSlopeW
+        : (perp - startLine) / localSlopeW;
 
-      const d = -maxDropLocal * smootherPow(t, profilePower);
-      const targetY = d;
-      if (targetY < vy) arr[i + 1] = targetY;
+      const w = smootherPow(t, profilePower);   // 높이/색상 공용 “같은” 프로파일
+      if (w <= 0) continue;
+
+      const targetY = -maxDropLocal * w;
+      if (targetY < vy) arr[i + 1] = targetY;  // 바닥만 깎음(돌출 금지)
     }
 
     pos.needsUpdate = true;
@@ -564,15 +579,10 @@ export default class CustomGround implements IWorldMapObject {
     this.geometry.computeBoundingBox();
     this.geometry.computeBoundingSphere();
 
+    /* -------------------- 2) 색상(블렌드맵) -------------------- */
     if (colorMode !== 'none' && this.blendMapData) {
       const sr = Math.round(sandColor.r * 255), sg = Math.round(sandColor.g * 255), sb = Math.round(sandColor.b * 255);
       const gr = Math.round(grassColor.r * 255), gg = Math.round(grassColor.g * 255), gb = Math.round(grassColor.b * 255);
-
-      const colorNoise2D = (x: number, z: number) => {
-        const u = (x + halfW) / this.planeWidth;
-        const v = (z + halfH) / this.planeHeight;
-        return this.noise.noise(u * colorNoiseFrequency * 10.0, v * colorNoiseFrequency * 10.0, 0);
-      };
 
       const applyPixel = (xi: number, yi: number, wSand: number) => {
         const idx = (yi * this.width + xi) * 4;
@@ -587,50 +597,47 @@ export default class CustomGround implements IWorldMapObject {
         }
       };
 
-      const smoother01 = (x: number) => {
-        const t = Math.max(0, Math.min(1, x));
-        return t * t * t * (t * (t * 6 - 15) + 10);
-      };
-
       if (side === 'south' || side === 'north') {
+        // x 스캔
         for (let xi = 0; xi < this.width; xi++) {
           const x = this.xFromXi(xi);
-          const startLine = baseStart + noiseAmpLocal * coastNoise1D(x);
-          const minZ = Math.min(edgeCoord, startLine), maxZ = Math.max(edgeCoord, startLine);
-          const yiStart = this.yiFromZ(minZ), yiEnd = this.yiFromZ(maxZ);
-          const y0 = Math.min(yiStart, yiEnd), y1 = Math.max(yiStart, yiEnd);
-          const slopeWidth = Math.max(1e-6, Math.abs(startLine - edgeCoord));
-
-          for (let yi = y0; yi <= y1; yi++) {
+          const startLine = coastStart(x);
+          const localSlopeW = Math.max(1e-6, Math.abs(startLine - edgeCoord));
+          const yi0 = this.yiFromZ(Math.min(edgeCoord, startLine));
+          const yi1 = this.yiFromZ(Math.max(edgeCoord, startLine));
+          for (let yi = Math.min(yi0, yi1); yi <= Math.max(yi0, yi1); yi++) {
             const z = this.zFromYi(yi);
-            let t = (side === 'south') ? (startLine - z) / slopeWidth : (z - startLine) / slopeWidth;
-            t = Math.max(0, Math.min(1, t));
-            if (t <= 0) continue;
-            let w = Math.pow(smoother01(t), 1.0);
-            w = Math.pow(w, 1.8);
-            const n = colorNoise2D(x, z);
-            w = Math.max(0, Math.min(1, w + n * 0.12));
+            let t = (side === 'south') ? (startLine - z) / localSlopeW : (z - startLine) / localSlopeW;
+            let w = smootherPow(t, profilePower);
+            if (w <= 0) continue;
+
+            if (colorNoiseAmp > 0) {
+              const u = (x + halfW) / this.planeWidth, v = (z + halfH) / this.planeHeight;
+              const n = this.noise.noise(u * 10.0, v * 10.0, 0); // 색상 노이즈 주파수 고정
+              w = Math.min(1, Math.max(0, w + n * colorNoiseAmp));
+            }
             applyPixel(xi, yi, w);
           }
         }
       } else {
+        // z 스캔
         for (let yi = 0; yi < this.height; yi++) {
           const z = this.zFromYi(yi);
-          const startLine = baseStart + noiseAmpLocal * coastNoise1D(z);
-          const minX = Math.min(edgeCoord, startLine), maxX = Math.max(edgeCoord, startLine);
-          const xiStart = this.xiFromX(minX), xiEnd = this.xiFromX(maxX);
-          const x0 = Math.min(xiStart, xiEnd), x1 = Math.max(xiStart, xiEnd);
-          const slopeWidth = Math.max(1e-6, Math.abs(startLine - edgeCoord));
-
-          for (let xi = x0; xi <= x1; xi++) {
+          const startLine = coastStart(z);
+          const localSlopeW = Math.max(1e-6, Math.abs(startLine - edgeCoord));
+          const xi0 = this.xiFromX(Math.min(edgeCoord, startLine));
+          const xi1 = this.xiFromX(Math.max(edgeCoord, startLine));
+          for (let xi = Math.min(xi0, xi1); xi <= Math.max(xi0, xi1); xi++) {
             const x = this.xFromXi(xi);
-            let t = (side === 'west') ? (startLine - x) / slopeWidth : (x - startLine) / slopeWidth;
-            t = Math.max(0, Math.min(1, t));
-            if (t <= 0) continue;
-            let w = Math.pow(smoother01(t), 1.0);
-            w = Math.pow(w, 1.8);
-            const n = colorNoise2D(x, z);
-            w = Math.max(0, Math.min(1, w + n * 0.12));
+            let t = (side === 'west') ? (startLine - x) / localSlopeW : (x - startLine) / localSlopeW;
+            let w = smootherPow(t, profilePower);
+            if (w <= 0) continue;
+
+            if (colorNoiseAmp > 0) {
+              const u = (x + halfW) / this.planeWidth, v = (z + halfH) / this.planeHeight;
+              const n = this.noise.noise(u * 10.0, v * 10.0, 0);
+              w = Math.min(1, Math.max(0, w + n * colorNoiseAmp));
+            }
             applyPixel(xi, yi, w);
           }
         }
@@ -639,225 +646,201 @@ export default class CustomGround implements IWorldMapObject {
     }
   }
 
-// NEW: 함수 이름을 좀 더 명확하게 변경했습니다.
-applyPatternRectSplat(pattern: THREE.DataTexture, opts: PatternBandSplatOptions) {
-  if (!this.blendMapData || !this.width || !this.height) return;
+  /* ------------------------ Pattern Rect Splat ------------------------ */
+  // NEW: 명확한 직사각 밴드 + 경계 스플랫
+  applyPatternRectSplat(pattern: THREE.DataTexture, opts: PatternBandSplatOptions) {
+    if (!this.blendMapData || !this.width || !this.height) return;
 
-  // ---- 옵션 & 기본 ----
-  // CHANGED: start/endPercent -> top/left/bottom/right
-  let {
-    top, left, bottom, right,
-    patternScalePxX = 1, patternScalePxY = 1,
-    patternOffsetPxX = 0, patternOffsetPxY = 0,
-    exchangeBandPx = 12,
-    splatDensity = 0.00025,
-    splatRadiusMinPx = 6,
-    splatRadiusMaxPx = 28,
-    splatIrregularity = 0.45,
-    splatLobesMin = 3,
-    splatLobesMax = 7,
-    splatFeatherPx = 1.2,
-    biasInsideHole = 0.45,
-    biasOutsideDot = 0.55,
-    rotateMinDeg = 0,
-    rotateMaxDeg = 360,
-    warpAmpPx = 4,
-    warpFreq = 0.08,
-    grassFallback = new THREE.Color(0xA6C954),
-  } = opts;
+    // ---- 옵션 & 기본 ----
+    let {
+      top, left, bottom, right,
+      patternScalePxX = 1, patternScalePxY = 1,
+      patternOffsetPxX = 0, patternOffsetPxY = 0,
+      exchangeBandPx = 12,
+      splatDensity = 0.00025,
+      splatRadiusMinPx = 6,
+      splatRadiusMaxPx = 28,
+      splatIrregularity = 0.45,
+      splatLobesMin = 3,
+      splatLobesMax = 7,
+      splatFeatherPx = 1.2,
+      biasInsideHole = 0.45,
+      biasOutsideDot = 0.55,
+      rotateMinDeg = 0,
+      rotateMaxDeg = 360,
+      warpAmpPx = 4,
+      warpFreq = 0.08,
+      grassFallback = new THREE.Color(0xA6C954),
+    } = opts;
 
-  const clamp01 = (v:number)=>Math.max(0,Math.min(1,v));
-  // NEW: 4방향 값 클램핑 및 정렬
-  top    = clamp01(top);
-  left   = clamp01(left);
-  bottom = clamp01(bottom);
-  right  = clamp01(right);
-  if (bottom < top) [top, bottom] = [bottom, top];
-  if (right < left) [left, right] = [right, left];
-  if (bottom === top) bottom = Math.min(1, top + 1e-4);
-  if (right === left) right = Math.min(1, left + 1e-4);
+    const clamp01 = (v:number)=>Math.max(0,Math.min(1,v));
+    // 4방향 값 클램핑 및 정렬
+    top    = clamp01(top);
+    left   = clamp01(left);
+    bottom = clamp01(bottom);
+    right  = clamp01(right);
+    if (bottom < top) [top, bottom] = [bottom, top];
+    if (right < left) [left, right] = [right, left];
+    if (bottom === top) bottom = Math.min(1, top + 1e-4);
+    if (right === left) right = Math.min(1, left + 1e-4);
 
-  // --- 돌 텍스처 샘플 (픽셀 모듈로) ---
-  const pSrc = pattern.image.data as Uint8Array | Uint8ClampedArray;
-  const pData = (pSrc.constructor === Uint8Array) ? pSrc : new Uint8Array(pSrc.buffer); // toU8 대신 안전한 타입 변환
-  const pw = pattern.image.width, ph = pattern.image.height;
-  const wrap = (v:number,m:number)=>((v % m)+m)%m;
-  const samplePatternByPixel = (px:number, py:number) => {
-    const sx = Math.max(1e-6, patternScalePxX);
-    const sy = Math.max(1e-6, patternScalePxY);
-    const tx = Math.floor(wrap((px + patternOffsetPxX) / sx, pw));
-    const ty = Math.floor(wrap((py + patternOffsetPxY) / sy, ph));
-    const i = (ty * pw + tx) * 4;
-    return [pData[i], pData[i+1], pData[i+2], pData[i+3]] as [number,number,number,number];
-  };
-
-  // --- 밴드(돌바닥) 메인 영역: 하드 오버라이드 ---
-  // CHANGED: 사각형의 픽셀 좌표 계산
-  const yTopPx = top * (this.height - 1);
-  const yBotPx = bottom * (this.height - 1);
-  const xLeftPx = left * (this.width - 1);
-  const xRightPx = right * (this.width - 1);
-
-  // CHANGED: 반복문을 사각형 영역으로 수정
-  for (let yi = Math.max(0, Math.floor(yTopPx)); yi <= Math.min(this.height - 1, Math.ceil(yBotPx)); yi++){
-    for (let xi = Math.max(0, Math.floor(xLeftPx)); xi <= Math.min(this.width - 1, Math.ceil(xRightPx)); xi++){
-      const [pr,pg,pb,pa] = samplePatternByPixel(xi, yi);
-      if (pa===0) continue;
-      const bi = (yi*this.width+xi)*4;
-      this.blendMapData[bi+0]=pr;
-      this.blendMapData[bi+1]=pg;
-      this.blendMapData[bi+2]=pb;
-    }
-  }
-
-  // --- 경계 대역을 기준으로 스플랫 씨앗 생성 ---
-  // NEW: 사각형 둘레 기반으로 씨앗 수 계산
-  const rectW = Math.max(1, xRightPx - xLeftPx);
-  const rectH = Math.max(1, yBotPx - yTopPx);
-  const perimeter = 2 * (rectW + rectH);
-  const approxSeeds = Math.max(1, Math.floor(perimeter * exchangeBandPx * splatDensity));
-
-  // 난수 유틸 (이전과 동일)
-  const randRange = (r:number)=> (a:number,b:number)=> a + (b-a)*r;
-
-  // 잡음(워블) (이전과 동일)
-  const n = this.noise;
-  const wobble = (x:number,y:number)=> (n.noise(x*warpFreq, y*warpFreq, 0) * 2 - 1) * warpAmpPx;
-
-  // 스플랫 씨앗 만들기
-  type Seed = {
-    cx:number; cy:number; r:number; rot:number; lobes:number;
-    type:'dot'|'hole';
-  };
-  const seeds: Seed[] = [];
-  
-  // NEW: 사각형 둘레에 씨앗을 배치하는 로직
-  for (let i=0;i<approxSeeds;i++){
-    const p = Math.random() * perimeter; // 둘레 위의 한 점 선택
-
-    let cx0=0, cy0=0;
-    let isHorizontalEdge = false; // 수평(상/하) 에지인가?
-    let insideSign = 0; // 사각형 안쪽 방향 (+1 또는 -1)
-
-    if (p < rectW) { // 1. 상단 에지
-      cx0 = xLeftPx + p;
-      cy0 = yTopPx;
-      isHorizontalEdge = true;
-      insideSign = 1; // y가 증가하는 방향이 안쪽
-    } else if (p < rectW + rectH) { // 2. 우측 에지
-      cx0 = xRightPx;
-      cy0 = yTopPx + (p - rectW);
-      insideSign = -1; // x가 감소하는 방향이 안쪽
-    } else if (p < 2 * rectW + rectH) { // 3. 하단 에지
-      cx0 = xLeftPx + (p - (rectW + rectH));
-      cy0 = yBotPx;
-      isHorizontalEdge = true;
-      insideSign = -1; // y가 감소하는 방향이 안쪽
-    } else { // 4. 좌측 에지
-      cx0 = xLeftPx;
-      cy0 = yTopPx + (p - (2 * rectW + rectH));
-      insideSign = 1; // x가 증가하는 방향이 안쪽
-    }
-
-    // 경계선에서 안/밖으로 랜덤한 오프셋 적용
-    const offsetDir = (Math.random() < 0.5) ? -1 : 1; // -1: 밖, +1: 안
-    const offsetVal = Math.random() * exchangeBandPx;
-    
-    let cx = cx0, cy = cy0;
-    if (isHorizontalEdge) {
-      cy += insideSign * offsetDir * offsetVal;
-    } else {
-      cx += insideSign * offsetDir * offsetVal;
-    }
-    
-    // 워블 추가
-    const wobbleOffset = wobble(cx0, cy0);
-    if (isHorizontalEdge) cy += wobbleOffset;
-    else cx += wobbleOffset;
-    
-    cx = Math.max(0, Math.min(this.width - 1, cx));
-    cy = Math.max(0, Math.min(this.height - 1, cy));
-
-    const r  = randRange(Math.random())(splatRadiusMinPx, splatRadiusMaxPx);
-    const rot= randRange(Math.random())(rotateMinDeg, rotateMaxDeg) * Math.PI/180;
-    const lobes = Math.floor(randRange(Math.random())(splatLobesMin, splatLobesMax+0.999));
-
-    // 타입 결정: 씨앗이 사각형 안쪽에 가까운가, 바깥쪽에 가까운가?
-    const type:Seed['type'] = (offsetDir > 0) // 안쪽으로 오프셋 되었으면
-      ? (Math.random() < biasInsideHole ? 'hole' : 'dot') // 'hole'일 확률 증가
-      : (Math.random() < biasOutsideDot ? 'dot'  : 'hole'); // 'dot'일 확률 증가
-
-    seeds.push({cx,cy,r,rot,lobes,type});
-  }
-
-  // 스플랫 도형 경계 계산 및 페인팅 (이하 로직 대부분 재사용)
-  const irr = splatIrregularity;
-  const cos = Math.cos, sin = Math.sin;
-  const gR = (c:THREE.Color)=>[Math.round(c.r*255), Math.round(c.g*255), Math.round(c.b*255)] as [number,number,number];
-  const [grR,grG,grB] = gR(grassFallback);
-
-  for (const s of seeds){
-    const rMax = s.r * (1 + irr);
-    const x0 = Math.max(0, Math.floor(s.cx - rMax - splatFeatherPx));
-    const x1 = Math.min(this.width-1, Math.ceil (s.cx + rMax + splatFeatherPx));
-    const y0 = Math.max(0, Math.floor(s.cy - rMax - splatFeatherPx));
-    const y1 = Math.min(this.height-1, Math.ceil (s.cy + rMax + splatFeatherPx));
-    
-    const radial = (theta:number)=>{
-      const k = s.lobes * 0.75;
-      const t = n.noise(cos(theta)*k, sin(theta)*k, 0);
-      const bump = (t*0.5+0.5);
-      return s.r * (1 + irr*(bump*2-1));
+    // --- 돌 텍스처 샘플 (픽셀 모듈로) ---
+    const pSrc = pattern.image.data as Uint8Array | Uint8ClampedArray;
+    const pData = (pSrc.constructor === Uint8Array) ? pSrc : new Uint8Array(pSrc.buffer);
+    const pw = pattern.image.width, ph = pattern.image.height;
+    const wrap = (v:number,m:number)=>((v % m)+m)%m;
+    const samplePatternByPixel = (px:number, py:number) => {
+      const sx = Math.max(1e-6, patternScalePxX);
+      const sy = Math.max(1e-6, patternScalePxY);
+      const tx = Math.floor(wrap((px + patternOffsetPxX) / sx, pw));
+      const ty = Math.floor(wrap((py + patternOffsetPxY) / sy, ph));
+      const i = (ty * pw + tx) * 4;
+      return [pData[i], pData[i+1], pData[i+2], pData[i+3]] as [number,number,number,number];
     };
 
-    for (let y=y0; y<=y1; y++){
-      for (let x=x0; x<=x1; x++){
-        // CHANGED: 가장 가까운 사각형 경계선까지의 거리를 계산하여 스플랫 적용 여부 결정
-        const distTop = Math.abs(y - yTopPx);
-        const distBot = Math.abs(y - yBotPx);
-        const distLeft = Math.abs(x - xLeftPx);
-        const distRight = Math.abs(x - xRightPx);
-        const minEdgeDist = Math.min(distTop, distBot, distLeft, distRight);
-        
-        // 점(x,y)이 사각형 내부에 있는지 여부 판단
-        const isInsideRect = (x >= xLeftPx && x <= xRightPx && y >= yTopPx && y <= yBotPx);
-        
-        // 현재 픽셀이 경계 대역 내에 있을 때만 스플랫을 그립니다.
-        // 대역은 사각형 안과 밖 양쪽에 걸쳐 있습니다.
-        if (minEdgeDist > exchangeBandPx) continue;
+    // --- 밴드 메인 영역 하드 오버라이드 ---
+    const yTopPx = top * (this.height - 1);
+    const yBotPx = bottom * (this.height - 1);
+    const xLeftPx = left * (this.width - 1);
+    const xRightPx = right * (this.width - 1);
 
-        const dx = x - s.cx, dy = y - s.cy;
-        const d  = Math.hypot(dx,dy);
-        if (d > rMax + splatFeatherPx) continue;
-        
-        const th = Math.atan2(dy, dx) - s.rot;
-        const rDir = radial(th);
+    for (let yi = Math.max(0, Math.floor(yTopPx)); yi <= Math.min(this.height - 1, Math.ceil(yBotPx)); yi++){
+      for (let xi = Math.max(0, Math.floor(xLeftPx)); xi <= Math.min(this.width - 1, Math.ceil(xRightPx)); xi++){
+        const [pr,pg,pb,pa] = samplePatternByPixel(xi, yi);
+        if (pa===0) continue;
+        const bi = (yi*this.width+xi)*4;
+        this.blendMapData[bi+0]=pr;
+        this.blendMapData[bi+1]=pg;
+        this.blendMapData[bi+2]=pb;
+      }
+    }
 
-        const edge = (rDir - d) / Math.max(1e-6, splatFeatherPx);
-        if (edge <= -1) continue;
-        const w = Math.max(0, Math.min(1, edge + 1));
-        if (w <= 0) continue;
+    // --- 경계 대역 스플랫 씨앗 ---
+    const rectW = Math.max(1, xRightPx - xLeftPx);
+    const rectH = Math.max(1, yBotPx - yTopPx);
+    const perimeter = 2 * (rectW + rectH);
+    const approxSeeds = Math.max(1, Math.floor(perimeter * exchangeBandPx * splatDensity));
 
-        const bi = (y*this.width + x)*4;
-        if (s.type === 'dot') {
-          const [pr,pg,pb,pa] = samplePatternByPixel(x, y);
-          if (pa===0) continue;
-          const [sr,sg,sb] = [this.blendMapData[bi], this.blendMapData[bi+1], this.blendMapData[bi+2]];
-          this.blendMapData[bi+0] = Math.round(sr*(1-w) + pr*w);
-          this.blendMapData[bi+1] = Math.round(sg*(1-w) + pg*w);
-          this.blendMapData[bi+2] = Math.round(sb*(1-w) + pb*w);
-        } else { // 'hole'
-          const [sr,sg,sb] = [this.blendMapData[bi], this.blendMapData[bi+1], this.blendMapData[bi+2]];
-          this.blendMapData[bi+0] = Math.round(sr*(1-w) + grR*w);
-          this.blendMapData[bi+1] = Math.round(sg*(1-w) + grG*w);
-          this.blendMapData[bi+2] = Math.round(sb*(1-w) + grB*w);
+    const n = this.noise;
+    const wobble = (x:number,y:number)=> (n.noise(x*warpFreq, y*warpFreq, 0) * 2 - 1) * warpAmpPx;
+
+    type Seed = {
+      cx:number; cy:number; r:number; rot:number; lobes:number;
+      type:'dot'|'hole';
+    };
+    const seeds: Seed[] = [];
+
+    for (let i=0;i<approxSeeds;i++){
+      const p = Math.random() * perimeter;
+
+      let cx0=0, cy0=0;
+      let isHorizontalEdge = false;
+      let insideSign = 0;
+
+      if (p < rectW) { // 상단
+        cx0 = xLeftPx + p;
+        cy0 = yTopPx;
+        isHorizontalEdge = true;
+        insideSign = 1;
+      } else if (p < rectW + rectH) { // 우측
+        cx0 = xRightPx;
+        cy0 = yTopPx + (p - rectW);
+        insideSign = -1;
+      } else if (p < 2 * rectW + rectH) { // 하단
+        cx0 = xLeftPx + (p - (rectW + rectH));
+        cy0 = yBotPx;
+        isHorizontalEdge = true;
+        insideSign = -1;
+      } else { // 좌측
+        cx0 = xLeftPx;
+        cy0 = yTopPx + (p - (2 * rectW + rectH));
+        insideSign = 1;
+      }
+
+      const offsetDir = (Math.random() < 0.5) ? -1 : 1; // -1: 밖, +1: 안
+      const offsetVal = Math.random() * exchangeBandPx;
+
+      let cx = cx0, cy = cy0;
+      if (isHorizontalEdge) cy += insideSign * offsetDir * offsetVal;
+      else cx += insideSign * offsetDir * offsetVal;
+
+      const wob = wobble(cx0, cy0);
+      if (isHorizontalEdge) cy += wob; else cx += wob;
+
+      cx = Math.max(0, Math.min(this.width - 1, cx));
+      cy = Math.max(0, Math.min(this.height - 1, cy));
+
+      const rr  = splatRadiusMinPx + Math.random()*(splatRadiusMaxPx - splatRadiusMinPx);
+      const rot = (rotateMinDeg + Math.random()*(rotateMaxDeg - rotateMinDeg)) * Math.PI/180;
+      const lobes = Math.floor(splatLobesMin + Math.random()*(splatLobesMax - splatLobesMin + 0.999));
+
+      const type:Seed['type'] = (offsetDir > 0)
+        ? (Math.random() < biasInsideHole ? 'hole' : 'dot')
+        : (Math.random() < biasOutsideDot ? 'dot' : 'hole');
+
+      seeds.push({cx,cy,r:rr,rot,lobes,type});
+    }
+
+    const irr = splatIrregularity;
+    const cos = Math.cos, sin = Math.sin;
+    const gR = (c:THREE.Color)=>[Math.round(c.r*255), Math.round(c.g*255), Math.round(c.b*255)] as [number,number,number];
+    const [grR,grG,grB] = gR(grassFallback);
+
+    for (const s of seeds){
+      const rMax = s.r * (1 + irr);
+      const x0 = Math.max(0, Math.floor(s.cx - rMax - splatFeatherPx));
+      const x1 = Math.min(this.width-1, Math.ceil (s.cx + rMax + splatFeatherPx));
+      const y0 = Math.max(0, Math.floor(s.cy - rMax - splatFeatherPx));
+      const y1 = Math.min(this.height-1, Math.ceil (s.cy + rMax + splatFeatherPx));
+
+      const radial = (theta:number)=>{
+        const k = s.lobes * 0.75;
+        const t = n.noise(cos(theta)*k, sin(theta)*k, 0);
+        const bump = (t*0.5+0.5);
+        return s.r * (1 + irr*(bump*2-1));
+      };
+
+      for (let y=y0; y<=y1; y++){
+        for (let x=x0; x<=x1; x++){
+          const distTop = Math.abs(y - yTopPx);
+          const distBot = Math.abs(y - yBotPx);
+          const distLeft = Math.abs(x - xLeftPx);
+          const distRight = Math.abs(x - xRightPx);
+          const minEdgeDist = Math.min(distTop, distBot, distLeft, distRight);
+          if (minEdgeDist > exchangeBandPx) continue;
+
+          const dx = x - s.cx, dy = y - s.cy;
+          const d  = Math.hypot(dx,dy);
+          if (d > rMax + splatFeatherPx) continue;
+
+          const th = Math.atan2(dy, dx) - s.rot;
+          const rDir = radial(th);
+
+          const edge = (rDir - d) / Math.max(1e-6, splatFeatherPx);
+          if (edge <= -1) continue;
+          const w = Math.max(0, Math.min(1, edge + 1));
+          if (w <= 0) continue;
+
+          const bi = (y*this.width + x)*4;
+          if (s.type === 'dot') {
+            const [pr,pg,pb,pa] = samplePatternByPixel(x, y);
+            if (pa===0) continue;
+            const [sr,sg,sb] = [this.blendMapData[bi], this.blendMapData[bi+1], this.blendMapData[bi+2]];
+            this.blendMapData[bi+0] = Math.round(sr*(1-w) + pr*w);
+            this.blendMapData[bi+1] = Math.round(sg*(1-w) + pg*w);
+            this.blendMapData[bi+2] = Math.round(sb*(1-w) + pb*w);
+          } else { // 'hole'
+            const [sr,sg,sb] = [this.blendMapData[bi], this.blendMapData[bi+1], this.blendMapData[bi+2]];
+            this.blendMapData[bi+0] = Math.round(sr*(1-w) + grR*w);
+            this.blendMapData[bi+1] = Math.round(sg*(1-w) + grG*w);
+            this.blendMapData[bi+2] = Math.round(sb*(1-w) + grB*w);
+          }
         }
       }
     }
-  }
 
-  this.blendMap.needsUpdate = true;
-}
+    this.blendMap.needsUpdate = true;
+  }
 
   /* -------------------------------- 정리 -------------------------------- */
   Dispose() {
@@ -929,48 +912,4 @@ applyPatternRectSplat(pattern: THREE.DataTexture, opts: PatternBandSplatOptions)
     }
     return dst;
   }
-}
-
-/* smootherstep for color pattern */
-function smootherstep(edge0: number, edge1: number, x: number): number {
-  const t = Math.max(0, Math.min(1, x));
-  const s = t * t * t * (t * (t * 6 - 15) + 10);
-  return edge0 + (edge1 - edge0) * s;
-}
-
-// 클래스 바깥(파일 하단 util 근처)에 추가해도 됩니다.
-function fbm(noise: ImprovedNoise, x: number, y: number, octaves: number, gain: number, lac: number) {
-  let amp = 1, freq = 1, sum = 0, norm = 0;
-  for (let i = 0; i < octaves; i++) {
-    sum += amp * noise.noise(x * freq, y * freq, 0);
-    norm += amp;
-    amp *= gain;
-    freq *= lac;
-  }
-  return sum / (norm || 1);
-}
-const BAYER4 = [
-  [0, 8, 2, 10],
-  [12, 4, 14, 6],
-  [3, 11, 1, 9],
-  [15, 7, 13, 5],
-]; // 0..15
-
-function rot2D(x: number, y: number, rad: number) {
-  const c = Math.cos(rad), s = Math.sin(rad);
-  return [x * c - y * s, x * s + y * c] as [number, number];
-}
-
-// 리지드 fBm (점/덩어리 느낌)
-function fbmRidged(noise: ImprovedNoise, x: number, y: number, oct: number, gain: number, lac: number) {
-  let amp = 0.5, freq = 1.0, sum = 0.0, norm = 0.0;
-  for (let i = 0; i < oct; i++) {
-    // ridged: 1 - |noise|
-    const n = 1.0 - Math.abs(noise.noise(x * freq, y * freq, 0));
-    sum += amp * n;
-    norm += amp;
-    amp *= gain;
-    freq *= lac;
-  }
-  return sum / (norm || 1); // 0..1 근사
 }
