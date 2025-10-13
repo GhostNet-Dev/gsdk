@@ -49,9 +49,8 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         this.idleState = this.currentState = property.idleStates!(id, this.zombie, this.property, this.gphysic, this.eventCtrl, this.baseSpec);
 
         this.phybox = new MonsterBox(id, "mon", property.id, geometry, material)
-        if (window.location.hostname == "hons.ghostwebservice.com") {
+        // if (window.location.hostname == "hons.ghostwebservice.com") 
             this.phybox.visible = false
-        }
         this.phybox.position.copy(this.zombie.Pos)
 
         eventCtrl.RegisterEventListener(EventTypes.UpdateBuff + "mon" + id, (buff: Buff) => {

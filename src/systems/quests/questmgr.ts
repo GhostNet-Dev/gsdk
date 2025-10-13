@@ -8,8 +8,6 @@ import {
 } from "./questdef";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { ItemId } from "@Glibs/inventory/items/itemdefs";
-import { AttackOption, AttackType } from "@Glibs/types/playertypes";
-import { MonsterId } from "@Glibs/types/monstertypes";
 
 export class QuestManager {
     // 모든 퀘스트 '정의'를 저장 (Key: QuestId, Value: Quest)
@@ -64,7 +62,7 @@ export class QuestManager {
                     if (currentProgress < requiredAmount) {
                         activeQuest.progress[objectiveKey] = currentProgress + 1;
                         console.log(`[${questDef.title}] 진행도: ${objectiveKey} (${activeQuest.progress[objectiveKey]}/${requiredAmount})`);
-                        this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `[${questDef.title}] 진행도: (${activeQuest.progress[objectiveKey]}/${requiredAmount}`);
+                        this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `[${questDef.title}] 진행도: (${activeQuest.progress[objectiveKey]}/${requiredAmount})`);
                     }
                     
                     this.checkQuestCompletion(questId);

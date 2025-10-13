@@ -6,6 +6,6 @@ export default class FreeCameraStrategy implements ICameraStrategy {
     constructor(private controls: OrbitControls) { }
 
     update(camera: THREE.Camera, player?: IPhysicsObject) {
-        this.controls.update()
+        if (this.controls.enabled) this.controls.update()
     }
 }

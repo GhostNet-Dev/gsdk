@@ -21,6 +21,7 @@ export const itemDefs = {
     level: "common",
     stackable: false,
     binding: true, autoAttack: true,
+    sound: SoundType.BatAttack1,
     stats: { "damageMin": 3, "damageMax": 5, "speed": 1, "attackRange": 2 },
     actions: [ActionDefs.FireFlame],
   },

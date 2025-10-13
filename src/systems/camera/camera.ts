@@ -46,6 +46,9 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
             this.lookTarget = false
             this.setMode(CameraMode.Free)
         })
+        eventCtrl.RegisterEventListener(EventTypes.OrbitControlsOnOff, (onOff:boolean) => {
+            this.controls.enabled = onOff
+        })
         eventCtrl.RegisterEventListener(EventTypes.RegisterPhysic, (obj: THREE.Object3D) => {
             this.targetObjs.push(obj)
         })

@@ -33,6 +33,7 @@ export enum EventTypes {
 
     CtrlObj = "ctrlObj",
     CtrlObjOff = "ctrlObjOff",
+    OrbitControlsOnOff = "orbitcontrols",
     // bloom효과를 제거해야하는 객체를 등록
     SetNonGlow = "nonglow",
     SetGlow = "glow",

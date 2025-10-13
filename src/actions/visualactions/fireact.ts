@@ -33,8 +33,8 @@ export class FireAction implements IActionComponent, ILoop {
     this.flames.attachTo(obj);
 
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
-    this.eventCtrl.SendEventMessage(EventTypes.SetGlow, this.flames.shell)
-    this.eventCtrl.SendEventMessage(EventTypes.SetGlow, this.flames.streaks!.mesh)
+    // this.eventCtrl.SendEventMessage(EventTypes.SetGlow, this.flames.shell)
+    // this.eventCtrl.SendEventMessage(EventTypes.SetGlow, this.flames.streaks!.mesh)
     // this.scean.add(this.dark.points)
   }
   deactivate(target: IActionUser, context?: ActionContext | undefined): void {

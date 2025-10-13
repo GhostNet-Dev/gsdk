@@ -38,7 +38,7 @@ export default class OptPhysics implements IGPhysic {
             const spatialObj: SpatialObject = {
                 id: obj.uuid, object3d: obj, box: box3 ?? new THREE.Box3().setFromObject(obj), raycastOn
             }
-            this.visualizeBox3(spatialObj.box)
+            // this.visualizeBox3(spatialObj.box)
             this.octreenode!.insert(spatialObj)
             obj.userData.spatialObj = spatialObj
         })
