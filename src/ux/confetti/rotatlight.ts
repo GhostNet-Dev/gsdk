@@ -2,9 +2,17 @@ import { GUX, IGUX } from "../gux";
 
 export default class RotateLight extends GUX {
   Dom = document.createElement("div")
+  contentCol = document.createElement("div")
+  open: Function
+  close: Function
 
-  constructor(private parent: HTMLElement, { color1 = "#00ff00", color2 = "#ffffff", speed = "4s", index = 0 } = {}) {
+  constructor(private parent: HTMLElement, {
+    color1 = "#00ff00", color2 = "#ffffff", speed = "4s", index = 0,
+    open = () => { }, close = () => { }, click = () => { }
+  } = {}) {
     super()
+    this.open = open
+    this.close = close
     this.applyDynamicStyle("rotating-light", getCSS(color1, color2, speed, index))
 
     this.Dom = document.createElement("div");
@@ -12,10 +20,25 @@ export default class RotateLight extends GUX {
     const lightDom = document.createElement("div");
     lightDom.classList.add("rotating-light")
     this.Dom.appendChild(lightDom)
-    this.parent.appendChild(this.Dom)
+    this.Dom.onclick = (e) => { e.stopPropagation(); click(); }
+
+    const container = document.createElement("div")
+    container.classList.add("container", "p-2")
+    container.style.height = "100%"
+    const row1 = document.createElement("div")
+    row1.classList.add("row", "m-0")
+    row1.style.height = "80%"
+    this.contentCol.classList.add("col", "d-flex", "align-items-center")
+    row1.appendChild(this.contentCol)
+    container.appendChild(row1)
+    this.Dom.appendChild(container)
   }
   AddChild(dom: IGUX, ...param: any): void {
-    this.Dom.appendChild(dom.Dom)
+    this.contentCol.appendChild(dom.Dom)
+  }
+  AddChildDom(dom: HTMLElement) {
+    dom.addEventListener("click", (e) => { e.stopPropagation() })
+    this.contentCol.appendChild(dom)
   }
   RenderHTML(...param: any): void {
   }
@@ -24,10 +47,12 @@ export default class RotateLight extends GUX {
   }
   Show() {
     this.parent.appendChild(this.Dom)
+    this.open()
   }
   Hide(): void {
+    this.close()
     if (this.parent.contains(this.Dom)) this.parent.removeChild(this.Dom)
-  } 
+  }
 }
 
 function getCSS(color1: string, color2: string, speed: string, index: number) {
@@ -35,6 +60,8 @@ function getCSS(color1: string, color2: string, speed: string, index: number) {
 /* 전체 배경 */
 .rotating-background {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 100vw;
   height: 100vh;
   overflow: hidden; /* 스크롤바 방지 */

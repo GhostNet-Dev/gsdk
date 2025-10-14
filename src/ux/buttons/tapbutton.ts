@@ -9,8 +9,8 @@ export default class TapButton extends GUX {
     close: Function
 
     constructor(
-        private parent: HTMLElement, 
-        { 
+        private parent: HTMLElement,
+        {
             opacity = "0.5", content = "Tap to continue", fullScreen = false,
             open = () => { }, close = () => { }, click = () => { } } = {}
     ) {
@@ -45,7 +45,7 @@ export default class TapButton extends GUX {
         container.style.height = "100%"
         const row1 = document.createElement("div")
         row1.classList.add("row", "m-0")
-        row1.style.height ="80%"
+        row1.style.height = "80%"
         this.contentCol.classList.add("col", "d-flex", "align-items-center")
         row1.appendChild(this.contentCol)
 
@@ -62,7 +62,7 @@ export default class TapButton extends GUX {
         this.Dom.appendChild(container)
     }
     RenderHTML(...param: any): void {
-        
+
     }
     AddChild(dom: IGUX): void {
         this.AddChildDom(dom.Dom)

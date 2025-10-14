@@ -13,7 +13,7 @@ export default class MenuGroup {
     constructor(private parent: HTMLElement, {
         top = "", left = "", right = "", bottom = "", margin = "m-1",
         vertical = false, center = false, opacity = "", interpadding = 1,
-        height = "", nowrap = false
+        height = "", nowrap = false, width = ""
     } = {}) {
         this.vertical = vertical
         this.center = center
@@ -25,6 +25,7 @@ export default class MenuGroup {
         this.dom.style.boxShadow = `0 4px 8px rgba(0, 0, 0, ${opacity.length > 0 ? opacity: ""})`
         this.dom.style.overflow = "hidden"
         this.dom.style.position = "absolute"
+        if(width.length > 0) this.dom.style.width = width
         if (height.length > 0) this.dom.style.height = height
 
         if (top.length > 0) this.dom.style.top = top
