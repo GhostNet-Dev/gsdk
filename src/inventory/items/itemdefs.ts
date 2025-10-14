@@ -22,7 +22,7 @@ export const itemDefs = {
     stackable: false,
     binding: true, autoAttack: true,
     sound: SoundType.BatAttack1,
-    stats: { "damageMin": 3, "damageMax": 5, "speed": 1, "attackRange": 2 },
+    stats: { "attack": 3, "damageMin": 3, "damageMax": 5, "speed": 1, "attackRange": 2 },
     actions: [ActionDefs.FireFlame],
   },
   Sword: {
@@ -41,7 +41,7 @@ export const itemDefs = {
     stackable: false,
     sound: SoundType.SwordAttack1,
     binding: true, autoAttack: true,
-    stats: { "damageMin": 3, "damageMax": 5, "speed": 1, "attackRange": 2 },
+    stats: { "attack": 5, "damageMin": 3, "damageMax": 5, "speed": 1, "attackRange": 2 },
     actions: [ActionDefs.Swing],
   },
   DefaultGun: {
