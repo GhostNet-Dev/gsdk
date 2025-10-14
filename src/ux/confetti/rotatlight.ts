@@ -1,39 +1,37 @@
+import { GUX, IGUX } from "../gux";
 
-export default class RotateLight {
-    dom: HTMLElement
+export default class RotateLight extends GUX {
+  Dom = document.createElement("div")
 
-    constructor(private parent: HTMLElement, { color1 = "#00ff00", color2 = "#ffffff", speed = "4s", index = 0 } = {}) {
-        this.applyDynamicStyle("rotating-light", getCSS(color1, color2, speed, index))
+  constructor(private parent: HTMLElement, { color1 = "#00ff00", color2 = "#ffffff", speed = "4s", index = 0 } = {}) {
+    super()
+    this.applyDynamicStyle("rotating-light", getCSS(color1, color2, speed, index))
 
-        this.dom = document.createElement("div");
-        this.dom.classList.add("rotating-background");
-        const lightDom = document.createElement("div");
-        lightDom.classList.add("rotating-light")
-        this.dom.appendChild(lightDom)
-
-        parent.appendChild(this.dom)
-    }
-    dispose() {
-        this.parent.removeChild(this.dom)
-    }
-    show() {
-        this.parent.appendChild(this.dom)
-    }
-
-    applyDynamicStyle(styleId: string, css: string) {
-        if (!document.getElementById(styleId)) {
-            const style = document.createElement("style");
-            style.id = styleId;
-            style.textContent = css;
-            document.head.appendChild(style); // <head>에 스타일 추가
-        } else {
-            console.log("Style already applied.");
-        }
-    }
+    this.Dom = document.createElement("div");
+    this.Dom.classList.add("rotating-background");
+    const lightDom = document.createElement("div");
+    lightDom.classList.add("rotating-light")
+    this.Dom.appendChild(lightDom)
+    this.parent.appendChild(this.Dom)
+  }
+  AddChild(dom: IGUX, ...param: any): void {
+    this.Dom.appendChild(dom.Dom)
+  }
+  RenderHTML(...param: any): void {
+  }
+  dispose() {
+    this.parent.removeChild(this.Dom)
+  }
+  Show() {
+    this.parent.appendChild(this.Dom)
+  }
+  Hide(): void {
+    if (this.parent.contains(this.Dom)) this.parent.removeChild(this.Dom)
+  } 
 }
 
 function getCSS(color1: string, color2: string, speed: string, index: number) {
-    return `
+  return `
 /* 전체 배경 */
 .rotating-background {
   position: absolute;

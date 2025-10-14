@@ -1,4 +1,5 @@
 import IEventController from "@Glibs/interface/ievent";
+import { gsap } from "gsap"
 import { EventTypes } from "@Glibs/types/globaltypes";
 /**
  * 실행할 작업을 정의하는 타입.
@@ -8,6 +9,7 @@ type Task = () => Promise<void>;
 
 export default class WheelLoader {
   private taskQueue: Task[] = [];
+  private loadingCompleteTask?: Task;
   private completedTasks: number = 0;
   private totalTasks: number = 0;
   private isRunning: boolean = false;
@@ -15,8 +17,17 @@ export default class WheelLoader {
   private cogsElement: HTMLElement;
   private element: HTMLElement;
   private wrapper: HTMLDivElement;
+  private extension: HTMLDivElement = document.createElement('div')
+  private textDom: HTMLDivElement = document.createElement("div")
+  private needToTap: boolean = false
+  private fullscreen: boolean = false
 
-  constructor(eventCtrl: IEventController) {
+  constructor(eventCtrl: IEventController, {
+    fullscreen = false, needToTap = false, soundWarning = false
+  } = {}) {
+    this.needToTap = needToTap
+    this.fullscreen = fullscreen
+
     this.wrapper = document.createElement("div") as HTMLDivElement
     this.wrapper.className = "loading"
     this.wrapper.innerHTML = html
@@ -26,11 +37,43 @@ export default class WheelLoader {
     this.progressElement = this.element.querySelector("progress") as HTMLProgressElement;
     this.cogsElement = this.element.querySelector(".cogs") as HTMLElement;
     this.reset();
+
+    if (soundWarning || fullscreen) {
+      const info = document.createElement("div") as HTMLDivElement
+      info.classList.add("container", "w-50")
+      let html = ""
+      if (soundWarning) html += `
+            <div class='row'>
+              <div class='col-auto p-1 pt-2 text-white rounded border border-white border-5 fw-bold'><span class="material-symbols-outlined" style="font-size: xx-large;"> brand_awareness </span></div>
+              <div class='col text-white fw-bold'>Sound Warning</div>
+            </div>
+          `
+      if (fullscreen) html += `
+            <div class='row mt-1'>
+              <div class='col-auto p-1 pt-2 text-white rounded border border-white border-5 fw-bold'><span class="material-symbols-outlined" style="font-size: xx-large;"> fullscreen </span></div>
+              <div class='col text-white fw-bold'>Fullscreen Warning</div>
+            </div>
+      `
+      info.innerHTML = html
+      Object.assign(this.extension.style, {
+        position: "absolute",
+        bottom: "0",
+        height: "50%",
+        width: "100%",
+        zIndex: "10",
+      })
+      this.extension.appendChild(info)
+    }
+    document.body.appendChild(this.extension)
+
     eventCtrl.RegisterEventListener(EventTypes.LoadingProgress, (value: number) => {
       this.load(value)
     })
     eventCtrl.RegisterEventListener(EventTypes.RegisterLoadingItems, (task: Task) => {
       this.taskQueue.push(task);
+    })
+    eventCtrl.RegisterEventListener(EventTypes.RegisterLoadingCompleteItem, (task: Task) => {
+      this.loadingCompleteTask = task
     })
   }
   public startProcessing(interval: number = 300): void {
@@ -74,13 +117,36 @@ export default class WheelLoader {
     this.load(percentage)
   }
 
+  ani?: gsap.core.Tween
   /**
    * 모든 작업이 완료되었을 때 호출되는 정리 함수.
    */
   private finishProcessing(): void {
     this.isRunning = false;
-    this.close();
-    console.log("모든 작업 완료.");
+    if (this.needToTap) {
+      Object.assign(this.textDom.style, {
+        position: "relative",
+        left: "50%",
+        width: "fit-content",
+        transform: "translate(-50%, 50%)",
+      })
+      this.textDom.innerText = "Tap to continue"
+      this.textDom.classList.add("gametext", "gfont")
+      const dom = document.createElement("div")
+      dom.classList.add("container", "mt-3")
+      dom.appendChild(this.textDom)
+      this.extension.appendChild(dom)
+      const closeFunc = () => {
+        this.close();
+        this.ani?.kill();
+        if(this.fullscreen) this.toggleFullScreen()
+      }
+      this.wrapper.onclick = closeFunc
+      this.extension.onclick = closeFunc
+      this.ani = gsap.fromTo(this.textDom, { opacity: 0 }, { opacity: 1, duration: 0.6, repeat: -1, yoyo: true, ease: "power2.out" })
+    } else {
+      this.close();
+    }
   }
   loadCSS(filename: string) {
     return new Promise((resolve, reject) => {
@@ -100,13 +166,13 @@ export default class WheelLoader {
   }
   private async load(value: number) {
     this.progressElement = this.element.querySelector("progress") as HTMLProgressElement;
-    console.log(value, ": ", this.progressElement)
+    console.log(value)
     if (this.progressElement) {
       this.progressElement.value = value;
       await this.sleep(1)
     }
     if (value === 100) {
-      this.close();
+      this.finishProcessing();
     }
   }
 
@@ -128,6 +194,8 @@ export default class WheelLoader {
   }
 
   private close() {
+    this.loadingCompleteTask?.()
+
     if (this.progressElement && this.cogsElement) {
       // Animate progress element (width)
       setTimeout(() => {
@@ -138,8 +206,11 @@ export default class WheelLoader {
         this.cogsElement.style.marginTop = "-50px";
         this.cogsElement.style.opacity = "0";
         this.wrapper.style.display = "none"
+        document.body.removeChild(this.wrapper)
+        document.body.removeChild(this.extension)
       }, 500);
     }
+    console.log("모든 작업 완료.");
   }
   applyDynamicStyle(styleId: string, css: string) {
     if (!document.getElementById(styleId)) {
@@ -151,6 +222,21 @@ export default class WheelLoader {
       console.log("Style already applied.");
     }
   }
+    toggleFullScreen(): void {
+        const doc = document.documentElement;
+
+        if (!document.fullscreenElement) {
+            if (doc.requestFullscreen) {
+                doc.requestFullscreen();
+            } else if ((doc as any).mozRequestFullScreen) { // Firefox
+                (doc as any).mozRequestFullScreen();
+            } else if ((doc as any).webkitRequestFullscreen) { // Chrome, Safari, Opera
+                (doc as any).webkitRequestFullscreen();
+            } else if ((doc as any).msRequestFullscreen) { // IE/Edge
+                (doc as any).msRequestFullscreen();
+            }
+        }
+    }
 }
 
 

@@ -1,7 +1,7 @@
 import { gsap } from "gsap"
 import { GUX, IGUX, UxLayerIndex } from "../gux"
 
-export default class TapButton extends GUX{
+export default class TapButton extends GUX {
     Dom = document.createElement("div")
     textDom = document.createElement("div")
     contentCol = document.createElement("div")
@@ -17,13 +17,15 @@ export default class TapButton extends GUX{
         super()
         this.open = open
         this.close = close
-        this.Dom.style.position = "absolute"
-        this.Dom.style.backgroundColor = `rgba(0, 0, 0, ${opacity})`
-        this.Dom.style.top = "0"
-        this.Dom.style.left = "0"
-        this.Dom.style.width = "100%"
-        this.Dom.style.height = "100%"
-        this.Dom.style.zIndex = UxLayerIndex.Tap.toString()
+        Object.assign(this.Dom.style, {
+            position: "absolute",
+            backgroundColor: `rgba(0, 0, 0, ${opacity})`,
+            top: "0",
+            left: "0",
+            width: "100%",
+            height: "100%",
+            zIndex: UxLayerIndex.Tap.toString(),
+        })
         // if(topDom) {
         //     const index = Number(topDom.style.zIndex)
         //     this.dom.style.zIndex = ((index > 0) ? index - 1 : 0).toString()

@@ -113,6 +113,7 @@ export enum EventTypes {
 
     LoadingProgress = "loading",
     RegisterLoadingItems = "regloaditems",
+    RegisterLoadingCompleteItem = "regcompitems",
     ShowProgress = "showprogress",
 
     // Sounds
