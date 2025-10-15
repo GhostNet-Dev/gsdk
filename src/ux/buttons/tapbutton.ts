@@ -33,12 +33,6 @@ export default class TapButton extends GUX {
         this.Dom.onclick = (e) => { if (fullScreen) this.toggleFullScreen(); e.stopPropagation(); click(); this.Hide() }
         this.Dom.addEventListener("click", (e) => { e.stopPropagation() })
 
-        this.textDom.style.position = "relative"
-        this.textDom.style.left = "50%"
-        this.textDom.style.width = "fit-content"
-        this.textDom.style.transform = "translate(-50%, -50%)"
-        this.textDom.innerText = content
-        this.textDom.classList.add("gametext", "gfont")
 
         const container = document.createElement("div")
         container.classList.add("container", "p-2")
@@ -49,6 +43,14 @@ export default class TapButton extends GUX {
         this.contentCol.classList.add("col", "d-flex", "align-items-center")
         row1.appendChild(this.contentCol)
 
+        container.appendChild(row1)
+
+        this.textDom.style.position = "relative"
+        this.textDom.style.left = "50%"
+        this.textDom.style.width = "fit-content"
+        this.textDom.style.transform = "translate(-50%, -50%)"
+        this.textDom.innerText = content
+        this.textDom.classList.add("gametext", "gfont")
         const row2 = document.createElement("div")
         row2.classList.add("row", "m-0")
         row2.style.height = "20%"
@@ -56,7 +58,6 @@ export default class TapButton extends GUX {
         col.classList.add("col", "d-flex", "align-items-center")
         col.appendChild(this.textDom)
         row2.appendChild(col)
-        container.appendChild(row1)
         container.appendChild(row2)
 
         this.Dom.appendChild(container)

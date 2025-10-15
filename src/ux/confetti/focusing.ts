@@ -1,30 +1,22 @@
+import { GUX, IGUX } from "../gux";
 
-export default class Focusing {
-  dom: HTMLElement
+export default class Focusing extends GUX{
+  Dom: HTMLElement
 
   constructor(private parent: HTMLElement, { color = "#000000", start = "20%", end = "100%", index = 0 } = {}) {
+    super()
     this.applyDynamicStyle("focusing-gradient", getCSS(color, start, end, index))
-    this.dom = document.createElement("div");
-    this.dom.classList.add("gradient-overlay");
-    
-    parent.appendChild(this.dom)
+    this.Dom = document.createElement("div");
+    this.Dom.classList.add("gradient-overlay");
   }
-  dispose() {
-    this.parent.removeChild(this.dom)
+  Hide() {
+    this.parent.removeChild(this.Dom)
   }
-  show() {
-    this.parent.appendChild(this.dom)
+  Show() {
+    this.parent.appendChild(this.Dom)
   }
-  applyDynamicStyle(styleId: string, css: string) {
-        if (!document.getElementById(styleId)) {
-            const style = document.createElement("style");
-            style.id = styleId;
-            style.textContent = css;
-            document.head.appendChild(style); // <head>에 스타일 추가
-        } else {
-            console.log("Style already applied.");
-        }
-    }
+  RenderHTML(...param: any): void { }
+  AddChild(dom: IGUX, ...param: any): void { }
 }
 
 
