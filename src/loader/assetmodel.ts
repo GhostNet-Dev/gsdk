@@ -31,7 +31,6 @@ export abstract class AssetModel {
         return this.clips.get(id)
     }
     GetBox(mesh: THREE.Group) {
-        console.log("GetBox", mesh.rotation.x)
         if (this.meshs == undefined) this.meshs = mesh
         // Don't Use this.meshs
         if (this.box == undefined) {

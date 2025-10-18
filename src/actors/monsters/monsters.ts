@@ -13,6 +13,7 @@ import { Loader } from "@Glibs/loader/loader";
 import { Effector } from "@Glibs/magical/effects/effector";
 import { calculateCompositeDamage } from "../battle/damagecalc";
 import { BaseSpec } from "../battle/basespec";
+import { Zombie } from "./zombie";
 
 export type MonsterSet = {
     monModel: IPhysicsObject,
@@ -52,6 +53,9 @@ export class Monsters {
         this.mode = flag 
         if(!this.mode) { this.ReleaseMonster() }
     }
+    maxMob = 100
+    mobCount = 0
+    nameView = true
 
     constructor(
         private loader: Loader,
@@ -59,8 +63,11 @@ export class Monsters {
         private game: THREE.Scene,
         private player: IPhysicsObject,
         private gphysic: IGPhysic,
-        private monDb: MonsterDb
+        private monDb: MonsterDb,
+        { maxMob = 100, nameView = true } = {}
     ) {
+        this.maxMob = maxMob
+        this.nameView = nameView
         eventCtrl.RegisterEventListener(EventTypes.Attack + "mon", (opts: AttackOption[]) => {
             if (!this.mode) return
             opts.forEach((opt) => {
@@ -105,6 +112,7 @@ export class Monsters {
         if (z && !z.monCtrl.ReceiveDemage(damage, effect)) {
             z.live = false
             z.deadtime = new Date().getTime()
+            this.mobCount--
             this.eventCtrl.SendEventMessage(EventTypes.Drop,
                 new THREE.Vector3(z.monModel.Meshs.position.x, this.player.CenterPos.y, z.monModel.Meshs.position.z), 
                 z.monCtrl.Drop, z.monCtrl.MonsterBox.MonId
@@ -173,6 +181,8 @@ export class Monsters {
 
     async Spawning(monId: MonsterId, respawn:boolean, monSet?: MonsterSet, pos?: THREE.Vector3) {
         //const zSet = await this.CreateZombie()
+        this.mobCount++
+        if (this.mobCount >= this.maxMob) return
         if (!this.mode) return
         let mon = this.monsters.get(monId)
         if (!mon) {
@@ -201,7 +211,8 @@ export class Monsters {
         monSet.live = true
         monSet.monCtrl.Respawning()
 
-        monSet.monModel.Visible = true
+        monSet.monModel.Visible = true;
+        (monSet.monModel as Zombie).NameView(this.nameView)
         console.log("Spawning", monSet.monCtrl.MonsterBox.Id, monSet, mon)
 
         this.eventCtrl.SendEventMessage(EventTypes.AddInteractive, monSet.monCtrl.MonsterBox)

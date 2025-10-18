@@ -8,7 +8,11 @@ export default class WoodModal implements IDialog {
     titleDom = document.createElement("div");
     row = document.createElement("div")
     child: IGUX[] = []
-    constructor({ width = "100%", height = "fit-content" } = {}) {
+    show: () => void
+    hide: () => void
+    constructor({ width = "100%", height = "fit-content", show = () => { }, hide = () => { } } = {}) {
+        this.show = show
+        this.hide= hide
         this.applyDynamicStyle("woodmodal", getCSS())
         this.dom.classList.add("woodmodal", "gfont")
         this.dom.style.width = width
@@ -58,6 +62,7 @@ export default class WoodModal implements IDialog {
             { scale: 1, opacity: 1, duration: 0.4, ease: "bounce.out",
                 onComplete: () => { 
                     this.child.forEach((e) => e.RenderHTML(this.dom.getBoundingClientRect().width)) 
+                    this.show()
                 }
             })
     }
@@ -67,10 +72,11 @@ export default class WoodModal implements IDialog {
                 scale: 0, opacity: 0, duration: 0.3, ease: "power2.in",
                 onComplete: resolve
             })
+            this.hide()
         })
     }
     Clear() {
-        this.container.replaceChildren()
+        this.row.replaceChildren()
     }
     applyDynamicStyle(styleId: string, css: string) {
         if (!document.getElementById(styleId)) {

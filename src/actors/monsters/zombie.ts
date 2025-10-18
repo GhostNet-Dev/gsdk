@@ -57,6 +57,12 @@ export class Zombie extends PhysicsObject {
         if(opacity > 0) this.Visible = true
         else this.Visible = false
     }
+    NameView(onoff: boolean) {
+        if (onoff)
+            this.meshs.add(this.text)
+        else
+            this.meshs.remove(this.text)
+    }
 
     async Loader(position: THREE.Vector3, text: string, id: number) {
         const [meshs, _exist] = await this.asset.UniqModel(text + id)
