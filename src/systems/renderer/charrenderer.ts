@@ -77,7 +77,9 @@ export default class CharMiniRenderer implements IViewer, ILoop {
         const observer = new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
-                    this.renderer.domElement.style.width = container.clientWidth + "px"
+                    // this.renderer.domElement.style.width = container.clientWidth + "px"
+                    console.log(container.clientWidth, container, container.style.width)
+                    this.resize()
                     observer.unobserve(entry.target);
                 } 
             });
@@ -116,14 +118,17 @@ export default class CharMiniRenderer implements IViewer, ILoop {
     }
     public resize() {
         // 컨테이너 크기에 맞춰 카메라와 렌더러 업데이트
-        const newAspect = this.container.clientWidth / this.container.clientHeight;
-        this.camera.left = -this.frustumSize * newAspect / 2;
-        this.camera.right = this.frustumSize * newAspect / 2;
-        this.camera.top = this.frustumSize / 2;
-        this.camera.bottom = -this.frustumSize / 2;
-        // this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+        setTimeout(() => {
+            const newAspect = this.container.clientWidth / this.container.clientHeight;
+            console.log(this.container.clientWidth, this.container.clientHeight, newAspect, this.container.style.width)
+            this.camera.left = -this.frustumSize * newAspect / 2;
+            this.camera.right = this.frustumSize * newAspect / 2;
+            this.camera.top = this.frustumSize / 2;
+            this.camera.bottom = -this.frustumSize / 2;
+            // this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+        });
     }
     light() {
         const hemispherelight = new THREE.HemisphereLight(0xffffff, 0x333333)

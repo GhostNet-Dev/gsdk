@@ -6,8 +6,9 @@ export default class WoodModal implements IDialog {
     dom = document.createElement("div")
     container = document.createElement("div")
     titleDom = document.createElement("div");
+    row = document.createElement("div")
     child: IGUX[] = []
-    constructor({ width = "90%", height = "fit-content" } = {}) {
+    constructor({ width = "100%", height = "fit-content" } = {}) {
         this.applyDynamicStyle("woodmodal", getCSS())
         this.dom.classList.add("woodmodal", "gfont")
         this.dom.style.width = width
@@ -17,6 +18,8 @@ export default class WoodModal implements IDialog {
         this.titleDom.classList.add("woodmodal_title", "gfont")
         this.dom.appendChild(this.titleDom)
         this.container.classList.add("container", "p-0")
+        this.row.classList.add("d-flex", "flex-column", "flex-md-row", "pb-1")
+        this.container.appendChild(this.row)
         this.dom.appendChild(this.container)
     }
     GetContentElement() {
@@ -30,14 +33,13 @@ export default class WoodModal implements IDialog {
         this.AddChildDom(dom.Dom)
     }
     AddChildDom(dom: HTMLElement) {
-        const row = document.createElement("div")
-        row.classList.add("row", "pb-1")
+        // const row = document.createElement("div")
         const col = document.createElement("div")
-        col.classList.add("col")
+        col.classList.add("w-100")
         dom.addEventListener("click", (e) => { e.stopPropagation() })
         col.appendChild(dom)
-        row.appendChild(col)
-        this.container.appendChild(row)
+        this.row.appendChild(col)
+        // this.container.appendChild(row)
     }
     RenderHtml(title: string, content?: string | HTMLElement, {
         visible = false, close = () => { } } = {}): void {
