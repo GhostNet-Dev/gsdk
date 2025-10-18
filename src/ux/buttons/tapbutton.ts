@@ -7,16 +7,22 @@ export default class TapButton extends GUX {
     contentCol = document.createElement("div")
     open: Function
     close: Function
+    click: Function
+    tapEnable = true
+    fullScreen = false
 
     constructor(
         private parent: HTMLElement,
         {
-            opacity = "0.5", content = "Tap to continue", fullScreen = false,
+            opacity = "0.5", content = "Tap to continue", fullScreen = false, tapEnable = true,
             open = () => { }, close = () => { }, click = () => { } } = {}
     ) {
         super()
+        this.tapEnable = tapEnable
+        this.fullScreen = fullScreen
         this.open = open
         this.close = close
+        this.click = click
         Object.assign(this.Dom.style, {
             position: "absolute",
             backgroundColor: `rgba(0, 0, 0, ${opacity})`,
@@ -30,7 +36,7 @@ export default class TapButton extends GUX {
         //     const index = Number(topDom.style.zIndex)
         //     this.dom.style.zIndex = ((index > 0) ? index - 1 : 0).toString()
         // }
-        this.Dom.onclick = (e) => { if (fullScreen) this.toggleFullScreen(); e.stopPropagation(); click(); this.Hide() }
+        if (tapEnable) this.Dom.onclick = (e) => { if (fullScreen) this.toggleFullScreen(); e.stopPropagation(); click(); this.Hide() }
         this.Dom.addEventListener("click", (e) => { e.stopPropagation() })
 
 
@@ -49,7 +55,7 @@ export default class TapButton extends GUX {
         this.textDom.style.left = "50%"
         this.textDom.style.width = "fit-content"
         this.textDom.style.transform = "translate(-50%, -50%)"
-        this.textDom.innerText = content
+        if (tapEnable) this.textDom.innerText = content
         this.textDom.classList.add("gametext", "gfont")
         const row2 = document.createElement("div")
         row2.classList.add("row", "m-0")
@@ -63,7 +69,6 @@ export default class TapButton extends GUX {
         this.Dom.appendChild(container)
     }
     RenderHTML(...param: any): void {
-
     }
     AddChild(dom: IGUX): void {
         this.AddChildDom(dom.Dom)
@@ -71,6 +76,11 @@ export default class TapButton extends GUX {
     AddChildDom(dom: HTMLElement) {
         dom.addEventListener("click", (e) => { e.stopPropagation() })
         this.contentCol.appendChild(dom)
+    }
+    EnableTap(content = "Tap to continue") {
+        this.tapEnable = true
+        this.textDom.innerText = content
+        this.Dom.onclick = (e) => { if (this.fullScreen) this.toggleFullScreen(); e.stopPropagation(); this.click(); this.Hide() }
     }
     ani?: gsap.core.Tween
     Show() {
