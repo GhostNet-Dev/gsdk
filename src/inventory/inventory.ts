@@ -44,6 +44,11 @@ export class Inventory implements IInventory {
         }
         this.bodySlot.set(bind, item)
     }
+    UnequipItem(bind: Bind): void {
+        const prevItem = this.bodySlot.get(bind)
+        if (prevItem) this.InsertInventory(prevItem)
+        this.bodySlot.delete(bind)
+    }
     GetBindingItem(bind: Bind) {
         return this.bodySlot.get(bind)
     }

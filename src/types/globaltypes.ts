@@ -40,6 +40,7 @@ export enum EventTypes {
     Outline = "outline",
 
     Equipment = "Equip",
+    Unequipment = "unequip",
     // item이 drop 해야될 때 
     Drop = "drop",
     DirectDrop = "directdrop",

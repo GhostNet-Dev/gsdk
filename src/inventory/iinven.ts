@@ -5,6 +5,7 @@ import { Bind } from "@Glibs/types/assettypes";
 
 export default interface IInventory {
     EquipItem(item: IItem): void
+    UnequipItem(bind: Bind): void
     GetItemSlot(id: ItemId): InventorySlot | undefined
     GetItemInfo(key: ItemId): ItemProperty
     NewItem(key: ItemId): Promise<IItem | undefined>

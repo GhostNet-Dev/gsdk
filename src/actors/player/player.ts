@@ -59,6 +59,9 @@ export class Player extends PhysicsObject {
             // right hand
             this.ReloadBindingItem(slot.item)
         })
+        this.eventCtrl.RegisterEventListener(EventTypes.Unequipment, (bind: Bind) => {
+            this.UnequipItem(bind)
+        })
     }
     GetItemPosition(target: THREE.Vector3) {
         const rightId = this.asset.GetBodyMeshId(Bind.Hands_R)
@@ -71,6 +74,15 @@ export class Player extends PhysicsObject {
         const mesh = this.meshs.getObjectByName("muzzlePoint")
         if (!mesh) return
         mesh.getWorldPosition(target)
+    }
+    UnequipItem(bind: Bind) {
+        const rightId = this.asset.GetBodyMeshId(bind)
+        if (rightId == undefined) return
+        
+        const mesh = this.meshs.getObjectByName(rightId)
+        if (!mesh) return
+        mesh.visible = false
+        delete this.bindMesh[bind]
     }
     ReloadBindingItem(item: IItem) {
         if(item.Bind == undefined) throw new Error("item bind is undefined")

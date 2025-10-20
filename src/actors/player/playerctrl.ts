@@ -22,6 +22,7 @@ import { MeleeAttackState } from "./states/meleeattackst";
 import { RangeAttackState } from "./states/rangeattackst";
 import { ComboMeleeState } from "./states/combomeleeattackst";
 import { EventActionState, EventIdleState } from "./states/eventstate";
+import { Bind } from "@Glibs/types/assettypes";
 
 export class PlayerCtrl implements ILoop, IActionUser {
     LoopId = 0
@@ -172,6 +173,14 @@ export class PlayerCtrl implements ILoop, IActionUser {
             this.baseSpec.Equip(slot.item);
             this.inventory.EquipItem(slot.item);
             (slot.item as Item).activate()
+            this.currentState.Init()
+        })
+        eventCtrl.RegisterEventListener(EventTypes.Unequipment, (bind: Bind) => {
+            const prevItem = this.baseSpec.GetBindItem(bind);
+            if (!prevItem) return
+            (prevItem as Item).deactivate()
+            this.baseSpec.Unequip(bind);
+            this.inventory.UnequipItem(bind);
             this.currentState.Init()
         })
         eventCtrl.RegisterEventListener(EventTypes.Pickup, (id: ItemId) => {

@@ -58,6 +58,9 @@ export default class LoadingMgr {
     }
     private finishProcessing(): void {
         this.isRunning = false;
+        this.completedTasks = 0;
+        this.totalTasks = 0;
+        this.taskQueue = [];
         this.close();
     }
     /**
@@ -66,6 +69,7 @@ export default class LoadingMgr {
     private updateProgress(): void {
         const percentage = this.totalTasks > 0 ? (this.completedTasks / this.totalTasks) * 100 : 0;
         this.progressBar.SetProgress(percentage)
+        console.log(percentage)
         this.load(percentage)
     }
     private async load(value: number) {
@@ -75,6 +79,7 @@ export default class LoadingMgr {
     }
     private close() {
         this.loadingCompleteTask?.()
+        this.progressBar.SetProgress(100)
 
         // Animate progress element (width)
         setTimeout(() => {
