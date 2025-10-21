@@ -1,10 +1,20 @@
 import * as THREE from 'three'
+import { ILoop } from '../event/ievent';
+import IEventController from '@Glibs/interface/ievent';
+import { EventTypes } from '@Glibs/types/globaltypes';
+import { IPhysicsObject } from '@Glibs/interface/iobject';
 
-export default class DefaultLights extends THREE.DirectionalLight {
+export default class DefaultLights extends THREE.DirectionalLight implements ILoop {
+    LoopId: number = 0;
+    private player?: IPhysicsObject
     hemi = new THREE.HemisphereLight(0xfffbef, 0xf7fbff, 0.8); // warm sky, very light ground
     ambient = new THREE.AmbientLight(0xffffff, 1.0); // 밝은 베이스
     fill = new THREE.DirectionalLight(0xfffaef, 0.25);
-    constructor(private scene: THREE.Scene) {
+    lightOffset = new THREE.Vector3(12, 20, 8);
+    constructor(
+        private scene: THREE.Scene,
+        private eventCtrl: IEventController,
+    ) {
         super(0xfff2e0, 1.0)
 
         this.hemi.position.set(0, 80, 0);
@@ -31,5 +41,18 @@ export default class DefaultLights extends THREE.DirectionalLight {
         this.fill.position.set(-10, 10, -6);
         this.fill.castShadow = false;
         this.scene.add(this.ambient, this.fill, this.hemi, /*hemispherelight,*/ this,/*this.effector.meshs*/)
+
+        eventCtrl.RegisterEventListener(EventTypes.CtrlObj, (obj: IPhysicsObject) => {
+            this.player = obj
+            this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.CtrlObjOff, () => {
+            this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
+        })
+    }
+    update(): void {
+        if (!this.player) return
+        this.position.copy(this.player.Pos).add(this.lightOffset)
+        this.target = this.player.Meshs
     }
 }
