@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { Fly } from "./fly";
 import { IFlyCtrl } from "./friendly";
-import { AttackFState, DyingFState, IdleFState, RunFState } from "./friendlystate";
+import { AttackFState, DyingFState, IdleFState, RunFState } from "./states/friendlystate";
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { MonsterProperty } from "@Glibs/types/monstertypes";
@@ -55,13 +55,7 @@ export class FlyCtrl implements ILoop, IFlyCtrl, IActionUser {
         this.dir.subVectors(this.player.CenterPos, this.fly.CenterPos)
         this.moveDirection.copy(this.dir)
 
-        /*
-        if (this.target && this.fly.CannonPos.distanceTo(this.target.CannonPos)) { // attack 
-        }
-        if (this.fly.CannonPos.distanceTo(this.player.CannonPos)) { // two far 
-        }
-        */
-        this.currentState = this.currentState.Update(delta, this.moveDirection, this.fly)
+        this.currentState = this.currentState.Update(delta, this.moveDirection, this.player)
         this.fly.update(delta)
         
     }

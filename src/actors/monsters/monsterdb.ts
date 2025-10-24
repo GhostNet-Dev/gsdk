@@ -8,6 +8,7 @@ import { NewDashMonsterState } from "@Glibs/actors/monsters/zombie/dashmonst"
 
 export class MonsterDb {
     monDb = new Map<MonsterId, MonsterProperty>()
+
     constructor() {
         this.monDb.set(MonsterId.Bee, {
             id: MonsterId.Bee,

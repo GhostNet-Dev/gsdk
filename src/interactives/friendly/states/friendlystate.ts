@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { Fly } from "./fly"
-import { FlyCtrl } from "./flyctrl"
+import { Fly } from "../fly"
+import { FlyCtrl } from "../flyctrl"
 import { MonsterId, MonsterProperty } from "@Glibs/types/monstertypes";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { ActionType } from "@Glibs/types/playertypes";

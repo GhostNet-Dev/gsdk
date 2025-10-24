@@ -12,6 +12,10 @@ import { DarkAction } from "./visualactions/darkact";
 import { StunStarsAction } from "./visualactions/stunstar";
 import { FireAction } from "./visualactions/fireact";
 import { Camera } from "@Glibs/systems/camera/camera";
+import { ElectricAction } from "./visualactions/electricact";
+import { FireballDefenceAction } from "./skillactions/firedefenceact";
+import { ElectricDefenceAction } from "./skillactions/electricdefenceact";
+import { GhostAction } from "./visualactions/ghostact";
 
 export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scene, camera: Camera) {
     ActionRegistry.register("statBoost", def => new StatBoostAction(def.stats))
@@ -26,6 +30,10 @@ export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scen
     ActionRegistry.register("swing", def => new SwingEffectAction(eventCtrl, scene, def.socketA, def.socketB, ))
     ActionRegistry.register("darkparticle", def => new DarkAction(eventCtrl, scene))
     ActionRegistry.register("stunstars", def => new StunStarsAction(eventCtrl, scene))
-    ActionRegistry.register("fireflame", def => new FireAction(eventCtrl, scene, camera))
+    ActionRegistry.register("fireflame", def => new FireAction(eventCtrl, camera))
+    ActionRegistry.register("electricaura", def => new ElectricAction(eventCtrl))
+    ActionRegistry.register("ghostaura", def => new GhostAction(eventCtrl))
+    ActionRegistry.register("firedefence", def => new FireballDefenceAction(eventCtrl, camera, def))
+    ActionRegistry.register("electricdefence", def => new ElectricDefenceAction(eventCtrl, def))
 }
 

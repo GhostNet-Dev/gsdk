@@ -46,11 +46,11 @@ const DEFAULTS: Required<ElectricAuraOptions> = {
   rimPower: 2.0,
   fieldBoost: 1.2,
 
-  boltCount: 10,
-  boltRadius: 0.022,
-  boltJitter: 0.35,
+  boltCount: 16,
+  boltRadius: 0.06,
+  boltJitter: 0.85,
   boltLifetime: 0.42,
-  spawnRate: 0.12,
+  spawnRate: 0.30,
   boltGlow: 0.35,
 
   distribution: 'area',

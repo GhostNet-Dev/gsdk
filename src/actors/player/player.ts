@@ -144,7 +144,7 @@ export class Player extends PhysicsObject {
         this.meshs = meshs
         this.meshs.position.copy(position)
 
-        if(this.audioListener) this.meshs.add(this.audioListener)
+        this.audioListener && this.meshs.add(this.audioListener)
 
         this.mixer = asset.GetMixer(name)
 

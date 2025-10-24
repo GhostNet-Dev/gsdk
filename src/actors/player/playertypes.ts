@@ -109,6 +109,7 @@ export const DefaultStatus: CharacterStatus = {
     maxExp: 100,
     exp: 0,
     immortal: false,
+    actions: [],
 
     stats: {
         attack: 1,

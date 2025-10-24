@@ -57,6 +57,8 @@ export enum EventTypes {
     UpdateBuff = "updatebuff",
     RemoveBuff = "removebuff",
     Death = "death",
+    ActionAttach = "actionattach",
+    ActionDettach = "actiondetach",
     // player와 상호작용하는 객체 Attackable, Interatable
     AddInteractive = "addinter",
     DelInteractive = "delinter",

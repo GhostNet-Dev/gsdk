@@ -4,6 +4,7 @@ import { StatSystem } from "@Glibs/inventory/stat/statsystem"
 export interface IActionUser {
   name?: string
   objs?: THREE.Group | THREE.Mesh | THREE.Object3D
+  targets?: THREE.Object3D[]
 
   baseSpec: {
     stats: StatSystem
@@ -115,6 +116,22 @@ export const ActionDefs = {
   },
   FireFlame: {
     type: "fireflame",
+    trigger: "onActivate",
+  },
+  FireDefence: {
+    type: "firedefence",
+    trigger: "onActivate",
+  },
+  ElectricAura: {
+    type: "electricaura",
+    trigger: "onActivate",
+  },
+  GhostAura: {
+    type: "ghostaura",
+    trigger: "onActivate",
+  },
+  ElectricDefence: {
+    type: "electricdefence",
     trigger: "onActivate",
   },
   StatBoost: {

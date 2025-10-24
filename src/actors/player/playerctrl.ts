@@ -13,7 +13,7 @@ import { AttackOption, AttackType, DefaultStatus, PlayMode } from "./playertypes
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import IInventory, { IItem } from "@Glibs/interface/iinven";
 import { ItemId } from "@Glibs/inventory/items/itemdefs";
-import { ActionContext, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes";
+import { ActionContext, ActionDef, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes";
 import { CutDownTreeState, TreeIdleState } from "./states/treestates";
 import { Item } from "@Glibs/inventory/items/item";
 import { Buffdefs } from "@Glibs/magical/buff/buffdefs";
@@ -234,6 +234,8 @@ export class PlayerCtrl implements ILoop, IActionUser {
         })
         eventCtrl.RegisterEventListener(EventTypes.RemoveBuff + "player", (buff: Buff) => {
             this.baseSpec.RemoveBuff(buff)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.ActionAttach + "player", (act: ActionDef) => {
         })
     }
     init() {

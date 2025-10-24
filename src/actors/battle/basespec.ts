@@ -54,6 +54,7 @@ export class BaseSpec {
             maxExp: 100,
             exp: 0,
             immortal: false,
+            actions: [],
             stats,
         }
         this.ResetStatus()
