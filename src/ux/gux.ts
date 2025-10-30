@@ -33,6 +33,13 @@ export abstract class GUX implements IGUX {
             console.log("Style already applied.");
         }
     }
+    injectHTML(parent: HTMLElement, html: string): HTMLElement {
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html.trim();
+        const node = tpl.content.firstElementChild as HTMLElement;
+        parent.appendChild(node);
+        return node;
+    }
 }
 
 export class SimpleGux extends GUX {

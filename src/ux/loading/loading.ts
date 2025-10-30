@@ -41,7 +41,11 @@ export default class WheelLoader {
     if (soundWarning || fullscreen) {
       const info = document.createElement("div") as HTMLDivElement
       info.classList.add("container", "w-50")
-      let html = ""
+      let html = `
+          <div class='row'>
+              <div class='col-auto p-1 pt-2 text-white rounded border border-white border-5 fw-bold'><i class="bi bi-browser-chrome" style="font-size: xx-large;"> </i></div>
+              <div class='col text-white fw-bold'>Chrome</div>
+          </div>`
       if (soundWarning) html += `
             <div class='row'>
               <div class='col-auto p-1 pt-2 text-white rounded border border-white border-5 fw-bold'><span class="material-symbols-outlined" style="font-size: xx-large;"> brand_awareness </span></div>
