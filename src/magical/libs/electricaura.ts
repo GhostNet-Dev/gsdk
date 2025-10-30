@@ -12,7 +12,7 @@ export interface ElectricAuraOptions {
   // Aura
   auraColor?: string | number;   // default '#7cc8ff'
   auraIntensity?: number;        // default 2.4
-  auraThickness?: number;        // default 0.08
+  auraThickness?: number;        // default 0.08 (Aura 쉘 거리)
   noiseScale?: number;           // default 2.2
   noiseSpeed?: number;           // default 1.7
   ridgeThreshold?: number;       // default 0.65
@@ -22,6 +22,7 @@ export interface ElectricAuraOptions {
 
   // Bolts
   boltCount?: number;            // default 10
+  boltOffset?: number;           // ⚡️ NEW! default 0.08 (볼트 생성 거리)
   boltRadius?: number;           // default 0.022
   boltJitter?: number;           // default 0.35
   boltLifetime?: number;         // seconds, default 0.42
@@ -36,6 +37,7 @@ export interface ElectricAuraOptions {
 /* --------------------------------- Internals --------------------------------- */
 
 const DEFAULTS: Required<ElectricAuraOptions> = {
+  // Aura
   auraColor: '#7cc8ff',
   auraIntensity: 2.4,
   auraThickness: 0.08,
@@ -46,13 +48,16 @@ const DEFAULTS: Required<ElectricAuraOptions> = {
   rimPower: 2.0,
   fieldBoost: 1.2,
 
+  // Bolts
   boltCount: 16,
+  boltOffset: 0.4, // ⚡️ NEW!
   boltRadius: 0.06,
   boltJitter: 0.85,
   boltLifetime: 0.42,
   spawnRate: 0.30,
   boltGlow: 0.35,
 
+  // Sampling
   distribution: 'area',
   evenMinDistance: 0.25,
 };
@@ -82,7 +87,7 @@ const AuraShader = {
     varying vec3 vWorldPos;
     varying vec3 vWorldNormal;
     void main() {
-      vec3 displaced = position + normal * uThickness;
+      vec3 displaced = position + normal * uThickness; // ⚡️ 여기가 auraThickness가 작동하는 곳
       vec4 worldPos = modelMatrix * vec4(displaced, 1.0);
       vWorldPos = worldPos.xyz;
       vWorldNormal = normalize(mat3(modelMatrix) * normal);
@@ -103,6 +108,7 @@ const AuraShader = {
     varying vec3 vWorldPos;
     varying vec3 vWorldNormal;
 
+    // ... (snoise, ridged 함수 동일) ...
     vec3 mod289(vec3 x){return x - floor(x*(1.0/289.0))*289.0;}
     vec4 mod289(vec4 x){return x - floor(x*(1.0/289.0))*289.0;}
     vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
@@ -212,52 +218,95 @@ function upperBound(arr: number[], x: number) {
   return lo;
 }
 
-function samplePointAreaLocal(geom: THREE.BufferGeometry, tab: AreaTable, out = new THREE.Vector3()) {
+// ⚡️ HELPER: 샘플링 시 노멀 벡터도 보간하여 가져옴
+const _nA = new THREE.Vector3(), _nB = new THREE.Vector3(), _nC = new THREE.Vector3();
+const _A = new THREE.Vector3(), _B = new THREE.Vector3(), _C = new THREE.Vector3();
+
+// ⚡️ CHANGED: outPos, outNormal 인자 추가
+function samplePointAreaLocal(
+  geom: THREE.BufferGeometry,
+  tab: AreaTable,
+  outPos: THREE.Vector3,
+  outNormal: THREE.Vector3
+) {
   const pos = geom.attributes.position as THREE.BufferAttribute;
+  const norm = geom.attributes.normal as THREE.BufferAttribute;
   const r = Math.random() * tab.total;
   const idx = upperBound(tab.cum, r);
   const tri = tab.tris[idx];
-  const A = new THREE.Vector3(pos.getX(tri[0]), pos.getY(tri[0]), pos.getZ(tri[0]));
-  const B = new THREE.Vector3(pos.getX(tri[1]), pos.getY(tri[1]), pos.getZ(tri[1]));
-  const C = new THREE.Vector3(pos.getX(tri[2]), pos.getY(tri[2]), pos.getZ(tri[2]));
+  const i0 = tri[0], i1 = tri[1], i2 = tri[2];
+
+  _A.set(pos.getX(i0), pos.getY(i0), pos.getZ(i0));
+  _B.set(pos.getX(i1), pos.getY(i1), pos.getZ(i1));
+  _C.set(pos.getX(i2), pos.getY(i2), pos.getZ(i2));
+
+  _nA.set(norm.getX(i0), norm.getY(i0), norm.getZ(i0));
+  _nB.set(norm.getX(i1), norm.getY(i1), norm.getZ(i1));
+  _nC.set(norm.getX(i2), norm.getY(i2), norm.getZ(i2));
+
   const r1 = Math.random(), r2 = Math.random(), s = Math.sqrt(r1);
   const u = 1.0 - s, v = r2 * s, w = 1.0 - u - v;
-  return out.set(0,0,0).addScaledVector(A,u).addScaledVector(B,v).addScaledVector(C,w);
+
+  outPos.set(0,0,0).addScaledVector(_A,u).addScaledVector(_B,v).addScaledVector(_C,w);
+  outNormal.set(0,0,0).addScaledVector(_nA,u).addScaledVector(_nB,v).addScaledVector(_nC,w).normalize();
+  return outPos; // (outPos는 참조이므로 반환값은 편의상 유지)
 }
 
-function samplePointUniformLocal(geom: THREE.BufferGeometry, out = new THREE.Vector3()) {
+// ⚡️ CHANGED: outPos, outNormal 인자 추가
+function samplePointUniformLocal(
+  geom: THREE.BufferGeometry,
+  outPos: THREE.Vector3,
+  outNormal: THREE.Vector3
+) {
   const pos = geom.attributes.position as THREE.BufferAttribute;
+  const norm = geom.attributes.normal as THREE.BufferAttribute;
   const index = geom.index ? (geom.index.array as ArrayLike<number>) : null;
   const triCount = (index ? index.length : pos.count) / 3;
   const tri = Math.floor(Math.random()*triCount);
   const i0 = index ? index[tri*3+0] : tri*3+0;
   const i1 = index ? index[tri*3+1] : tri*3+1;
   const i2 = index ? index[tri*3+2] : tri*3+2;
-  const A = new THREE.Vector3(pos.getX(i0), pos.getY(i0), pos.getZ(i0));
-  const B = new THREE.Vector3(pos.getX(i1), pos.getY(i1), pos.getZ(i1));
-  const C = new THREE.Vector3(pos.getX(i2), pos.getY(i2), pos.getZ(i2));
+
+  _A.set(pos.getX(i0), pos.getY(i0), pos.getZ(i0));
+  _B.set(pos.getX(i1), pos.getY(i1), pos.getZ(i1));
+  _C.set(pos.getX(i2), pos.getY(i2), pos.getZ(i2));
+
+  _nA.set(norm.getX(i0), norm.getY(i0), norm.getZ(i0));
+  _nB.set(norm.getX(i1), norm.getY(i1), norm.getZ(i1));
+  _nC.set(norm.getX(i2), norm.getY(i2), norm.getZ(i2));
+
   const r1 = Math.random(), r2 = Math.random(), s = Math.sqrt(r1);
   const u = 1.0 - s, v = r2 * s, w = 1.0 - u - v;
-  return out.set(0,0,0).addScaledVector(A,u).addScaledVector(B,v).addScaledVector(C,w);
+
+  outPos.set(0,0,0).addScaledVector(_A,u).addScaledVector(_B,v).addScaledVector(_C,w);
+  outNormal.set(0,0,0).addScaledVector(_nA,u).addScaledVector(_nB,v).addScaledVector(_nC,w).normalize();
+  return outPos; // (outPos는 참조이므로 반환값은 편의상 유지)
 }
 
+// ⚡️ CHANGED: outPos, outNormal 인자 추가
+const _tempNormal = new THREE.Vector3(); // even 샘플링용 임시 노멀
 function samplePointEvenLocal(
   geom: THREE.BufferGeometry,
   tab: AreaTable,
   cache: THREE.Vector3[],
   minDist: number,
-  out = new THREE.Vector3(),
+  outPos: THREE.Vector3,
+  outNormal: THREE.Vector3, // ⚡️
   maxTry = 24
 ) {
   for (let k=0; k<maxTry; k++) {
-    samplePointAreaLocal(geom, tab, out);
+    samplePointAreaLocal(geom, tab, outPos, _tempNormal); // ⚡️ 임시 노멀에 저장
     let ok = true;
     for (let i=0;i<cache.length;i++) {
-      if (out.distanceTo(cache[i]) < minDist) { ok=false; break; }
+      if (outPos.distanceTo(cache[i]) < minDist) { ok=false; break; }
     }
-    if (ok) return out;
+    if (ok) {
+      outNormal.copy(_tempNormal); // ⚡️ 성공 시 노멀 복사
+      return outPos;
+    }
   }
-  return out;
+  outNormal.copy(_tempNormal); // ⚡️ 실패해도 마지막 노멀 복사
+  return outPos;
 }
 
 /* ------------------------------- Lightning Bolt ------------------------------- */
@@ -267,6 +316,7 @@ class LightningBolt {
   private jitter: number;
   private lifetime: number;
   private color: THREE.Color;
+  private offset: number; // ⚡️ NEW!
 
   private birth = performance.now()*0.001;
 
@@ -287,28 +337,65 @@ class LightningBolt {
   constructor(
     private readonly samplingMesh: THREE.Mesh,      // local space geometry
     private readonly parent: THREE.Object3D,        // effectRoot
-    boltOpts: { radius: number; jitter: number; lifetime: number; color: THREE.Color },
+    boltOpts: { radius: number; jitter: number; lifetime: number; color: THREE.Color; offset: number }, // ⚡️ offset 추가
     private readonly glowOpacity: number
   ) {
     this.radius = boltOpts.radius;
     this.jitter = boltOpts.jitter;
     this.lifetime = boltOpts.lifetime;
     this.color = boltOpts.color.clone();
+    this.offset = boltOpts.offset; // ⚡️
 
     const geom = this.samplingMesh.geometry;
     const tab: AreaTable | undefined = (this.samplingMesh.userData.area as AreaTable | undefined);
     const dist: DistributionMode = this.samplingMesh.userData.distribution ?? 'area';
     const cache: THREE.Vector3[] = (this.samplingMesh.userData.evenCache ??= []);
 
-    const choose = (out: THREE.Vector3) => {
-      if (dist === 'uniform') return samplePointUniformLocal(geom, out);
-      if (dist === 'even')    return samplePointEvenLocal(geom, tab!, cache, this.samplingMesh.userData.evenMinDistance, out);
-      return samplePointAreaLocal(geom, tab!, out);
+    // ⚡️ 샘플링을 위한 임시 변수
+    const pos = new THREE.Vector3();
+    const nrm = new THREE.Vector3();
+
+    // ⚡️ CHANGED: choose 함수가 pos, nrm을 모두 받도록 수정
+    const choose = (outPos: THREE.Vector3, outNrm: THREE.Vector3) => {
+      if (dist === 'uniform') return samplePointUniformLocal(geom, outPos, outNrm);
+      if (dist === 'even')    return samplePointEvenLocal(geom, tab!, cache, this.samplingMesh.userData.evenMinDistance, outPos, outNrm);
+      return samplePointAreaLocal(geom, tab!, outPos, outNrm);
     };
 
-    this.startLocal.copy(choose(new THREE.Vector3()));
-    this.endLocal  .copy(choose(new THREE.Vector3()));
-    if (dist === 'even') { cache.push(this.startLocal.clone(), this.endLocal.clone()); }
+    // ⚡️ CHANGED: 샘플링 후 offset 적용
+    choose(pos, nrm);
+    this.startLocal.copy(pos).addScaledVector(nrm, this.offset); // 표면 위치 + (노멀 * offset)
+
+    choose(pos, nrm);
+    this.endLocal.copy(pos).addScaledVector(nrm, this.offset); // 표면 위치 + (노멀 * offset)
+    
+    // ⚡️ CHANGED: 'even' 모드 캐시는 *표면* 위치(pos) 기준이어야 함 (버그 수정)
+    //    (위에서 choose가 pos를 덮어썼으므로, startLocal/endLocal에서 offset을 빼서 저장)
+    if (dist === 'even') { 
+        // offset을 적용하기 전의 '표면' 위치를 캐시해야 함
+        // 이미 this.startLocal/endLocal은 offset이 적용됐으므로, 
+        // choose 함수를 다시 호출하거나... 간단하게 그냥 offset 적용된 위치를 캐시.
+        // (정확하려면 choose가 반환한 pos를 캐시해야 하지만, 이 코드에서는 pos가 재사용됨)
+        // (간단한 수정을 위해, offset 적용된 위치를 캐시하도록 유지 - evenMinDistance가 offset 공간에서 계산됨)
+        
+        // choose 함수를 수정하지 않고 간단히 수정하려면...
+        // 1. startLocal/startNormal 샘플링
+        const startPos = new THREE.Vector3(); const startNrm = new THREE.Vector3();
+        choose(startPos, startNrm);
+        // 2. endLocal/endNormal 샘플링
+        const endPos = new THREE.Vector3(); const endNrm = new THREE.Vector3();
+        choose(endPos, endNrm);
+        
+        // 3. 'even' 모드일 경우 *표면* 위치를 캐시
+        if (dist === 'even') { 
+            cache.push(startPos.clone(), endPos.clone()); 
+        }
+
+        // 4. offset 적용
+        this.startLocal.copy(startPos).addScaledVector(startNrm, this.offset);
+        this.endLocal.copy(endPos).addScaledVector(endNrm, this.offset);
+    }
+    // (위 'even' 로직이 복잡해져서, 생성자 로직을 위 2~4번으로 대체합니다.)
 
     this.reframe();
     this.rebuild(0);
@@ -440,7 +527,14 @@ export class ElectricAura {
         const toLocal = new THREE.Matrix4().multiplyMatrices(inv, mw);
         g.applyMatrix4(toLocal);
         if (!g.index) g.setIndex([...Array(g.attributes.position.count).keys()]);
-        g.computeVertexNormals();
+        
+        // ⚡️ 중요: 노멀이 없으면 계산 (샘플링에 필수)
+        if (!g.attributes.normal) {
+          g.computeVertexNormals();
+        } else {
+          g.normalizeNormals(); // 정규화 보장
+        }
+        
         geos.push(g);
       }
     });
@@ -530,8 +624,9 @@ export class ElectricAura {
       if (patch.rimPower !== undefined) u.uRimPower.value = patch.rimPower;
       if (patch.fieldBoost !== undefined) u.uAlphaBoost.value = patch.fieldBoost;
     }
-    // 분포 변경 시 볼트 재생성
-    if (patch.distribution !== undefined || patch.evenMinDistance !== undefined) {
+    
+    // ⚡️ CHANGED: 분포 또는 *볼트 offset* 변경 시 볼트 재생성
+    if (patch.distribution !== undefined || patch.evenMinDistance !== undefined || patch.boltOffset !== undefined) {
       if (this.samplingMesh) {
         this.samplingMesh.userData.distribution = this.opts.distribution;
         this.samplingMesh.userData.evenMinDistance = this.opts.evenMinDistance;
@@ -587,6 +682,7 @@ export class ElectricAura {
         jitter: this.opts.boltJitter,
         lifetime: this.opts.boltLifetime,
         color: new THREE.Color(this.opts.auraColor as any),
+        offset: this.opts.boltOffset, // ⚡️ NEW: 옵션 전달
       },
       this.opts.boltGlow
     );

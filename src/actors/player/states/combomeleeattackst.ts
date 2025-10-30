@@ -3,6 +3,9 @@
 //  - 스윙/히트 setTimeout 예약 + Update catch-up 즉시 실행
 //  - 드리프트 감지 → (가능시) 애니메이션 소프트 시크 / (초반) 하드 리셋(ChangeAction 재호출)
 //  - 입력창 소비 정책: "히트 이후 + 리커버리" 유지
+//  - 수정: 콤보 입력 시 플래그만 설정, 애니메이션 종료 시점에 다음 스텝 전환
+//  - 수정: 콤보 스텝 진행 시 가속 (COMBO_STEP_SPEED_INCREASE)
+//  - 수정: 콤보 체인/스텝별 애니메이션 재생 비율(playThroughRatio) 적용 (스텝 우선)
 
 import * as THREE from "three";
 import { IPlayerAction } from "./playerstate";
@@ -21,7 +24,7 @@ import { KeyType } from "@Glibs/types/eventtypes";
 import { GlobalEffectType } from "@Glibs/types/effecttypes";
 
 /* -------------------------------------------------------------------------- */
-/*                                   Types                                    */
+/* Types                                   */
 /* -------------------------------------------------------------------------- */
 
 type ComboPhase = "idle" | "windup" | "hit" | "recovery";
@@ -41,6 +44,8 @@ interface ComboStep {
     hitT?: SecOrFrac;
     recoveryT?: SecOrFrac;
     inputWindowT?: [SecOrFrac, SecOrFrac];
+
+    playThroughRatio?: number; // <-- [신규] 스텝별 애니메이션 재생 비율 (0.0 ~ 1.0)
 
     damageMul?: number;
     rangeMul?: number;
@@ -62,6 +67,7 @@ interface ComboChain {
     inputBufferSec?: number;
     hitstopSec?: number;
     triggerPolicy?: "afterHitOnly" | "anytimeRecovery";
+    playThroughRatio?: number; // <-- 체인 기본 재생 비율 (0.0 ~ 1.0)
 }
 
 interface ResolvedTimes {
@@ -74,7 +80,7 @@ interface ResolvedTimes {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                              Chain Presets                                 */
+/* Chain Presets                               */
 /* -------------------------------------------------------------------------- */
 
 const Unarmed3: ComboChain = {
@@ -82,6 +88,7 @@ const Unarmed3: ComboChain = {
     inputBufferSec: 0.25,
     hitstopSec: 0.04,
     triggerPolicy: "afterHitOnly",
+    playThroughRatio: 0.85, // 체인 기본값
     steps: [
         {
             anim: ActionType.Punch,
@@ -101,9 +108,11 @@ const OneHandSword3: ComboChain = {
     inputBufferSec: 0.28,
     hitstopSec: 0.05,
     triggerPolicy: "afterHitOnly",
+    playThroughRatio: 0.85, // <-- 체인 기본값 (85%)
     steps: [
         {
             anim: ActionType.TwoHandSword1,
+            // playThroughRatio: 0.8, // (스텝 0만 80%로 개별 설정)
             windupT: { sec: 0.14 }, hitT: { sec: 0.20 }, recoveryT: { sec: 0.22 },
             inputWindowT: [{ sec: 0.18 }, { sec: 0.34 }],
             damageMul: 1.2, rangeMul: 1.1,
@@ -112,6 +121,7 @@ const OneHandSword3: ComboChain = {
         },
         {
             anim: ActionType.TwoHandSword2,
+            // (설정 안함) -> 체인 기본값 0.85 사용
             windupT: { sec: 0.12 }, hitT: { sec: 0.18 }, recoveryT: { sec: 0.24 },
             inputWindowT: [{ sec: 0.18 }, { sec: 0.34 }],
             damageMul: 1.3, rangeMul: 1.15,
@@ -120,6 +130,7 @@ const OneHandSword3: ComboChain = {
         },
         {
             anim: ActionType.TwoHandSwordFinish,
+            playThroughRatio: 1.0, // <-- [신규] 피니시 스텝은 100% 재생 (기본값 덮어쓰기)
             windupT: { sec: 0.16 }, hitT: { sec: 0.24 }, recoveryT: { sec: 0.30 },
             inputWindowT: [{ sec: 0.26 }, { sec: 0.40 }],
             damageMul: 1.6, rangeMul: 1.25,
@@ -129,7 +140,7 @@ const OneHandSword3: ComboChain = {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                      Tunables: 지연/드리프트/리셋 정책                     */
+/* Tunables: 지연/드리프트/리셋 정책                        */
 /* -------------------------------------------------------------------------- */
 
 // 사운드 지연이 없다면 0 유지
@@ -148,8 +159,11 @@ const RESYNC_HARD_WINDOW_SEC = 0.20;
 // 디버그 로그 on/off
 const DEBUG_SYNC = false;
 
+// 콤보 스텝당 속도 증가량 (0.5 = 스텝 2에서 2배속)
+const COMBO_STEP_SPEED_INCREASE = 0.25;
+
 /* -------------------------------------------------------------------------- */
-/*                              ComboMeleeState                               */
+/* ComboMeleeState                              */
 /* -------------------------------------------------------------------------- */
 
 export class ComboMeleeState extends AttackState implements IPlayerAction {
@@ -161,6 +175,8 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
     private phaseTime = 0;
     private hitstopLeft = 0;
     private comboWindowOpen = false;
+    private nextStepQueued = false;
+    private currentPlayThroughRatio = 1.0; // <-- [수정] 현재 스텝의 재생 비율
 
     // 입력 버퍼/엣지
     private prevAttackPressed = false;
@@ -317,12 +333,11 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
     private tryQueueNextIfBuffered(nowSec: number): boolean {
         if (this.phase !== "recovery") return false;
         if (!this.comboWindowOpen) return false;
+        if (this.nextStepQueued) return true; // 이미 큐에 있음
+
         if (!this.tryConsumeBufferedInput(nowSec)) return false;
 
-        const next = this.currentStep.next;
-        if (next == null) return false;
-
-        this.startStep(next);
+        this.nextStepQueued = true;
         return true;
     }
 
@@ -472,9 +487,9 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         this.chain = this.pickChain();
         this.inputBufferSec = this.chain.inputBufferSec ?? 0.25;
         this.hitstopSec = this.chain.hitstopSec ?? 0.04;
+        // this.playThroughRatio = this.chain.playThroughRatio ?? 1.0; // <-- [제거]
 
         this.attackProcess = false;
-        this.attackSpeed = this.baseSpec.AttackSpeed;  // 총 길이(초)
         this.attackDist = this.baseSpec.AttackRange;
 
         this.clock = new THREE.Clock();
@@ -489,7 +504,17 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         this.stepIndex = i;
         this.currentStep = this.chain.steps[i];
 
-        // 애니메이션 시작(처음부터, 총 길이=attackSpeed)
+        // [수정] 스텝별 playThroughRatio 결정 (스텝 > 체인 > 1.0)
+        this.currentPlayThroughRatio = this.currentStep.playThroughRatio
+            ?? this.chain.playThroughRatio
+            ?? 1.0;
+
+        // 콤보 스텝에 따라 attackSpeed 가속
+        const baseSpeed = this.baseSpec.AttackSpeed;
+        const speedMultiplier = 1.0 + (this.stepIndex * COMBO_STEP_SPEED_INCREASE);
+        this.attackSpeed = baseSpeed / speedMultiplier; // 속도가 빨라지므로 총 시간(attackSpeed)은 줄어듦
+
+        // 애니메이션 시작(처음부터, 총 길이=계산된 attackSpeed)
         this.player.ChangeAction(this.currentStep.anim, this.attackSpeed);
 
         // 타이밍 해석(절대초)
@@ -519,6 +544,7 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         this.phaseTime = 0;
         this.hitstopLeft = 0;
         this.comboWindowOpen = false;
+        this.nextStepQueued = false;
         this.swingSfxPlayed = false;
         this.impactSfxPlayed = false;
         this.swingTimerFired = false;
@@ -594,14 +620,19 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         // 3) 상태 진행(종료는 총 길이 기반)
         if (this.phase === "recovery") {
             this.maybeOpenInputWindowByTime(this.phaseTime);
-            if (this.tryQueueNextIfBuffered(this.phaseTime)) return this;
+            
+            this.tryQueueNextIfBuffered(this.phaseTime); // 플래그만 설정
 
-            const endT = this.totalDurSec;
+            // [수정] 종료 시간을 currentPlayThroughRatio 기준으로 계산
+            const endT = this.totalDurSec * this.currentPlayThroughRatio;
+            
             if (this.phaseTime >= endT) {
                 this.clearStepTimers();
 
                 const hasNext = this.currentStep.next != null;
-                const buffered = this.tryConsumeBufferedInput(this.phaseTime);
+                
+                // 콤보창 내 입력(nextStepQueued) 또는 종료 직전 버퍼 입력(tryConsume) 확인
+                const buffered = this.nextStepQueued || this.tryConsumeBufferedInput(this.phaseTime);
 
                 // 버퍼가 있고 다음 스텝이 있으면 정상 진행
                 if (buffered && hasNext) {
@@ -609,15 +640,17 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
                     return this;
                 }
 
-                // ★ 마지막 스텝 종료 시: 1단계로 되돌리기 (체인 길이 > 1일 때만)
+                // ★ 마지막 스텝 종료 시: (버퍼가 있을 때만) 1단계로 되돌리기
                 const isLast = !hasNext;
                 const hasMulti = this.chain.steps.length > 1;
-                if (isLast && hasMulti) {
+                
+                // 입력이 있을 때만 1단계로 루프
+                if (buffered && isLast && hasMulti) { 
                     this.startStep(0);
                     return this;
                 }
 
-                // 그 외엔 종료 → Idle
+                // 그 외엔(입력이 없었으면) 종료 → Idle
                 this.Uninit();
                 return this.playerCtrl.IdleSt;
             }
@@ -630,6 +663,7 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         this.clearStepTimers();
         this.inputQueue.length = 0;
         this.comboWindowOpen = false;
+        this.nextStepQueued = false;
         this.hitstopLeft = 0;
         super.Uninit();
     }

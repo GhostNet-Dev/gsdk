@@ -118,6 +118,10 @@ export const ActionDefs = {
     type: "fireflame",
     trigger: "onActivate",
   },
+  GhostAura: {
+    type: "ghostaura",
+    trigger: "onActivate",
+  },
   FireDefence: {
     type: "firedefence",
     trigger: "onActivate",
@@ -126,12 +130,12 @@ export const ActionDefs = {
     type: "electricaura",
     trigger: "onActivate",
   },
-  GhostAura: {
-    type: "ghostaura",
-    trigger: "onActivate",
-  },
   ElectricDefence: {
     type: "electricdefence",
+    trigger: "onActivate",
+  },
+  WaterDefence: {
+    type: "waterdefence",
     trigger: "onActivate",
   },
   StatBoost: {
