@@ -1,15 +1,16 @@
 import { Icons, IconsColor } from "./icontypes";
 import { GetIconColorDb, GetIconDb } from "../icons/preicons"
+import { GUX } from "../gux";
 
 /*
 yellow: startColor = "#FFC107", endColor = "#FFF176"
 blue:  startColor = "#0D47A1", endColor = "#2196F3"
 */
 
-export default class MenuIcon {
+export default class MenuIcon extends GUX {
   icons = GetIconDb()
   colors = GetIconColorDb()
-  dom = document.createElement("div");
+  Dom = document.createElement("div");
 
   constructor({
     text = "", icon = Icons.None, iconPath = "",
@@ -18,19 +19,20 @@ export default class MenuIcon {
     width = "50px", height = "50px", rounded = "10px",
     color = IconsColor.Blue, lolli = false, click = () => {}
   } = {}) {
+    super()
     const c = this.colors.get(color)
     const startColor = c ? c[0] : "";
     const endColor = c ? c[1] : "";
     const lolliColor = c ? c[2] : "";
 
-    this.dom.style.cursor = "pointer"
-    this.dom.style.position = "relative"
-    this.dom.style.width = boxWidth
-    this.dom.style.height = boxheight
-    this.dom.onclick = () => {
+    this.Dom.style.cursor = "pointer"
+    this.Dom.style.position = "relative"
+    this.Dom.style.width = boxWidth
+    this.Dom.style.height = boxheight
+    this.Dom.onclick = () => {
       click()
     }
-    this.dom.addEventListener("click", (e) => { e.stopPropagation() })
+    this.Dom.addEventListener("click", (e) => { e.stopPropagation() })
     let boxHtml = ""
     let iconHtml = ""
     let lolliHtml = ""
@@ -66,22 +68,15 @@ export default class MenuIcon {
       </div>
       `
     }
-    this.dom.innerHTML = `
+    this.Dom.innerHTML = `
       ${boxHtml}
       ${iconHtml}
       ${textHtml}
       `
   }
-  applyDynamicStyle(styleId: string, css: string) {
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement("style");
-      style.id = styleId;
-      style.textContent = css;
-      document.head.appendChild(style); // <head>에 스타일 추가
-    } else {
-      console.log("Style already applied.");
-    }
-  }
+  Show(): void { }
+  Hide(): void { }
+
 }
 
 function getCSS(width: string, height: string, rounded: string) {

@@ -1,4 +1,4 @@
-import { GUX, IGUX } from "../gux";
+import { GUX, IGUX } from "../../gux";
 
 export interface BossHandles {
   root: HTMLElement;

@@ -1,28 +1,29 @@
-import { GUX, IGUX } from "../gux";
-import { IHudItem } from "./soulmenugroup";
+import { GUX, IGUX } from "../../gux";
+import { Icons } from '@Glibs/ux/menuicons/icontypes'
 
 /** HP/MP/SP 공용 바 */
-export class DefaultStatusBar extends GUX implements IHudItem {
+export class DefaultStatusBar extends GUX implements IGUX {
   get Dom() { return this.wrap; }
   private wrap: HTMLDivElement;
   private fill: HTMLDivElement;
   private text: HTMLBRElement;
-  private visible = true;
 
   public cur: number;
   public max: number;
   public readonly type: 'hp' | 'mp' | 'sp';
   private label: string;
 
-  constructor(type: 'hp' | 'mp' | 'sp', data: { cur: number; max: number; visible?: boolean }) {
+  constructor({ 
+    icon = Icons.None, lolliBar = false, type = 'hp', cur = 100, max = 100, visible = true 
+  } = {}) {
     super()
     this.applyDynamicStyle('ghud-defaultbar-style', DEFAULT_BAR_CSS);
 
-    this.type = type;
+    this.type = type as 'hp' | 'mp' | 'sp';
     this.label = type.toUpperCase();
-    this.cur = data.cur;
-    this.max = Math.max(1, data.max);
-    this.visible = data.visible ?? true;
+    this.cur = cur;
+    this.max = Math.max(1, max);
+    this.visible = visible;
 
     this.wrap = document.createElement('div');
     this.wrap.className = 'ghud-pill';
@@ -59,6 +60,9 @@ export class DefaultStatusBar extends GUX implements IHudItem {
     if (p.cur != null) this.cur = p.cur;
     if (p.max != null) this.max = Math.max(1, p.max);
     this.RenderHTML();
+  }
+  UpdateStatus(value: number) {
+    this.setData({ cur: value })
   }
 
   RenderHTML() {

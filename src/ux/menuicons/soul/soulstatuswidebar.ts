@@ -1,23 +1,21 @@
-import { GUX, IGUX } from '../gux';
-import { IHudItem } from './soulmenugroup';
+import { GUX, IGUX } from '../../gux';
 
 /** 넓은 바 (XP 등) */
-export class WideStatusBar extends GUX implements IHudItem {
+export class WideStatusBar extends GUX implements IGUX {
   get Dom() { return this.wrap; }
   private wrap: HTMLDivElement;
   private fill: HTMLDivElement;
-  private visible = true;
 
   public cur: number;
   public max: number;
 
-  constructor(data: { cur: number; max: number; visible?: boolean }) {
+  constructor({ cur = 100, max = 100, visible = true } = {}) {
     super()
     this.applyDynamicStyle('ghud-widebar-style', WIDE_BAR_CSS);
 
-    this.cur = data.cur;
-    this.max = Math.max(1, data.max);
-    this.visible = data.visible ?? true;
+    this.cur = cur;
+    this.max = Math.max(1, max);
+    this.visible = visible;
 
     this.wrap = document.createElement('div');
     this.wrap.className = 'ghud-xp';

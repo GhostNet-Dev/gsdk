@@ -31,7 +31,7 @@ export class Grid extends GUX {
             const dom = document.createElement("div")
             dom.classList.add("col", ...element.colClassList ?? "")
             dom.appendChild(element.ui.Dom)
-            element.ui.RenderHTML()
+            element.ui.RenderHTML?.()
 
             if (this.vertical) {
                 const vrow = document.createElement("div")

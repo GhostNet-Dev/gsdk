@@ -61,7 +61,7 @@ export default class WoodModal implements IDialog {
         gsap.fromTo(this.dom, { scale: 0, opacity: 0 }, 
             { scale: 1, opacity: 1, duration: 0.4, ease: "bounce.out",
                 onComplete: () => { 
-                    this.child.forEach((e) => e.RenderHTML(this.dom.getBoundingClientRect().width)) 
+                    this.child.forEach((e) => e.RenderHTML?.(this.dom.getBoundingClientRect().width)) 
                     this.show()
                 }
             })

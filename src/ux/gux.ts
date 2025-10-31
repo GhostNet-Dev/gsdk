@@ -12,7 +12,10 @@ export interface IGUX {
     Dom: HTMLElement
     Show(): void
     Hide(): void
-    RenderHTML(...param: any): void
+    setVisible(v: boolean): void;
+    isVisible(): boolean;
+    onLayout?(slotIndex: number, total: number): void;
+    RenderHTML?(...param: any): void
     AddChild?(dom: IGUX, ...param: any): void
 }
 
@@ -20,9 +23,13 @@ export abstract class GUX implements IGUX {
     abstract Dom: HTMLElement
     abstract Show(): void
     abstract Hide(): void
-    abstract RenderHTML(...param: any): void
-    abstract AddChild?(dom: IGUX, ...param: any): void
-
+    protected visible = true;
+    setVisible(v: boolean): void {
+        v ? this.Show() : this.Hide();
+    }
+    isVisible(): boolean {
+        return this.visible;
+    }
     applyDynamicStyle(styleId: string, css: string) {
         if (!document.getElementById(styleId)) {
             const style = document.createElement("style");
@@ -30,7 +37,7 @@ export abstract class GUX implements IGUX {
             style.textContent = css;
             document.head.appendChild(style); // <head>에 스타일 추가
         } else {
-            console.log("Style already applied.");
+            console.log("Style already applied. : ", styleId);
         }
     }
     injectHTML(parent: HTMLElement, html: string): HTMLElement {
@@ -73,7 +80,7 @@ export class SimpleGux extends GUX {
                 root: null, // 뷰포트를 기준으로 관찰 (기본값)
                 threshold: 0.1 // 요소의 10%가 보일 때 콜백 실행
             });
-           observer.observe(this.Dom);
+            observer.observe(this.Dom);
         }
     }
     Show(): void {

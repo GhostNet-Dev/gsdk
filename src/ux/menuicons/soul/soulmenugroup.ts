@@ -1,24 +1,15 @@
-import { GUX, IGUX } from "../gux";
+import { GUX, IGUX } from "../../gux";
 
 export type HudArea = 'left' | 'right';
-
-export interface IHudItem {
-  getEl(): HTMLElement;
-  Show(): void;
-  Hide(): void;
-  setVisible(v: boolean): void;
-  isVisible(): boolean;
-  onLayout?(slotIndex: number, total: number): void;
-}
 
 export interface MenuAddParams {
   id: string;
   area: HudArea;
   line?: number; // default 0
-  item: IHudItem;
+  item: IGUX;
 }
 
-type AreaStruct = { container: HTMLElement; lines: Map<number, { el: HTMLElement; items: Array<{ id: string; item: IHudItem }> }> };
+type AreaStruct = { container: HTMLElement; lines: Map<number, { el: HTMLElement; items: Array<{ id: string; item: IGUX }> }> };
 
 export interface HudHandles {
   root: HTMLElement;
@@ -29,12 +20,12 @@ export interface HudHandles {
 /** HUD 루트 + 좌/우 그리드 생성 */
 
 /** 좌/우 + 라인 규칙을 관리하는 통합 배치기 */
-export class MenuGroup extends GUX {
+export class SoulMenuGroup extends GUX {
   Dom: HTMLElement
   private areas: Record<HudArea, AreaStruct>;
-  private items = new Map<string, { area: HudArea; line: number; item: IHudItem }>();
+  private items = new Map<string, { area: HudArea; line: number; item: IGUX }>();
 
-  constructor(parent?: HTMLElement) {
+  constructor(parent?: HTMLElement, param?: any) {
     super()
     const { root, left, right } = this.createHud(parent)
     this.Dom = root
@@ -45,8 +36,9 @@ export class MenuGroup extends GUX {
   }
   Show(): void { }
   Hide(): void { }
-  AddChild(dom: IGUX, ...param: any): void { }
-  RenderHTML(...param: any): void { }
+  AddChild(item: IGUX, b: { id: string; area: HudArea; line: number }): void { 
+    this.add({ id: b.id, area: b.area, line: b.line, item })
+  }
   createHud(mount?: HTMLElement): HudHandles {
     this.applyDynamicStyle('ghud-base-style', BASE_CSS);
 
@@ -60,12 +52,12 @@ export class MenuGroup extends GUX {
     return { root, left, right };
   }
 
-  add({ id, area, line = 0, item }: MenuAddParams): IHudItem {
+  add({ id, area, line = 0, item }: MenuAddParams): IGUX {
     const A = this.areas[area];
     if (!A) throw new Error(`Unknown area: ${area}`);
     const box = this.ensureLine(A, line);
     box.items.push({ id, item });
-    box.el.appendChild(item.getEl());
+    box.el.appendChild(item.Dom);
     this.items.set(id, { area, line, item });
     this.layoutLine(A, line);
     return item;
@@ -82,7 +74,7 @@ export class MenuGroup extends GUX {
     }
     const box = this.ensureLine(A, newLine);
     box.items.push({ id, item: rec.item });
-    box.el.appendChild(rec.item.getEl());
+    box.el.appendChild(rec.item.Dom);
     rec.line = newLine;
     this.layoutLine(A, newLine);
   }
@@ -93,7 +85,7 @@ export class MenuGroup extends GUX {
     const box = A.lines.get(rec.line);
     if (box) {
       box.items = box.items.filter(v => v.id !== id);
-      rec.item.getEl().remove();
+      rec.item.Dom.remove();
       this.layoutLine(A, rec.line);
     }
     this.items.delete(id);
@@ -118,7 +110,7 @@ export class MenuGroup extends GUX {
     }
     if (!inserted) A.container.appendChild(el);
 
-    const box = { el, items: [] as Array<{ id: string; item: IHudItem }> };
+    const box = { el, items: [] as Array<{ id: string; item: IGUX }> };
     A.lines.set(line, box);
     return box;
   }
@@ -138,7 +130,7 @@ export class MenuGroup extends GUX {
 const BASE_CSS = `
 :root{ --ghud-ui-fg:#e9edf3; --ghud-buff-size:40px; }
 #ghud-root{ color:var(--ghud-ui-fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Pretendard,Apple SD Gothic Neo,Arial,sans-serif; }
-#ghud-status{ position:fixed; left:0; right:0; top:10px; z-index:40; padding:0 12px; filter: drop-shadow(0 10px 24px rgba(0,0,0,.35)); container-type:inline-size; }
+#ghud-status{ position:fixed; left:0; right:0; top:10px; z-index:0; padding:0 12px; filter: drop-shadow(0 10px 24px rgba(0,0,0,.35)); container-type:inline-size; }
 #ghud-status .ghud-status-grid{ display:grid; gap:8px; grid-template-columns:1fr; align-items:start; }
 @container (min-width: 860px){
   #ghud-status .ghud-status-grid{ grid-template-columns:max-content 1fr; }

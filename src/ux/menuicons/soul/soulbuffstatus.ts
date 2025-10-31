@@ -1,5 +1,4 @@
-import { GUX, IGUX } from "../gux";
-import { IHudItem } from "./soulmenugroup";
+import { GUX, IGUX } from "../../gux";
 
 type IconDef =
   | string
@@ -8,10 +7,9 @@ type IconDef =
   | { type: 'text'; value: string }
   | { type: 'svgInline'; value: string };
 
-export class BuffStatus extends GUX implements IHudItem {
+export class BuffStatus extends GUX implements IGUX {
   get Dom() { return this.root; }
   private root: HTMLDivElement;
-  private visible = true;
   private timer!: number;
   private opts = { align: 'right' as 'left' | 'center' | 'right', size: 40, showTime: true, tooltip: true, interval: 200 };
   private buffs = new Map<string, { id: string; icon: IconDef; name?: string; desc?: string; duration: number; endAt: number; el: HTMLElement }>();

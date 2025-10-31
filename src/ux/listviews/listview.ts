@@ -84,7 +84,7 @@ export default class ListView extends GUX {
     }
     SendEvent(width: number) {
         this.child.forEach((e) => {
-            e.RenderHTML(width)
+            e.RenderHTML?.(width)
         })
     }
     AddChild(dom: IGUX) {

@@ -1,26 +1,28 @@
 import LolliBar from "../progress/lollibar"
 import { Icons } from "./icontypes"
 import { GetIconColorDb, GetIconDb } from "../icons/preicons"
+import { GUX } from "../gux"
 
-export default class StatusBar {
-    dom = document.createElement("div")
+export default class StatusBar extends GUX {
+    Dom = document.createElement("div")
     icons = GetIconDb()
     colors = GetIconColorDb()
     textDom = document.createElement('span') as HTMLSpanElement
     max = 0
     lbar?: LolliBar
 
-    constructor({ text = "", min = 0, max = 0, value = 100, bgOpacity = "0.5",
+    constructor({ type = "hp", max = 0, cur = 50, bgOpacity = "0.5",
         icon = Icons.Save, plusIcon = false, iconSize = "", height = "100%",
         lolliBar = false, fontFamily = "",
         click = () => { }
     } = {}) {
+        super()
         this.max = max
-        this.dom.style.backgroundColor = `rgba(0, 0, 0, ${bgOpacity})`
-        this.dom.style.borderRadius = "30px"
-        this.dom.onclick = () => { click() }
-        this.dom.classList.add("h-100")
-        this.dom.setAttribute("role", "presentation")
+        this.Dom.style.backgroundColor = `rgba(0, 0, 0, ${bgOpacity})`
+        this.Dom.style.borderRadius = "30px"
+        this.Dom.onclick = () => { click() }
+        this.Dom.classList.add("h-100")
+        this.Dom.setAttribute("role", "presentation")
         
         // Icon set
         const iconDom = document.createElement('img') as HTMLImageElement
@@ -31,11 +33,11 @@ export default class StatusBar {
 
         // value set
         if (lolliBar) {
-            this.lbar = new LolliBar(this.dom, { width: "60px", initValue: 0.0 })
+            this.lbar = new LolliBar(this.Dom, { width: "60px", initValue: cur / max })
             this.lbar.RenderHTML()
             content.push(this.lbar.dom!)
         } else {
-            let vText = value.toString()
+            let vText = cur.toString()
             if (this.max > 0) vText += "/" + this.max
             this.textDom.innerText = vText
             this.textDom.classList.add("gametext", "pe-2", "gfont")
@@ -66,7 +68,7 @@ export default class StatusBar {
             row.appendChild(col)
         })
 
-        this.dom.appendChild(container)
+        this.Dom.appendChild(container)
     }
     UpdateStatus(value: number) {
         if(this.lbar) {
@@ -77,4 +79,6 @@ export default class StatusBar {
         if (this.max > 0) text += "/" + this.max
         this.textDom.innerText = text
     }
+    Show(): void { }
+    Hide(): void { }
 }

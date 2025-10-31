@@ -46,7 +46,7 @@ export class GStack extends GUX {
     RenderHTML(): void {
         this.child.forEach(element => {
             element.ui.Dom.classList.add("position-absolute", ...element.classList ?? "")
-            element.ui.RenderHTML()
+            element.ui.RenderHTML?.()
             this.Dom.appendChild(element.ui.Dom)
         })
     }
