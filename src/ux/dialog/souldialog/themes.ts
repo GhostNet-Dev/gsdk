@@ -1,0 +1,91 @@
+// ============================================================================
+// core/themes.ts  — 공통 변수/쉘/위젯 CSS (전역 1회 + ShadowRoot 주입)
+// ============================================================================
+import { css } from './dlgstyle';
+
+export const BASE_VARS = css`
+  :host, :root {
+    --gnx-bg:#0b0f16;
+    --gnx-ui-bg:#0e1116cc; --gnx-ui-bg-strong:#0e1116f2;
+    --gnx-ui-fg:#e9edf3; --gnx-ui-sub:#b7c0cf;
+    --gnx-ui-accent:#d8b66b; --gnx-ui-accent-weak:#9a7c3e;
+    --gnx-ui-coin:#ffd463;
+    --gnx-radius:16px; --gnx-blur:8px;
+    --gnx-shadow:0 8px 40px rgba(0,0,0,.55), inset 0 0 1px rgba(255,255,255,.06);
+    --gnx-border:1px solid rgba(216,182,107,.32);
+    --gnx-card-glow:0 0 18px rgba(216,182,107,.28);
+    --gnx-rar-common:#aeb6c8; --gnx-rar-rare:#58a6ff; --gnx-rar-epic:#d87cff;
+  }
+`;
+
+export const SHELL_BASE = css`
+  .gnx-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:2147483000;background:radial-gradient(1500px 800px at 50% 30%, rgba(0,0,0,.45), rgba(0,0,0,.75));}
+  .gnx-dialog{width:min(860px,calc(100% - 32px));max-height:80vh;display:flex;flex-direction:column;background:var(--gnx-ui-bg);border:var(--gnx-border);border-radius:var(--gnx-radius);box-shadow:var(--gnx-shadow);backdrop-filter:blur(var(--gnx-blur));outline:none;transform:translateY(10px) scale(.98);opacity:.0;transition:transform .2s ease, opacity .2s ease;}
+  .gnx-dialog--wide{width:min(1080px,calc(100% - 32px));}
+  .gnx-overlay[data-open="true"] .gnx-dialog{transform:translateY(0) scale(1); opacity:1;}
+  .gnx-dialog__header{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,var(--gnx-ui-bg-strong),transparent);}
+  .gnx-dialog__title{font-weight:600;letter-spacing:.2px;font-size:16px;}
+  .gnx-dialog__body{flex:1;min-height:0;padding:16px;display:grid;gap:14px;overflow:auto;}
+  .gnx-dialog__actions{display:flex;gap:10px;justify-content:flex-end;padding:0 16px 14px;}
+  .gnx-btn{appearance:none;border:1px solid rgba(255,255,255,.18);color:var(--gnx-ui-fg);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:600;letter-spacing:.2px;}
+  .gnx-btn--accent{border-color:var(--gnx-ui-accent-weak);box-shadow:inset 0 0 0 1px rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.25),var(--gnx-card-glow);background:linear-gradient(180deg,color-mix(in oklab,var(--gnx-ui-accent) 25%,transparent),rgba(255,255,255,.02));color:#fff;}
+  .gnx-btn--danger{border-color:rgba(255,90,106,.35);color:#fff;background:linear-gradient(180deg,rgba(255,90,106,.25),rgba(255,255,255,.12));}
+  .gnx-text{color:var(--gnx-ui-sub);line-height:1.55;}
+  .gnx-bar{height:6px;border-radius:6px;background:rgba(255,255,255,.12);position:relative;overflow:hidden;}
+  .gnx-bar>i{position:absolute;left:0;top:0;bottom:0;background:color-mix(in oklab,var(--gnx-ui-accent) 60%,transparent)}
+  .gnx-card__meta{font-size:12px;display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.06);}
+  .gnx-rar-common{ color:var(--gnx-rar-common); box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--gnx-rar-common) 60%, transparent); }
+  .gnx-rar-rare{   color:var(--gnx-rar-rare);   box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--gnx-rar-rare) 60%, transparent); }
+  .gnx-rar-epic{   color:var(--gnx-rar-epic);   box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--gnx-rar-epic) 60%, transparent); }
+`;
+
+export const WIDGET_BASE = css`
+  .gnx-cardgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .gnx-card{display:grid;gap:6px;text-align:left;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px;cursor:pointer;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease;color:var(--gnx-ui-fg);line-height:1.35;}
+  .gnx-card:hover{ transform:translateY(-2px); border-color:var(--gnx-ui-accent); box-shadow:0 0 0 2px color-mix(in oklab,var(--gnx-ui-accent) 50%,transparent); }
+  .gnx-card__title{ font-weight:700; letter-spacing:.2px; display:block }
+  .gnx-list{display:grid;gap:8px;}
+  .gnx-rowitem{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:10px 12px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));}
+  .gnx-row__icon{width:36px;height:36px;border-radius:8px;display:grid;place-items:center;background:rgba(255,255,255,.06);font-size:20px;}
+  .gnx-tooltip{position:absolute;inset:auto auto 100% 0;transform:translateY(-8px);background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.18);padding:6px 8px;border-radius:8px;font-size:12px;color:#fff;pointer-events:none;white-space:nowrap;z-index:5;}
+`;
+
+export const THEMES: Record<string, string> = {
+  souls: BASE_VARS,
+  pastel: css`
+    :host, :root {
+      --gnx-bg:#10131a;
+      --gnx-ui-bg:#1a1f2acc; --gnx-ui-bg-strong:#1a1f2af2;
+      --gnx-ui-fg:#f6f7fb; --gnx-ui-sub:#cbd5e1;
+      --gnx-ui-accent:#a7e3ff; --gnx-ui-accent-weak:#6fb9df;
+      --gnx-coin:#ffe19a; --gnx-rar-common:#b7c2cc; --gnx-rar-rare:#7fd2ff; --gnx-rar-epic:#ffb0f4;
+    }
+  `,
+  neon: css`
+    :host, :root {
+      --gnx-bg:#07090e;
+      --gnx-ui-bg:#0b1020cc; --gnx-ui-bg-strong:#0b1020f2;
+      --gnx-ui-fg:#e9f5ff; --gnx-ui-sub:#9bb3d1;
+      --gnx-ui-accent:#00f0ff; --gnx-ui-accent-weak:#00b3c3;
+      --gnx-coin:#ffe56b; --gnx-rar-common:#8ba2b8; --gnx-rar-rare:#34d3ff; --gnx-rar-epic:#ff78ff;
+    }
+  `,
+  parchment: css`
+    :host, :root {
+      --gnx-bg:#15140f;
+      --gnx-ui-bg:#2a261bcc; --gnx-ui-bg-strong:#2a261bf2;
+      --gnx-ui-fg:#f3e9da; --gnx-ui-sub:#e6d5b8;
+      --gnx-ui-accent:#e7c176; --gnx-ui-accent-weak:#b28d4a;
+      --gnx-coin:#ffcf73; --gnx-rar-common:#d7cab3; --gnx-rar-rare:#9ed0ff; --gnx-rar-epic:#f5a8ff;
+    }
+  `,
+  forest: css`
+    :host, :root {
+      --gnx-bg:#0b1210;
+      --gnx-ui-bg:#10201acc; --gnx-ui-bg-strong:#10201af2;
+      --gnx-ui-fg:#e9ffe9; --gnx-ui-sub:#b7d5b7;
+      --gnx-ui-accent:#74d279; --gnx-ui-accent-weak:#499b50;
+      --gnx-coin:#f3ff9a; --gnx-rar-common:#b7c8b7; --gnx-rar-rare:#76ff90; --gnx-rar-epic:#b1ffea;
+    }
+  `,
+};
