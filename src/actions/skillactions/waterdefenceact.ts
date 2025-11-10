@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import IEventController, { ILoop } from "@Glibs/interface/ievent"
-import { ActionContext, ActionDef, IActionComponent, IActionUser } from "@Glibs/types/actiontypes"
+import { ActionContext,  ActionDef, IActionComponent, IActionUser } from "@Glibs/types/actiontypes"
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { GhostAura } from "@Glibs/magical/libs/ghostaura";
 

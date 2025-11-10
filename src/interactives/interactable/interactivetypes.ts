@@ -1,6 +1,6 @@
 import { InteractableObject } from "@Glibs/interactives/interactable/interactable";
 import { itemDefs } from "@Glibs/inventory/items/itemdefs";
-import { ActionDefs } from "@Glibs/types/actiontypes";
+import { actionDefs } from "@Glibs/types/actiontypes";
 import { Char } from "@Glibs/types/assettypes";
 
 export type InteractiveType =
@@ -32,7 +32,7 @@ export const interactableDefs = {
     assetKey: Char.Tree,
     name: "tree",
     stats: { "hp": 10 },
-    actions: [ActionDefs.Shaker, ActionDefs.Fluffy],
+    actions: [actionDefs.Shaker, actionDefs.Fluffy],
     drop: [
       { itemId: itemDefs.Logs.id, ratio: 1 }
     ]

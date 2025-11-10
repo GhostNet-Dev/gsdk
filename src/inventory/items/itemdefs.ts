@@ -1,5 +1,5 @@
-import { ActionDefs } from "@Glibs/actions/actiontypes";
 import { Char } from "@Glibs/loader/assettypes";
+import { actionDefs } from "@Glibs/types/actiontypes";
 import { Bind } from "@Glibs/types/assettypes";
 import { AttackItemType } from "@Glibs/types/inventypes";
 import { SoundType } from "@Glibs/types/soundtypes";
@@ -23,7 +23,7 @@ export const itemDefs = {
     binding: true, autoAttack: true,
     sound: SoundType.BatAttack1,
     stats: { "attack": 3, "damageMin": 3, "damageMax": 5, "speed": 1, "attackRange": 2 },
-    actions: [ActionDefs.FireFlame],
+    actions: [actionDefs.FireFlame],
   },
   Sword: {
     id: "Sword",
@@ -42,7 +42,7 @@ export const itemDefs = {
     sound: SoundType.SwordAttack1,
     binding: true, autoAttack: true,
     stats: { "attack": 5, "damageMin": 3, "damageMax": 5, "speed": 1, "attackRange": 2 },
-    actions: [ActionDefs.Swing],
+    actions: [actionDefs.Swing],
   },
   DefaultGun: {
     id: "DefaultGun",
@@ -87,7 +87,7 @@ export const itemDefs = {
     sound: SoundType.Pistol9mm,
     stackable: false, binding: true, autoAttack: true,
     stats: { "attack": 1, "attackSpeed": 1, "speed": 1, "attackRange": 7 },
-    actions: [ActionDefs.MuzzleFlash, ActionDefs.Casing],
+    actions: [actionDefs.MuzzleFlash, actionDefs.Casing],
   },
   M4A1: {
     id: "M4A1",
@@ -106,7 +106,7 @@ export const itemDefs = {
     stats: {
       "attack": 3, "attackSpeed": .2, "speed": 1, "attackRange": 10
     },
-    actions: [ActionDefs.MuzzleFlash, ActionDefs.Casing],
+    actions: [actionDefs.MuzzleFlash, actionDefs.Casing],
   },
   M16: {
     id: "M16",
@@ -125,7 +125,7 @@ export const itemDefs = {
     stats: {
       "attack": 3, "attackSpeed": .1, "speed": 1, "attackRange": 10
     },
-    actions: [ActionDefs.MuzzleFlash, ActionDefs.Casing],
+    actions: [actionDefs.MuzzleFlash, actionDefs.Casing],
   },
   SCAR: {
     id: "SCAR",
@@ -144,7 +144,7 @@ export const itemDefs = {
     stats: {
       "attack": 3, "attackSpeed": .1, "speed": 1, "attackRange": 10
     },
-    actions: [ActionDefs.MuzzleFlash, ActionDefs.Casing],
+    actions: [actionDefs.MuzzleFlash, actionDefs.Casing],
   },
   WarterCan: {
     id: "WarterCan",

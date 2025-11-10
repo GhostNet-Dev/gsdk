@@ -78,7 +78,7 @@ export interface IActionComponent {
   isAvailable?(context?: ActionContext): boolean
 }
 
-export const ActionDefs = {
+export const actionDefs = {
   MuzzleFlash: {
     type: "muzzleFlash",
     trigger: "onFire",
@@ -184,3 +184,8 @@ export const ActionDefs = {
     ]
   }
 }
+
+
+export type ActionDefs = typeof actionDefs
+export type ActionId = keyof ActionDefs
+export type ActionProperty = ActionDefs[ActionId] // 공통 타입

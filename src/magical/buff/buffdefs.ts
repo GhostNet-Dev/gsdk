@@ -1,4 +1,4 @@
-import { ActionDefs } from "@Glibs/types/actiontypes";
+import { actionDefs } from "@Glibs/types/actiontypes";
 
 
 export const buffDefs = {
@@ -13,7 +13,7 @@ export const buffDefs = {
         level: "common",
         stackable: false,
         binding: true,
-        actions: [ActionDefs.DarkParticle],
+        actions: [actionDefs.DarkParticle],
     },
     StunStar: {
         id: "stunstar",
@@ -26,7 +26,7 @@ export const buffDefs = {
         level: "common",
         stackable: false,
         binding: true,
-        actions: [ActionDefs.StunStars],
+        actions: [actionDefs.StunStars],
     },
 }
 

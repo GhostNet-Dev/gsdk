@@ -1,4 +1,4 @@
-import { ActionDef } from "@Glibs/types/actiontypes";
+import { ActionDefs } from "@Glibs/types/actiontypes";
 import { StatKey } from "@Glibs/types/stattypes"
 
 export const StatNamesKr: { [key: string]: string } = {
@@ -27,7 +27,7 @@ export type CharacterStatus = {
     maxExp: number
     exp: number
     immortal: boolean
-    actions: ActionDef[],
+    actions: ActionDefs[],
 /*
 기타 특수 스탯 
 | 스탯                   | 설명               |
