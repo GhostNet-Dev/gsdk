@@ -5,7 +5,7 @@ export type DialogType =
   | 'narrative' | 'confirm' | 'cards' | 'shop'
   | 'quest-log' | 'quest-detail'
   | 'inventory' | 'character'
-  | 'input' | 'warning' | 'tutorial' | 'scroll';
+  | 'input' | 'warning' | 'tutorial' | 'scroll' | 'techtree';
 
 export interface DialogDescriptor<TProps = any> {
   id: string;

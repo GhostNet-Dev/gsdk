@@ -567,7 +567,7 @@ function injectCssOnce() {
   .ttx-node.ttx-maxed    { background:#3f2f4f }
   .ttx-edge { stroke:#6f7b91; stroke-width:2; fill:none; opacity:.65 }
   .ttx-legend { position:absolute; right:10px; top:10px; background:#0e1116cc; border:1px solid #1c2838; border-radius:10px; padding:6px 8px; gap:8px; display:flex; align-items:center }
-  .ttx-dot { display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:6px; vertical-align:middle }
+  .ttx-dot { display:inline-block; width:12px; height:12px; border-radius:51%; margin-right:6px; vertical-align:middle }
   .ttx-dot.ttx-locked{background:#263244} .ttx-dot.ttx-available{background:#314d3e}
   .ttx-dot.ttx-unlocked{background:#2c3f64} .ttx-dot.ttx-maxed{background:#3f2f4f}
   `;
