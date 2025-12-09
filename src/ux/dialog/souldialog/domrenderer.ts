@@ -58,6 +58,8 @@ export class DomRenderer implements RendererAPI {
   }
 
   closeShell(shell: RendererShell) {
+    shell.overlay.setAttribute('aria-hidden', 'true');
+    shell.overlay.removeAttribute('data-open');
     if (shell.overlay instanceof HTMLElement) shell.overlay.remove();
     shell.host.remove();
   }
@@ -72,6 +74,20 @@ export class DomRenderer implements RendererAPI {
       b.addEventListener('click', () => a.onClick?.());
       shell.actions.appendChild(b);
     });
+  }
+
+  setTitle(shell: RendererShell, title: string): void {
+    // 생성 시 저장해 둔 title 엘리먼트로 반영
+    // @ts-ignore
+    const el: HTMLElement | undefined = shell._titleEl;
+    if (el) el.textContent = title;
+  }
+
+  setWide(shell: RendererShell, on: boolean): void {
+    // @ts-ignore
+    const dlg: HTMLElement | undefined = shell._dialog;
+    if (!dlg) return;
+    dlg.classList.toggle('gnx-dialog--wide', !!on);
   }
 
   setTheme(name: keyof typeof THEMES) {

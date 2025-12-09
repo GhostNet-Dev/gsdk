@@ -17,12 +17,12 @@ export class DebugDiv {
         })
         document.body.appendChild(this.dom)
         this.eventCtrl.RegisterEventListener(EventTypes.DebugVar, (name, value: string) => {
-            this.valueView.set(name, value)
+            this.valueView.set(name, value.substring(0, 256))
             this.updateText()
         })
         this.eventCtrl.RegisterEventListener(EventTypes.DebugOut, (msg: string) => {
             if (this.textQueue.length > 4) this.textQueue.shift()
-            this.textQueue.push(msg)
+            this.textQueue.push(msg.substring(0, 256))
             this.updateText()
         })
     }

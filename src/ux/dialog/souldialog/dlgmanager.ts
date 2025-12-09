@@ -24,11 +24,17 @@ export class DialogManager {
     const title = options?.title ?? this.titleFor(type);
     const shell = this.renderer.openShell({ title, wide: !!options?.wide, icon: options?.icon });
     (shell.overlay as HTMLElement).setAttribute('data-open','true');
+    shell.overlay.addEventListener('click', (e) => {
+      if (e.target === shell.overlay) {
+        // 기본: 바깥 클릭 닫기 → DialogManager.close를 통해 닫아야 하므로 noop
+        this.close()
+      }
+    })
 
     const desc: DialogDescriptor = { id, type, props, options };
     this.opened.push({ desc, view, shell });
 
-    view.mount({ manager: this, render: this.renderer, events: this.events }, props);
+    view.mount({ manager: this, shell: shell, render: this.renderer, events: this.events }, props);
     return id;
   }
 

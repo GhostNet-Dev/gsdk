@@ -2,10 +2,11 @@
 // views/QuestDetailView.ts
 // ============================================================================
 import type { IDialogView, ViewContext } from '../souldlgtypes';
-import { css } from '../dlgstyle';
+import { createEl, css } from '../dlgstyle';
 import type { Quest } from '../dlgstore';
 
 const CSS_QDETAIL = css`
+  :host { color: var(--gnx-ui-fg); }
   .gnx-qdetail{display:grid;gap:10px}
   .gnx-cardgrid{grid-template-columns:repeat(2,1fr)}
 `;
@@ -14,7 +15,9 @@ export class QuestDetailView implements IDialogView<{ quest: Quest; trackedId?: 
   private shell?: any; private key?: string; private ctx!: ViewContext; private props!: { quest: Quest; trackedId?: string };
   mount(ctx: ViewContext, props: { quest: Quest; trackedId?: string }) {
     this.ctx = ctx; this.props = props;
-    this.shell = ctx.render.openShell({ title: `퀘스트 상세 — ${props.quest.title}`, wide: true });
+    this.shell = ctx.shell
+    ctx.render.setTitle(this.shell, `퀘스트 상세 — ${props.quest.title}`);
+    ctx.render.setWide(this.shell, true);
     this.key = ctx.render.ensureScopedCSS(this.shell.sr, CSS_QDETAIL, 'view:qdetail');
     this.render();
     this.setActions();
@@ -27,7 +30,7 @@ export class QuestDetailView implements IDialogView<{ quest: Quest; trackedId?: 
     this.shell.body.innerHTML = '';
     const { quest: q, trackedId } = this.props;
     const pct = Math.round((q.done/q.total)*100);
-    const wrap = doc.createElement('div'); wrap.className='gnx-qdetail gnx-text';
+    const wrap = createEl(doc, 'div'); wrap.className='gnx-qdetail gnx-text';
     wrap.innerHTML = `
       <div><b>지역</b>: ${q.region} · <b>상태</b>: ${q.status==='completed'?'완료':'진행중'}</div>
       <div><b>설명</b>: ${q.desc}</div>

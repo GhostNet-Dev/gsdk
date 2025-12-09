@@ -43,10 +43,14 @@ export type RendererAPI = {
   setTheme(name: string): void;
   ensureScopedCSS(host: Document | ShadowRoot, css: string, key?: string): string;
   releaseCSS(host: Document | ShadowRoot, key: string): void;
+
+  setTitle(shell: RendererShell, title: string): void;
+  setWide(shell: RendererShell, on: boolean): void;
 };
 
 export interface ViewContext {
   manager: import('./dlgmanager').DialogManager;
   render: RendererAPI;
+  shell: RendererShell
   events?: any; // IEventController 등 외부 이벤트 버스
 }

@@ -2,11 +2,25 @@
 // views/QuestLogView.ts
 // ============================================================================
 import type { IDialogView, ViewContext } from '../souldlgtypes';
-import { css } from '../dlgstyle';
+import { createEl, css } from '../dlgstyle';
 import type { Quest } from '../dlgstore';
 
 const CSS_QUEST = css`
-  .gnx-rowitem .gnx-bar{height:6px;margin-top:6px}
+  :host { color: var(--gnx-ui-fg); }
+
+  /* 리스트/행 전체를 쉘 타이틀 색으로 */
+  .gnx-list { color: var(--gnx-ui-fg); }
+  .gnx-rowitem { color: inherit; }
+
+  /* 제목(b)과 메타 배지를 또렷하게 */
+  .gnx-rowitem b { color: var(--gnx-ui-fg); }
+  .gnx-rowitem .gnx-card__meta { color: var(--gnx-ui-fg); }
+
+  /* 진행 바는 그대로 */
+  .gnx-rowitem .gnx-bar { height:6px; margin-top:6px; }
+
+  /* 설명 텍스트는 의도적으로 살짝 흐리게 유지 */
+  .gnx-rowitem .gnx-text { color: var(--gnx-ui-sub); }
 `;
 
 export class QuestLogView implements IDialogView<{ quests: Quest[]; trackedId?: string }> {
@@ -14,12 +28,13 @@ export class QuestLogView implements IDialogView<{ quests: Quest[]; trackedId?: 
 
   mount(ctx: ViewContext, props: { quests: Quest[]; trackedId?: string }) {
     this.ctx = ctx; this.props = props;
-    this.shell = ctx.render.openShell({ title:'퀘스트 로그' });
+    this.shell = ctx.shell
+    ctx.render.setTitle(this.shell, '퀘스트 로그')
     const host = this.shell.sr;
     this.key = ctx.render.ensureScopedCSS(host, CSS_QUEST, 'view:quest');
 
     this.renderList();
-    ctx.render.setActions(this.shell, [{ id:'close', label:'닫기' }]);
+    ctx.render.setActions(this.shell, [{ id: 'close', label: '닫기', onClick: () => this.ctx.manager.close() }]);
   }
 
   update(next: { quests: Quest[]; trackedId?: string }) {
@@ -34,17 +49,17 @@ export class QuestLogView implements IDialogView<{ quests: Quest[]; trackedId?: 
   private renderList() {
     const doc = (this.shell.sr instanceof ShadowRoot) ? this.shell.sr : document;
     this.shell.body.innerHTML = '';
-    const list = doc.createElement('div'); list.className='gnx-list';
+    const list = createEl(doc, 'div'); list.className='gnx-list';
 
     const active = this.props.quests.filter(q=>q.status==='active');
     const done   = this.props.quests.filter(q=>q.status==='completed');
 
     if (active.length) {
-      const h = doc.createElement('div'); h.className='gnx-text'; h.innerHTML='<b>진행중</b>'; list.appendChild(h);
+      const h = createEl(doc, 'div'); h.className='gnx-text'; h.innerHTML='<b>진행중</b>'; list.appendChild(h);
       active.forEach(q => list.appendChild(this.row(q)));
     }
     if (done.length) {
-      const h = doc.createElement('div'); h.className='gnx-text'; h.style.marginTop='6px'; h.innerHTML='<b>완료</b>'; list.appendChild(h);
+      const h = createEl(doc, 'div'); h.className='gnx-text'; h.style.marginTop='6px'; h.innerHTML='<b>완료</b>'; list.appendChild(h);
       done.forEach(q => list.appendChild(this.row(q)));
     }
     this.shell.body.appendChild(list);
@@ -55,7 +70,7 @@ export class QuestLogView implements IDialogView<{ quests: Quest[]; trackedId?: 
 
   private row(q: Quest) {
     const doc = (this.shell.sr instanceof ShadowRoot) ? this.shell.sr : document;
-    const row = doc.createElement('div'); row.className='gnx-rowitem';
+    const row = createEl(doc, 'div'); row.className='gnx-rowitem';
     const tracked = this.tracked(q);
     row.innerHTML = `
       <div class="gnx-row__icon">📜</div>

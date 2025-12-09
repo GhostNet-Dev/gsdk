@@ -1,168 +1,411 @@
 // ============================================================================
-// views/InventoryView.ts
+// views/InventoryView.ts  — Right-panel header (tabs+bag info + filters)
 // ============================================================================
 import type { IDialogView, ViewContext } from '../souldlgtypes';
-import { css } from '../dlgstyle';
+import { createEl, css } from '../dlgstyle';
 import type { Item } from '../dlgstore';
 
+type Slot = 'head'|'chest'|'hands'|'legs'|'weapon'|'offhand';
+
 const CSS_INV = css`
-  .gnx-invbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;}
+  /* 2열 반응형 레이아웃: 왼(캐릭터+장착), 오른(상단바+필터+인벤) */
+  .gnx-invwrap{
+    display:grid; gap:14px;
+    grid-template-columns: 360px 1fr;
+    align-items:start;
+  }
+  @media (max-width:1000px){
+    .gnx-invwrap{ grid-template-columns: 1fr; }
+  }
+
+  /* 왼쪽 패널 */
+  .gnx-left{
+    display:grid; gap:12px;
+    grid-template-rows: auto auto;
+  }
+  .gnx-charview{
+    height:280px; border-radius:14px;
+    background:linear-gradient(135deg,#2b2b36,#15151b);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
+    display:grid; place-items:center; color:var(--gnx-ui-fg);
+    font-size:42px; user-select:none;
+  }
+  .gnx-equip{
+    display:grid; gap:10px;
+    grid-template-columns: repeat(6, 1fr);
+  }
+  @media (max-width:520px){
+    .gnx-equip{ grid-template-columns: repeat(3, 1fr); }
+  }
+  .gnx-e-slot{
+    height:70px;border:1px solid rgba(255,255,255,.14);border-radius:10px;
+    display:grid;place-items:center;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));
+    position:relative;font-size:20px; cursor:default;
+  }
+  .gnx-e-slot[data-accept="true"]{border-color:var(--gnx-ui-accent);box-shadow:0 0 0 2px color-mix(in oklab,var(--gnx-ui-accent) 40%,transparent);}
+  .gnx-e-slot .cap{position:absolute;left:6px;top:4px;font:11px/1.2 system-ui;color:var(--gnx-ui-sub)}
+
+  /* 오른쪽 패널 */
+  .gnx-right{ display:grid; gap:12px; }
+
+  /* 오른쪽 상단 헤더(상단바 + 필터 그룹) */
+  .gnx-righthead{
+    display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+  }
+  .gnx-rightgroup{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .gnx-tabs{display:flex;gap:6px;flex-wrap:wrap;}
   .gnx-tab{padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);cursor:pointer;background:rgba(255,255,255,.04);color:var(--gnx-ui-fg);}
   .gnx-tab[data-active="true"]{border-color:var(--gnx-ui-accent);box-shadow:0 0 0 2px color-mix(in oklab,var(--gnx-ui-accent) 40%,transparent);}
-  .gnx-invwrap{display:grid;grid-template-columns:1fr 320px;gap:14px;}
-  @media (max-width:1000px){.gnx-invwrap{grid-template-columns:1fr}}
-  .gnx-invgrid{--cell:84px;display:grid;grid-template-columns:repeat(6,var(--cell));gap:10px;justify-content:center;}
-  @media (max-width:700px){.gnx-invgrid{grid-template-columns:repeat(4,var(--cell));}}
-  .gnx-slot{width:var(--cell);height:var(--cell);border:1px solid rgba(255,255,255,.16);border-radius:12px;display:grid;place-items:center;position:relative;cursor:pointer;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));transition:.08s;}
+  .gnx-baginfo{ color: var(--gnx-ui-sub); }
+
+  /* 버튼/셀렉트 공통 */
+  .gnx-btn{ appearance:none; border:1px solid rgba(255,255,255,.18); color:var(--gnx-ui-fg);
+    background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));
+    padding:6px 10px; border-radius:10px; cursor:pointer; font-weight:600; min-height:34px;
+  }
+
+  /* 검색 인풋: 절대 넘치지 않게 */
+  .gnx-input{
+    box-sizing:border-box;
+    width: clamp(120px, 40vw, 240px);
+    max-width: 100%;
+    min-width: 120px;
+    outline:none;
+  }
+
+  /* 인벤토리 그리드 */
+  .gnx-invgrid{
+    --cell:84px;
+    display:grid; gap:10px; justify-content:center;
+    grid-template-columns: repeat(6, var(--cell));
+  }
+  @media (max-width:700px){ .gnx-invgrid{ grid-template-columns: repeat(4, var(--cell)); } }
+  .gnx-slot{
+    width:var(--cell);height:var(--cell);
+    border:1px solid rgba(255,255,255,.16);border-radius:12px;display:grid;place-items:center;position:relative;cursor:pointer;
+    background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));transition:.08s;
+  }
   .gnx-slot[data-selected="true"]{border-color:var(--gnx-ui-accent);box-shadow:0 0 0 2px color-mix(in oklab,var(--gnx-ui-accent) 40%,transparent);transform:translateY(-2px);}
   .gnx-slot .gnx-qty{position:absolute;right:6px;bottom:6px;font-size:12px;padding:2px 6px;border-radius:10px;background:rgba(0,0,0,.35);color:#fff;border:1px solid rgba(255,255,255,.18);}
   .gnx-slot .gnx-icon{font-size:30px;user-select:none;}
-  .gnx-equip-mini{display:grid;grid-template-columns:repeat(6, 44px);gap:6px;padding:6px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));}
-  .gnx-e-mini{width:44px;height:44px;border:1px dashed rgba(255,255,255,.20);border-radius:8px;display:grid;place-items:center;position:relative;background:rgba(255,255,255,.03);font-size:20px;}
-  .gnx-e-mini[data-accept="true"]{border-color:var(--gnx-ui-accent);box-shadow:0 0 0 2px color-mix(in oklab,var(--gnx-ui-accent) 40%,transparent);}
-  .gnx-detail{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px;display:grid;gap:10px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));}
+
+  /* Diablo-like Overlay Tooltip */
+  .gnx-tip {
+    position: fixed; z-index: 2147483600;
+    min-width: 240px; max-width: 360px;
+    padding: 10px 12px; border-radius: 12px;
+    color: var(--gnx-ui-fg);
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    border: 1px solid rgba(255,255,255,.18);
+    box-shadow: var(--gnx-shadow, 0 8px 40px rgba(0,0,0,.55));
+    backdrop-filter: blur(var(--gnx-blur, 8px));
+    pointer-events: none; transition: opacity .08s ease; opacity: 0;
+  }
+  .gnx-tip[data-show="true"]{ opacity: 1; }
+  .gnx-tip[data-pinned="true"]{ pointer-events: auto; cursor: default; }
+  .gnx-tip .tt-title { font-weight:700; margin-bottom:4px; color: var(--gnx-title-fg, #f5f8ff); }
+  .gnx-tip .tt-row   { font-size:12px; color: var(--gnx-ui-sub); margin:2px 0; }
+  .gnx-tip .tt-badges{ display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
+  .gnx-tip .tt-badge { font-size:11px; padding:2px 8px; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); }
+  .gnx-tip .tt-desc  { margin-top:6px; color: var(--gnx-ui-fg); line-height:1.5; }
+  .gnx-tip .tt-actions { margin-top:8px; display:flex; gap:8px; justify-content:flex-end; }
+  .gnx-tip .tt-btn { appearance:none; border:1px solid rgba(255,255,255,.18); color:var(--gnx-ui-fg);
+    background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));
+    padding:6px 10px; border-radius:10px; cursor:pointer; font-weight:600; }
+  .gnx-tip .tt-btn--accent { border-color:var(--gnx-ui-accent-weak,#9a7c3e);
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.25),var(--gnx-card-glow,0 0 18px rgba(216,182,107,.28));
+    background:linear-gradient(180deg,color-mix(in oklab,var(--gnx-ui-accent,#d8b66b) 25%,transparent),rgba(255,255,255,.02)); color:#fff; }
 `;
 
 type Props = {
-  items: (Item|null)[];
+  items: (Item | null)[];
   slots?: number;
+  equip?: Partial<Record<Slot, Item|null>>;
   onUse?: (it: Item) => void;
   onDrop?: (index: number) => void;
+  onEquip?: (slot: Slot, index: number, item: Item) => void;
+  onUnequip?: (slot: Slot) => void;
+  onMountCharacterView?: (container: HTMLElement) => void;
 };
 
 export class InventoryView implements IDialogView<Props> {
   private shell?: any; private key?: string; private ctx!: ViewContext; private props!: Props;
-  private state = { tab:'전체', sort:'name' as 'name'|'weight'|'qty', rar:'all' as 'all'|'Common'|'Rare'|'Epic', q:'' };
+  private state = { tab: '전체', sort: 'name' as 'name' | 'weight' | 'qty', rar: 'all' as 'all' | 'Common' | 'Rare' | 'Epic', q: '' };
   private selected = 0;
-  private eqSlots = ['head','chest','hands','legs','weapon','offhand'] as const;
+  private eqSlots: Slot[] = ['head', 'chest', 'hands', 'legs', 'weapon', 'offhand'];
+
+  private tip?: HTMLDivElement;
+  private tipPinned = false;
+  private tipItemIndex: number | null = null;
+
+  private charContainer?: HTMLDivElement;
 
   mount(ctx: ViewContext, props: Props) {
     this.ctx = ctx; this.props = props;
-    this.shell = ctx.render.openShell({ title:'인벤토리', wide:true });
+    this.shell = ctx.shell
+    ctx.render.setTitle(this.shell, "인벤토리");
+    ctx.render.setWide(this.shell, true)
     this.key = ctx.render.ensureScopedCSS(this.shell.sr, CSS_INV, 'view:inv');
     this.render();
   }
   update(next: Props) { this.props = next; this.render(); }
-  unmount() { if (this.key) this.ctx.render.releaseCSS(this.shell.sr, this.key); }
+  unmount() {
+    if (this.key) this.ctx.render.releaseCSS(this.shell.sr, this.key);
+    this.destroyTip();
+  }
 
   private render() {
     const doc = (this.shell.sr instanceof ShadowRoot) ? this.shell.sr : document;
     this.shell.body.innerHTML = '';
 
-    // 상단 바
-    const bar = doc.createElement('div'); bar.className='gnx-invbar';
-    const left = doc.createElement('div'); left.style.display='flex'; left.style.gap='12px'; left.style.alignItems='center';
-    const tabs = doc.createElement('div'); tabs.className='gnx-tabs';
-    const cat = ['전체','무기','방어구','소모','키'];
-    tabs.innerHTML = '';
-    cat.forEach(name=>{
-      const b = doc.createElement('button'); b.className='gnx-tab'; b.textContent=name;
-      (b as any).dataset.active = String(name===this.state.tab);
-      b.onclick = ()=> { this.state.tab = name; this.render(); };
-      tabs.appendChild(b);
-    });
-    const bagInfo = doc.createElement('div'); bagInfo.className='gnx-text';
-    const count = this.props.items.filter(Boolean).length;
-    const weight = this.props.items.reduce((s,it)=> s+(it?.wt||0)*(it?.qty||0),0);
-    bagInfo.textContent = `가방 ${count} / ${this.props.items.length} · 무게 ${weight.toFixed(1)}`;
+    /* ---------- 본문 2-컬럼 ---------- */
+    const wrap = createEl(doc,'div'); wrap.className='gnx-invwrap';
+    const left = createEl(doc,'section'); left.className='gnx-left';
+    const right = createEl(doc,'section'); right.className='gnx-right';
+    wrap.appendChild(left); wrap.appendChild(right);
+    this.shell.body.appendChild(wrap);
 
-    left.appendChild(tabs); left.appendChild(bagInfo);
+    // 왼쪽: 캐릭터 미리보기 + 장착 슬롯
+    this.charContainer = createEl(doc,'div') as HTMLDivElement;
+    this.charContainer.className = 'gnx-charview';
+    this.charContainer.textContent = '🧍';
+    left.appendChild(this.charContainer);
+    this.props.onMountCharacterView?.(this.charContainer);
 
-    const right = doc.createElement('div'); right.style.display='flex'; right.style.gap='10px'; right.style.alignItems='center'; right.style.flexWrap='wrap';
-
-    // equip mini
-    const mini = doc.createElement('div'); mini.className='gnx-equip-mini';
+    const equip = createEl(doc,'div'); equip.className='gnx-equip';
     this.eqSlots.forEach(s=>{
-      const d = doc.createElement('div'); d.className='gnx-e-mini'; (d as any).dataset.slot=s;
-      d.onmouseenter=()=> (d as any).dataset.accept='true';
-      d.onmouseleave=()=> (d as any).dataset.accept='false';
-      d.ondragover=(e: any)=> e.preventDefault();
-      d.ondrop=(e: any)=>{
+      const slot = createEl(doc,'div'); slot.className='gnx-e-slot'; (slot as any).dataset.slot=s;
+      const cap = createEl(doc,'div'); cap.className='cap'; cap.textContent = s;
+      const it = this.props.equip?.[s] ?? null;
+      slot.appendChild(cap);
+      slot.appendChild(document.createTextNode(it?.icon ?? ''));
+      slot.onmouseenter = ()=> (slot as any).dataset.accept='true';
+      slot.onmouseleave = ()=> (slot as any).dataset.accept='false';
+      slot.ondragover = (e: DragEvent)=> e.preventDefault();
+      slot.ondrop = (e: DragEvent)=>{
         e.preventDefault();
         const data = e.dataTransfer?.getData('text/plain'); if (!data) return;
-        const obj = JSON.parse(data); if (obj.type!=='bag') return;
-        const item = this.props.items[obj.index] as Item; if (!item) return;
-        if (s==='weapon' && item.cat!=='무기') return; // 간단한 검사
+        const obj = JSON.parse(data);
+        if (obj.type!=='bag') return;
+        const index = obj.index as number;
+        const item = this.props.items[index] as Item;
+        if (!item) return;
+        if (s==='weapon' && item.cat!=='무기') return;
         if (['head','chest','hands','legs','offhand'].includes(s) && item.cat!=='방어구') return;
-        // 실제 장착: 여기선 단순히 아이콘만 표시
-        d.textContent = item.icon;
-        const newItems = this.props.items.slice(); newItems[obj.index] = null;
-        this.update({ ...this.props, items: newItems });
+        this.props.onEquip?.(s, index, item);
       };
-      mini.appendChild(d);
+      slot.oncontextmenu = (e)=>{
+        e.preventDefault();
+        if (it) this.props.onUnequip?.(s);
+      };
+      equip.appendChild(slot);
     });
+    left.appendChild(equip);
 
-    const selSort = doc.createElement('select'); selSort.className='gnx-btn'; ['name','weight','qty'].forEach(v=>{
-      const o=doc.createElement('option'); o.value=v; o.textContent=(v==='name'?'이름순':v==='weight'?'무게순':'수량순'); if (v===this.state.sort) o.selected=true; selSort.appendChild(o);
+    // 오른쪽 헤더: (상단바 + 필터/정렬/검색) — 모두 오른쪽에!
+    const rHead = createEl(doc,'div'); rHead.className='gnx-righthead';
+
+    // 상단바(탭 + 가방정보)
+    const grpTop = createEl(doc,'div'); grpTop.className='gnx-rightgroup';
+    const tabs = createEl(doc, 'div'); tabs.className = 'gnx-tabs';
+    const cat = ['전체','무기','방어구','소모','물약'];
+    tabs.innerHTML = '';
+    cat.forEach(name=>{
+      const b = createEl(doc, 'button'); b.className = 'gnx-tab'; b.textContent = name;
+      (b as any).dataset.active = String(name === this.state.tab);
+      b.onclick = () => { this.state.tab = name; this.render(); };
+      tabs.appendChild(b);
     });
-    selSort.onchange=()=>{ this.state.sort = selSort.value as any; this.render(); };
+    const bagInfo = createEl(doc, 'div'); bagInfo.className = 'gnx-baginfo';
+    const count = this.props.items.filter(Boolean).length;
+    const weight= this.props.items.reduce((s,it)=> s + (it?.wt||0)*(it?.qty||0),0);
+    bagInfo.textContent = `가방 ${count} / ${this.props.items.length} · 무게 ${weight.toFixed(1)}`;
+    grpTop.appendChild(tabs); grpTop.appendChild(bagInfo);
 
-    const selRar = doc.createElement('select'); selRar.className='gnx-btn'; ['all','Common','Rare','Epic'].forEach(v=>{
-      const o=doc.createElement('option'); o.value=v; o.textContent=(v==='all'?'전체 등급':v); if (v===this.state.rar) o.selected=true; selRar.appendChild(o);
+    // 필터/정렬/검색
+    const grpFilters = createEl(doc,'div'); grpFilters.className='gnx-rightgroup';
+    const selSort = createEl(doc,'select'); selSort.className='gnx-btn';
+    ['name','weight','qty'].forEach(v=>{
+      const o = createEl(doc,'option'); o.value=v; o.textContent = v==='name'?'이름순':(v==='weight'?'무게순':'수량순');
+      if (v===this.state.sort) o.selected = true; selSort.appendChild(o);
     });
-    selRar.onchange=()=>{ this.state.rar = selRar.value as any; this.render(); };
+    selSort.onchange = ()=>{ this.state.sort = selSort.value as any; this.render(); };
 
-    const inpS = doc.createElement('input'); inpS.className='gnx-btn'; (inpS as any).style.width='160px'; (inpS as any).placeholder='검색(이름)';
-    inpS.value = this.state.q; inpS.oninput = ()=>{ this.state.q = inpS.value.toLowerCase(); this.render(); };
+    const selRar = createEl(doc,'select'); selRar.className='gnx-btn';
+    ['all','Common','Rare','Epic'].forEach(v=>{
+      const o = createEl(doc,'option'); o.value=v; o.textContent = v==='all'?'전체 등급':v;
+      if (v===this.state.rar) o.selected = true; selRar.appendChild(o);
+    });
+    selRar.onchange = ()=>{ this.state.rar = selRar.value as any; this.render(); };
 
-    right.appendChild(mini); right.appendChild(selSort); right.appendChild(selRar); right.appendChild(inpS);
-    bar.appendChild(left); bar.appendChild(right);
-    this.shell.body.appendChild(bar);
+    const inpS = createEl(doc,'input'); inpS.className = 'gnx-btn gnx-input';
+    (inpS as any).placeholder = '검색(이름)';
+    inpS.value = this.state.q;
+    inpS.oninput = ()=>{ this.state.q = inpS.value.toLowerCase(); this.render(); };
 
-    // 그리드 + 디테일
-    const wrap = doc.createElement('div'); wrap.className='gnx-invwrap';
-    const grid = doc.createElement('div'); grid.className='gnx-invgrid';
-    const detail = doc.createElement('aside'); detail.className='gnx-detail';
+    grpFilters.appendChild(selSort); grpFilters.appendChild(selRar); grpFilters.appendChild(inpS);
 
+    // 오른쪽 상단 헤더 조립
+    rHead.appendChild(grpTop);
+    rHead.appendChild(grpFilters);
+    right.appendChild(rHead);
+
+    // 오른쪽: 인벤토리 그리드(툴팁 상세)
+    const grid = createEl(doc,'div'); grid.className='gnx-invgrid';
     const order = this.filteredSortedIndices();
     order.forEach(i=>{
       const it = this.props.items[i];
-      const cell = doc.createElement('button'); cell.className='gnx-slot'; (cell as any).dataset.selected = String(i===this.selected);
+      const cell = createEl(doc,'button'); cell.className='gnx-slot'; (cell as any).dataset.selected = String(i === this.selected);
       cell.type='button';
-      if (it) {
+      if (it){
         cell.innerHTML = `<div class="gnx-icon" title="${it.name}">${it.icon}</div><div class="gnx-qty">${it.qty}</div>`;
         cell.draggable = true;
-        cell.ondragstart=(e: any)=> e.dataTransfer?.setData('text/plain', JSON.stringify({type:'bag', index:i}));
+        cell.ondragstart = (e: DragEvent)=> e.dataTransfer?.setData('text/plain', JSON.stringify({ type:'bag', index:i }));
+
+        // Tooltip
+        cell.onmouseenter = (e)=>{ if (this.tipPinned) return; this.showTip(it,i); this.moveTip(e as MouseEvent); };
+        cell.onmousemove  = (e)=>{ if (this.tipPinned) return; this.moveTip(e as MouseEvent); };
+        cell.onmouseleave = ()=>{ if (this.tipPinned) return; this.hideTip(); };
+        cell.onclick = (e)=>{
+          if (!it) return;
+          if (!this.tipPinned){ this.showTip(it,i,true); this.moveTip(e as MouseEvent); }
+          else { if (this.tipItemIndex===i){ this.tipPinned=false; this.hideTip(); } else { this.showTip(it,i,true); this.moveTip(e as MouseEvent); } }
+        };
       } else {
         cell.innerHTML = `<div class="gnx-icon" style="opacity:.25">—</div>`;
       }
-      cell.onclick=()=>{ this.selected = i; this.render(); };
+      cell.addEventListener('mousedown', ()=>{ this.selected=i; });
       grid.appendChild(cell);
     });
-
-    const it = this.props.items[this.selected];
-    detail.innerHTML = it ? `<div class="gnx-text"><b>${it.icon} ${it.name}</b></div>
-      <div class="gnx-text">희귀도: <b class="${it.rarity==='Epic'?'gnx-rar-epic': it.rarity==='Rare'?'gnx-rar-rare':'gnx-rar-common'}">${it.rarity}</b></div>
-      <div class="gnx-text">분류: ${it.cat}${it.set?` · 세트: ${it.set}`:''}</div>
-      <div class="gnx-text">수량: ${it.qty} · 무게: ${it.wt}</div>
-      <div class="gnx-text">${it.desc}</div>` : `<div class="gnx-text">좌측에서 아이템을 선택하세요.</div>`;
-
-    wrap.appendChild(grid); wrap.appendChild(detail);
-    this.shell.body.appendChild(wrap);
+    right.appendChild(grid);
 
     // 하단 액션
+    const it = this.props.items[this.selected];
     const actions = [
-      ...(it ? [{ id:'use', label:'사용/장착', variant:'accent' as const, onClick:()=> this.props.onUse?.(it) }] : []),
-      ...(this.props.items[this.selected] ? [{ id:'drop', label:'버리기', variant:'danger' as const, onClick:()=> this.props.onDrop?.(this.selected) }] : []),
-      { id:'close', label:'닫기' },
+      ...(it ? [{
+        id:'use',
+        label:(it.cat==='무기'||it.cat==='방어구')?'장착':'사용',
+        variant:'accent' as const,
+        onClick:()=>this.equipOrUse(this.selected, it)
+      }]:[]),
+      ...(this.props.items[this.selected] ? [{
+        id:'drop',
+        label:'버리기',
+        variant:'danger' as const,
+        onClick:()=>this.props.onDrop?.(this.selected)
+      }]:[]),
+      { id:'close', label:'닫기', onClick:()=>this.ctx.manager.close() },
     ];
     this.ctx.render.setActions(this.shell, actions);
+
+    // Tooltip DOM
+    this.ensureTip();
   }
 
-  private filteredSortedIndices() {
-    const idx: number[] = [];
-    const catOK = (it: Item|null) => this.state.tab==='전체' || (it && it.cat===this.state.tab);
-    const rarOK = (it: Item|null) => this.state.rar==='all' || (it && it.rarity===this.state.rar);
-    const qOK   = (it: Item|null) => !this.state.q || (it && it.name.toLowerCase().includes(this.state.q));
-    for (let i=0;i<this.props.items.length;i++) {
-      const it = this.props.items[i];
+  /* ----------------------------- Tooltip logic ----------------------------- */
+  private ensureTip(){
+    if (this.tip) return;
+    const root = (this.shell.sr instanceof ShadowRoot) ? this.shell.sr : document;
+    this.tip = createEl(root,'div') as HTMLDivElement;
+    this.tip.className='gnx-tip';
+    this.tip.setAttribute('data-show','false');
+    this.tip.innerHTML='';
+    this.tip.addEventListener('click',(e)=>{
+      if (!this.tipPinned) return;
+      const target = e.target as HTMLElement;
+      const act = target.closest('[data-action]') as HTMLElement|null;
+      if (!act) return;
+
+      const action = act.getAttribute('data-action')!;
+      const idx = this.tipItemIndex;
+      if (idx==null) return;
+      const item = this.props.items[idx] as Item | null;
+      if (!item) return;
+
+      if (action==='close'){ this.tipPinned=false; this.hideTip(); return; }
+      if (action==='use'){ this.equipOrUse(idx, item); this.tipPinned=false; this.hideTip(); return; }
+      if (action==='drop'){ this.props.onDrop?.(idx); this.tipPinned=false; this.hideTip(); return; }
+    });
+    root.appendChild(this.tip);
+  }
+  private destroyTip(){
+    if (this.tip && this.tip.parentNode) this.tip.parentNode.removeChild(this.tip);
+    this.tip = undefined; this.tipPinned=false; this.tipItemIndex=null;
+  }
+  private showTip(it: Item, index:number, pin=false){
+    this.ensureTip(); if (!this.tip) return;
+    this.tipPinned = pin; this.tipItemIndex = index;
+    this.tip.setAttribute('data-pinned', pin?'true':'false');
+
+    const primaryLabel = (it.cat==='무기'||it.cat==='방어구')?'장착':'사용';
+    const actions = pin ? `
+      <div class="tt-actions">
+        <button class="tt-btn tt-btn--accent" data-action="use">${primaryLabel}</button>
+        <button class="tt-btn" data-action="drop">버리기</button>
+        <button class="tt-btn" data-action="close">닫기</button>
+      </div>` : '';
+
+    this.tip.innerHTML = `
+      <div class="tt-title">${it.icon} ${escapeHtml(it.name)}</div>
+      <div class="tt-badges">
+        <span class="tt-badge">${it.rarity}</span>
+        <span class="tt-badge">${it.cat}</span>
+        ${('set' in (it as any) && (it as any).set) ? `<span class="tt-badge">세트: ${escapeHtml((it as any).set)}</span>`:''}
+        <span class="tt-badge">수량: ${it.qty}</span>
+        <span class="tt-badge">무게: ${it.wt}</span>
+      </div>
+      <div class="tt-desc">${escapeHtml(it.desc || '')}</div>
+      ${actions}
+    `;
+    this.tip.setAttribute('data-show','true');
+  }
+  private hideTip(){
+    if (!this.tip) return;
+    this.tip.setAttribute('data-show','false');
+    this.tip.removeAttribute('data-pinned');
+    this.tipItemIndex = null;
+  }
+  private moveTip(e: MouseEvent){
+    if (!this.tip) return;
+    const PAD=14, GAP=12;
+    const tipRect = this.tip.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+    let x = e.clientX + PAD, y = e.clientY + PAD;
+    if (x + tipRect.width + GAP > vw) x = e.clientX - PAD - tipRect.width;
+    if (y + tipRect.height + GAP > vh) y = e.clientY - PAD - tipRect.height;
+    if (x < GAP) x = GAP; if (y < GAP) y = GAP;
+    this.tip.style.left = `${x}px`; this.tip.style.top = `${y}px`;
+  }
+
+  /* ------------------------------ Actions ---------------------------------- */
+  private equipOrUse(index:number, it: Item){
+    if (it.cat==='무기'){ this.props.onEquip?.('weapon', index, it); return; }
+    if (it.cat==='방어구'){ this.props.onEquip?.(this.pickArmorSlot(it), index, it); return; }
+    this.props.onUse?.(it);
+  }
+  private pickArmorSlot(it: Item): Slot {
+    const sub = (it as any).subcat as string | undefined;
+    if (sub==='머리') return 'head';
+    if (sub==='상체') return 'chest';
+    if (sub==='장갑') return 'hands';
+    if (sub==='하체') return 'legs';
+    return 'offhand';
+  }
+
+  /* ------------------------------ Helpers ---------------------------------- */
+  private filteredSortedIndices(){
+    const idx:number[]=[];
+    const catOK=(it:Item|null)=> this.state.tab==='전체'||(it&&it.cat===this.state.tab);
+    const rarOK=(it:Item|null)=> this.state.rar==='all'||(it&&it.rarity===this.state.rar);
+    const qOK  =(it:Item|null)=> !this.state.q || (it && it.name.toLowerCase().includes(this.state.q));
+    for (let i=0;i<this.props.items.length;i++){
+      const it=this.props.items[i];
       if (!it) { idx.push(i); continue; }
       if (!catOK(it) || !rarOK(it) || !qOK(it)) continue;
       idx.push(i);
     }
-    const filled = idx.filter(i=> !!this.props.items[i]);
-    const empty  = idx.filter(i=> !this.props.items[i]);
+    const filled=idx.filter(i=>!!this.props.items[i]);
+    const empty =idx.filter(i=>!this.props.items[i]);
     filled.sort((a,b)=>{
       const A=this.props.items[a]!, B=this.props.items[b]!;
       if (this.state.sort==='name')   return A.name.localeCompare(B.name,'ko');
@@ -171,4 +414,7 @@ export class InventoryView implements IDialogView<Props> {
     });
     return [...filled, ...empty];
   }
+}
+function escapeHtml(s:string){
+  return s.replace(/[&<>"']/g,(m)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" } as any)[m]);
 }

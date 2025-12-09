@@ -14,7 +14,8 @@ export class LevelupCardsView implements IDialogView<{ title?: string; cards: Ca
   private shell?: any; private key?: string;
   mount(ctx: ViewContext, props: { title?: string; cards: Card[]; onPick:(id:string)=>void }) {
     const title = props.title ?? '레벨 업 — 강화 선택';
-    this.shell = ctx.render.openShell({ title });
+    this.shell = ctx.shell
+    ctx.render.setTitle(this.shell, title);
     const host = this.shell.sr;
     this.key = ctx.render.ensureScopedCSS(host, CSS_CARDS, 'view:cards');
 

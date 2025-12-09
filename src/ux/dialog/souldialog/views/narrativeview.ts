@@ -13,7 +13,8 @@ export class NarrativeView implements IDialogView<{ title?: string; body: string
   private cssKey?: string;
   mount(ctx: ViewContext, props: { title?: string; body: string }) {
     const title = props.title ?? '내러티브';
-    this.shell = ctx.render.openShell({ title });
+    this.shell = ctx.shell
+    ctx.render.setTitle(this.shell, title);
     const host = this.shell.sr;
     this.cssKey = ctx.render.ensureScopedCSS(host, CSS_NARR, 'view:narr');
 
