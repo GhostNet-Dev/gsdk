@@ -1,10 +1,10 @@
 import os
 
 # 설정: 파일이 있는 디렉토리 및 출력 파일
-input_directory = "assets/dungeonpack/pps_dungeon/fbx_Files"
+input_directory = "assets/kaykit/medieval_hexagon_pack/decoration/nature"
 output_file = "generated_classes.ghost"
-pack_name = "PPsDungeonPackFab"
-front_name = "PPsDungeonPack"
+pack_name = "KaykitMedHexagonDecorationNaturePackFab"
+front_name = "KaykitMedHexagonDecorationNaturePack"
 exe_name = ".fbx"
 
 # 파일 리스트 가져오기 및 정렬
