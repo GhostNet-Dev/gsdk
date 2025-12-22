@@ -11,7 +11,13 @@ export interface DialogDescriptor<TProps = any> {
   id: string;
   type: DialogType;
   props: TProps;
-  options?: { modal?: boolean; wide?: boolean; title?: string; icon?: string };
+  options?: {
+    modal?: boolean; 
+    wide?: boolean; 
+    title?: string; 
+    icon?: string;
+    confetti?: 'blast' | 'rain';
+  };
 }
 
 export interface ActionSpec {
