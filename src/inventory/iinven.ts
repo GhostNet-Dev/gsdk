@@ -28,4 +28,5 @@ export interface IItem {
     get Stackable(): boolean
     get Stats(): Partial<Record<string, number>> | undefined
     get Enchantments(): Partial<Record<string, number>> | undefined
+    get Description(): string
 }

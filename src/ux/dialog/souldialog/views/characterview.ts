@@ -2,7 +2,7 @@
 // views/CharacterView.ts  — 슬롯 툴팁(hover=정보만 / click=버튼표시), 보너스 반올림 표시
 // ============================================================================
 import type { IDialogView, ViewContext } from '../souldlgtypes';
-import { createEl, css } from '../dlgstyle';
+import { createEl, css, renderIcon } from '../dlgstyle';
 
 // 모든 캐릭터 렌더러가 구현해야 할 인터페이스
 export interface ICharacterRenderer {
@@ -260,7 +260,10 @@ export class CharacterView implements IDialogView<Props> {
     SLOTS.forEach((slot)=>{
       const it = this.props.equip?.[slot] ?? null;
       const cell = createEl(doc, 'div'); cell.className='gnx-eslot'; (cell as any).dataset.slot = slot;
-      const icon = createEl(doc, 'div'); icon.className='icon'; icon.textContent = it?.icon ?? '—';
+      const icon = createEl(doc, 'div'); icon.className='icon'; 
+      // 아이콘이 있으면 렌더링, 없으면 대시(—)
+      icon.innerHTML = it?.icon ? renderIcon(it.icon) : '—';
+      
       const name = createEl(doc, 'div'); name.className='slot-name'; name.textContent = slot;
       cell.appendChild(icon); cell.appendChild(name);
 
@@ -390,7 +393,9 @@ export class CharacterView implements IDialogView<Props> {
     const doc = this.cardDoc();
 
     const title = createEl(doc, 'h4');
-    title.innerHTML = `${escapeHtml(it?.icon ?? '—')} ${escapeHtml(it?.name ?? `[${slot}]`)}`
+    title.style.display = 'flex'; title.style.alignItems = 'center'; title.style.gap = '6px';
+    const iconHtml = it?.icon ? renderIcon(it.icon) : '—';
+    title.innerHTML = `<div style="width:24px;height:24px;display:flex;justify-content:center;align-items:center">${iconHtml}</div> <span>${escapeHtml(it?.name ?? `[${slot}]`)}</span>`;
     this.tip.appendChild(title);
 
     const meta = createEl(doc, 'div'); meta.className='meta';

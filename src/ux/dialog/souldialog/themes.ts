@@ -19,6 +19,14 @@ export const BASE_VARS = css`
     --gnx-card-glow:0 0 18px rgba(216,182,107,.28);
     --gnx-rar-common:#aeb6c8; --gnx-rar-rare:#58a6ff; --gnx-rar-epic:#d87cff;
   }
+  /* [추가] 이미지 아이콘 스타일: 부모 박스에 꽉 차게 */
+  .gnx-img-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* 비율 유지하며 맞춤 */
+    display: block;
+    pointer-events: none; /* 클릭 통과 (드래그 등 간섭 방지) */
+  }
 `;
 
 /* -------------------------------------------------------------------------- */

@@ -2,8 +2,10 @@
 // views/InventoryView.ts  — Right-panel header (tabs+bag info + filters)
 // ============================================================================
 import type { IDialogView, ViewContext } from '../souldlgtypes';
-import { createEl, css } from '../dlgstyle';
+import { createEl, css, renderIcon } from '../dlgstyle';
 import type { Item } from '../dlgstore';
+// [수정 1] 캐릭터 렌더러 인터페이스 임포트
+import { ICharacterRenderer } from './characterview';
 
 type Slot = 'head'|'chest'|'hands'|'legs'|'weapon'|'offhand';
 
@@ -11,9 +13,12 @@ const CSS_INV = css`
   /* 2열 반응형 레이아웃: 왼(캐릭터+장착), 오른(상단바+필터+인벤) */
   .gnx-invwrap{
     display:grid; gap:14px;
+    /* 왼쪽 패널 360px 고정, 오른쪽은 남는 공간(minmax로 최소 폭 보장) */
     grid-template-columns: 360px 1fr;
     align-items:start;
   }
+  
+  /* 화면이 좁아지면 1열로 변경 (모바일/태블릿) */
   @media (max-width:1000px){
     .gnx-invwrap{ grid-template-columns: 1fr; }
   }
@@ -28,15 +33,20 @@ const CSS_INV = css`
     background:linear-gradient(135deg,#2b2b36,#15151b);
     box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
     display:grid; place-items:center; color:var(--gnx-ui-fg);
-    font-size:42px; user-select:none;
+    overflow: hidden;
   }
+
+  /* [수정] 장비 슬롯 그리드: 동적 배치 */
+  /* 기본: 3칸씩 2줄로 배치하여 가로 공간 절약 */
   .gnx-equip{
     display:grid; gap:10px;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(3, 1fr); 
   }
-  @media (max-width:520px){
-    .gnx-equip{ grid-template-columns: repeat(3, 1fr); }
+  /* 화면이 충분히 넓거나 모바일에서 1열 레이아웃일 때는 한 줄로(6칸) 표시 가능하면 표시 */
+  @media (min-width: 1200px) {
+     .gnx-equip{ grid-template-columns: repeat(6, 1fr); }
   }
+  
   .gnx-e-slot{
     height:70px;border:1px solid rgba(255,255,255,.14);border-radius:10px;
     display:grid;place-items:center;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));
@@ -46,42 +56,44 @@ const CSS_INV = css`
   .gnx-e-slot .cap{position:absolute;left:6px;top:4px;font:11px/1.2 system-ui;color:var(--gnx-ui-sub)}
 
   /* 오른쪽 패널 */
-  .gnx-right{ display:grid; gap:12px; }
-
-  /* 오른쪽 상단 헤더(상단바 + 필터 그룹) */
-  .gnx-righthead{
-    display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+  .gnx-right{ 
+      display:grid; gap:12px; 
+      min-width: 0; /* [중요] Grid 자식의 overflow 방지 필수 설정 */
   }
+
+  /* ... (헤더/탭 스타일은 기존 유지) ... */
+  .gnx-righthead{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
   .gnx-rightgroup{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .gnx-tabs{display:flex;gap:6px;flex-wrap:wrap;}
   .gnx-tab{padding:6px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);cursor:pointer;background:rgba(255,255,255,.04);color:var(--gnx-ui-fg);}
   .gnx-tab[data-active="true"]{border-color:var(--gnx-ui-accent);box-shadow:0 0 0 2px color-mix(in oklab,var(--gnx-ui-accent) 40%,transparent);}
   .gnx-baginfo{ color: var(--gnx-ui-sub); }
 
-  /* 버튼/셀렉트 공통 */
   .gnx-btn{ appearance:none; border:1px solid rgba(255,255,255,.18); color:var(--gnx-ui-fg);
     background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));
     padding:6px 10px; border-radius:10px; cursor:pointer; font-weight:600; min-height:34px;
   }
-
-  /* 검색 인풋: 절대 넘치지 않게 */
   .gnx-input{
-    box-sizing:border-box;
-    width: clamp(120px, 40vw, 240px);
-    max-width: 100%;
-    min-width: 120px;
-    outline:none;
+    box-sizing:border-box; width: clamp(120px, 40vw, 240px);
+    max-width: 100%; min-width: 120px; outline:none;
   }
 
-  /* 인벤토리 그리드 */
+  /* [수정] 인벤토리 그리드: 완전 반응형 (핵심 수정) */
   .gnx-invgrid{
-    --cell:84px;
-    display:grid; gap:10px; justify-content:center;
-    grid-template-columns: repeat(6, var(--cell));
+    --cell: 84px;
+    display:grid; 
+    gap:10px; 
+    /* justify-content:center; <--- 제거 (왼쪽 정렬이 더 자연스러움) */
+    
+    /* [핵심] 6개 고정이 아니라, 공간 남는 만큼 채우기 */
+    grid-template-columns: repeat(auto-fill, minmax(var(--cell), 1fr));
   }
-  @media (max-width:700px){ .gnx-invgrid{ grid-template-columns: repeat(4, var(--cell)); } }
+  
   .gnx-slot{
-    width:var(--cell);height:var(--cell);
+    /* width:var(--cell); <--- 고정 너비 제거하고 반응형으로 */
+    aspect-ratio: 1 / 1; /* 정사각형 비율 유지 */
+    height: auto;       /* 높이 자동 */
+    
     border:1px solid rgba(255,255,255,.16);border-radius:12px;display:grid;place-items:center;position:relative;cursor:pointer;
     background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));transition:.08s;
   }
@@ -89,7 +101,7 @@ const CSS_INV = css`
   .gnx-slot .gnx-qty{position:absolute;right:6px;bottom:6px;font-size:12px;padding:2px 6px;border-radius:10px;background:rgba(0,0,0,.35);color:#fff;border:1px solid rgba(255,255,255,.18);}
   .gnx-slot .gnx-icon{font-size:30px;user-select:none;}
 
-  /* Diablo-like Overlay Tooltip */
+  /* ... (툴팁 스타일 기존 유지) ... */
   .gnx-tip {
     position: fixed; z-index: 2147483600;
     min-width: 240px; max-width: 360px;
@@ -125,7 +137,7 @@ type Props = {
   onDrop?: (index: number) => void;
   onEquip?: (slot: Slot, index: number, item: Item) => void;
   onUnequip?: (slot: Slot) => void;
-  onMountCharacterView?: (container: HTMLElement) => void;
+  // [수정 2] onMountCharacterView 제거 (내부에서 처리하므로 불필요)
 };
 
 export class InventoryView implements IDialogView<Props> {
@@ -139,6 +151,11 @@ export class InventoryView implements IDialogView<Props> {
   private tipItemIndex: number | null = null;
 
   private charContainer?: HTMLDivElement;
+  // [수정 3] ResizeObserver 참조 저장용
+  private _ro?: ResizeObserver;
+
+  // [수정 4] 생성자에서 Renderer 주입
+  constructor(private charRenderer: ICharacterRenderer) {}
 
   mount(ctx: ViewContext, props: Props) {
     this.ctx = ctx; this.props = props;
@@ -149,7 +166,12 @@ export class InventoryView implements IDialogView<Props> {
     this.render();
   }
   update(next: Props) { this.props = next; this.render(); }
+
   unmount() {
+    // [수정 5] 리소스 해제
+    if (this._ro) this._ro.disconnect();
+    this.charRenderer.dispose();
+
     if (this.key) this.ctx.render.releaseCSS(this.shell.sr, this.key);
     this.destroyTip();
   }
@@ -157,6 +179,9 @@ export class InventoryView implements IDialogView<Props> {
   private render() {
     const doc = (this.shell.sr instanceof ShadowRoot) ? this.shell.sr : document;
     this.shell.body.innerHTML = '';
+
+    // 기존의 ResizeObserver가 있다면 해제 (DOM이 재생성되므로)
+    if (this._ro) { this._ro.disconnect(); this._ro = undefined; }
 
     /* ---------- 본문 2-컬럼 ---------- */
     const wrap = createEl(doc,'div'); wrap.className='gnx-invwrap';
@@ -168,9 +193,21 @@ export class InventoryView implements IDialogView<Props> {
     // 왼쪽: 캐릭터 미리보기 + 장착 슬롯
     this.charContainer = createEl(doc,'div') as HTMLDivElement;
     this.charContainer.className = 'gnx-charview';
-    this.charContainer.textContent = '🧍';
+    // [수정 6] 텍스트 제거 및 렌더러 마운트
+    this.charContainer.textContent = ''; 
     left.appendChild(this.charContainer);
-    this.props.onMountCharacterView?.(this.charContainer);
+
+    // 렌더러 부착
+    this.charRenderer.mount(this.charContainer);
+    
+    // ResizeObserver 설정 (반응형 대응)
+    this._ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+            const { width, height } = entry.contentRect;
+            this.charRenderer.resize(width, height);
+        }
+    });
+    this._ro.observe(this.charContainer);
 
     const equip = createEl(doc,'div'); equip.className='gnx-equip';
     this.eqSlots.forEach(s=>{
@@ -178,7 +215,12 @@ export class InventoryView implements IDialogView<Props> {
       const cap = createEl(doc,'div'); cap.className='cap'; cap.textContent = s;
       const it = this.props.equip?.[s] ?? null;
       slot.appendChild(cap);
-      slot.appendChild(document.createTextNode(it?.icon ?? ''));
+      
+      const iconWrap = createEl(doc, 'div');
+      iconWrap.style.cssText = 'width:100%;height:100%;padding:14px;box-sizing:border-box;display:flex;justify-content:center;align-items:center;';
+      iconWrap.innerHTML = renderIcon(it?.icon);
+      slot.appendChild(iconWrap);
+
       slot.onmouseenter = ()=> (slot as any).dataset.accept='true';
       slot.onmouseleave = ()=> (slot as any).dataset.accept='false';
       slot.ondragover = (e: DragEvent)=> e.preventDefault();
@@ -258,7 +300,7 @@ export class InventoryView implements IDialogView<Props> {
       const cell = createEl(doc,'button'); cell.className='gnx-slot'; (cell as any).dataset.selected = String(i === this.selected);
       cell.type='button';
       if (it){
-        cell.innerHTML = `<div class="gnx-icon" title="${it.name}">${it.icon}</div><div class="gnx-qty">${it.qty}</div>`;
+        cell.innerHTML = `<div class="gnx-icon" title="${it.name}">${renderIcon(it.icon)}</div><div class="gnx-qty">${it.qty}</div>`;
         cell.draggable = true;
         cell.ondragstart = (e: DragEvent)=> e.dataTransfer?.setData('text/plain', JSON.stringify({ type:'bag', index:i }));
 
@@ -345,8 +387,11 @@ export class InventoryView implements IDialogView<Props> {
         <button class="tt-btn" data-action="close">닫기</button>
       </div>` : '';
 
-    this.tip.innerHTML = `
-      <div class="tt-title">${it.icon} ${escapeHtml(it.name)}</div>
+      this.tip.innerHTML = `
+      <div class="tt-title" style="display:flex;align-items:center;gap:6px">
+        <div style="width:24px;height:24px;display:flex;justify-content:center;align-items:center">${renderIcon(it.icon)}</div>
+        ${escapeHtml(it.name)}
+      </div>
       <div class="tt-badges">
         <span class="tt-badge">${it.rarity}</span>
         <span class="tt-badge">${it.cat}</span>

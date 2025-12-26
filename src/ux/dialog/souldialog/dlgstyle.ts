@@ -69,3 +69,15 @@ export function createEl<T extends keyof HTMLElementTagNameMap>(
 ): HTMLElementTagNameMap[T] {
   return docOf(host).createElement(tag);
 }
+
+// [추가] 아이콘이 URL 형태인지 텍스트인지 판단하여 HTML 문자열 반환
+export function renderIcon(icon: string | undefined | null) {
+  if (!icon) return '';
+  // http로 시작하거나, /, ./, ../ 로 시작하는 경우 이미지로 간주
+  const isUrl = /^(https?:\/\/|\/|\.\.?\/|data:image)/i.test(icon);
+
+  if (isUrl) {
+    return `<img src="${icon}" class="gnx-img-icon" alt="icon" draggable="false" />`;
+  }
+  return icon;
+}

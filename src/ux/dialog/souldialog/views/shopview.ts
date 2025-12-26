@@ -1,7 +1,7 @@
 // ============================================================================
 // views/ShopView.ts  — Tooltip(pin) 고정/해제 안정화 + 쉘 톤 맞춘 가독성 개선
 // ============================================================================
-import { createEl, css } from '../dlgstyle';
+import { createEl, css, renderIcon } from '../dlgstyle';
 import type { IDialogView, ViewContext } from '../souldlgtypes';
 
 type ShopItem = {
@@ -101,7 +101,7 @@ export class ShopView implements IDialogView<{ items: ShopItem[]; onBuy: (id: st
       const row = createEl(doc, 'div');
       row.className = 'gnx-shop-row';
       row.innerHTML = `
-        <div class="gnx-row__icon">${it.icon}</div>
+        <div class="gnx-row__icon">${renderIcon(it.icon)}</div>
         <div>
           <div class="gnx-shop-title">${escapeHtml(it.title)}</div>
           <div class="meta">
@@ -215,7 +215,8 @@ export class ShopView implements IDialogView<{ items: ShopItem[]; onBuy: (id: st
     const doc = (this.shell!.sr instanceof ShadowRoot) ? this.shell!.sr : document;
 
     const title = createEl(doc, 'h4');
-    title.textContent = it.icon + ' ' + it.title;
+    title.style.display = 'flex'; title.style.alignItems = 'center'; title.style.gap = '6px';
+    title.innerHTML = `${renderIcon(it.icon)} <span>${escapeHtml(it.title)}</span>`;
 
     const meta = createEl(doc, 'div');
     meta.className = 'meta';

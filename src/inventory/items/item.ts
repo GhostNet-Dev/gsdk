@@ -5,6 +5,7 @@ import type { ItemProperty } from "./itemdefs"
 import { IAsset } from "@Glibs/interface/iasset"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
 import { ItemIconProperty } from "../../ux/icons/itemicons"
+import { ItemType } from "@Glibs/types/inventypes"
 
 
 export class ItemAbstract implements IItem {
@@ -13,6 +14,21 @@ export class ItemAbstract implements IItem {
   get UniqId() { return this.uniqId }
   get Id() { return this.property.id }
   get ItemType() { return this.property.type }
+  get ItemTypeTrans() {
+    switch (this.property.type as ItemType) {
+      case "shield":
+      case "armor":
+        return "방어구"
+      case "meleeattack":
+      case "rangeattack":
+        return "무기"
+      case "material":
+        return "소모"
+      case "potion":
+        return "물약"
+    }
+    return this.property.type
+  }
   get IconPath() { return this.property.icon.path }
   get Bindable() { return this.property.binding }
   get Bind() { return ("bind" in this.property) ? this.property.bind : undefined }
@@ -25,12 +41,13 @@ export class ItemAbstract implements IItem {
   get Sound() { return ("sound" in this.property) ? this.property.sound : undefined }
   get Stats() { return ("stats" in this.property) ? this.property.stats : undefined }
   get Enchantments() { return ("enchantments" in this.property) ? this.property.enchantments : undefined }
+  get Description() { return this.property.description }
   // get Effects() { return this.property.effects }
 
   constructor(protected uniqId: string, public property: ItemProperty) { }
 }
 
-export class Item extends ItemAbstract implements IActionUser{
+export class Item extends ItemAbstract implements IActionUser {
   id: string
   name: string
   icon: ItemIconProperty
