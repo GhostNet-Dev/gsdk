@@ -1,18 +1,14 @@
 // ============================================================================
-// views/CharacterView.ts  — 슬롯 툴팁(hover=정보만 / click=버튼표시), 보너스 반올림 표시
+// views/characterview.ts — 캐릭터 UI (아이콘 크기 및 툴팁 스탯 개선)
 // ============================================================================
 import type { IDialogView, ViewContext } from '../souldlgtypes';
 import { createEl, css, renderIcon } from '../dlgstyle';
+import { IItem } from '@Glibs/interface/iinven';
 
 // 모든 캐릭터 렌더러가 구현해야 할 인터페이스
 export interface ICharacterRenderer {
-  // DOM 요소에 렌더러를 부착 (초기화)
   mount(container: HTMLElement): void;
-
-  // 크기 변경 대응 (반응형)
   resize(width: number, height: number): void;
-
-  // 메모리 해제 및 이벤트 리스너 제거 (필수!)
   dispose(): void;
 }
 
@@ -21,28 +17,29 @@ type EquipSlot =
   | 'weapon' | 'offhand'
   | 'ring1' | 'ring2' | 'amulet';
 
-type EquipItem = {
-  icon?: string;
-  atk?: number;
-  def?: number;
-  wt?: number;
-  set?: string;
-  name?: string;
-  rarity?: 'Common'|'Rare'|'Epic';
-  desc?: string;
+// 스탯 라벨 한글 매핑
+const STAT_LABELS: Record<string, string> = {
+    attack: '공격력',
+    defense: '방어력',
+    hp: '생명력',
+    mp: '마나',
+    speed: '이동 속도',
+    criticalRate: '치명타 확률',
+    criticalDamage: '치명타 피해',
+    weight: '무게'
 };
 
 type Props = {
-  base: { STR:number; DEX:number; INT:number; FAI:number; VIT:number };
-  resistBase: { fire:number; elec:number; ice:number };
-  equip: Partial<Record<EquipSlot, EquipItem|null|undefined>>;
+  base: { STR: number; DEX: number; INT: number; FAI: number; VIT: number };
+  resistBase: { fire: number; elec: number; ice: number };
+  equip: Partial<Record<EquipSlot, IItem | null | undefined>>;
   charRenderer: ICharacterRenderer;
   onUnequip?: (slot: EquipSlot) => void;
   onReplace?: (slot: EquipSlot) => void;
-  onInspect?: (slot: EquipSlot, item: EquipItem) => void;
+  onInspect?: (slot: EquipSlot, item: IItem) => void;
 };
 
-const SLOTS: EquipSlot[] = ['head','chest','hands','legs','weapon','offhand','ring1','ring2','amulet'];
+const SLOTS: EquipSlot[] = ['head', 'chest', 'hands', 'legs', 'weapon', 'offhand', 'ring1', 'ring2', 'amulet'];
 
 const CSS_CHAR = css`
   :host { color: var(--gnx-ui-fg); }
@@ -56,6 +53,7 @@ const CSS_CHAR = css`
     display:grid;place-items:center;
     box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);
     color:inherit; font-size:72px;
+    overflow: hidden;
   }
 
   .gnx-stats{display:grid;gap:10px; color:inherit;}
@@ -79,20 +77,29 @@ const CSS_CHAR = css`
     gap:10px; color:inherit;
   }
   @media (max-width:700px){.gnx-equip-grid{grid-template-columns:repeat(3,1fr)}}
+  
   .gnx-eslot{
     height:78px;border:1px solid rgba(255,255,255,.14);border-radius:10px;
     display:grid;place-items:center;position:relative;
     background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.015));
-    color:inherit; cursor:pointer;
+    color:inherit; cursor:pointer; overflow: hidden;
   }
   .gnx-eslot[data-hover="true"]{
     border-color:var(--gnx-ui-accent);
     box-shadow:0 0 0 2px color-mix(in oklab,var(--gnx-ui-accent) 40%,transparent);
   }
   .gnx-eslot .slot-name{
-    position:absolute; left:8px; bottom:6px; font-size:11px; color:var(--gnx-ui-sub);
+    position:absolute; left:8px; bottom:6px; font-size:11px; color:var(--gnx-ui-sub); z-index: 2;
   }
-  .gnx-eslot .icon{ font-size:28px; user-select:none; }
+
+  /* [수정] 아이콘 래퍼 (InventoryView와 동일하게 크기 맞춤) */
+  .gnx-e-icon-wrap {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    padding: 8px; /* CharacterView는 슬롯이 조금 더 크므로 패딩 조절 */
+    box-sizing: border-box;
+    display: flex; justify-content: center; align-items: center; z-index: 1;
+  }
+  .gnx-e-icon-wrap img.gnx-img-icon { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
 
   /* ===== Tooltip ===== */
   .gnx-tip {
@@ -100,13 +107,13 @@ const CSS_CHAR = css`
     z-index: 2147483647;
     min-width: 260px;
     max-width: 380px;
-    padding: 10px 12px;
+    padding: 12px;
     border-radius: 12px;
     border: 1px solid rgba(255,255,255,.18);
-    background: var(--gnx-ui-bg, rgba(14,17,22,.92));
+    background: linear-gradient(180deg, rgba(30,33,40,0.95), rgba(20,23,30,0.98));
     box-shadow: var(--gnx-shadow, 0 8px 40px rgba(0,0,0,.55));
     color: var(--gnx-ui-fg);
-    pointer-events: none; /* hover 상태: 버튼 비활성(숨김) + 클릭 통과 */
+    pointer-events: none;
     transform: translate(-50%, -10px);
     opacity: 0;
     transition: opacity .08s ease, transform .08s ease;
@@ -114,10 +121,16 @@ const CSS_CHAR = css`
   .gnx-tip[data-show="true"] { opacity: 1; }
   .gnx-tip[data-pinned="true"] { pointer-events: auto; transform: translate(-50%, 0); }
 
-  .gnx-tip h4{ margin:0 0 6px 0; font-size:14px; font-weight:700; }
-  .gnx-tip .meta{ display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
-  .gnx-tip .desc{ color:var(--gnx-ui-sub); line-height:1.55; }
-  .gnx-tip .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
+  .gnx-tip h4{ margin:0 0 8px 0; font-size:16px; font-weight:700; display:flex; align-items:center; gap:8px; }
+  
+  /* [추가] 툴팁 스탯 스타일 */
+  .tt-stats { margin: 12px 0; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 4px; }
+  .tt-stat-row { font-size: 13px; color: #8ab4f8; display: flex; justify-content: space-between; }
+  .tt-stat-row.enchant { color: #d87cff; }
+
+  .gnx-tip .meta{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom: 8px; }
+  .gnx-tip .desc{ margin-top:8px; color:var(--gnx-ui-sub); line-height:1.55; font-size:13px; font-style:italic; }
+  .gnx-tip .actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.1); }
 
   .gnx-btn{ appearance:none; border:1px solid rgba(255,255,255,.18); color:var(--gnx-ui-fg);
     background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));
@@ -133,14 +146,20 @@ const CSS_CHAR = css`
     background:linear-gradient(180deg,rgba(255,90,106,.25),rgba(255,255,255,.12));
     color:#fff;
   }
+  
+  .gnx-rar-common{ color:var(--gnx-rar-common); }
+  .gnx-rar-rare{   color:var(--gnx-rar-rare); }
+  .gnx-rar-epic{   color:var(--gnx-rar-epic); }
 `;
 
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" } as any)[m]);
 }
-function rarClass(r?: 'Common'|'Rare'|'Epic') {
-  if (r === 'Epic') return 'gnx-rar-epic';
-  if (r === 'Rare') return 'gnx-rar-rare';
+
+function rarClass(r?: string) {
+  const lower = r?.toLowerCase();
+  if (lower === 'epic') return 'gnx-rar-epic';
+  if (lower === 'rare') return 'gnx-rar-rare';
   return 'gnx-rar-common';
 }
 
@@ -154,10 +173,9 @@ export class CharacterView implements IDialogView<Props> {
   private tipPinned = false;
   private tipSlot: EquipSlot | null = null;
   private charContainerRef?: HTMLDivElement;
+  private _ro?: ResizeObserver;
 
-  constructor(private charRenderer: ICharacterRenderer){
-
-  }
+  constructor(private charRenderer: ICharacterRenderer) { }
 
   private onGlobalDown = (e: Event) => {
     if (!this.tip || !this.tipPinned) return;
@@ -179,26 +197,22 @@ export class CharacterView implements IDialogView<Props> {
 
     this.render();
     this.ctx.render.setActions(this.shell, [{ id: 'close', label: '닫기', onClick: () => this.ctx.manager.close() }]);
-    const portraitContainer = this.shell.body.querySelector('.gnx-char-portrait') as HTMLDivElement;
     
+    // Character Renderer Mount
+    const portraitContainer = this.shell.body.querySelector('.gnx-char-portrait') as HTMLDivElement;
     if (portraitContainer) {
       this.charContainerRef = portraitContainer;
+      portraitContainer.textContent = '';
       
-      // 기존 텍스트(🧍) 제거
-      portraitContainer.textContent = ''; 
-      
-      // 렌더러 마운트
       this.charRenderer.mount(portraitContainer);
-      
-      // 반응형 크기 조절 (ResizeObserver 사용 권장)
-      const ro = new ResizeObserver((entries) => {
+
+      this._ro = new ResizeObserver((entries) => {
         for (const entry of entries) {
            const { width, height } = entry.contentRect;
            this.charRenderer.resize(width, height);
         }
       });
-      ro.observe(portraitContainer);
-      (this as any)._ro = ro; // 나중에 해제하기 위해 저장
+      this._ro.observe(portraitContainer);
     }
   }
 
@@ -208,7 +222,7 @@ export class CharacterView implements IDialogView<Props> {
   }
 
   unmount() {
-    if ((this as any)._ro) (this as any)._ro.disconnect();
+    if (this._ro) this._ro.disconnect();
     this.charRenderer.dispose();
     if (this.key) this.ctx.render.releaseCSS(this.shell.sr, this.key);
     document.removeEventListener('pointerdown', this.onGlobalDown, true);
@@ -222,32 +236,30 @@ export class CharacterView implements IDialogView<Props> {
     const doc = (this.shell.sr instanceof ShadowRoot) ? this.shell.sr : document;
     this.shell.body.innerHTML = '';
 
-    const wrap = createEl(doc, 'div'); wrap.className='gnx-char';
+    const wrap = createEl(doc, 'div'); wrap.className = 'gnx-char';
 
     // LEFT — Portrait + base/resist
     const left = createEl(doc, 'div');
-    const port = createEl(doc, 'div'); port.className='gnx-char-portrait'; port.textContent='🧍';
+    const port = createEl(doc, 'div'); port.className = 'gnx-char-portrait'; port.textContent = '🧍';
     left.appendChild(port);
 
-    const stats1 = createEl(doc, 'div'); stats1.className='gnx-stats'; stats1.style.marginTop='12px';
+    const stats1 = createEl(doc, 'div'); stats1.className = 'gnx-stats'; stats1.style.marginTop = '12px';
 
     const sums = this.computeEquipSums();
-    const atkBase = Math.round(this.props.base.STR*1.2 + this.props.base.DEX*0.5);
+    const atkBase = Math.round(this.props.base.STR * 1.2 + this.props.base.DEX * 0.5);
     const atkTotal = atkBase + Math.round(sums.atk);
-    const defBase = Math.round(10 + this.props.base.VIT*0.8);
+    const defBase = Math.round(10 + this.props.base.VIT * 0.8);
     const defTotal = defBase + Math.round(sums.def);
-    const sta = 50 + this.props.base.VIT*2;
-    const wt  = sums.wt; // 전체 중량 자체는 소수 표시가 필요하면 toFixed로 바꿔도 됩니다.
+    const sta = 50 + this.props.base.VIT * 2;
+    const wt = sums.wt;
 
-    // 보너스는 반올림하여 소수점 제거
-    stats1.appendChild(this.statRow('공격력', atkTotal, atkBase, Math.round(sums.atk), 100/3));
-    stats1.appendChild(this.statRow('방어도', defTotal, defBase, Math.round(sums.def), 100/3));
-    stats1.appendChild(this.statRow('스태미너', sta, sta, 0, 100/1.5));
-    // suffix는 총중량 표시, 보너스(+wt)는 반올림하여 정수로 표기
-    stats1.appendChild(this.statRow('장비 중량', Math.min(100, wt*12), 0, Math.round(wt), 1, true, String(Math.round(wt))));
+    stats1.appendChild(this.statRow('공격력', atkTotal, atkBase, Math.round(sums.atk), 100 / 3));
+    stats1.appendChild(this.statRow('방어도', defTotal, defBase, Math.round(sums.def), 100 / 3));
+    stats1.appendChild(this.statRow('스태미너', sta, sta, 0, 100 / 1.5));
+    stats1.appendChild(this.statRow('장비 중량', Math.min(100, wt * 12), 0, Math.round(wt), 1, true, String(Math.round(wt))));
     left.appendChild(stats1);
 
-    const res = createEl(doc, 'div'); res.className='gnx-stats'; res.style.marginTop='12px';
+    const res = createEl(doc, 'div'); res.className = 'gnx-stats'; res.style.marginTop = '12px';
     res.appendChild(this.statSimple('🔥 화염 저항', this.props.resistBase.fire, 1));
     res.appendChild(this.statSimple('⚡ 번개 저항', this.props.resistBase.elec, 1));
     res.appendChild(this.statSimple('❄️ 빙결 저항', this.props.resistBase.ice, 1));
@@ -255,29 +267,34 @@ export class CharacterView implements IDialogView<Props> {
 
     // RIGHT — Equip grid
     const right = createEl(doc, 'div');
-    const equipGrid = createEl(doc, 'div'); equipGrid.className='gnx-equip-grid';
+    const equipGrid = createEl(doc, 'div'); equipGrid.className = 'gnx-equip-grid';
 
-    SLOTS.forEach((slot)=>{
-      const it = this.props.equip?.[slot] ?? null;
-      const cell = createEl(doc, 'div'); cell.className='gnx-eslot'; (cell as any).dataset.slot = slot;
-      const icon = createEl(doc, 'div'); icon.className='icon'; 
-      // 아이콘이 있으면 렌더링, 없으면 대시(—)
-      icon.innerHTML = it?.icon ? renderIcon(it.icon) : '—';
+    SLOTS.forEach((slot) => {
+      const it = this.props.equip?.[slot];
+      const cell = createEl(doc, 'div'); cell.className = 'gnx-eslot'; (cell as any).dataset.slot = slot;
       
-      const name = createEl(doc, 'div'); name.className='slot-name'; name.textContent = slot;
-      cell.appendChild(icon); cell.appendChild(name);
+      // [수정] 아이콘 래퍼 및 renderIcon 사용
+      const iconWrap = createEl(doc, 'div');
+      iconWrap.className = 'gnx-e-icon-wrap';
+      iconWrap.innerHTML = it?.IconPath ? renderIcon(it.IconPath) : '—';
+      if (!it) {
+        // 아이콘이 없을 때 텍스트 대시(-)의 스타일 조정이 필요하면 여기에 추가
+        iconWrap.style.fontSize = '28px';
+        iconWrap.style.opacity = '0.25';
+      }
 
-      // hover → 정보만 표시(버튼 없음)
-      cell.addEventListener('mouseenter', (e)=>{ (cell as HTMLElement).dataset.hover='true'; this.onSlotHover(slot, it || undefined, e as MouseEvent); });
-      cell.addEventListener('mousemove', (e)=> this.onSlotHover(slot, it || undefined, e as MouseEvent));
-      cell.addEventListener('mouseleave', ()=>{ (cell as HTMLElement).dataset.hover='false'; this.onSlotLeave(); });
+      const name = createEl(doc, 'div'); name.className = 'slot-name'; name.textContent = slot;
+      cell.appendChild(iconWrap); cell.appendChild(name);
 
-      // click → pin (버튼 표시)
-      cell.addEventListener('pointerdown', (e)=>{
+      cell.addEventListener('mouseenter', (e) => { (cell as HTMLElement).dataset.hover = 'true'; this.onSlotHover(slot, it || undefined, e as MouseEvent); });
+      cell.addEventListener('mousemove', (e) => this.onSlotHover(slot, it || undefined, e as MouseEvent));
+      cell.addEventListener('mouseleave', () => { (cell as HTMLElement).dataset.hover = 'false'; this.onSlotLeave(); });
+
+      cell.addEventListener('pointerdown', (e) => {
         if ((e as PointerEvent).pointerType !== 'mouse') return;
         e.stopPropagation();
         this.pinTip(slot, it || undefined);
-      }, { capture:true });
+      }, { capture: true });
 
       equipGrid.appendChild(cell);
     });
@@ -290,33 +307,38 @@ export class CharacterView implements IDialogView<Props> {
   /* ---------------------------- Stats helpers ---------------------------- */
 
   private computeEquipSums() {
-    let atk=0, def=0, wt=0;
+    let atk = 0, def = 0, wt = 0;
     for (const s of SLOTS) {
       const it = this.props.equip?.[s];
       if (!it) continue;
-      if (typeof it.atk === 'number') atk += it.atk;
-      if (typeof it.def === 'number') def += it.def;
-      if (typeof it.wt  === 'number') wt  += it.wt;
+      
+      if (it.Stats) {
+        if (typeof it.Stats['attack'] === 'number') atk += it.Stats['attack'];
+        if (typeof it.Stats['defense'] === 'number') def += it.Stats['defense'];
+      }
+      
+      if (typeof (it as any).Weight === 'number') wt += (it as any).Weight;
+      else if (it.Stats && typeof it.Stats['weight'] === 'number') wt += it.Stats['weight'];
     }
     return { atk, def, wt };
   }
 
-  private statRow(label:string, total:number, base:number, bonus:number, scale:number, clamp=false, suffix?:string) {
+  private statRow(label: string, total: number, base: number, bonus: number, scale: number, clamp = false, suffix?: string) {
     const doc = (this.shell.sr instanceof ShadowRoot) ? this.shell.sr : document;
-    const row = createEl(doc, 'div'); row.className='gnx-stat';
+    const row = createEl(doc, 'div'); row.className = 'gnx-stat';
 
-    const labelEl = createEl(doc, 'div'); labelEl.className='label'; labelEl.textContent = label;
-    const bar = createEl(doc, 'div'); bar.className='gnx-bar';
+    const labelEl = createEl(doc, 'div'); labelEl.className = 'label'; labelEl.textContent = label;
+    const bar = createEl(doc, 'div'); bar.className = 'gnx-bar';
     const i = createEl(doc, 'i');
-    const width = clamp ? Math.min(100, total*scale) : (total/scale);
-    (i as any).style.width = (typeof width==='number'? width : parseFloat(String(width))) + '%';
+    const width = clamp ? Math.min(100, total * scale) : (total / scale);
+    (i as any).style.width = (typeof width === 'number' ? width : parseFloat(String(width))) + '%';
     bar.appendChild(i);
 
-    const val = createEl(doc, 'div'); val.className='val';
+    const val = createEl(doc, 'div'); val.className = 'val';
     val.textContent = suffix ?? String(total);
     const bonusRounded = Math.round(bonus);
     if (bonusRounded && Math.abs(bonusRounded) > 0) {
-      const plus = createEl(doc, 'span'); plus.className='gnx-plus';
+      const plus = createEl(doc, 'span'); plus.className = 'gnx-plus';
       plus.textContent = `(+${bonusRounded})`;
       val.appendChild(plus);
     }
@@ -325,13 +347,13 @@ export class CharacterView implements IDialogView<Props> {
     return row;
   }
 
-  private statSimple(label:string, val:number, scale:number) {
+  private statSimple(label: string, val: number, scale: number) {
     const doc = (this.shell.sr instanceof ShadowRoot) ? this.cardDoc() : document;
-    const row = createEl(doc, 'div'); row.className='gnx-stat';
-    const labelEl = createEl(doc, 'div'); labelEl.className='label'; labelEl.textContent = label;
-    const bar = createEl(doc, 'div'); bar.className='gnx-bar';
-    const i = createEl(doc, 'i'); (i as any).style.width = (val/scale)+'%'; bar.appendChild(i);
-    const right = createEl(doc, 'div'); right.className='val'; right.textContent = String(val);
+    const row = createEl(doc, 'div'); row.className = 'gnx-stat';
+    const labelEl = createEl(doc, 'div'); labelEl.className = 'label'; labelEl.textContent = label;
+    const bar = createEl(doc, 'div'); bar.className = 'gnx-bar';
+    const i = createEl(doc, 'i'); (i as any).style.width = (val / scale) + '%'; bar.appendChild(i);
+    const right = createEl(doc, 'div'); right.className = 'val'; right.textContent = String(val);
     row.appendChild(labelEl); row.appendChild(bar); row.appendChild(right);
     return row;
   }
@@ -347,17 +369,17 @@ export class CharacterView implements IDialogView<Props> {
     const doc = this.cardDoc();
     const tip = createEl(doc, 'div') as HTMLDivElement;
     tip.className = 'gnx-tip';
-    tip.setAttribute('data-show','false');
-    tip.setAttribute('data-pinned','false');
+    tip.setAttribute('data-show', 'false');
+    tip.setAttribute('data-pinned', 'false');
     this.shell.sr.appendChild(tip);
     this.tip = tip;
   }
 
-  private onSlotHover(slot: EquipSlot, it?: EquipItem, ev?: MouseEvent) {
+  private onSlotHover(slot: EquipSlot, it?: IItem, ev?: MouseEvent) {
     if (!this.tip) this.ensureTip();
     if (!this.tip) return;
-    if (this.tipPinned) return; // 핀 상태에서는 hover 미표시
-    this.renderTip(slot, it, false); // hover → 버튼 숨김
+    if (this.tipPinned) return;
+    this.renderTip(slot, it, false);
     if (ev) this.placeTip(ev.clientX, ev.clientY);
   }
 
@@ -366,20 +388,21 @@ export class CharacterView implements IDialogView<Props> {
     this.hideTip();
   }
 
-  private pinTip(slot: EquipSlot, it?: EquipItem) {
-    this.renderTip(slot, it, true); // pin → 버튼 표시
+  private pinTip(slot: EquipSlot, it?: IItem) {
+    this.renderTip(slot, it, true);
   }
 
   private unpinTip() {
     this.tipPinned = false;
     if (this.tip) {
-      this.tip.setAttribute('data-pinned','false');
+      this.tip.setAttribute('data-pinned', 'false');
       this.hideTip();
     }
     this.tipSlot = null;
   }
 
-  private renderTip(slot: EquipSlot, it: EquipItem|undefined, pin:boolean) {
+  // [수정] 툴팁 렌더링: 디아블로 스타일 스탯 표시
+  private renderTip(slot: EquipSlot, it: IItem | undefined, pin: boolean) {
     this.ensureTip();
     if (!this.tip) return;
 
@@ -393,79 +416,114 @@ export class CharacterView implements IDialogView<Props> {
     const doc = this.cardDoc();
 
     const title = createEl(doc, 'h4');
-    title.style.display = 'flex'; title.style.alignItems = 'center'; title.style.gap = '6px';
-    const iconHtml = it?.icon ? renderIcon(it.icon) : '—';
-    title.innerHTML = `<div style="width:24px;height:24px;display:flex;justify-content:center;align-items:center">${iconHtml}</div> <span>${escapeHtml(it?.name ?? `[${slot}]`)}</span>`;
+    const iconHtml = it?.IconPath ? renderIcon(it.IconPath) : '—';
+    const nameText = it?.Name ?? `[${slot}]`;
+    const rarity = (it as any)?.Level ?? 'Common';
+    const rarityClass = rarClass(rarity);
+
+    title.innerHTML = `<div style="width:28px;height:28px;display:flex;justify-content:center;align-items:center">${iconHtml}</div> <span class="${rarityClass}">${escapeHtml(nameText)}</span>`;
     this.tip.appendChild(title);
 
-    const meta = createEl(doc, 'div'); meta.className='meta';
-    const rar = createEl(doc,'span'); rar.className = `gnx-card__meta ${rarClass(it?.rarity)}`; rar.textContent = it?.rarity ?? 'Empty';
+    const meta = createEl(doc, 'div'); meta.className = 'meta';
+    
+    // Rarity Badge
+    const rar = createEl(doc, 'span'); rar.className = `gnx-card__meta ${rarityClass}`; rar.textContent = rarity;
     meta.appendChild(rar);
-    if (it?.set) { const s = createEl(doc,'span'); s.className='gnx-card__meta'; s.textContent=`세트: ${it.set}`; meta.appendChild(s); }
+    
+    // Set Bonus
+    const setName = (it as any)?.Set ?? (it?.Stats?.setBonus ? 'Set Item' : null);
+    if (setName) { 
+        const s = createEl(doc,'span'); s.className='gnx-card__meta'; s.style.color = '#00ff00'; s.textContent=`세트: ${setName}`; 
+        meta.appendChild(s); 
+    }
     this.tip.appendChild(meta);
 
-    const lines: string[] = [];
-    if (it?.atk) lines.push(`공격력 +${Math.round(it.atk)}`);
-    if (it?.def) lines.push(`방어도 +${Math.round(it.def)}`);
-    if (it?.wt)  lines.push(`중량 +${Math.round(it.wt)}`);
-    if (lines.length) {
-      const stats = createEl(doc,'div'); stats.className='meta';
-      for (const L of lines) { const sp = createEl(doc,'span'); sp.className='gnx-card__meta'; sp.textContent=L; stats.appendChild(sp); }
-      this.tip.appendChild(stats);
+    // [추가] 스탯 표시 로직
+    let statsHtml = '';
+    if (it) {
+        const stats = it.Stats;
+        const enchantments = it.Enchantments;
+        const hasStats = (stats && Object.keys(stats).length > 0) || (enchantments && Object.keys(enchantments).length > 0);
+
+        if (hasStats) {
+            statsHtml += '<div class="tt-stats">';
+            if (stats) {
+                for (const [key, val] of Object.entries(stats)) {
+                    if (typeof val !== 'number' || val === 0) continue;
+                    const label = STAT_LABELS[key] || key;
+                    const valStr = val > 0 ? `+${val}` : `${val}`;
+                    statsHtml += `<div class="tt-stat-row"><span>${label}</span><span>${valStr}</span></div>`;
+                }
+            }
+            if (enchantments) {
+                for (const [key, val] of Object.entries(enchantments)) {
+                    if (typeof val !== 'number' || val === 0) continue;
+                    const label = STAT_LABELS[key] || key;
+                    const valStr = val > 0 ? `+${val}` : `${val}`;
+                    statsHtml += `<div class="tt-stat-row enchant"><span>${label}</span><span>${valStr}</span></div>`;
+                }
+            }
+            statsHtml += '</div>';
+        }
+    }
+    
+    if (statsHtml) {
+        const statsDiv = createEl(doc, 'div');
+        statsDiv.innerHTML = statsHtml;
+        this.tip.appendChild(statsDiv);
     }
 
-    const desc = createEl(doc,'div'); desc.className='desc';
-    desc.textContent = it?.desc ?? (it ? '설명 없음.' : '빈 슬롯입니다. 인벤토리에서 장비를 장착하세요.');
+    const desc = createEl(doc, 'div'); desc.className = 'desc';
+    desc.textContent = it?.Description ?? (it ? '설명 없음.' : '빈 슬롯입니다. 인벤토리에서 장비를 장착하세요.');
     this.tip.appendChild(desc);
 
-    // hover일 때는 버튼 숨김, pin 상태에서만 버튼 추가
     if (pin) {
-      const acts = createEl(doc,'div'); acts.className='actions';
+      const acts = createEl(doc, 'div'); acts.className = 'actions';
 
-      const close = createEl(doc,'button'); close.className='gnx-btn'; close.textContent='닫기';
-      close.onclick = (e)=>{ e.stopPropagation(); this.unpinTip(); };
+      const close = createEl(doc, 'button'); close.className = 'gnx-btn'; close.textContent = '닫기';
+      close.onclick = (e) => { e.stopPropagation(); this.unpinTip(); };
 
       if (it) {
-        const inspect = createEl(doc,'button'); inspect.className='gnx-btn'; inspect.textContent='자세히';
-        inspect.onclick=(e)=>{ e.stopPropagation(); this.props.onInspect?.(slot, it); };
+        const inspect = createEl(doc, 'button'); inspect.className = 'gnx-btn'; inspect.textContent = '자세히';
+        inspect.onclick = (e) => { e.stopPropagation(); this.props.onInspect?.(slot, it); };
 
-        const replace = createEl(doc,'button'); replace.className='gnx-btn gnx-btn--accent'; replace.textContent='교체';
-        replace.onclick=(e)=>{ e.stopPropagation(); this.props.onReplace?.(slot); };
+        const replace = createEl(doc, 'button'); replace.className = 'gnx-btn gnx-btn--accent'; replace.textContent = '교체';
+        replace.onclick = (e) => { e.stopPropagation(); this.props.onReplace?.(slot); };
 
-        const unequip = createEl(doc,'button'); unequip.className='gnx-btn gnx-btn--danger'; unequip.textContent='장착 해제';
-        unequip.onclick=(e)=>{ e.stopPropagation(); this.props.onUnequip?.(slot); this.unpinTip(); };
+        const unequip = createEl(doc, 'button'); unequip.className = 'gnx-btn gnx-btn--danger'; unequip.textContent = '장착 해제';
+        unequip.onclick = (e) => { e.stopPropagation(); this.props.onUnequip?.(slot); this.unpinTip(); };
 
         acts.appendChild(close); acts.appendChild(inspect); acts.appendChild(replace); acts.appendChild(unequip);
       } else {
-        const replace = createEl(doc,'button'); replace.className='gnx-btn gnx-btn--accent'; replace.textContent='장비 장착';
-        replace.onclick=(e)=>{ e.stopPropagation(); this.props.onReplace?.(slot); };
+        const replace = createEl(doc, 'button'); replace.className = 'gnx-btn gnx-btn--accent'; replace.textContent = '장비 장착';
+        replace.onclick = (e) => { e.stopPropagation(); this.props.onReplace?.(slot); };
         acts.appendChild(close); acts.appendChild(replace);
       }
 
       this.tip.appendChild(acts);
     }
 
-    this.tip.setAttribute('data-show','true');
+    this.tip.setAttribute('data-show', 'true');
   }
 
   private hideTip() {
     if (!this.tip) return;
-    this.tip.setAttribute('data-show','false');
+    this.tip.setAttribute('data-show', 'false');
     this.tip.style.pointerEvents = 'none';
   }
 
-  private placeTip(cx:number, cy:number) {
+  private placeTip(cx: number, cy: number) {
     if (!this.tip) return;
     const vw = window.innerWidth, vh = window.innerHeight;
     const rect = this.tip.getBoundingClientRect();
     const pad = 12;
     let x = cx, y = cy - 12;
 
-    if (x - rect.width/2 < pad) x = rect.width/2 + pad;
-    if (x + rect.width/2 > vw - pad) x = vw - rect.width/2 - pad;
+    if (x - rect.width / 2 < pad) x = rect.width / 2 + pad;
+    if (x + rect.width / 2 > vw - pad) x = vw - rect.width / 2 - pad;
     if (y - rect.height < pad) y = rect.height + pad;
 
     this.tip.style.left = `${x}px`;
-    this.tip.style.top  = `${y}px`;
+    this.tip.style.top = `${y}px`;
   }
 }

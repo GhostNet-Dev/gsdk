@@ -24,6 +24,7 @@ export const itemDefs = {
     sound: SoundType.BatAttack1,
     stats: { "attack": 3, "damageMin": 3, "damageMax": 5, "speed": 1, "attackRange": 2 },
     actions: [actionDefs.FireFlame],
+    weight: 1,
   },
   Sword: {
     id: "Sword",

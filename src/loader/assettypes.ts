@@ -5,6 +5,9 @@ export enum Bind {
     Head = "head", //Helm
     Legs = "legs",
     Feet = "feet",
+    Finger_L = "fngerl",
+    Finger_R = "fngerr",
+    Amulet = "amu",
 }
 
 export enum Ani {

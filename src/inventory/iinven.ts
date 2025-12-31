@@ -29,4 +29,6 @@ export interface IItem {
     get Stats(): Partial<Record<string, number>> | undefined
     get Enchantments(): Partial<Record<string, number>> | undefined
     get Description(): string
+    get Weight(): number; // property.weight 접근
+    get Level(): string;  // property.level 접근 (Common, Rare 등)
 }

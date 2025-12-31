@@ -43,6 +43,8 @@ export class ItemAbstract implements IItem {
   get Enchantments() { return ("enchantments" in this.property) ? this.property.enchantments : undefined }
   get Description() { return this.property.description }
   // get Effects() { return this.property.effects }
+  get Weight() { return ("weight" in this.property) ? this.property.weight : 0 }
+  get Level() { return ("level" in this.property) ? this.property.level : "" }
 
   constructor(protected uniqId: string, public property: ItemProperty) { }
 }

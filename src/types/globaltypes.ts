@@ -94,6 +94,7 @@ export enum EventTypes {
 
     // Quest Event
     QuestStateChanged = "queststate",
+    QuestProcessChanged = "questpro",
     QuestComplete = "questcomp",
     Confetti = "confetti",
 

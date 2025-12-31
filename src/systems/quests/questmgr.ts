@@ -11,13 +11,13 @@ import { ItemId } from "@Glibs/inventory/items/itemdefs";
 
 export class QuestManager {
     // 모든 퀘스트 '정의'를 저장 (Key: QuestId, Value: Quest)
-    private questDefinitions: Map<QuestId, Quest>;
+    questDefinitions: Map<QuestId, Quest>;
 
     // 플레이어가 '진행 중'인 퀘스트의 '상태'만 저장
-    private activeQuests: Map<QuestId, ActiveQuest>;
+    activeQuests: Map<QuestId, ActiveQuest>;
     
     // 플레이어가 '완료'한 퀘스트 ID를 저장
-    private completedQuests: Set<QuestId>;
+    completedQuests: Set<QuestId>;
 
     constructor(private eventCtrl: IEventController, newQuestDef?: Record<string, Quest>) {
         // 기본 퀘스트 데이터로 초기화
@@ -63,6 +63,7 @@ export class QuestManager {
                         activeQuest.progress[objectiveKey] = currentProgress + 1;
                         console.log(`[${questDef.title}] 진행도: ${objectiveKey} (${activeQuest.progress[objectiveKey]}/${requiredAmount})`);
                         this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `[${questDef.title}] 진행도: (${activeQuest.progress[objectiveKey]}/${requiredAmount})`);
+                        this.eventCtrl.SendEventMessage(EventTypes.QuestProcessChanged)
                     }
                     
                     this.checkQuestCompletion(questId);
