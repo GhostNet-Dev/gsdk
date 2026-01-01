@@ -29,7 +29,7 @@ export class LevelupCardsView implements IDialogView<{ title?: string; cards: Ca
       grid.appendChild(btn);
     });
     this.shell.body.appendChild(grid);
-    ctx.render.setActions(this.shell, [{ id:'skip', label:'건너뛰기' }]);
+    // ctx.render.setActions(this.shell, [{ id:'skip', label:'건너뛰기' }]);
   }
   unmount() {}
 }

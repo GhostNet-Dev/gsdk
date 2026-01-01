@@ -117,10 +117,14 @@ export class Monsters {
                 new THREE.Vector3(z.monModel.Meshs.position.x, this.player.CenterPos.y, z.monModel.Meshs.position.z), 
                 z.monCtrl.Drop, z.monCtrl.MonsterBox.MonId
             )
+            const property = this.monDb.GetItem(z.monCtrl.MonsterBox.MonId)
+            const exp = property.stats?.expBonus
+            exp ?? this.eventCtrl.SendEventMessage(EventTypes.Exp, exp)
+            
             this.eventCtrl.SendEventMessage(EventTypes.Death, z.monCtrl.MonsterBox.MonId)
             this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, z.monCtrl.MonsterBox)
             this.respawntimeout = setTimeout(() => {
-                if(z.respawn) {
+                if (z.respawn) {
                     this.Spawning(z.monCtrl.MonsterBox.MonId, z.respawn, z, z.initPos)
                 }
             }, THREE.MathUtils.randInt(8000, 15000))

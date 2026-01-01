@@ -1,18 +1,25 @@
-import { BuffProperty, Buffdefs, buffDefs } from "@Glibs/magical/buff/buffdefs";
+import { BuffProperty, buffDefs } from "@Glibs/magical/buff/buffdefs";
 import { ActionId, ActionProperty, actionDefs } from "@Glibs/types/actiontypes";
 
 export type TechId = string;
 export type Tag = string;
 export type TechTreeKind = "skill" | "trait" | "buff" | "building" | "action";
+export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
+export const RarityConfig: Record<Rarity, { rank: number; color: string; label: string }> = {
+    common:    { rank: 1, color: '#b0b0b0', label: '일반' },
+    uncommon:  { rank: 2, color: '#5e98d9', label: '고급' },
+    rare:      { rank: 3, color: '#4b69ff', label: '희귀' },
+    epic:      { rank: 4, color: '#d32ce6', label: '영웅' },
+    legendary: { rank: 5, color: '#ff8000', label: '전설' },
+};
 
 export interface LevelCost {
-    /** Human-friendly level number (1-based). */
     lv: number;
-    /** Optional unlock cost (points, gold) */
     cost?: Partial<Record<"points" | "gold" | "materials", number>>;
 }
 
-export type TechTreeTypes = BuffProperty | ActionProperty
+export type TechTreeTypes = BuffProperty | ActionProperty;
 export type Requirement =
     | { type: "has"; id: TechId; minLv?: number }
     | { type: "tag"; tag: Tag }
@@ -32,6 +39,7 @@ export interface TechTreeDefBase {
     kind: TechTreeKind;
     name: string;
     desc?: string;
+    rarity?: Rarity;
     // 검색/필터/시너지/추천(예: “얼음”, “근접”, “보스전”)에 사용.
     // 레벨업 UI에서 카테고리 탭, 빌드 플래너의 자동 추천, 밸런싱 리포트(태그별 분포) 등에 유용.
     tags?: Tag[];
@@ -60,6 +68,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         id: "fireball",
         kind: "skill",
         name: "fireball",
+        desc: "화염구를 발사합니다.",
         cost: [1, 2, 3, 4, 5].map(lv => ({ lv, cost: { points: lv } })),
         tech: actionDefs.FireBall,
     },
@@ -67,6 +76,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         id: "fireDefence",
         kind: "skill",
         name: "fireDefence",
+        desc: "화염이 시전자를 보호합니다.",
         cost: [
             { lv: 1, cost: { points: 10 } },
         ],
@@ -79,12 +89,26 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         id: "darkside",
         kind: "buff",
         name: "dark side",
+        desc: "암흑 저항이 증가합니다",
         cost: [
-            { lv: 1, cost: { points: 20 } },
+            { lv: 1, cost: { points: 1 } },
         ],
         requires: [
             { type: "playerLv", atLeast: 2 }
         ],
         tech: buffDefs.DarkSide
+    },
+    {
+        id: "hpboost",
+        kind: "buff",
+        name: "HP Boost",
+        desc: "boost hp",
+        cost: [
+            { lv: 1, cost: { points: 1 } },
+        ],
+        requires: [
+            { type: "playerLv", atLeast: 2 }
+        ],
+        tech: buffDefs.HpBoost
     }
 ]

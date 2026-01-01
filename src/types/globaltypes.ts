@@ -47,6 +47,7 @@ export enum EventTypes {
     Pickup = "pickup",
     // item이 사용되는 때
     UseItem = "useitem",
+    DiscardItem = "discarditem",
 
     BrickInfo = "bsize",
     TerrainInfo = "tsize",
@@ -56,7 +57,13 @@ export enum EventTypes {
     AreaOfEffect = "AOE",
     UpdateBuff = "updatebuff",
     RemoveBuff = "removebuff",
+    SkillLearned = "skilllearned",
+    UpdateSkill = "updateskill",
+    RemoveSkill = "removeskill",
     Death = "death",
+    Exp = "exp",
+    LevelUp = "levelup",
+    AddSkillPoint = "addskillp",
     ActionAttach = "actionattach",
     ActionDettach = "actiondetach",
     // player와 상호작용하는 객체 Attackable, Interatable

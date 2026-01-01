@@ -1,48 +1,37 @@
 import { actionDefs } from "@Glibs/types/actiontypes";
 
 
-export const buffDefs = {
+export const skillDefs = {
     DarkSide: {
         id: "darkside",
         name: "Dark Side",
         nameKr: "다크사이드",
-        descriptionKr: "어둠속성이 강화됩니다.",
+        descriptionKr: "",
         description: "",
         type: "attack",
         levelRequirement: 0,
         level: "common",
         stackable: false,
         binding: true,
+        bufflevel: 1,
         actions: [actionDefs.DarkParticle],
     },
     StunStar: {
         id: "stunstar",
         name: "Stun",
         nameKr: "기절",
-        descriptionKr: "일정확률로 기절시킵니다.",
+        descriptionKr: "",
         description: "",
         type: "stun",
         levelRequirement: 0,
         level: "common",
         stackable: false,
         binding: true,
+        bufflevel: 1,
         actions: [actionDefs.StunStars],
-    },
-    HpBoost: {
-        id: "hpboost",
-        name: "Hp Boost",
-        nameKr: "Hp Boost",
-        descriptionKr: "HP Max가 증가됩니다.",
-        description: "",
-        type: "buff",
-        levelRequirement: 0,
-        level: "common",
-        stackable: false,
-        binding: true,
-        actions: [actionDefs.HpStatBoost],
     },
 }
 
-export type Buffdefs = typeof buffDefs
-export type BuffId = keyof Buffdefs
-export type BuffProperty = Buffdefs[BuffId] // 공통 타입
+export type Skilldefs = typeof skillDefs
+export type SkillId = keyof Skilldefs
+export type SkillProperty = Skilldefs[SkillId] // 공통 타입

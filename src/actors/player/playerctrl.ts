@@ -229,8 +229,8 @@ export class PlayerCtrl implements ILoop, IActionUser {
         eventCtrl.RegisterEventListener(EventTypes.DelInteractive, (obj: THREE.Object3D) => {
             this.remove(obj)
         })
-        eventCtrl.RegisterEventListener(EventTypes.UpdateBuff + "player", (buff: Buff) => {
-            this.baseSpec.Buff(buff)
+        eventCtrl.RegisterEventListener(EventTypes.UpdateBuff + "player", (buff: Buff, level = 0) => {
+            this.baseSpec.Buff(buff, level)
         })
         eventCtrl.RegisterEventListener(EventTypes.RemoveBuff + "player", (buff: Buff) => {
             this.baseSpec.RemoveBuff(buff)
@@ -261,7 +261,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.targets.splice(idx, 1)
     }
     applyAction(action: IActionComponent, ctx?: ActionContext) {
-        action.apply?.(this)
+        action.apply?.(this, ctx)
         action.activate?.(this, ctx)
     }
     removeAction(action: IActionComponent, context?: ActionContext | undefined): void {

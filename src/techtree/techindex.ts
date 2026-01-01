@@ -4,18 +4,12 @@ import { Requirement, TechId, TechTreeDefBase } from "./techtreedefs";
 export class TechIndex {
   readonly byId = new Map<TechId, TechNode>();
   readonly byTechId = new Map<string, TechId>();
-  readonly edges = new Map<TechId, Set<TechId>>(); // u→v : v depends on u
+  readonly edges = new Map<TechId, Set<TechId>>();
   readonly indeg = new Map<TechId, number>();
-  readonly order: TechId[]; // topological order
-
-  private constructor() {
-    this.order = [];
-  }
+  readonly order: TechId[] = [];
 
   static build(defs: TechTreeDefBase[]): TechIndex {
     const idx = new TechIndex();
-
-    // 1) 노드 등록
     for (const d of defs) {
       const node = new TechNode(d);
       idx.byId.set(node.id, node);
@@ -24,72 +18,56 @@ export class TechIndex {
       idx.indeg.set(node.id, 0);
     }
 
-    // 2) 간선 구축 (requires 중 has/skill만 DAG 간선)
     for (const n of idx.byId.values()) {
       for (const r of n.requires ?? []) {
-        TechIndex.collectEdges(n.id, r, idx);
+        this.collectEdges(n.id, r, idx, false);
       }
     }
 
-    // 3) 위상 정렬/검증
-    idx.order.push(...TechIndex.topo(idx.edges, idx.indeg));
+    const q: TechId[] = [];
+    const deg = new Map(idx.indeg);
+    for (const [id, d] of deg) if (d === 0) q.push(id);
+    
+    while (q.length) {
+      const u = q.shift()!;
+      idx.order.push(u);
+      for (const v of idx.edges.get(u) ?? []) {
+        deg.set(v, deg.get(v)! - 1);
+        if (deg.get(v) === 0) q.push(v);
+      }
+    }
+
     if (idx.order.length !== idx.byId.size) {
-      throw new Error("TechTree cycle detected or invalid dependency.");
+      throw new Error("TechTree cycle detected in mandatory dependencies.");
     }
     return idx;
   }
 
-  private static collectEdges(to: TechId, req: Requirement, idx: TechIndex) {
+  private static collectEdges(to: TechId, req: Requirement, idx: TechIndex, isNegative: boolean) {
+    if (isNegative) return; // NOT 조건 내부의 의존성은 그래프 간선으로 치지 않음
+
     switch (req.type) {
-      case "has": {
-        if (idx.byId.has(req.id)) {
-          const from = req.id;
-          if (!idx.edges.get(from)!.has(to)) {
-            idx.edges.get(from)!.add(to);
-            idx.indeg.set(to, (idx.indeg.get(to) ?? 0) + 1);
-          }
-        }
+      case "has":
+        if (idx.byId.has(req.id)) this.addEdge(req.id, to, idx);
         break;
-      }
-      case "skill": {
+      case "skill":
         const from = idx.byTechId.get(String(req.id));
-        if (from && idx.byId.has(from)) {
-          if (!idx.edges.get(from)!.has(to)) {
-            idx.edges.get(from)!.add(to);
-            idx.indeg.set(to, (idx.indeg.get(to) ?? 0) + 1);
-          }
-        }
+        if (from) this.addEdge(from, to, idx);
         break;
-      }
       case "all":
       case "any":
-        for (const x of req.of) TechIndex.collectEdges(to, x, idx);
+        for (const x of req.of) this.collectEdges(to, x, idx, isNegative);
         break;
       case "not":
-        TechIndex.collectEdges(to, req.of, idx);
-        break;
-      default:
-        // tag/playerLv/points/quest/stat 등은 DAG 간선 아님
+        this.collectEdges(to, req.of, idx, true);
         break;
     }
   }
 
-  private static topo(
-    edges: Map<TechId, Set<TechId>>,
-    indeg: Map<TechId, number>
-  ): TechId[] {
-    const q: TechId[] = [];
-    const deg = new Map(indeg);
-    for (const [id, d] of deg) if (d === 0) q.push(id);
-    const out: TechId[] = [];
-    while (q.length) {
-      const u = q.shift()!;
-      out.push(u);
-      for (const v of edges.get(u) ?? []) {
-        deg.set(v, (deg.get(v) ?? 0) - 1);
-        if ((deg.get(v) ?? 0) === 0) q.push(v);
-      }
+  private static addEdge(from: TechId, to: TechId, idx: TechIndex) {
+    if (!idx.edges.get(from)!.has(to)) {
+      idx.edges.get(from)!.add(to);
+      idx.indeg.set(to, (idx.indeg.get(to) ?? 0) + 1);
     }
-    return out;
   }
 }

@@ -1,11 +1,12 @@
 import { CostVector } from "@Glibs/inventory/wallet";
-import { Requirement, Tag, TechId, TechTreeDefBase, TechTreeKind, TechTreeTypes } from "./techtreedefs";
+import { Rarity, Requirement, Tag, TechId, TechTreeDefBase, TechTreeKind, TechTreeTypes } from "./techtreedefs";
 
 export class TechNode {
   readonly id: TechId;
   readonly kind: TechTreeKind;
   readonly name: string;
   readonly desc?: string;
+  readonly rarity?: Rarity; // ✨ 추가된 필드 (readonly로 안전하게 선언)
   readonly tags?: Tag[];
   readonly requires?: Requirement[];
   readonly requiresPerLevel?: Requirement[];
@@ -25,6 +26,7 @@ export class TechNode {
     this.kind = def.kind;
     this.name = def.name;
     this.desc = def.desc;
+    this.rarity = def.rarity;
     this.tags = def.tags;
     this.requires = def.requires;
     this.requiresPerLevel = def.requiresPerLevel;

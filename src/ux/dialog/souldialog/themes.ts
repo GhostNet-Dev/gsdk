@@ -162,9 +162,10 @@ export const SHELL_BASE = css`
 `;
 
 /* -------------------------------------------------------------------------- */
-/* 3) 카드/리스트/툴팁                                                         */
+/* 3) 카드/리스트/툴팁 (공통 위젯 스타일)                                       */
 /* -------------------------------------------------------------------------- */
 export const WIDGET_BASE = css`
+  /* 기존 스타일 유지 */
   .gnx-cardgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
   .gnx-card{
     display:grid; gap:6px; text-align:left;
@@ -188,14 +189,71 @@ export const WIDGET_BASE = css`
     display:grid; place-items:center; background:rgba(255,255,255,.06); font-size:20px;
   }
 
-  .gnx-tooltip{
-    position:absolute; inset:auto auto 100% 0; transform:translateY(-8px);
-    background:rgba(0,0,0,.75); border:1px solid rgba(255,255,255,.18);
-    padding:6px 8px; border-radius:8px; font-size:12px; color:#fff;
-    pointer-events:none; white-space:nowrap; z-index:5;
+  /* [추가/수정] 공통 툴팁 스타일 (.gnx-tip) */
+  .gnx-tip {
+    position: fixed; /* [중요] 화면 기준으로 떠있게 함 */
+    z-index: 2147483647; /* 최상단 레이어 */
+    
+    min-width: 240px;
+    max-width: 360px;
+    padding: 12px;
+    
+    background: linear-gradient(180deg, rgba(30,33,40,0.98), rgba(20,23,30,0.99));
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0,0,0,.65);
+    backdrop-filter: blur(4px);
+    
+    color: var(--gnx-ui-fg);
+    pointer-events: none; /* 기본적으로 클릭 통과 */
+    
+    opacity: 0;
+    transition: opacity .08s ease;
+  }
+
+  .gnx-tip[data-show="true"] { opacity: 1; }
+  .gnx-tip[data-pinned="true"] { pointer-events: auto; } /* 고정되면 클릭 가능 */
+
+  /* 툴팁 내부 타이틀 */
+  .gnx-tip .tt-title { 
+    font-weight:700; font-size: 15px; margin-bottom:8px; 
+    display:flex; align-items:center; gap:8px; 
+  }
+  
+  /* 툴팁 내부 스탯 */
+  .gnx-tip .tt-stats { 
+    margin: 10px 0; padding-top: 10px; 
+    border-top: 1px solid rgba(255,255,255,0.1); 
+    display: flex; flex-direction: column; gap: 4px; 
+  }
+  .tt-stat-row { font-size: 13px; color: #8ab4f8; display: flex; justify-content: space-between; }
+  .tt-stat-row.enchant { color: #d87cff; }
+
+  /* 툴팁 내부 설명 */
+  .gnx-tip .tt-desc { 
+    margin-top:8px; color: var(--gnx-ui-sub); 
+    line-height:1.5; font-size: 13px; font-style: italic; 
+  }
+
+  /* 툴팁 내부 액션 버튼 영역 */
+  .gnx-tip .tt-actions { 
+    margin-top:12px; padding-top: 8px; 
+    border-top: 1px solid rgba(255,255,255,0.1); 
+    display:flex; gap:6px; justify-content:flex-end; flex-wrap: wrap;
+  }
+  
+  /* 툴팁 버튼 스타일 */
+  .tt-btn { 
+    appearance:none; border:1px solid rgba(255,255,255,.18); 
+    color:var(--gnx-ui-fg); background:rgba(255,255,255,.05); 
+    padding:4px 10px; border-radius:8px; cursor:pointer; font-weight:600; font-size:12px;
+  }
+  .tt-btn--accent {
+    border-color:var(--gnx-ui-accent-weak);
+    background:color-mix(in oklab, var(--gnx-ui-accent) 20%, transparent);
+    color: #fff;
   }
 `;
-
 /* -------------------------------------------------------------------------- */
 /* 4) 테마 변형 (색상만)                                                       */
 /* -------------------------------------------------------------------------- */

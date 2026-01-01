@@ -9,6 +9,7 @@ export type PlayerContext = {
   quests: Map<string, "done" | "in-progress" | "not-started">;
   stats: Record<string, number>;
 };
+
 export type TechLevels = Record<TechId, number>;
 export type TechEvalEnv = {
   levels: TechLevels;
@@ -18,7 +19,7 @@ export type TechEvalEnv = {
 
 export interface IRequirementEvaluator {
   eval(req: Requirement, env: TechEvalEnv): boolean;
-  describe?(req: Requirement): string; // UI 디버그용
+  describe?(req: Requirement): string;
 }
 
 export class RequirementEvaluator implements IRequirementEvaluator {
@@ -29,8 +30,17 @@ export class RequirementEvaluator implements IRequirementEvaluator {
         return cur >= (req.minLv ?? 1);
       }
       case "skill": {
-        const nodeId = env.index.byTechId.get(String(req.id));
-        const cur = nodeId ? (env.levels[nodeId] ?? 0) : 0;
+        // [수정된 로직] 
+        // 1. req.id가 테크 노드 ID인 경우를 먼저 확인
+        let targetId = String(req.id);
+        
+        // 2. 만약 해당 ID가 테크 노드 ID가 아니라면, techId(ActionId) 매핑에서 실제 노드 ID를 찾음
+        if (!env.index.byId.has(targetId)) {
+          const mappedId = env.index.byTechId.get(targetId);
+          if (mappedId) targetId = mappedId;
+        }
+
+        const cur = env.levels[targetId] ?? 0;
         return cur >= (req.atLeast ?? 1);
       }
       case "tag":

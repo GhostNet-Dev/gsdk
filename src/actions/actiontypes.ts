@@ -143,6 +143,15 @@ export const actionDefs = {
     trigger: "onBuffApply",
     stats: { defense: 5, maxHp: 20 }
   },
+  HpStatBoost: {
+    type: "hpStatBoost",
+    trigger: "onActivate",
+    levels: [
+      { hp: 3, },
+      { hp: 5, },
+      { hp: 10, }
+    ]
+  },
   Regen: {
     type: "regen",
     trigger: "onBuffTick",

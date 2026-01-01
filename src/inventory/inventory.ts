@@ -31,6 +31,13 @@ export class Inventory implements IInventory {
                 if(find.count == 0) this.data.inventroySlot.splice(this.data.inventroySlot.indexOf(find), 1)
             }
         })
+        this.event.RegisterEventListener(EventTypes.DiscardItem, (id: ItemId) => {
+            const find = this.data.inventroySlot.find((slot) => slot.item.Id == id)
+            if (find) {
+                console.log("discard item: ", id)
+                this.data.inventroySlot.splice(this.data.inventroySlot.indexOf(find), 1)
+            }
+        })
     }
     EquipItem(item: IItem) {
         const bind = item.Bind

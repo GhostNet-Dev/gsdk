@@ -27,8 +27,8 @@ export class NpcCtrl implements ILoop, IActionUser {
         this.baseSpec = new BaseSpec(stat ?? DefaultStatus.stats, this)
         this.currentState = state
 
-        eventCtrl.RegisterEventListener(EventTypes.UpdateBuff + name, (buff: Buff) => {
-            this.baseSpec.Buff(buff)
+        eventCtrl.RegisterEventListener(EventTypes.UpdateBuff + name, (buff: Buff, level = 0) => {
+            this.baseSpec.Buff(buff, level)
         })
     }
     init() {

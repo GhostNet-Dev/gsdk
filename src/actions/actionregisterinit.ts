@@ -19,8 +19,9 @@ import { GhostAction } from "./visualactions/ghostact";
 import { WaterDefenceAction } from "./skillactions/waterdefenceact";
 
 export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scene, camera: Camera) {
-    ActionRegistry.register("statBoost", def => new StatBoostAction(def.stats))
-    ActionRegistry.register("fireball", def => new FireballAction())
+    ActionRegistry.register("statBoost", def => new StatBoostAction(def))
+    ActionRegistry.register("hpStatBoost", def => new StatBoostAction(def))
+    ActionRegistry.register("fireball", def => new FireballAction(def))
     ActionRegistry.register("casing", def => new BulletCasingAct(eventCtrl, scene, def.socket))
     ActionRegistry.register("muzzleFlash", def => {
         const texture = new THREE.TextureLoader().load(def.texture)

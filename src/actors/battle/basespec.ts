@@ -84,11 +84,11 @@ export class BaseSpec {
     GetBindItem(slot: Bind) {
         return this.equipment[slot]
     }
-    Buff(buff: Buff) {
+    Buff(buff: Buff, level: number) {
         if ("actions" in buff && buff.actions && Array.isArray(buff.actions)) {
             for (const action of buff.actions) {
                 // ❗ baseSpec은 IActionUser가 아님 → 위임 필요
-                this.owner?.applyAction(action)
+                this.owner?.applyAction(action, { level: level })
             }
         }
     }

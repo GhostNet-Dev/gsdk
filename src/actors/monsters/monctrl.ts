@@ -53,8 +53,8 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
             this.phybox.visible = false
         this.phybox.position.copy(this.zombie.Pos)
 
-        eventCtrl.RegisterEventListener(EventTypes.UpdateBuff + "mon" + id, (buff: Buff) => {
-            this.baseSpec.Buff(buff)
+        eventCtrl.RegisterEventListener(EventTypes.UpdateBuff + "mon" + id, (buff: Buff, level = 0) => {
+            this.baseSpec.Buff(buff, level)
         })
         eventCtrl.RegisterEventListener(EventTypes.RemoveBuff + "mon" + id, (buff: Buff) => {
             this.baseSpec.RemoveBuff(buff)

@@ -1,17 +1,17 @@
 import { ActionContext, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes";
-import { BuffProperty } from "./buffdefs";
 import { ActionRegistry } from "@Glibs/actions/actionregistry";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
+import { SkillProperty } from "./castdefs";
 
 
 
-export class Buff implements IActionUser {
+export class Skill implements IActionUser {
     stats?: any
     actions: IActionComponent[] = []
     baseSpec: BaseSpec
     get id() { return this.def.id }
     constructor(
-        private def: BuffProperty,
+        private def: SkillProperty,
     ) {
         this.stats = ("stats" in def) ? def.stats : undefined
         this.baseSpec = new BaseSpec(this.stats, this)

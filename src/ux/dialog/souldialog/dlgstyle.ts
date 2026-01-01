@@ -81,3 +81,39 @@ export function renderIcon(icon: string | undefined | null) {
   }
   return icon;
 }
+
+// dlgstyle.ts에 추가
+
+export const STAT_LABELS: Record<string, string> = {
+  attack: '공격력', defense: '방어력', hp: '생명력', mp: '마나',
+  speed: '이동 속도', criticalRate: '치명타 확률', criticalDamage: '치명타 피해', weight: '무게'
+};
+
+export function getRarityClass(rarity?: string) {
+  const r = rarity?.toLowerCase();
+  if (r === 'epic') return 'gnx-rar-epic';
+  if (r === 'rare') return 'gnx-rar-rare';
+  return 'gnx-rar-common';
+}
+
+/** 아이템 스탯 섹션 HTML 생성 공통화 */
+export function renderStatsHtml(item: any): string {
+  const stats = item.Stats;
+  const enchantments = item.Enchantments;
+  if (!stats && !enchantments) return '';
+
+  let html = '<div class="tt-stats">';
+  const addRows = (data: any, isEnchant: boolean) => {
+      if (!data) return;
+      for (const [key, val] of Object.entries(data)) {
+          if (typeof val !== 'number' || val === 0) continue;
+          const label = STAT_LABELS[key] || key;
+          const valStr = val > 0 ? `+${val}` : `${val}`;
+          html += `<div class="tt-stat-row ${isEnchant ? 'enchant' : ''}"><span>${label}</span><span>${valStr}</span></div>`;
+      }
+  };
+
+  addRows(stats, false);
+  addRows(enchantments, true);
+  return html + '</div>';
+}
