@@ -406,24 +406,24 @@ export class RunState extends State implements IPlayerAction {
         const qt = this.QT.setFromRotationMatrix(mx);
         this.player.Meshs.quaternion.copy(qt);
 
-        // ✅ 이동 처리
-        // 한 프레임 이동을 두 번으로 쪼개 간이 CCD
+        // ✅ 이동 처리 부분 수정
         const stepCount = 2;
         const EPS = 1e-6;
 
         for (let i = 0; i < stepCount; i++) {
             const stepDir = worldDir.clone().normalize();
+            
+            // OptPhysics의 CheckDirection은 slope에 따른 move 벡터를 리턴합니다.
             const dis = this.gphysic.CheckDirection(this.player, stepDir, this.speed);
             const step = (delta * this.speed) / stepCount;
 
             let moved = false;
 
-            // --- 1) 수평(XZ) 이동: distance 기반 ---
-            // stepDir에서 XZ만 추출해 정규화
+            // --- 1) 수평(XZ) 이동 ---
             const xz = new THREE.Vector3(stepDir.x, 0, stepDir.z);
             const xzLen = xz.length();
             if (dis.distance > 0 && xzLen > EPS) {
-                xz.divideScalar(xzLen); // 정규화
+                xz.divideScalar(xzLen); 
                 const canMove = Math.min(step, dis.distance - 0.01);
                 if (canMove > 0) {
                     this.player.Pos.add(xz.multiplyScalar(canMove));
@@ -431,35 +431,27 @@ export class RunState extends State implements IPlayerAction {
                 }
             }
 
-            // --- 2) 수직(Y) 이동: move.y 기반 ---
+            // --- 2) 수직(Y) 이동 [문제의 원인] ---
+            // OptPhysics를 사용할 때는 이 부분을 제거하거나 제한해야 합니다.
+            // CheckDirection이 리턴하는 move.y는 경사면의 기울기입니다.
+            // 하지만 높이 보정은 CheckGravity(CheckDown)가 담당하므로 중복 적용을 막습니다.
+            
+            /* [삭제 또는 주석 처리] 
+               지형(HeightMap) 위를 걷는 경우라면 Y축 이동을 적용하지 않습니다.
+               단, 사다리나 완전한 3D 오브젝트 위라면 필요할 수 있으나, 
+               일반적인 지형 이동에서는 떨림의 주원인이 됩니다.
+            */
+            /*
             if (dis.move && Math.abs(dis.move.y) > EPS) {
-                // dis.move는 정규화된 y-only 벡터(위/아래 부호만 사용)
                 const yStep = Math.sign(dis.move.y) * step;
-                this.player.Pos.y += yStep;
+                this.player.Pos.y += yStep; 
                 moved = true;
             }
+            */
 
-            // 아무 이동도 못했으면 중단
+            // 만약 벽에 막혀서 아무 이동도 못했다면 루프 종료
             if (!moved) break;
         }
-
-
-        // if (moveDis < dis.distance) {
-        //     this.player.Pos.add(moveAmount);
-        // } else if (dis.move) {
-        //     this.player.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
-        // } else {
-        //     // this.player.Meshs.position.y += 1 // 계단 체크
-        // const dis = this.gphysic.CheckDirection(this.player, this.dir.set(v.x, 0, v.z))
-        // if (moveDis > dis.distance) {
-        //     this.player.Pos.add(moveAmount)
-        //     console.log("계단 ", moveAmount)
-        //     // this.player.Meshs.position.x -= movX
-        //     // this.player.Meshs.position.z -= movZ
-        // } else {
-        //     this.player.Meshs.position.y -= 1
-        // }
-        // }
         return this
     }
     getAnimationForItem(item: IItem): ActionType {
