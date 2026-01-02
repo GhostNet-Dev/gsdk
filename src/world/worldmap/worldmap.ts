@@ -132,7 +132,9 @@ export default class WorldMap {
         const obj = this.mapObj.get(mapType)
         if (!obj)  throw new Error("there is not types = " + mapType);
         const mesh =  obj.CreateDone?.()
-        this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, mesh)
+
+        if (mapType != MapEntryType.ProductGround)
+            this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, mesh)
         return mesh
     }
     // DeleteMapObject(mapType = MapEntryType.CustomGround, obj: THREE.Object3D) {
