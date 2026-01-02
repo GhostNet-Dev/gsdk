@@ -18,13 +18,14 @@ export type StatKey =
   // 기본 속성 스탯
   | 'strength' | 'dexterity' | 'constitution'
   | 'intelligence' | 'wisdom' | 'agility' | 'luck'
+  | 'vitality' | 'faith'
 
   // 경험치 보너스 
   | 'expBonus'
 
   // 상태이상 저항
   | 'fireResistance' | 'iceResistance' | 'poisonResistance'
-  | 'stunResistance' | 'slowResistance'
+  | 'stunResistance' | 'slowResistance' | 'electricResistance'
   | 'debuffResistance' | 'knockbackResistance'
 
   // 부가 효과
@@ -75,6 +76,8 @@ export const StatDescriptions: Record<StatKey, string> = {
   wisdom: '지혜: 마나 재생, 마법 저항',
   agility: '기민함: 공격 속도, 회피',
   luck: '운: 치명타 및 드랍율 향상',
+  faith: '신성한 힘',
+  vitality: '육체적인 맷집과 생존 능력',
 
   // 🛡️ 저항 스탯
   fireResistance: '화염 저항',
@@ -84,6 +87,7 @@ export const StatDescriptions: Record<StatKey, string> = {
   slowResistance: '감속 저항',
   debuffResistance: '디버프 저항',
   knockbackResistance: '넉백 저항',
+  electricResistance: '전기 저항',
 
   // ✨ 부가 효과
   lifeSteal: '생명력 흡수',
@@ -154,6 +158,8 @@ export const StatApplyMode: Record<StatKey, ModifierType> = {
   wisdom: 'add',
   agility: 'add',
   luck: 'add',
+  vitality: 'add',
+  faith: 'add',
 
   // 🛡️ 저항 스탯
   fireResistance: 'add',
@@ -163,6 +169,7 @@ export const StatApplyMode: Record<StatKey, ModifierType> = {
   slowResistance: 'add',
   debuffResistance: 'add',
   knockbackResistance: 'add',
+  electricResistance: 'add',
 
   // ✨ 부가 효과
   lifeSteal: 'mul',            // 비율이 일반적
