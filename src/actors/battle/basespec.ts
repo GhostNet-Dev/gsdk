@@ -25,7 +25,7 @@ export class BaseSpec {
     status: CharacterStatus
 
     get AttackSpeed() { return this.stats.getStat("attackSpeed") }
-    get AttackRange() { return this.stats.getStat("attackRange") }
+    get AttackRange() { return this.stats.getStat("attackRange") + 0.5 }
     get Speed() { return this.stats.getStat("speed") }
     get Damage() {
         return this.stats.getStat("attack")
