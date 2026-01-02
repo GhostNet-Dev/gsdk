@@ -52,6 +52,12 @@ export enum EventTypes {
     BrickInfo = "bsize",
     TerrainInfo = "tsize",
 
+    //reward
+    Exp = "exp",
+    Gold = "gold",
+    LevelUp = "levelup",
+    AddSkillPoint = "addskillp",
+
     // Battle
     Attack = "attack",
     AreaOfEffect = "AOE",
@@ -61,9 +67,6 @@ export enum EventTypes {
     UpdateSkill = "updateskill",
     RemoveSkill = "removeskill",
     Death = "death",
-    Exp = "exp",
-    LevelUp = "levelup",
-    AddSkillPoint = "addskillp",
     ActionAttach = "actionattach",
     ActionDettach = "actiondetach",
     // player와 상호작용하는 객체 Attackable, Interatable

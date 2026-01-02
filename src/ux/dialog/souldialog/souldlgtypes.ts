@@ -3,7 +3,7 @@
 // ============================================================================
 export type DialogType =
   | 'narrative' | 'confirm' | 'cards' | 'shop'
-  | 'quest-log' | 'quest-detail'
+  | 'quest-log' | 'quest-detail' | 'quest-complete'
   | 'inventory' | 'character'
   | 'input' | 'warning' | 'tutorial' | 'scroll' | 'techtree';
 

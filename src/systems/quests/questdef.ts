@@ -22,6 +22,12 @@ export interface Quest {
         items?: { itemId: string; amount: number }[];
         skills?: { skillId: string; lv?: number }[];
     };
+    selectiveRewards?: {
+        experience?: number;
+        gold?: number;
+        items?: { itemId: string; amount: number }[];
+        skills?: { skillId: string; lv?: number }[];
+    };
 }
 
 // 3. QuestId 타입을 일반 string으로 정의하여 외부에서 ID를 자유롭게 추가할 수 있도록 합니다.

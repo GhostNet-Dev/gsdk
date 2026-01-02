@@ -22,24 +22,36 @@ const CSS_QDETAIL = css`
   }
   .gnx-obj-item.done { color: var(--gnx-ui-sub); text-decoration: line-through; opacity: 0.7; }
 
-  /* 보상 리스트 */
+  /* 보상 섹션 */
+  .gnx-reward-section { margin-top: 8px; }
+  .gnx-reward-header { 
+    font-size: 12px; font-weight: 700; color: var(--gnx-ui-sub); 
+    margin-bottom: 6px; text-transform: uppercase; 
+  }
+  .gnx-reward-header.choice { color: var(--gnx-ui-accent); }
+
   .gnx-reward-list { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* 보상 태그 */
   .gnx-reward-tag {
     display: flex; align-items: center; gap: 8px;
     padding: 6px 10px;
     background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    transition: 0.2s;
+    font-size: 13px; font-weight: 600;
   }
   
   .gnx-reward-tag.item-reward { cursor: pointer; padding-left: 6px; }
   .gnx-reward-tag.item-reward:hover { 
     background: rgba(255,255,255,0.1); 
-    border-color: var(--gnx-ui-accent);
-    box-shadow: 0 0 8px rgba(216,182,107,0.2);
+    border-color: var(--gnx-ui-fg);
+  }
+
+  /* 선택 보상 강조 스타일 */
+  .gnx-reward-tag.choice-reward {
+    border-color: var(--gnx-ui-accent-weak);
+    background: color-mix(in oklab, var(--gnx-ui-accent) 10%, rgba(255,255,255,0.05));
   }
 
   .gnx-reward-icon { 
@@ -47,7 +59,6 @@ const CSS_QDETAIL = css`
     display: flex; justify-content: center; align-items: center;
     font-size: 16px; 
   }
-  .gnx-reward-icon img { max-width: 100%; max-height: 100%; }
   
   /* 상태 배지 */
   .gnx-status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.1); }
@@ -67,15 +78,13 @@ export class QuestDetailView implements IDialogView<Props> {
     private key?: string; 
     private ctx!: ViewContext; 
     private props!: Props;
-
-    // [리팩토링] TooltipComponent 사용
     private tip!: TooltipComponent;
 
     mount(ctx: ViewContext, props: Props) {
         this.ctx = ctx; 
         this.props = props;
         this.shell = ctx.shell;
-        this.tip = new TooltipComponent(this.shell.sr); // 초기화
+        this.tip = new TooltipComponent(this.shell.sr);
 
         ctx.render.setTitle(this.shell, '퀘스트 상세');
         ctx.render.setWide(this.shell, true);
@@ -84,7 +93,6 @@ export class QuestDetailView implements IDialogView<Props> {
         this.render();
         this.setActions();
 
-        // 전역 클릭 (툴팁 닫기용)
         document.addEventListener('pointerdown', this.onGlobalDown, true);
     }
 
@@ -110,7 +118,9 @@ export class QuestDetailView implements IDialogView<Props> {
         const doc = this.shell.sr;
         this.shell.body.innerHTML = '';
         const { quest: q, trackedId } = this.props;
-        const wrap = createEl(doc, 'div'); wrap.className = 'gnx-qdetail gnx-text';
+        
+        const wrap = createEl(doc, 'div'); 
+        wrap.className = 'gnx-qdetail gnx-text';
 
         // 1. 상태 텍스트
         let statusText = '진행중', statusClass = 'gnx-status-active';
@@ -135,62 +145,7 @@ export class QuestDetailView implements IDialogView<Props> {
             objectivesHtml = `<div class="gnx-text" style="opacity:0.5; padding:4px;">목표 정보 없음</div>`;
         }
 
-        // 3. 보상 리스트 생성
-        const rewardList = createEl(doc, 'div'); rewardList.className = 'gnx-reward-list';
-        
-        if (q.rewards) {
-            if (q.rewards.experience) rewardList.appendChild(this.createRewardTag('✨', `경험치 +${q.rewards.experience}`));
-            if (q.rewards.gold) {
-                const tag = this.createRewardTag('💰', `${q.rewards.gold} G`);
-                (tag.querySelector('.gnx-reward-icon') as HTMLElement).style.color = 'var(--gnx-ui-coin)';
-                rewardList.appendChild(tag);
-            }
-            if (q.rewards.items) {
-                q.rewards.items.forEach(rw => {
-                    const itemData = this.props.getItem ? this.props.getItem(rw.itemId) : undefined;
-                    
-                    if (itemData) {
-                        // [리팩토링] 아이템 보상 태그 + 툴팁 연결
-                        const iconHtml = renderIcon(itemData.IconPath);
-                        const tag = createEl(doc, 'div');
-                        tag.className = 'gnx-reward-tag item-reward';
-                        tag.innerHTML = `<span class="gnx-reward-icon">${iconHtml}</span> ${itemData.Name} x${rw.amount}`;
-                        
-                        // Hover: 툴팁 표시
-                        tag.onmouseenter = (e) => {
-                            if (!this.tip.pinned) {
-                                this.tip.renderItem(itemData, rw.amount);
-                                this.tip.move(e);
-                            }
-                        };
-                        tag.onmousemove = (e) => { if (!this.tip.pinned) this.tip.move(e); };
-                        tag.onmouseleave = () => { if (!this.tip.pinned) this.tip.hide(); };
-                        
-                        // Click: 툴팁 고정
-                        tag.onclick = (e) => {
-                            e.stopPropagation();
-                            // 간단한 닫기 버튼만 제공
-                            const actions = `<div class="tt-actions"><button class="tt-btn" data-action="close">닫기</button></div>`;
-                            this.tip.renderItem(itemData, rw.amount, { pin: true, actions });
-                            this.tip.move(e);
-                            
-                            // 버튼 리스너 바인딩
-                            const btn = this.tip.tip?.querySelector('[data-action="close"]');
-                            if(btn) (btn as HTMLElement).onclick = () => this.tip.hide();
-                        };
-                        
-                        rewardList.appendChild(tag);
-                    } else {
-                        // 데이터 없음
-                        rewardList.appendChild(this.createRewardTag('🎁', `${rw.itemId} x${rw.amount}`));
-                    }
-                });
-            }
-        }
-        
-        if (!rewardList.hasChildNodes()) rewardList.innerHTML = '<span class="gnx-text" style="opacity:0.5">보상 없음</span>';
-
-        // 4. 최종 조립
+        // 3. UI 조립
         wrap.innerHTML = `
             <div>
                 <span class="gnx-status-badge ${statusClass}">${statusText}</span>
@@ -205,22 +160,121 @@ export class QuestDetailView implements IDialogView<Props> {
             </div>
 
             <div style="margin-top: 12px;">
-                <b style="display:block; margin-bottom:8px;">보상</b>
+                <b style="display:block; margin-bottom:4px;">보상</b>
                 <div class="js-reward-container"></div> 
             </div>
         `;
         
-        const container = wrap.querySelector('.js-reward-container');
-        if (container) container.appendChild(rewardList);
+        // 4. 보상 렌더링 (고정 + 선택)
+        const rewardContainer = wrap.querySelector('.js-reward-container');
+        if (rewardContainer) {
+            // A. 고정 보상
+            const fixedRewards = q.rewards || {};
+            const hasFixed = fixedRewards.experience || fixedRewards.gold || (fixedRewards.items && fixedRewards.items.length > 0);
+            
+            if (hasFixed) {
+                const fixedDiv = this.renderRewardGroup(doc, fixedRewards, '확정 보상', false);
+                rewardContainer.appendChild(fixedDiv);
+            }
+
+            // B. 선택 보상
+            const selective = q.selectiveRewards;
+            const hasSelective = selective && (selective.experience || selective.gold || (selective.items && selective.items.length > 0));
+
+            if (hasSelective) {
+                const selDiv = this.renderRewardGroup(doc, selective!, '선택 보상 (택 1)', true);
+                rewardContainer.appendChild(selDiv);
+            }
+
+            if (!hasFixed && !hasSelective) {
+                rewardContainer.innerHTML = '<span class="gnx-text" style="opacity:0.5; font-size:13px;">보상 없음</span>';
+            }
+        }
         
         this.shell.body.appendChild(wrap);
     }
 
-    private createRewardTag(icon: string, text: string) {
+    // 보상 그룹(고정/선택) 렌더링 헬퍼
+    private renderRewardGroup(doc: Document | ShadowRoot, rewards: any, label: string, isChoice: boolean) {
+        const wrapper = createEl(doc, 'div');
+        wrapper.className = 'gnx-reward-section';
+
+        const header = createEl(doc, 'div');
+        header.className = `gnx-reward-header ${isChoice ? 'choice' : ''}`;
+        header.textContent = label;
+        wrapper.appendChild(header);
+
+        const list = createEl(doc, 'div');
+        list.className = 'gnx-reward-list';
+
+        // XP
+        if (rewards.experience) {
+            list.appendChild(this.createRewardTag('✨', `XP +${rewards.experience}`, isChoice));
+        }
+        // Gold
+        if (rewards.gold) {
+            const tag = this.createRewardTag('💰', `${rewards.gold} G`, isChoice);
+            (tag.querySelector('.gnx-reward-icon') as HTMLElement).style.color = 'var(--gnx-ui-coin)';
+            list.appendChild(tag);
+        }
+        // Items
+        if (rewards.items) {
+            rewards.items.forEach((rw: any) => {
+                const itemData = this.props.getItem ? this.props.getItem(rw.itemId) : undefined;
+                if (itemData) {
+                    const tag = this.createItemTag(doc, itemData, rw.amount, isChoice);
+                    list.appendChild(tag);
+                } else {
+                    // 아이템 데이터 없을 경우 Fallback
+                    list.appendChild(this.createRewardTag('🎁', `${rw.itemId} x${rw.amount}`, isChoice));
+                }
+            });
+        }
+        // Skills (옵션: 필요하다면 추가)
+        if (rewards.skills) {
+             rewards.skills.forEach((sk: any) => {
+                list.appendChild(this.createRewardTag('⚡', `스킬: ${sk.skillId}`, isChoice));
+             });
+        }
+
+        wrapper.appendChild(list);
+        return wrapper;
+    }
+
+    private createRewardTag(icon: string, text: string, isChoice: boolean) {
         const div = createEl(this.shell.sr, 'div');
-        div.className = 'gnx-reward-tag';
+        div.className = `gnx-reward-tag ${isChoice ? 'choice-reward' : ''}`;
         div.innerHTML = `<span class="gnx-reward-icon">${icon}</span> ${text}`;
         return div;
+    }
+
+    private createItemTag(doc: Document | ShadowRoot, item: IItem, count: number, isChoice: boolean) {
+        const tag = createEl(doc, 'div');
+        tag.className = `gnx-reward-tag item-reward ${isChoice ? 'choice-reward' : ''}`;
+        
+        const iconHtml = renderIcon(item.IconPath);
+        tag.innerHTML = `<span class="gnx-reward-icon">${iconHtml}</span> ${item.Name} x${count}`;
+
+        // 툴팁 이벤트
+        tag.onmouseenter = (e) => {
+            if (!this.tip.pinned) {
+                this.tip.renderItem(item, count);
+                this.tip.move(e);
+            }
+        };
+        tag.onmousemove = (e) => { if (!this.tip.pinned) this.tip.move(e); };
+        tag.onmouseleave = () => { if (!this.tip.pinned) this.tip.hide(); };
+        
+        tag.onclick = (e) => {
+            e.stopPropagation();
+            const actions = `<div class="tt-actions"><button class="tt-btn" data-action="close">닫기</button></div>`;
+            this.tip.renderItem(item, count, { pin: true, actions });
+            this.tip.move(e);
+            const btn = this.tip.tip?.querySelector('[data-action="close"]');
+            if(btn) (btn as HTMLElement).onclick = () => this.tip.hide();
+        };
+
+        return tag;
     }
 
     private setActions() {
@@ -234,7 +288,12 @@ export class QuestDetailView implements IDialogView<Props> {
         ];
 
         if (isCompletable) {
-            actions.push({ id: 'complete', label: '보상 받기', variant: 'accent', onClick: () => { console.log('Complete Req'); this.ctx.manager.close(); } });
+            // [중요] 완료는 QuestCompleteView를 통해 처리되도록 유도 (여기서는 상세만 봄)
+            // 혹은 바로 완료 API를 호출할 수도 있지만, 선택 보상이 있다면 CompleteView를 여는 것이 안전합니다.
+            actions.push({ id: 'complete', label: '완료하기', variant: 'accent', onClick: () => { 
+                console.log('Open QuestCompleteView requested');
+                this.ctx.manager.close(); // 실제 로직은 외부에서 CompleteView 호출 필요
+            }});
         } else if (!isCompleted) {
             actions.push({ id: 'track', label: tracked ? '추적 해제' : '추적', variant: tracked?'default':'accent', onClick: () => {
                 const next = tracked ? null : quest.id;

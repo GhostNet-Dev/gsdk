@@ -91,6 +91,7 @@ export class DialogManager {
       case 'shop': return '상점';
       case 'quest-log': return '퀘스트 로그';
       case 'quest-detail': return '퀘스트 상세';
+      case 'quest-complete': return '보상 획득'; // <--- 추가됨
       case 'inventory': return '인벤토리';
       case 'character': return '캐릭터';
       case 'input': return '입력';

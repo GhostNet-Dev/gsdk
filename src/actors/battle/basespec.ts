@@ -9,7 +9,6 @@ import { Buffdefs } from "@Glibs/magical/buff/buffdefs"
 import { Buff } from "@Glibs/magical/buff/buff"
 
 
-
 export class BaseSpec {
     attackDamageMax = 1
     attackDamageMin = 1
