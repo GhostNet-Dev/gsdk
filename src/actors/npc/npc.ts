@@ -3,7 +3,7 @@ import { IAsset } from "@Glibs/interface/iasset";
 import IEventController from "@Glibs/interface/ievent";
 import { PhysicsObject } from "@Glibs/interface/iobject";
 import { Loader } from "@Glibs/loader/loader";
-import { Ani } from "@Glibs/types/assettypes";
+import { Ani, Bind } from "@Glibs/types/assettypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { ActionType } from "@Glibs/types/playertypes";
 import { InvenFactory } from "@Glibs/inventory/invenfactory";
@@ -32,6 +32,9 @@ export class Npc extends PhysicsObject {
             const item = await fab.inven.GetNewItem(id)
             this.ReloadBindingItem(item)
         })
+        this.eventCtrl.RegisterEventListener(EventTypes.Unequipment, (bind: Bind) => {
+            this.UnequipItem(bind)
+        })
     }
     ReloadBindingItem(item: IItem) {
         if(item.Bind == undefined) throw new Error("item bind is undefined")
@@ -58,6 +61,15 @@ export class Npc extends PhysicsObject {
             }
             this.bindMesh[item.Bind] = item.Mesh
         }
+    }
+    UnequipItem(bind: Bind) {
+        const rightId = this.asset.GetBodyMeshId(bind)
+        if (rightId == undefined) return
+        
+        const mesh = this.meshs.getObjectByName(rightId)
+        if (!mesh) return
+        mesh.visible = false
+        delete this.bindMesh[bind]
     }
     Uninit() {
         this.meshs.visible = false
