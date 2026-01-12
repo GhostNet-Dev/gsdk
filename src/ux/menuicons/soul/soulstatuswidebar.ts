@@ -48,6 +48,9 @@ export class WideStatusBar extends GUX implements IGUX {
     if (p.max != null) this.max = Math.max(1, p.max);
     this.RenderHTML();
   }
+  UpdateStatus(value: number) {
+    this.setData({ cur: value })
+  }
 
   RenderHTML() {
     this.fill.style.width = (100 * this.cur / this.max).toFixed(1) + '%';

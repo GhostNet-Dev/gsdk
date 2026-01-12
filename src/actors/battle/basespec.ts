@@ -3,112 +3,240 @@ import { Bind } from "@Glibs/types/assettypes"
 import { Modifier } from "@Glibs/inventory/stat/modifier"
 import { StatApplyMode, StatKey } from "@Glibs/inventory/stat/stattypes"
 import { StatSystem } from "@Glibs/inventory/stat/statsystem"
-import { CharacterStatus } from "./charstatus"
 import { IActionUser } from "@Glibs/types/actiontypes"
 import { Buffdefs } from "@Glibs/magical/buff/buffdefs"
 import { Buff } from "@Glibs/magical/buff/buff"
-
+import { CharacterStatus } from "./charstatus"
+import { StatFactory } from "./statfactory"
+import { calculateCompositeDamage, DamageContext, DamageResult } from "./damagecalc"
 
 export class BaseSpec {
+    // 레거시 호환성을 위한 프로퍼티 (필요 없다면 제거 가능)
     attackDamageMax = 1
     attackDamageMin = 1
-
     defence = 2
 
+    // 성장 계산을 위해 초기 태생 스탯을 기억합니다.
+    private _initialStats: Partial<Record<StatKey, number>>;
 
     stats: StatSystem
     equipment: Record<string, IItem | null> = {};
+    
+    // 이 수치들은 이제 StatSystem에서 가져오는 것이 정확하므로 get 접근자를 권장하지만,
+    // 기존 코드 호환성을 위해 필드로 남겨둘 경우 동기화 로직이 필요합니다.
     attack = 1
     strength = 1
     skillMultiplier = 1
+    
     status: CharacterStatus
 
+    // Getters
     get AttackSpeed() { return this.stats.getStat("attackSpeed") }
     get AttackRange() { return this.stats.getStat("attackRange") + 0.5 }
     get Speed() { return this.stats.getStat("speed") }
-    get Damage() {
-        return this.stats.getStat("attack")
-    }
-
-    get AttackDamageMax() {
-        let ret = this.attackDamageMax
-        return ret
-    }
-    get AttackDamageMin() {
-        return this.attackDamageMin
-    }
-    get Status() { return this.status}
+    get Damage() { return this.stats.getStat("attack") }
+    
+    // 레거시 Getter 호환성 유지
+    get AttackDamageMax() { return this.stats.getStat("attack") } 
+    get AttackDamageMin() { return this.stats.getStat("attack") * 0.9 } // 최소 데미지 예시 로직
+    
+    get Status() { return this.status }
     get Health() { return this.status.health }
 
     constructor( 
         stats: Partial<Record<StatKey, number>>,
         private owner: IActionUser,
     ) {
+        // 1. 초기 스탯 백업 (성장 기준점)
+        this._initialStats = { ...stats };
+        
+        // 2. 스탯 시스템 초기화
         this.stats = new StatSystem(stats);
+        
         this.status = {
             level: 1,
             health: this.stats.getStat("hp"),
             mana: this.stats.getStat("mp"),
             stamina: this.stats.getStat("stamina"),
-            maxExp: 100,
+            maxExp: StatFactory.getRequiredExp ? StatFactory.getRequiredExp(1) : 100,
             exp: 0,
             immortal: false,
             actions: [],
             stats,
         }
-        this.ResetStatus()
+
+        // 초기 상태 설정
+        this.RecoverFullState();
     }
 
-    ResetStatus() {
-        this.status.level = 1
-        this.status.health = this.stats.getStat("hp")
-        this.status.mana = this.stats.getStat("mp")
-        this.status.stamina = this.stats.getStat("stamina")
-        this.status.maxExp = 100
-        this.status.immortal = false
-    }
+    // ==========================================
+    // 🌱 레벨업 및 성장 로직
+    // ==========================================
+
     NextLevelUp() {
-        this.status.level++
-        this.HealthLevelUp()
+        // 1. 레벨 증가
+        this.status.level++;
+
+        // 2. 스탯 성장 (Factory 사용)
+        this.UpdateStatsByLevel();
+
+        // 3. 경험치 통 갱신
+        this.UpdateExpRequirement();
+
+        // 4. 상태 회복 (레벨업 축하)
+        this.RecoverFullState();
     }
-    DefaultLevelSpec() {
-        this.attackDamageMax = 1 * this.status.level
-        this.attackDamageMin = 1 * this.status.level
-        this.defence = 1 * this.status.level * 10
+
+    // 레벨에 맞춰 스탯을 재계산하고 StatSystem에 반영
+    private UpdateStatsByLevel() {
+        // Factory를 통해 현재 레벨에 맞는 기본 스탯 계산
+        const scaledStats = StatFactory.getScaledStats(
+            this._initialStats, 
+            this.status.level, 
+            'normal' // 몬스터 등급 등을 인자로 받을 수 있음
+        );
+
+        // StatSystem을 새로운 베이스 스탯으로 교체
+        // 주의: 기존 StatSystem에 걸려있던 버프나 아이템 효과가 날아가지 않도록 주의해야 함.
+        // 여기서는 가장 안전한 방법으로 StatSystem을 새로 만들고 장비 스탯을 다시 적용하는 방식을 예시로 듭니다.
+        this.stats = new StatSystem(scaledStats);
+        
+        // 장비하고 있는 아이템의 스탯 다시 적용
+        this.reapplyItemModifiers();
+
+        // 레거시 필드 동기화 (호환성 유지용)
+        this.attackDamageMax = this.stats.getStat("attack");
+        this.defence = this.stats.getStat("defense");
     }
-    HealthLevelUp() {
-        this.status.maxExp += this.status.level * 50
-        this.status.exp = 0
+
+    // 경험치 요구량 갱신 (구 HealthLevelUp 대체)
+    private UpdateExpRequirement() {
+        // StatFactory에 관련 메서드가 있다면 사용, 없다면 기본 공식 사용
+        // 예: this.status.maxExp = StatFactory.getRequiredExp(this.status.level);
+        this.status.maxExp += this.status.level * 50; 
+        this.status.exp = 0; // 초과 경험치 이월 로직이 필요하다면 여기서 처리
     }
+
+    // HP/MP/Stamina 풀 회복
+    private RecoverFullState() {
+        this.status.health = this.stats.getStat("hp");
+        this.status.mana = this.stats.getStat("mp");
+        this.status.stamina = this.stats.getStat("stamina");
+    }
+
+    // 경험치 획득
+    ReceiveExp(exp: number) {
+        this.status.exp += exp;
+        if (this.status.exp >= this.status.maxExp) {
+            this.NextLevelUp();
+        }
+    }
+
+    // 상태 초기화
+    ResetStatus() {
+        this.status.level = 1;
+        this.UpdateStatsByLevel(); // 1레벨 스탯으로 복귀
+        this.UpdateExpRequirement();
+        this.RecoverFullState();
+        this.status.immortal = false;
+    }
+
+
+    // ==========================================
+    // ⚔️ 전투 로직 (DamageCalc 통합)
+    // ==========================================
+
+    // 내가 상대방을 공격할 때 호출
+    AttackTarget(target: BaseSpec): DamageResult {
+        const context: DamageContext = {
+            source: [this],
+            destination: target,
+            element: 'physical',
+            skillMultiplier: this.skillMultiplier
+        };
+
+        // damagecalc.ts의 로직을 사용하여 결과 산출
+        const result = calculateCompositeDamage(context);
+
+        // 상대방에게 데미지 적용
+        target.ReceiveCombatDamage(result);
+
+        return result;
+    }
+
+    // 내가 공격 당했을 때 호출 (구 ReceiveCalcDamage 대체)
+    ReceiveCombatDamage(result: DamageResult) {
+        if (!result.isHit) {
+            // 회피 이펙트 처리 등을 위한 콜백이 있다면 여기서 호출
+            return;
+        }
+
+        // 실제 체력 차감
+        this.status.health -= result.finalDamage;
+
+        // 사망 체크
+        if (this.CheckDie()) {
+            // onDeath 이벤트 등이 있다면 여기서 호출
+        }
+    }
+
+    // 기존 방식의 데미지 처리 (레거시 코드 호환용, 필요 없으면 삭제 추천)
+    ReceiveCalcDamage(damage: number) {
+        // 더 이상 독자 공식을 쓰지 않고, 방어력이 이미 계산된 데미지가 들어온다고 가정하거나
+        // 간단한 처리만 수행
+        this.status.health -= damage;
+    }
+
+    ReceiveCalcHeal(heal: number) {
+        const maxHp = this.stats.getStat("hp");
+        if(this.status.health + heal >= maxHp) {
+            this.status.health = maxHp;
+        } else {
+            this.status.health += heal;
+        }
+    }
+
+    CheckDie(): boolean {
+        return (this.status.immortal === false && this.status.health <= 0);
+    }
+
+
+    // ==========================================
+    // 🎒 아이템 및 버프 관리
+    // ==========================================
+
     GetBindItem(slot: Bind) {
-        return this.equipment[slot]
+        return this.equipment[slot];
     }
+
     Buff(buff: Buff, level: number) {
         if ("actions" in buff && buff.actions && Array.isArray(buff.actions)) {
             for (const action of buff.actions) {
-                // ❗ baseSpec은 IActionUser가 아님 → 위임 필요
-                this.owner?.applyAction(action, { level: level })
+                this.owner?.applyAction(action, { level: level });
             }
         }
     }
+
     RemoveBuff(buff: Buff) {
         if ("actions" in buff && buff.actions && Array.isArray(buff.actions)) {
             for (const action of buff.actions) {
-                this.owner?.removeAction(action)
+                this.owner?.removeAction(action);
             }
         }
     }
+
     Equip(item: IItem) {
-        if (item.Bind == undefined) throw new Error("item bind is undefined")
+        if (item.Bind == undefined) throw new Error("item bind is undefined");
+        
         const prevItem = this.equipment[item.Bind];
         if (prevItem) {
-            this.removeItemModifiers(prevItem);
+            this.Unequip(item.Bind); // 기존 아이템 해제 시 modifiers도 제거됨
         }
-        // 🔥 핵심: ActionComponent 실행
+
+        // ActionComponent 실행
         if (item.Actions) {
             for (const action of item.Actions) {
-                // ❗ baseSpec은 IActionUser가 아님 → 위임 필요
-                this.owner?.applyAction(action, { via: "item", source: item })
+                this.owner?.applyAction(action, { via: "item", source: item });
             }
         }
 
@@ -132,17 +260,24 @@ export class BaseSpec {
         return Object.values(this.equipment).filter((item): item is IItem => !!item);
     }
 
+    // StatSystem 재설정 시 아이템 스탯을 다시 적용하기 위한 헬퍼
+    private reapplyItemModifiers() {
+        this.getEquippedItems().forEach(item => {
+            this.addItemModifiers(item);
+        });
+    }
+
     private addItemModifiers(item: IItem) {
         if (item.Stats) {
             Object.entries(item.Stats).forEach(([k, v]) => {
-                const key = k as StatKey
+                const key = k as StatKey;
                 const apply = StatApplyMode[key] || 'add';
                 this.stats.addModifier(new Modifier(key, v!, apply, `item:${item.Id}`));
             });
         }
         if (item.Enchantments) {
             Object.entries(item.Enchantments).forEach(([k, v]) => {
-                const key = k as StatKey
+                const key = k as StatKey;
                 const apply = StatApplyMode[key] || 'add';
                 this.stats.addModifier(new Modifier(key, v!, apply, `enchant:${item.Id}`));
             });
@@ -152,25 +287,5 @@ export class BaseSpec {
     private removeItemModifiers(item: IItem) {
         this.stats.removeModifierBySource(`item:${item.Id}`);
         this.stats.removeModifierBySource(`enchant:${item.Id}`);
-    }
-    
-    ReceiveExp(exp: number) {
-        this.status.exp += exp
-        if (this.status.exp > this.status.maxExp) {
-            this.NextLevelUp()
-        }
-    }
-    ReceiveCalcDamage(damage: number) {
-        this.status.health -= Math.round((5500 / (5500 + this.defence)) * damage)
-    }
-    ReceiveCalcHeal(heal: number) {
-        if(this.status.health >= this.stats.getStat("hp")) {
-            this.status.health = this.stats.getStat("hp")
-            return
-        } 
-        this.status.health +=  heal
-    }
-    CheckDie(): boolean {
-        return (this.status.immortal == false && this.status.health <= 0)
     }
 }

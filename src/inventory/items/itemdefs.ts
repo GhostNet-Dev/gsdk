@@ -6,6 +6,15 @@ import { SoundType } from "@Glibs/types/soundtypes";
 import { itemIcons } from "@Glibs/ux/icons/itemicons";
 
 export const itemDefs = {
+  Exp: { 
+    id: "Exp",
+    name: "Exp",
+    icon: itemIcons.Topazstaff,
+    type: "meleeattack",
+    binding: false,
+    stackable: true,
+    description : "exp", 
+  },
   Hanhwasbat: {
     id: "Hanhwasbat",
     name: "Hanhwa's Bat",

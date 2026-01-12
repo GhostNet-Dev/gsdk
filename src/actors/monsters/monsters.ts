@@ -86,7 +86,7 @@ export class Monsters {
                 })
                 console.log(`calc damage: ${damage}, original damage: ${opt.damage}`)
 
-                this.ReceiveDemage(z, damage, opt.effect)
+                this.ReceiveDemage(z, damage.finalDamage, opt.effect)
             })
         })
         // eventCtrl.RegisterEventListener(EventTypes.Attack + "monster", (opts: AttackOption[]) => {

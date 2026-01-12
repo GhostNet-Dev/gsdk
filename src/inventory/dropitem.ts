@@ -3,6 +3,7 @@ import { IPhysicsObject } from '@Glibs/interface/iobject';
 import { ItemDropOptions } from '@Glibs/types/inventypes';
 import * as THREE from 'three';
 import { ItemId } from './items/itemdefs';
+import { MonDrop } from '@Glibs/types/monstertypes';
 
 
 export class DropItem {
@@ -32,11 +33,13 @@ export class DropItem {
     private readonly MaxTrackingDistance = 8; // 아이템이 가속되는 최대 거리
     private readonly GroundLevel = 0.5
 
+    public ItemId: ItemId = this.drop.itemId
+
     constructor(
         public mesh: THREE.Mesh | THREE.Group,
         monsterPosition: THREE.Vector3,
         playerObject: IPhysicsObject,
-        public ItemId: ItemId,
+        public drop: MonDrop,
         options?: ItemDropOptions
     ) {
         monsterPosition.y = (monsterPosition.y < this.GroundLevel) ? this.GroundLevel : monsterPosition.y

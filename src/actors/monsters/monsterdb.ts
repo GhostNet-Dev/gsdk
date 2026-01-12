@@ -23,6 +23,7 @@ export class MonsterDb {
             model: Char.CharMonZombie,
             drop: [
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
+                { itemId: itemDefs.Exp.id, value: 10, ratio: 1}
             ],
             stats: baseStatPresets[MonsterId.Zombie],
             idleStates: NewDefaultMonsterState,
@@ -33,6 +34,7 @@ export class MonsterDb {
             model: Char.CharMonZombie,
             drop: [
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
+                { itemId: itemDefs.Exp.id, value: 20, ratio: 1}
             ],
             stats: baseStatPresets[MonsterId.DashZombie],
             idleStates: NewDashMonsterState,
@@ -43,7 +45,8 @@ export class MonsterDb {
             model: Char.CharMonMinataur,
             drop: [
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
-                { itemId: itemDefs.MinataurDeck.id, ratio: 0.05 }
+                { itemId: itemDefs.MinataurDeck.id, ratio: 0.05 },
+                { itemId: itemDefs.Exp.id, value: 10, ratio: 1}
             ],
             stats: baseStatPresets[MonsterId.Minotaur],
             idleStates: NewDefaultMonsterState,

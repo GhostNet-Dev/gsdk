@@ -45,6 +45,7 @@ export enum EventTypes {
     Drop = "drop",
     DirectDrop = "directdrop",
     Pickup = "pickup",
+    Reward = "reward",
     // item이 사용되는 때
     UseItem = "useitem",
     DiscardItem = "discarditem",

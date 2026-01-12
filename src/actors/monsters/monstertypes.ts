@@ -51,7 +51,8 @@ export enum MonsterType {
 
 export type MonDrop = {
     itemId: ItemId,
-    ratio: number
+    value?: number
+    ratio: number,
 }
 
 export type MonsterProperty = {
@@ -61,13 +62,7 @@ export type MonsterProperty = {
     stats?: Partial<Record<StatKey, number>>
     drop?: MonDrop[]
     actions?: ActionDef[],
-    idleStates?: (
-        id: number,
-        zombie: Zombie,
-        prop: MonsterProperty,
-        gphysic: IGPhysic,
-        eventCtrl: IEventController,
-        spec: BaseSpec) => IMonsterAction
+    idleStates?: (...params: any) => IMonsterAction
 }
 
 export interface IMonsterAction {

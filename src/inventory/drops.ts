@@ -35,7 +35,7 @@ export class Drops implements ILoop {
                     const itemPros = itemDefs[item.itemId]
                     console.log("drop =>", drop)
                     const modelKey = ("assetDrop" in itemPros) ? itemPros.assetDrop : undefined
-                    await this.onMonsterDeath(pos, item.itemId, modelKey)
+                    await this.onMonsterDeath(pos, item, modelKey)
                 })
             }
         })
@@ -44,7 +44,7 @@ export class Drops implements ILoop {
     update(delta: number): void {
         this.items = this.items.filter((item) => {
             if(item.update(delta)) {
-                this.eventCtrl.SendEventMessage(EventTypes.Pickup, item.ItemId)
+                this.eventCtrl.SendEventMessage(EventTypes.Pickup, item.drop)
                 this.scene.remove(item.mesh);
                 return false
             }
@@ -52,7 +52,8 @@ export class Drops implements ILoop {
         })
     }
 
-    async onMonsterDeath(monsterPosition: THREE.Vector3, itemId: ItemId, assetKey?: Char) {
+    async onMonsterDeath(monsterPosition: THREE.Vector3, drop: MonDrop, assetKey?: Char) {
+        const itemId = drop.itemId
         let mesh: THREE.Mesh | THREE.Group
 
         if (assetKey) {
@@ -66,7 +67,7 @@ export class Drops implements ILoop {
         }
 
         const item = new DropItem(mesh, monsterPosition,
-            this.player, itemId, this.options);
+            this.player, drop, this.options);
         this.scene.add(item.mesh);
         this.items.push(item);
     }

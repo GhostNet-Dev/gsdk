@@ -12,7 +12,7 @@ import { KeyType } from "@Glibs/types/eventtypes";
 import { AttackOption, AttackType, DefaultStatus, PlayMode } from "./playertypes";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import IInventory, { IItem } from "@Glibs/interface/iinven";
-import { ItemId } from "@Glibs/inventory/items/itemdefs";
+import { ItemId, itemDefs } from "@Glibs/inventory/items/itemdefs";
 import { ActionContext, ActionDef, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes";
 import { CutDownTreeState, TreeIdleState } from "./states/treestates";
 import { Item } from "@Glibs/inventory/items/item";
@@ -23,6 +23,7 @@ import { RangeAttackState } from "./states/rangeattackst";
 import { ComboMeleeState } from "./states/combomeleeattackst";
 import { EventActionState, EventIdleState } from "./states/eventstate";
 import { Bind } from "@Glibs/types/assettypes";
+import { MonDrop } from "../monsters/monstertypes";
 
 export class PlayerCtrl implements ILoop, IActionUser {
     LoopId = 0
@@ -183,7 +184,18 @@ export class PlayerCtrl implements ILoop, IActionUser {
             this.inventory.UnequipItem(bind);
             this.currentState.Init()
         })
-        eventCtrl.RegisterEventListener(EventTypes.Pickup, (id: ItemId) => {
+        eventCtrl.RegisterEventListener(EventTypes.Pickup, (drop: MonDrop) => {
+            const id = drop.itemId
+            if (id == itemDefs.Exp.id && drop.value) {
+                this.baseSpec.ReceiveExp(drop.value)
+                this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `경험치 ${drop.value}을 얻었습니다.`)
+                return
+            }
+            const info = this.inventory.GetItemInfo(id)
+            this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `${info.name}을 얻었습니다.`)
+            this.inventory.NewItem(id)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.Reward, (id: ItemId, count: number) => {
             const info = this.inventory.GetItemInfo(id)
             this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `${info.name}을 얻었습니다.`)
             this.inventory.NewItem(id)

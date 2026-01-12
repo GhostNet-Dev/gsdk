@@ -14,7 +14,7 @@ export class DefaultStatusBar extends GUX implements IGUX {
   private label: string;
 
   constructor({ 
-    icon = Icons.None, lolliBar = false, type = 'hp', cur = 100, max = 100, visible = true 
+    type = 'hp', cur = 100, max = 100, visible = true 
   } = {}) {
     super()
     this.applyDynamicStyle('ghud-defaultbar-style', DEFAULT_BAR_CSS);

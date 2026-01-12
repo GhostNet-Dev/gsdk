@@ -8,6 +8,7 @@ import {
 } from "./questdef";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { ItemId } from "@Glibs/inventory/items/itemdefs";
+import { MonDrop } from "@Glibs/types/monstertypes";
 
 export class QuestManager {
     // 모든 퀘스트 '정의'를 저장 (Key: QuestId, Value: Quest)
@@ -29,7 +30,8 @@ export class QuestManager {
         }
 
         // 게임 이벤트 구독 (예시: 실제 이벤트 이름으로 변경 필요)
-        this.eventCtrl.RegisterEventListener(EventTypes.Pickup, (itemId: ItemId) => {
+        this.eventCtrl.RegisterEventListener(EventTypes.Pickup, (drop: MonDrop) => {
+            const itemId = drop.itemId
             this.handleGameEvent({ type: 'pickup', targetId: itemId });
         });
         this.eventCtrl.RegisterEventListener(EventTypes.Death, (id: string) => {
