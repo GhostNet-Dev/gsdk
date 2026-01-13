@@ -187,7 +187,9 @@ export class PlayerCtrl implements ILoop, IActionUser {
         eventCtrl.RegisterEventListener(EventTypes.Pickup, (drop: MonDrop) => {
             const id = drop.itemId
             if (id == itemDefs.Exp.id && drop.value) {
-                this.baseSpec.ReceiveExp(drop.value)
+                if(this.baseSpec.ReceiveExp(drop.value)) {
+                    this.eventCtrl.SendEventMessage(EventTypes.LevelUp, this.baseSpec.Status.level)
+                }
                 this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `경험치 ${drop.value}을 얻었습니다.`)
                 return
             }
@@ -225,7 +227,9 @@ export class PlayerCtrl implements ILoop, IActionUser {
                         this.player.DamageEffect(opt.damage)
                         break;
                     case AttackType.Exp:
-                        this.baseSpec.ReceiveExp(opt.damage)
+                        if(this.baseSpec.ReceiveExp(opt.damage)) {
+                            this.eventCtrl.SendEventMessage(EventTypes.LevelUp, this.baseSpec.Status.level)
+                        }
                         break;
                     case AttackType.Heal:
                         this.player.HealEffect(opt.damage)

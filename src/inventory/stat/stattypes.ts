@@ -8,7 +8,7 @@ export type StatKey =
 
   // 생명력/자원 관련
   | 'hp' | 'hpRegen' | 'mp' | 'mpRegen'
-  | 'stamina' | 'staminaRegen'| 'exp' 
+  | 'stamina' | 'staminaRegen'
 
   // 보조 스탯
   | 'movementSpeed' | 'castingSpeed'
@@ -58,7 +58,6 @@ export const StatDescriptions: Record<StatKey, string> = {
   mpRegen: '초당 마나 회복량',
   stamina: '스태미나: 행동/회피 소모 자원',
   staminaRegen: '스태미나 회복 속도',
-  exp: '경험치',
 
   // 🧠 보조 스탯
   movementSpeed: '이동 속도',
@@ -141,7 +140,6 @@ export const StatApplyMode: Record<StatKey, ModifierType> = {
   mpRegen: 'add',
   stamina: 'add',
   staminaRegen: 'add',
-  exp: 'add',
 
   // 🎲 보조 스탯
   movementSpeed: 'mul',

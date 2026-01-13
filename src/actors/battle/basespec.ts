@@ -9,6 +9,8 @@ import { Buff } from "@Glibs/magical/buff/buff"
 import { CharacterStatus } from "./charstatus"
 import { StatFactory } from "./statfactory"
 import { calculateCompositeDamage, DamageContext, DamageResult } from "./damagecalc"
+import IEventController from "@Glibs/interface/ievent"
+import { EventTypes } from "@Glibs/types/globaltypes"
 
 export class BaseSpec {
     // 레거시 호환성을 위한 프로퍼티 (필요 없다면 제거 가능)
@@ -109,12 +111,18 @@ export class BaseSpec {
         this.defence = this.stats.getStat("defense");
     }
 
-    // 경험치 요구량 갱신 (구 HealthLevelUp 대체)
+    // 경험치 요구량 갱신 및 초과 경험치 이월 처리
     private UpdateExpRequirement() {
-        // StatFactory에 관련 메서드가 있다면 사용, 없다면 기본 공식 사용
-        // 예: this.status.maxExp = StatFactory.getRequiredExp(this.status.level);
-        this.status.maxExp += this.status.level * 50; 
-        this.status.exp = 0; // 초과 경험치 이월 로직이 필요하다면 여기서 처리
+        // 1. 초과분 계산: (현재 보유 경험치) - (방금 달성한 레벨의 경험치 요구량)
+        // 주의: 이 시점에서 this.status.maxExp는 아직 갱신 전이므로 '이전 레벨의 목표치'입니다.
+        const overflowExp = this.status.exp - this.status.maxExp;
+
+        // 2. 새로운 레벨에 맞는 경험치 요구량(MaxExp) 설정
+        // (StatFactory가 없다면 기존 공식 사용)
+        this.status.maxExp = StatFactory.getRequiredExp(this.status.level);
+        
+        // 3. 초과된 경험치를 현재 경험치로 적용 (음수 방지 안전장치 포함)
+        this.status.exp = Math.max(0, overflowExp);
     }
 
     // HP/MP/Stamina 풀 회복
@@ -127,9 +135,14 @@ export class BaseSpec {
     // 경험치 획득
     ReceiveExp(exp: number) {
         this.status.exp += exp;
-        if (this.status.exp >= this.status.maxExp) {
+        // while 루프를 사용하여 경험치가 충족되는 한 계속 레벨업 (다중 레벨업 지원)
+        // 예: 1레벨(0/100)에서 500EXP 획득 -> 1->2(100소모), 2->3(200소모), 3레벨(잔여 200)
+        let lvUp = false
+        while (this.status.exp >= this.status.maxExp) {
             this.NextLevelUp();
+            lvUp = true
         }
+        return lvUp
     }
 
     // 상태 초기화
@@ -185,6 +198,7 @@ export class BaseSpec {
         // 더 이상 독자 공식을 쓰지 않고, 방어력이 이미 계산된 데미지가 들어온다고 가정하거나
         // 간단한 처리만 수행
         this.status.health -= damage;
+        this.status.health = Math.max(0, this.status.health);
     }
 
     ReceiveCalcHeal(heal: number) {
