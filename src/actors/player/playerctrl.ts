@@ -197,6 +197,12 @@ export class PlayerCtrl implements ILoop, IActionUser {
             this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `${info.name}을 얻었습니다.`)
             this.inventory.NewItem(id)
         })
+        eventCtrl.RegisterEventListener(EventTypes.Exp, (exp: number) => {
+            if (this.baseSpec.ReceiveExp(exp)) {
+                this.eventCtrl.SendEventMessage(EventTypes.LevelUp, this.baseSpec.Status.level)
+            }
+            this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `경험치 ${exp}을 얻었습니다.`)
+        })
         eventCtrl.RegisterEventListener(EventTypes.Reward, (id: ItemId, count: number) => {
             const info = this.inventory.GetItemInfo(id)
             this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `${info.name}을 얻었습니다.`)
