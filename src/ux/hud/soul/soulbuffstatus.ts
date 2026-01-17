@@ -49,19 +49,25 @@ export class BuffStatus extends GUX implements IGUX {
 
   addBuff(p: { id: string; icon: IconDef; name?: string; desc?: string; duration?: number }) {
     const { id, icon, name, desc, duration = 10 } = p;
-    const endAt = performance.now() + duration * 1000;
     
+    // [변경] duration이 0이면 무제한(Infinity)으로 설정
+    const isInfinite = duration === 0;
+    const endAt = isInfinite ? Infinity : performance.now() + duration * 1000;
+    
+    // 이미 존재하는 버프면 갱신 처리 (옵션)
+    if (this.buffs.has(id)) {
+        this.removeBuff(id);
+    }
+
     const el = document.createElement('div');
     el.className = 'ghud-buff';
     el.setAttribute('role', 'img');
     el.setAttribute('aria-label', name || id);
-    el.innerHTML = `<i class="ghud-icon"></i><span class="ghud-time">0s</span><div class="ghud-tooltip"><b>${name || id}</b><br>${desc ?? ''}</div>`;
+    el.innerHTML = `<i class="ghud-icon"></i><span class="ghud-time"></span><div class="ghud-tooltip"><b>${name || id}</b><br>${desc ?? ''}</div>`;
     
     this.renderIcon(el.querySelector('.ghud-icon') as HTMLElement, icon);
     
-    // [신규 기능] 마우스 오버 시 툴팁 위치 보정 (화면 이탈 방지)
     el.addEventListener('mouseenter', () => this.updateTooltipPos(el));
-    // 터치 환경 대응
     el.addEventListener('touchstart', () => this.updateTooltipPos(el), { passive: true });
 
     this.root.appendChild(el);
@@ -71,44 +77,39 @@ export class BuffStatus extends GUX implements IGUX {
     this.renderBuff(obj);
   }
 
-  /** 툴팁 위치를 계산하여 화면 안쪽에 배치하고 최상위로 올림 */
   private updateTooltipPos(buffEl: HTMLElement) {
     const tooltip = buffEl.querySelector('.ghud-tooltip') as HTMLElement;
     if (!tooltip) return;
 
-    // 1. 강제로 보이게 하여 크기 측정 준비
     tooltip.style.display = 'block';
-    
-    // 2. 버프 아이콘의 현재 화면상 위치 획득
     const iconRect = buffEl.getBoundingClientRect();
     const tooltipRect = tooltip.getBoundingClientRect();
     
-    // 3. X축 계산 (기본: 중앙 정렬)
     let left = iconRect.left + (iconRect.width / 2) - (tooltipRect.width / 2);
-    
-    // 4. 화면 왼쪽/오른쪽 이탈 방지 (Padding 10px)
     const padding = 10;
     const screenW = window.innerWidth;
     
-    if (left < padding) left = padding; // 왼쪽 벽
+    if (left < padding) left = padding;
     else if (left + tooltipRect.width > screenW - padding) {
-      left = screenW - tooltipRect.width - padding; // 오른쪽 벽
+      left = screenW - tooltipRect.width - padding;
     }
 
-    // 5. Y축 계산 (아이콘 바로 아래)
-    const top = iconRect.bottom + 8; // 8px 간격
+    const top = iconRect.bottom + 8;
 
-    // 6. 스타일 적용 (Fixed로 띄워서 다른 UI 위에 표시)
     tooltip.style.position = 'fixed';
     tooltip.style.left = `${left}px`;
     tooltip.style.top = `${top}px`;
-    tooltip.style.bottom = 'auto'; // 기존 bottom 스타일 제거
-    tooltip.style.transform = 'none'; // 기존 transform 제거
+    tooltip.style.bottom = 'auto';
+    tooltip.style.transform = 'none';
   }
 
   refreshBuff(id: string, extraSeconds = 0) {
     const b = this.buffs.get(id);
     if (!b) return;
+
+    // [변경] 무제한 버프는 시간 갱신 로직을 건너뜀
+    if (b.duration === 0) return;
+
     b.endAt = Math.max(b.endAt, performance.now()) + extraSeconds * 1000;
     this.renderBuff(b);
   }
@@ -139,24 +140,38 @@ export class BuffStatus extends GUX implements IGUX {
   }
 
   private renderBuff(b: { id: string; duration: number; endAt: number; el: HTMLElement; name?: string; desc?: string }) {
+    const t = b.el.querySelector('.ghud-time') as HTMLElement;
+    const tip = b.el.querySelector('.ghud-tooltip') as HTMLElement;
+    
+    // [변경] duration이 0인 경우 (무제한 버프 처리)
+    if (b.duration === 0) {
+        b.el.style.setProperty('--ghud-pct', '1'); // 게이지 항상 꽉 참
+        t.style.display = 'none'; // 시간 텍스트 숨김
+        
+        b.el.classList.toggle('ghud-tooltip-off', !this.opts.tooltip);
+        // 툴팁에 '지속 효과' 표시
+        tip.innerHTML = `<b>${b.name || b.id}</b><br>${b.desc ?? ''}<br><small style="color:#fbbf24">지속 효과</small>`;
+        return;
+    }
+
+    // 일반 기간제 버프 처리
     const remain = Math.max(0, b.endAt - performance.now());
+    // division by zero 방지를 위해 duration 확인 (위에서 0 체크 했으므로 안전)
     const r = Math.max(0, Math.min(1, remain / (b.duration * 1000)));
     b.el.style.setProperty('--ghud-pct', String(r));
 
-    const t = b.el.querySelector('.ghud-time') as HTMLElement;
     t.style.display = this.opts.showTime ? '' : 'none';
     t.textContent = Math.ceil(remain / 1000) + 's';
 
-    const tip = b.el.querySelector('.ghud-tooltip') as HTMLElement;
     b.el.classList.toggle('ghud-tooltip-off', !this.opts.tooltip);
     
-    // 툴팁 내용 갱신
     tip.innerHTML = `<b>${b.name || b.id}</b><br>${b.desc ?? ''}<br><small style="color:#fbbf24">남은 시간: ${Math.ceil(remain / 1000)}s</small>`;
   }
 
   private tick() {
     const now = performance.now();
     for (const b of [...this.buffs.values()]) {
+      // duration 0인 경우 endAt이 Infinity이므로 now >= Infinity는 항상 false -> 삭제되지 않음
       if (now >= b.endAt) this.removeBuff(b.id);
       else this.renderBuff(b);
     }
@@ -176,7 +191,7 @@ const BUFF_CSS = `
   --ghud-pct:1; position:relative; width:var(--ghud-buff-size); height:var(--ghud-buff-size);
   border-radius:12px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18);
   box-shadow:0 2px 10px rgba(0,0,0,.35); overflow:visible;
-  cursor: help; /* 커서 변경 */
+  cursor: help;
 }
 .ghud-buff::before{
   content:""; position:absolute; inset:0; z-index:0; pointer-events:none; width:calc(var(--ghud-pct) * 100%);
@@ -187,12 +202,10 @@ const BUFF_CSS = `
 .ghud-buff i svg{ width:70%; height:70%; display:block; }
 .ghud-buff .ghud-time{ position:absolute; right:4px; bottom:2px; z-index:2; font-size:11px; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.75); }
 
-/* 툴팁 스타일 수정됨 */
 .ghud-buff .ghud-tooltip{
-  /* 기본적으로 숨김, 위치는 JS가 제어하므로 fixed 설정 */
   position: fixed; 
   top: 0; left: 0;
-  z-index: 9999; /* 최상위 보장 */
+  z-index: 9999;
   
   pointer-events:none; 
   background:rgba(0,0,0,.95); 
@@ -204,10 +217,9 @@ const BUFF_CSS = `
   
   opacity:0; 
   transition:opacity .15s ease; 
-  visibility: hidden; /* 공간 차지 방지 */
+  visibility: hidden;
 }
 
-/* 호버 시 표시 */
 .ghud-buff:hover .ghud-tooltip { opacity:1; visibility: visible; }
 .ghud-buff.ghud-tooltip-off:hover .ghud-tooltip { opacity:0; visibility: hidden; }
-`;
+`

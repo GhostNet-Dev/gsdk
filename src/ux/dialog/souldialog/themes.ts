@@ -31,10 +31,6 @@ export const BASE_VARS = css`
 
 /* -------------------------------------------------------------------------- */
 /* 2) 쉘/다이얼로그                                                            */
-/*  - blur는 ::before에서 처리 + z-index:-1 로 컨텐츠 뒤로                     */
-/*  - .gnx-dialog 배경은 투명(색은 ::before가 담당)                           */
-/*  - scale 제거, 클리핑 강화                                                  */
-/*  - 헤더 대비/제목 가독성 강화                                               */
 /* -------------------------------------------------------------------------- */
 export const SHELL_BASE = css`
   .gnx-overlay{
@@ -92,7 +88,7 @@ export const SHELL_BASE = css`
     padding:14px 16px 10px;
     border-bottom:1px solid rgba(255,255,255,.08);
 
-    /* 헤더 대비 강화(조금 더 불투명한 그라데이션) */
+    /* 헤더 대비 강화 */
     background:linear-gradient(
       180deg,
       color-mix(in oklab, var(--gnx-ui-bg-strong) 96%, transparent) 0%,
@@ -105,20 +101,82 @@ export const SHELL_BASE = css`
     overflow:hidden;
     border-top-left-radius:var(--gnx-radius);
     border-top-right-radius:var(--gnx-radius);
+    flex-shrink: 0; /* 헤더 크기 유지 */
   }
 
   .gnx-dialog__title{
     font-weight:700; letter-spacing:.2px; font-size:16px;
     color:inherit; opacity:1; filter:none;
     -webkit-font-smoothing: antialiased;
-    text-shadow: 0 1px 0 rgba(0,0,0,.20); /* 옵션: 윤곽 보강 */
+    text-shadow: 0 1px 0 rgba(0,0,0,.20);
   }
 
-  .gnx-dialog__body{
-    flex:1; min-height:0; padding:16px; display:grid; gap:14px; overflow:auto;
+  /* [변경] Body Wrapper: 인디케이터 위치 기준점 */
+  .gnx-body-wrap {
+    flex: 1; 
+    min-height: 0; 
+    position: relative; 
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden;
   }
+
+  /* [변경] Body: 실제 스크롤 영역 */
+  .gnx-dialog__body{
+    flex:1; 
+    min-height:0; 
+    padding:16px; 
+    display:grid; 
+    gap:14px; 
+    overflow-y:auto; 
+    overflow-x:hidden;
+  }
+
+  /* [추가] 커스텀 스크롤바 (PC용) */
+  .gnx-dialog__body::-webkit-scrollbar { width: 6px; }
+  .gnx-dialog__body::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+  .gnx-dialog__body::-webkit-scrollbar-thumb { 
+    background: rgba(255,255,255,0.12); 
+    border-radius: 3px; 
+  }
+  .gnx-dialog__body::-webkit-scrollbar-thumb:hover { 
+    background: var(--gnx-ui-accent); 
+  }
+
+  /* [추가] 스크롤 인디케이터 (삼각형) */
+  .gnx-scroll-hint {
+    position: absolute; left: 0; right: 0; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none; z-index: 10;
+    opacity: 0; transition: opacity 0.2s ease;
+    color: var(--gnx-ui-accent); font-size: 14px;
+    text-shadow: 0 0 4px rgba(0,0,0,0.8);
+  }
+  
+  /* 상단 힌트 (배경 그라데이션으로 컨텐츠와 구분) */
+  .gnx-scroll-hint.top { 
+    top: 0; 
+    align-items: flex-start; padding-top: 4px;
+    background: linear-gradient(180deg, var(--gnx-ui-bg-strong) 0%, transparent 100%);
+  }
+  /* 하단 힌트 */
+  .gnx-scroll-hint.bottom { 
+    bottom: 0; 
+    align-items: flex-end; padding-bottom: 4px;
+    background: linear-gradient(0deg, var(--gnx-ui-bg-strong) 0%, transparent 100%);
+  }
+
+  /* 깜빡이는 애니메이션 */
+  @keyframes gnx-pulse-v { 0%,100% { transform:translateY(0); opacity: 0.8; } 50% { transform:translateY(3px); opacity: 0.3; } }
+  @keyframes gnx-pulse-v-rev { 0%,100% { transform:translateY(0); opacity: 0.8; } 50% { transform:translateY(-3px); opacity: 0.3; } }
+
+  .gnx-scroll-hint[data-visible="true"] { opacity: 1; }
+  .gnx-scroll-hint.bottom[data-visible="true"] span { animation: gnx-pulse-v 1.5s infinite; }
+  .gnx-scroll-hint.top[data-visible="true"] span { animation: gnx-pulse-v-rev 1.5s infinite; }
+
   .gnx-dialog__actions{
     display:flex; gap:10px; justify-content:flex-end; padding:0 16px 14px;
+    flex-shrink: 0;
   }
 
   .gnx-btn{
@@ -157,12 +215,12 @@ export const SHELL_BASE = css`
     border-radius:999px; background:rgba(255,255,255,.06);
   }
   .gnx-rar-common{ color:var(--gnx-rar-common); box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--gnx-rar-common) 60%, transparent); }
-  .gnx-rar-rare{   color:var(--gnx-rar-rare);   box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--gnx-rar-rare)   60%, transparent); }
-  .gnx-rar-epic{   color:var(--gnx-rar-epic);   box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--gnx-rar-epic)   60%, transparent); }
+  .gnx-rar-rare{   color:var(--gnx-rar-rare);   box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--gnx-rar-rare)    60%, transparent); }
+  .gnx-rar-epic{   color:var(--gnx-rar-epic);   box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--gnx-rar-epic)    60%, transparent); }
 `;
 
 /* -------------------------------------------------------------------------- */
-/* 3) 카드/리스트/툴팁 (공통 위젯 스타일)                                       */
+/* 3) 카드/리스트/툴팁 (공통 위젯 스타일)                                     */
 /* -------------------------------------------------------------------------- */
 export const WIDGET_BASE = css`
   /* 기존 스타일 유지 */
@@ -189,10 +247,10 @@ export const WIDGET_BASE = css`
     display:grid; place-items:center; background:rgba(255,255,255,.06); font-size:20px;
   }
 
-  /* [추가/수정] 공통 툴팁 스타일 (.gnx-tip) */
+  /* 공통 툴팁 스타일 */
   .gnx-tip {
-    position: fixed; /* [중요] 화면 기준으로 떠있게 함 */
-    z-index: 2147483647; /* 최상단 레이어 */
+    position: fixed;
+    z-index: 2147483647;
     
     min-width: 240px;
     max-width: 360px;
@@ -205,22 +263,20 @@ export const WIDGET_BASE = css`
     backdrop-filter: blur(4px);
     
     color: var(--gnx-ui-fg);
-    pointer-events: none; /* 기본적으로 클릭 통과 */
+    pointer-events: none;
     
     opacity: 0;
     transition: opacity .08s ease;
   }
 
   .gnx-tip[data-show="true"] { opacity: 1; }
-  .gnx-tip[data-pinned="true"] { pointer-events: auto; } /* 고정되면 클릭 가능 */
+  .gnx-tip[data-pinned="true"] { pointer-events: auto; }
 
-  /* 툴팁 내부 타이틀 */
   .gnx-tip .tt-title { 
     font-weight:700; font-size: 15px; margin-bottom:8px; 
     display:flex; align-items:center; gap:8px; 
   }
   
-  /* 툴팁 내부 스탯 */
   .gnx-tip .tt-stats { 
     margin: 10px 0; padding-top: 10px; 
     border-top: 1px solid rgba(255,255,255,0.1); 
@@ -229,20 +285,17 @@ export const WIDGET_BASE = css`
   .tt-stat-row { font-size: 13px; color: #8ab4f8; display: flex; justify-content: space-between; }
   .tt-stat-row.enchant { color: #d87cff; }
 
-  /* 툴팁 내부 설명 */
   .gnx-tip .tt-desc { 
     margin-top:8px; color: var(--gnx-ui-sub); 
     line-height:1.5; font-size: 13px; font-style: italic; 
   }
 
-  /* 툴팁 내부 액션 버튼 영역 */
   .gnx-tip .tt-actions { 
     margin-top:12px; padding-top: 8px; 
     border-top: 1px solid rgba(255,255,255,0.1); 
     display:flex; gap:6px; justify-content:flex-end; flex-wrap: wrap;
   }
   
-  /* 툴팁 버튼 스타일 */
   .tt-btn { 
     appearance:none; border:1px solid rgba(255,255,255,.18); 
     color:var(--gnx-ui-fg); background:rgba(255,255,255,.05); 
@@ -254,6 +307,7 @@ export const WIDGET_BASE = css`
     color: #fff;
   }
 `;
+
 /* -------------------------------------------------------------------------- */
 /* 4) 테마 변형 (색상만)                                                       */
 /* -------------------------------------------------------------------------- */

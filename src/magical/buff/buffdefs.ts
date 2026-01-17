@@ -13,6 +13,8 @@ export const buffDefs = {
         level: "common",
         stackable: false,
         binding: true,
+        icon: "🌑",
+        duration: 0,
         actions: [actionDefs.DarkParticle],
     },
     StunStar: {
@@ -26,6 +28,8 @@ export const buffDefs = {
         level: "common",
         stackable: false,
         binding: true,
+        duration: 10,
+        icon: "💫",
         actions: [actionDefs.StunStars],
     },
     HpBoost: {
@@ -39,6 +43,8 @@ export const buffDefs = {
         level: "common",
         stackable: false,
         binding: true,
+        duration: 60,
+        icon: "🩸", //"🌙",
         actions: [actionDefs.HpStatBoost],
     },
 }

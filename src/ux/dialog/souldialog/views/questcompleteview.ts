@@ -236,9 +236,9 @@ export class QuestCompleteView implements IDialogView<QuestCompleteProps> {
                 variant: canComplete ? 'accent' : 'default',
                 onClick: () => {
                     if (!canComplete) return; 
+                    this.ctx.manager.close();
                     // 선택된 인덱스 (없으면 null) 반환
                     this.props.onComplete(this.selectedChoice);
-                    this.ctx.manager.close();
                 }
             }
         ]);

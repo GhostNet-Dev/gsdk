@@ -10,6 +10,10 @@ export class Buff implements IActionUser {
     actions: IActionComponent[] = []
     baseSpec: BaseSpec
     get id() { return this.def.id }
+    get icon() { return this.def.icon }
+    get name() { return this.def.name }
+    get desc() { return this.def.descriptionKr }
+    get duration() { return this.def.duration }
     constructor(
         private def: BuffProperty,
     ) {

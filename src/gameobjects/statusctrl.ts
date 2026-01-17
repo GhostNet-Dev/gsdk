@@ -1,9 +1,11 @@
 import { PlayerCtrl } from "@Glibs/actors/player/playerctrl";
 import IEventController from "@Glibs/interface/ievent";
 import { itemDefs } from "@Glibs/inventory/items/itemdefs";
+import { Buff } from "@Glibs/magical/buff/buff";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { MonDrop } from "@Glibs/types/monstertypes";
 import { AttackOption } from "@Glibs/types/playertypes";
+import { BuffStatus } from "@Glibs/ux/hud/soul/soulbuffstatus";
 import { DefaultStatusBar } from "@Glibs/ux/hud/soul/soulstatusbar";
 import { WideStatusBar } from "@Glibs/ux/hud/soul/soulstatuswidebar";
 
@@ -14,6 +16,7 @@ export default class StatusCtrl {
         private heart: DefaultStatusBar,
         private mp: DefaultStatusBar,
         private exp: WideStatusBar,
+        private buff: BuffStatus,
     ) {
         this.heart.UpdateStatus(100)
         this.mp.UpdateStatus(100)
@@ -36,6 +39,15 @@ export default class StatusCtrl {
             const exp = this.playerCtrl.baseSpec.status.maxExp
             const curH = this.playerCtrl.baseSpec.status.exp
             this.exp.UpdateStatus(Math.floor(curH / exp * 100))
+        })
+        this.eventCtrl.RegisterEventListener(EventTypes.UpdateBuff + "player", (buff: Buff) => {
+            this.buff.addBuff({
+                id: buff.id,
+                icon: buff.icon,
+                name: buff.name,
+                desc: buff.desc,
+                duration: buff.duration,
+            })
         })
     }
 }
