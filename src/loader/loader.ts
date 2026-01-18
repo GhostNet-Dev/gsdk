@@ -10,7 +10,7 @@ import { MushroomFab } from "./plant/mushroomfab";
 import { DeadTree2Fab, TreeFab } from "./plant/treefab";
 import { PortalFab } from "./portalfab";
 import { TestFab } from "./testfab";
-import { ZombieFab } from "./monster/zombiefab";
+import { ZombieBombFab, ZombieFab, ZombieHallowFab } from "./monster/zombiefab";
 import { BatFab } from "./item/batfab";
 import { OldGunFab } from "./item/gunfab";
 import { MinataurFab } from "./monster/minataurfab";
@@ -135,6 +135,8 @@ export class Loader {
 
         // Monster
         this.fabClasses.set(Char.CharMonZombie, ZombieFab);
+        this.fabClasses.set(Char.CharMonZombieHallow, ZombieHallowFab);
+        this.fabClasses.set(Char.CharMonZombieBomb, ZombieBombFab);
         this.fabClasses.set(Char.CharMonMinataur, MinataurFab);
         this.fabClasses.set(Char.CharMonCrab, CrabFab);
         this.fabClasses.set(Char.CharMonBatPig, BatPigFab);

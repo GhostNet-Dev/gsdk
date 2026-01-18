@@ -79,6 +79,8 @@ export enum Char {
     Portal,
     Test,
     CharMonZombie,
+    CharMonZombieHallow,
+    CharMonZombieBomb,
     CharMonMinataur,
     CharMonBatPig,
     CharMonBilbyMon,
