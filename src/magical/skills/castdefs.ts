@@ -2,32 +2,18 @@ import { actionDefs } from "@Glibs/types/actiontypes";
 
 
 export const skillDefs = {
-    DarkSide: {
-        id: "darkside",
-        name: "Dark Side",
-        nameKr: "다크사이드",
-        descriptionKr: "",
-        description: "",
-        type: "attack",
-        levelRequirement: 0,
-        level: "common",
-        stackable: false,
-        binding: true,
-        bufflevel: 1,
-        actions: [actionDefs.DarkParticle],
-    },
     StunStar: {
         id: "stunstar",
         name: "Stun",
         nameKr: "기절",
-        descriptionKr: "",
+        descriptionKr: "일정확률로 기절시킵니다.",
         description: "",
         type: "stun",
         levelRequirement: 0,
         level: "common",
         stackable: false,
         binding: true,
-        bufflevel: 1,
+        icon: "💫",
         actions: [actionDefs.StunStars],
     },
 }

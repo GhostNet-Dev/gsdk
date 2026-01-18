@@ -9,7 +9,7 @@ import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actio
 
 
 
-export class ProjectileCtrl implements IActionUser{
+export class ProjectileCtrl implements IActionUser {
     raycast = new THREE.Raycaster()
     moveDirection = new THREE.Vector3()
     prevPosition = new THREE.Vector3()

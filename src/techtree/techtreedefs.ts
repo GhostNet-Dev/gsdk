@@ -63,11 +63,27 @@ export interface TechTreeDefBase {
     tech: TechTreeTypes
 }
 
+// =========================================================
+// [설정] 공통 상수 (Placeholder)
+// =========================================================
+const MOCK_TECH = buffDefs.DarkSide; // 실제 기능은 이걸로 통일
+
+// 모든 레벨 비용 1 골드
+const COST_1: LevelCost[] = [{ lv: 1, cost: { gold: 1 } }];
+const COST_3: LevelCost[] = [
+    { lv: 1, cost: { gold: 1 } }, { lv: 2, cost: { gold: 1 } }, { lv: 3, cost: { gold: 1 } }
+];
+const COST_5: LevelCost[] = [
+    { lv: 1, cost: { gold: 1 } }, { lv: 2, cost: { gold: 1 } }, { lv: 3, cost: { gold: 1 } },
+    { lv: 4, cost: { gold: 1 } }, { lv: 5, cost: { gold: 1 } }
+];
+
+
 export const DefaultTechTreeDefs: TechTreeDefBase[] = [
     {
         id: "fireball",
         kind: "skill",
-        name: "fireball",
+        name: "Fireball",
         desc: "화염구를 발사합니다.",
         cost: [1, 2, 3, 4, 5].map(lv => ({ lv, cost: { points: lv } })),
         tech: actionDefs.FireBall,
@@ -75,7 +91,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
     {
         id: "fireDefence",
         kind: "skill",
-        name: "fireDefence",
+        name: "Fire Defence",
         desc: "화염이 시전자를 보호합니다.",
         cost: [
             { lv: 1, cost: { points: 10 } },
@@ -88,7 +104,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
     {
         id: "darkside",
         kind: "buff",
-        name: "dark side",
+        name: "Dark Side",
         desc: "암흑 저항이 증가합니다",
         cost: [
             { lv: 1, cost: { points: 1 } },
@@ -110,5 +126,561 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
             { type: "playerLv", atLeast: 2 }
         ],
         tech: buffDefs.HpBoost
+    },
+    // =================================================================
+    // [ROOT] 시작점
+    // =================================================================
+    {
+        id: "root_license",
+        kind: "trait",
+        name: "모험가 자격증",
+        desc: "거대한 테크트리의 시작점입니다.",
+        rarity: "common",
+        tags: ["base"],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+
+    // =================================================================
+    // 1. [공용 스탯 - 공격] (이전 VS 트리 통합)
+    // =================================================================
+    {
+        id: "stat_might",
+        kind: "trait",
+        name: "근력 (Might)",
+        desc: "모든 피해량이 증가합니다. (기본 공격 스탯)",
+        rarity: "common",
+        tags: ["stat", "attack"],
+        requires: [{ type: "has", id: "root_license" }],
+        cost: COST_5,
+        tech: MOCK_TECH
+    },
+    {
+        id: "stat_proj_speed",
+        kind: "trait",
+        name: "투사체 속도",
+        desc: "투사체가 더 빠르게 날아갑니다.",
+        rarity: "common",
+        tags: ["stat", "attack"],
+        requires: [{ type: "has", id: "stat_might", minLv: 1 }],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+    {
+        id: "stat_area",
+        kind: "trait",
+        name: "범위 (Area)",
+        desc: "공격 범위가 증가합니다. (광역 마법 선행)",
+        rarity: "uncommon",
+        tags: ["stat", "aoe"],
+        requires: [{ type: "has", id: "stat_might", minLv: 2 }],
+        cost: COST_5,
+        tech: MOCK_TECH
+    },
+    {
+        id: "stat_cooldown",
+        kind: "trait",
+        name: "재사용 대기시간 (Cooldown)",
+        desc: "스킬을 더 자주 사용합니다. (마법 계열 필수)",
+        rarity: "uncommon",
+        tags: ["stat", "magic"],
+        requires: [{ type: "has", id: "stat_might", minLv: 3 }],
+        cost: COST_5,
+        tech: MOCK_TECH
+    },
+    {
+        id: "stat_crit_rate",
+        kind: "trait",
+        name: "치명타 확률",
+        desc: "치명타가 발생할 확률이 증가합니다.",
+        rarity: "rare",
+        tags: ["stat", "crit"],
+        requires: [{ type: "has", id: "stat_might", minLv: 5 }],
+        cost: COST_5,
+        tech: MOCK_TECH
+    },
+
+    // =================================================================
+    // 2. [공용 스탯 - 생존] (이전 VS 트리 통합)
+    // =================================================================
+    {
+        id: "stat_maxhp",
+        kind: "trait",
+        name: "최대 체력 (Max HP)",
+        desc: "생존을 위한 기본 체력입니다.",
+        rarity: "common",
+        tags: ["stat", "defense"],
+        requires: [{ type: "has", id: "root_license" }],
+        cost: COST_5,
+        tech: MOCK_TECH
+    },
+    {
+        id: "stat_recovery",
+        kind: "trait",
+        name: "회복력 (Recovery)",
+        desc: "체력이 서서히 회복됩니다.",
+        rarity: "common",
+        tags: ["stat", "defense"],
+        requires: [{ type: "has", id: "stat_maxhp", minLv: 2 }],
+        cost: COST_5,
+        tech: MOCK_TECH
+    },
+    {
+        id: "stat_armor",
+        kind: "trait",
+        name: "방어력 (Armor)",
+        desc: "받는 피해를 줄여줍니다. (전사/성기사 선행)",
+        rarity: "uncommon",
+        tags: ["stat", "defense"],
+        requires: [{ type: "has", id: "stat_maxhp", minLv: 3 }],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+
+    // =================================================================
+    // 3. [공용 스탯 - 유틸리티/경제]
+    // =================================================================
+    {
+        id: "stat_speed",
+        kind: "trait",
+        name: "이동 속도",
+        desc: "캐릭터의 이동 속도가 증가합니다. (도적 선행)",
+        rarity: "common",
+        tags: ["stat", "utility"],
+        requires: [{ type: "has", id: "root_license" }],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+    {
+        id: "stat_greed",
+        kind: "trait",
+        name: "탐욕 (Greed)",
+        desc: "골드 획득량이 증가합니다.",
+        rarity: "common",
+        tags: ["stat", "economy"],
+        requires: [{ type: "has", id: "root_license" }],
+        cost: COST_5,
+        tech: MOCK_TECH
+    },
+    {
+        id: "stat_luck",
+        kind: "trait",
+        name: "행운 (Luck)",
+        desc: "좋은 일이 일어날 확률이 증가합니다.",
+        rarity: "uncommon",
+        tags: ["stat", "utility"],
+        requires: [{ type: "has", id: "stat_greed", minLv: 2 }],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+    {
+        id: "stat_magnet",
+        kind: "trait",
+        name: "자석 (Magnet)",
+        desc: "아이템 획득 범위가 증가합니다.",
+        rarity: "uncommon",
+        tags: ["stat", "utility"],
+        requires: [{ type: "has", id: "stat_speed", minLv: 2 }],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+
+    // =================================================================
+    // 4. [RPG 클래스 - 전사/성기사] (Armor, Might 기반)
+    // =================================================================
+    {
+        id: "class_warrior",
+        kind: "trait",
+        name: "[전사] 숙련",
+        desc: "근접 공격력이 강화됩니다.",
+        rarity: "rare",
+        tags: ["class", "melee"],
+        requires: [
+            { type: "has", id: "stat_might", minLv: 3 },
+            { type: "has", id: "stat_armor", minLv: 1 }
+        ],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+    {
+        id: "skill_whirlwind",
+        kind: "skill",
+        name: "휠윈드",
+        desc: "주변 적들을 회전하며 공격합니다.",
+        rarity: "rare",
+        tags: ["melee", "aoe"],
+        requires: [{ type: "has", id: "class_warrior", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+    {
+        id: "class_paladin",
+        kind: "trait",
+        name: "[성기사] 서약",
+        desc: "방어력과 신성력이 강화됩니다.",
+        rarity: "rare",
+        tags: ["class", "holy"],
+        requires: [{ type: "has", id: "stat_armor", minLv: 3 }],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+    {
+        id: "skill_hammer",
+        kind: "skill",
+        name: "축복받은 망치",
+        desc: "캐릭터 주변을 도는 망치를 소환합니다.",
+        rarity: "uncommon",
+        tags: ["holy", "projectile"],
+        requires: [{ type: "has", id: "class_paladin", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+    {
+        id: "trait_thorns",
+        kind: "trait",
+        name: "가시 오라 (Thorns)",
+        desc: "피격 시 적에게 피해를 돌려줍니다.",
+        rarity: "epic",
+        tags: ["defense", "holy"],
+        requires: [{ type: "has", id: "class_paladin", minLv: 2 }],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+
+    // =================================================================
+    // 5. [RPG 클래스 - 도적/암살자] (Speed, Crit 기반)
+    // =================================================================
+    {
+        id: "class_rogue",
+        kind: "trait",
+        name: "[도적] 그림자",
+        desc: "이동속도와 치명타 피해가 증가합니다.",
+        rarity: "rare",
+        tags: ["class", "rogue"],
+        requires: [
+            { type: "has", id: "stat_speed", minLv: 3 },
+            { type: "has", id: "stat_crit_rate", minLv: 1 }
+        ],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+    {
+        id: "skill_knife",
+        kind: "skill",
+        name: "단검 투척",
+        desc: "전방으로 빠르게 단검을 던집니다.",
+        rarity: "common",
+        tags: ["rogue", "projectile"],
+        requires: [{ type: "has", id: "class_rogue", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+    {
+        id: "skill_fan_of_knives",
+        kind: "skill",
+        name: "칼날 부채",
+        desc: "주변으로 수많은 칼날을 뿌립니다.",
+        rarity: "rare",
+        tags: ["rogue", "aoe"],
+        requires: [{ type: "has", id: "skill_knife", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+
+    // =================================================================
+    // 6. [원소 마법 - 화염/냉기/번개/대지] (Cooldown, Area 기반)
+    // =================================================================
+    
+    // --- 화염 (Fire) ---
+    {
+        id: "elem_fire",
+        kind: "trait",
+        name: "[화염] 마스터리",
+        desc: "화염 데미지가 증가합니다.",
+        rarity: "uncommon",
+        tags: ["element", "fire"],
+        requires: [{ type: "has", id: "stat_area", minLv: 1 }],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+    {
+        id: "skill_fireball",
+        kind: "skill",
+        name: "화염구",
+        desc: "폭발하는 불덩이를 발사합니다.",
+        rarity: "common",
+        tags: ["fire", "projectile"],
+        requires: [{ type: "has", id: "elem_fire", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+    {
+        id: "skill_meteor",
+        kind: "skill",
+        name: "메테오",
+        desc: "하늘에서 운석을 떨어뜨립니다.",
+        rarity: "epic",
+        tags: ["fire", "aoe"],
+        requires: [{ type: "has", id: "skill_fireball", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+
+    // --- 냉기 (Ice) ---
+    {
+        id: "elem_ice",
+        kind: "trait",
+        name: "[냉기] 마스터리",
+        desc: "적을 느리게 만드는 능력이 강화됩니다.",
+        rarity: "uncommon",
+        tags: ["element", "ice"],
+        requires: [{ type: "has", id: "stat_cooldown", minLv: 1 }],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+    {
+        id: "skill_frost_nova",
+        kind: "skill",
+        name: "프로스트 노바",
+        desc: "주변 적을 얼립니다.",
+        rarity: "uncommon",
+        tags: ["ice", "aoe"],
+        requires: [{ type: "has", id: "elem_ice", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+    {
+        id: "skill_blizzard",
+        kind: "skill",
+        name: "눈보라",
+        desc: "지속적인 광역 냉기 피해를 줍니다.",
+        rarity: "epic",
+        tags: ["ice", "aoe"],
+        requires: [{ type: "has", id: "skill_frost_nova", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+
+    // --- 번개 (Lightning) ---
+    {
+        id: "elem_lightning",
+        kind: "trait",
+        name: "[번개] 마스터리",
+        desc: "번개 피해와 시전 속도가 증가합니다.",
+        rarity: "uncommon",
+        tags: ["element", "lightning"],
+        requires: [
+            { type: "has", id: "stat_cooldown", minLv: 2 },
+            { type: "has", id: "stat_proj_speed", minLv: 2 }
+        ],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+    {
+        id: "skill_lightning_bolt",
+        kind: "skill",
+        name: "번개 화살",
+        desc: "가장 가까운 적에게 벼락을 내립니다.",
+        rarity: "common",
+        tags: ["lightning", "single"],
+        requires: [{ type: "has", id: "elem_lightning", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+    {
+        id: "skill_chain_lightning",
+        kind: "skill",
+        name: "체인 라이트닝",
+        desc: "적들을 타고 흐르는 전격을 발사합니다.",
+        rarity: "rare",
+        tags: ["lightning", "multi"],
+        requires: [{ type: "has", id: "skill_lightning_bolt", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+
+    // --- 대지/독 (Earth/Poison) ---
+    {
+        id: "elem_earth",
+        kind: "trait",
+        name: "[대지] 마스터리",
+        desc: "지속 피해와 체력이 증가합니다.",
+        rarity: "uncommon",
+        tags: ["element", "earth"],
+        requires: [{ type: "has", id: "stat_maxhp", minLv: 3 }],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+    {
+        id: "skill_garlic",
+        kind: "skill",
+        name: "마늘 (Garlic)",
+        desc: "주변 적에게 지속 피해를 입히고 저항력을 낮춥니다.",
+        rarity: "common",
+        tags: ["earth", "aoe"],
+        requires: [{ type: "has", id: "elem_earth", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+    {
+        id: "skill_earthquake",
+        kind: "skill",
+        name: "지진",
+        desc: "화면 전체를 흔들어 적을 밀어냅니다.",
+        rarity: "epic",
+        tags: ["earth", "aoe"],
+        requires: [{ type: "has", id: "skill_garlic", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+
+    // =================================================================
+    // 7. [특수 직업 - 네크로맨서/비전] (상위 조건)
+    // =================================================================
+    {
+        id: "class_necro",
+        kind: "trait",
+        name: "[강령술사] 금기",
+        desc: "소환수 공격력과 생명력 흡수가 증가합니다.",
+        rarity: "epic",
+        tags: ["class", "dark"],
+        requires: [
+            { type: "has", id: "stat_maxhp", minLv: 5 }, // 피통이 커야함
+            { type: "has", id: "stat_cooldown", minLv: 3 }
+        ],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+    {
+        id: "skill_skeleton",
+        kind: "skill",
+        name: "해골 소환",
+        desc: "아군으로 싸우는 해골을 소환합니다.",
+        rarity: "uncommon",
+        tags: ["dark", "summon"],
+        requires: [{ type: "has", id: "class_necro", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+    {
+        id: "class_arcane",
+        kind: "trait",
+        name: "[비전] 대마법사",
+        desc: "모든 마법의 효율이 극대화됩니다.",
+        rarity: "legendary",
+        tags: ["class", "arcane"],
+        // 화염과 냉기를 모두 섭렵해야 함
+        requires: [
+            { type: "has", id: "elem_fire", minLv: 1 },
+            { type: "has", id: "elem_ice", minLv: 1 },
+            { type: "has", id: "stat_cooldown", minLv: 5 }
+        ],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+    {
+        id: "skill_magic_missile",
+        kind: "skill",
+        name: "매직 미사일",
+        desc: "가장 가까운 적을 추적하는 마법탄",
+        rarity: "common",
+        tags: ["arcane", "projectile"],
+        requires: [{ type: "has", id: "class_arcane", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+
+    // =================================================================
+    // 8. [시스템/메타] (Reroll, Skip, Banish)
+    // =================================================================
+    {
+        id: "meta_reroll",
+        kind: "trait",
+        name: "운명 조작 (Reroll)",
+        desc: "레벨업 선택지를 변경할 수 있습니다.",
+        rarity: "rare",
+        tags: ["meta"],
+        requires: [{ type: "has", id: "stat_luck", minLv: 2 }],
+        cost: COST_5,
+        tech: MOCK_TECH
+    },
+    {
+        id: "meta_skip",
+        kind: "trait",
+        name: "회피 (Skip)",
+        desc: "선택지를 건너뛰고 경험치를 얻습니다.",
+        rarity: "rare",
+        tags: ["meta"],
+        requires: [{ type: "has", id: "meta_reroll", minLv: 1 }],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+    {
+        id: "meta_banish",
+        kind: "trait",
+        name: "봉인 (Banish)",
+        desc: "원하지 않는 아이템을 영구히 제외합니다.",
+        rarity: "epic",
+        tags: ["meta"],
+        requires: [{ type: "has", id: "meta_reroll", minLv: 2 }],
+        cost: COST_3,
+        tech: MOCK_TECH
+    },
+
+    // =================================================================
+    // 9. [궁극/저주] (End Game)
+    // =================================================================
+    {
+        id: "ultimate_amount",
+        kind: "trait",
+        name: "복제 (Duplicator)",
+        desc: "모든 무기의 투사체가 증가합니다. (최강 패시브)",
+        rarity: "legendary",
+        tags: ["ultimate"],
+        requires: [
+            { type: "has", id: "stat_might", minLv: 5 },
+            { type: "has", id: "stat_proj_speed", minLv: 3 },
+            { type: "has", id: "stat_cooldown", minLv: 5 }
+        ],
+        cost: COST_3, // 3단계까지
+        tech: MOCK_TECH
+    },
+    {
+        id: "ultimate_revival",
+        kind: "trait",
+        name: "불사조 (Revival)",
+        desc: "사망 시 부활합니다.",
+        rarity: "legendary",
+        tags: ["ultimate"],
+        requires: [
+            { type: "has", id: "stat_maxhp", minLv: 5 },
+            { type: "has", id: "stat_recovery", minLv: 5 }
+        ],
+        cost: COST_1,
+        tech: MOCK_TECH
+    },
+    {
+        id: "curse_torment",
+        kind: "trait",
+        name: "고행 (Curse)",
+        desc: "적들이 강력해지지만 보상이 증가합니다.",
+        rarity: "epic",
+        tags: ["curse"],
+        requires: [{ type: "has", id: "stat_greed", minLv: 5 }],
+        cost: COST_5,
+        tech: MOCK_TECH
+    },
+    {
+        id: "wpn_pentagram",
+        kind: "skill",
+        name: "오망성",
+        desc: "화면의 모든 적을 삭제합니다.",
+        rarity: "legendary",
+        tags: ["weapon", "curse"],
+        requires: [{ type: "has", id: "curse_torment", minLv: 1 }],
+        cost: COST_1,
+        tech: MOCK_TECH
     }
 ]
+
+

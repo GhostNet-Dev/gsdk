@@ -39,7 +39,6 @@ export class Projectile implements ILoop {
         private eventCtrl: IEventController,
         private game: THREE.Scene,
         private targetList: THREE.Object3D[],
-        private monDb: MonsterDb,
     ) {
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         eventCtrl.RegisterEventListener(EventTypes.Projectile, (opt: ProjectileMsg) => {
