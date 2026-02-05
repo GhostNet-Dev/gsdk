@@ -57,4 +57,7 @@ export class StatSystem {
 
     this.isDirty = false;
   }
+  getBaseStat(stat: StatKey): number {
+    return this.baseStats[stat] || 0;
+  }
 }

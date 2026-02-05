@@ -5,7 +5,6 @@ import { AttackIdleState, AttackState } from "./states/attackstate";
 import { BaseSpec } from "../battle/basespec";
 import { BuildingState, DeleteState, PickFruitState, PickFruitTreeState, PlantAPlantState, WarteringState } from "./states/farmstate";
 import { DeckState } from "./states/deckstate";
-import { IBuffItem } from "@Glibs/interface/ibuff";
 import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
 import IEventController, { IKeyCommand, ILoop } from "@Glibs/interface/ievent";
 import { KeyType } from "@Glibs/types/eventtypes";
@@ -359,9 +358,6 @@ export class PlayerCtrl implements ILoop, IActionUser {
         if (position.x == this.moveDirection.x) { this.moveDirection.x = 0 }
         if (position.y == this.moveDirection.y) { this.moveDirection.y = 0 }
         if (position.z == this.moveDirection.z) { this.moveDirection.z = 0 }
-    }
-    UpdateBuff(buff: IBuffItem[]) {
-        console.log(buff)
     }
     isObjectLookingAt(object: THREE.Object3D, targetPosition: THREE.Vector3, fov: number): boolean {
         // 1. 객체의 정면 방향 벡터를 구합니다.

@@ -6,6 +6,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "../battle/basespec";
 import { StatKey } from "@Glibs/types/stattypes";
 import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
+import { VirtualActorFactory } from "../battle/virtualactorfab";
 
 
 
@@ -71,7 +72,7 @@ export class ProjectileCtrl implements IActionUser {
         this.projectile.update(this.position)
     }
     attack() {
-        if (!this.live) return false
+        if (!this.live || !this.creatorSpec) return false
         if (true) {
             const obj = this.getClosestHit(this.prevPosition, this.position, 
                 this.targetList, this.attackDist)
@@ -79,7 +80,7 @@ export class ProjectileCtrl implements IActionUser {
                 const k = obj.target.name
                 const v = {
                     type: AttackType.NormalSwing,
-                    spec: [this.creatorSpec, this.baseSpec],
+                    spec: VirtualActorFactory.createFusionActor(this.baseSpec, [this.creatorSpec]),
                     damage: this.damage,
                     obj: obj.target
                 }

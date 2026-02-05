@@ -11,8 +11,6 @@ export const skillDefs = {
         type: "stun",
         levelRequirement: 0,
         level: "common",
-        stackable: false,
-        binding: true,
         icon: "💫",
         actions: [actionDefs.StunStars],
     },

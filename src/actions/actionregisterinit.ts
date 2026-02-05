@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ActionRegistry } from "./actionregistry"
-import { StatBoostAction } from "./itemactions/statboostact"
+import { StatBoostAction } from "./traitaction/statboostact"
 import { FireballAction } from "./skillactions/fireballact"
 import { MuzzleAction } from "./itemactions/muzzleact";
 import { EventController } from "@Glibs/systems/event/eventctrl";

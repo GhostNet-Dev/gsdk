@@ -35,7 +35,8 @@ export type Requirement =
 export interface TechTreeDefBase {
     id: TechId;
     // 동작 정책을 분기하는 상위 분류.
-    // 예) buff는 지속시간/스택 정책을 가질 수 있고, skill은 쿨다운/액티브 트리거를 가질 수 있음. trait는 주로 패시브 스탯 보정.
+    // 예) buff는 지속시간/스택 정책을 가질 수 있고, skill은 쿨다운/액티브 트리거를 가질 수 있음. 
+    // trait는 주로 패시브 스탯 보정.
     kind: TechTreeKind;
     name: string;
     desc?: string;

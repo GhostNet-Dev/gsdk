@@ -81,8 +81,8 @@ export class Monsters {
                 if (!z.live) return
                 if(opt.spec == undefined) throw new Error("unexpected value");
                 const damage = calculateCompositeDamage({
-                    source: opt.spec,
-                    destination: z.monCtrl.Spec,
+                    attacker: opt.spec,
+                    defender: z.monCtrl.Spec,
                 })
                 console.log(`calc damage: ${damage}, original damage: ${opt.damage}`)
 

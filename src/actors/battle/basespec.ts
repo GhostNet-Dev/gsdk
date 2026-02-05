@@ -11,6 +11,7 @@ import { StatFactory } from "./statfactory"
 import { calculateCompositeDamage, DamageContext, DamageResult } from "./damagecalc"
 import IEventController from "@Glibs/interface/ievent"
 import { EventTypes } from "@Glibs/types/globaltypes"
+import { DamageFormula } from "./damageformula"
 
 export class BaseSpec {
     // 레거시 호환성을 위한 프로퍼티 (필요 없다면 제거 가능)
@@ -44,6 +45,7 @@ export class BaseSpec {
     
     get Status() { return this.status }
     get Health() { return this.status.health }
+    get Owner() { return this.owner }
 
     constructor( 
         stats: Partial<Record<StatKey, number>>,
@@ -162,18 +164,14 @@ export class BaseSpec {
     // 내가 상대방을 공격할 때 호출
     AttackTarget(target: BaseSpec): DamageResult {
         const context: DamageContext = {
-            source: [this],
-            destination: target,
-            element: 'physical',
+            attacker: this,
+            defender: target,
+            type: 'physical', // 기본 평타는 물리로 가정
             skillMultiplier: this.skillMultiplier
         };
 
-        // damagecalc.ts의 로직을 사용하여 결과 산출
         const result = calculateCompositeDamage(context);
-
-        // 상대방에게 데미지 적용
         target.ReceiveCombatDamage(result);
-
         return result;
     }
 
@@ -302,4 +300,21 @@ export class BaseSpec {
         this.stats.removeModifierBySource(`item:${item.Id}`);
         this.stats.removeModifierBySource(`enchant:${item.Id}`);
     }
+    // [New] UI에 표시할 내 물리 공격력
+    get PhysicalAttackPower(): number {
+        return DamageFormula.getPhysicalAttack(this);
+    }
+
+    // [New] UI에 표시할 내 마법 공격력
+    get MagicAttackPower(): number {
+        return DamageFormula.getMagicAttack(this);
+    }
+    
+    // [New] 장비 비교를 위한 DPS
+    get DPS(): number {
+        const dps = DamageFormula.getDPS(this);
+        // 캐릭터 직업/주속성에 따라 리턴값 결정 (여기선 합산 예시)
+        return Math.max(dps.physical, dps.magic); 
+    }
+
 }

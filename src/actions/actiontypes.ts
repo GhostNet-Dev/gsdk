@@ -79,65 +79,11 @@ export interface IActionComponent {
 }
 
 export const actionDefs = {
-  MuzzleFlash: {
-    type: "muzzleFlash",
-    trigger: "onFire",
-    texture: "https://hons.ghostwebservice.com/assets/texture/particlepack/muzzle_02.png",
-    socket: "muzzlePoint",
-    size: 1,
-    duration: 0.1
-  },
-  Casing: {
-    type: "casing",
-    trigger: "onFire",
-    socket: "casingEjectionPoint",
-  },
-  Shaker: {
-    type: "shaker",
-    trigger: "onHit",
-  },
-  Fluffy: {
-    type: "fluffy",
-    trigger: "onActivate",
-  },
-  Swing: {
-    type: "swing",
-    trigger: "onUse",
-    socketA: "localTipAOffset",
-    socketB: "localTipBOffset",
-  },
-  StunStars: {
-    type: "stunstars",
-    trigger: "onActivate" as TriggerType,
-  },
-  DarkParticle: {
-    type: "darkparticle",
-    trigger: "onActivate",
-  },
-  FireFlame: {
-    type: "fireflame",
-    trigger: "onActivate",
-  },
-  GhostAura: {
-    type: "ghostaura",
-    trigger: "onActivate",
-  },
-  FireDefence: {
-    type: "firedefence",
-    trigger: "onActivate",
-  },
-  ElectricAura: {
-    type: "electricaura",
-    trigger: "onActivate",
-  },
-  ElectricDefence: {
-    type: "electricdefence",
-    trigger: "onActivate",
-  },
-  WaterDefence: {
-    type: "waterdefence",
-    trigger: "onActivate",
-  },
+
+  // =================================================================
+  // 1. [공용 스탯 - 공격] (이전 VS 트리 통합)
+  // =================================================================
+
   StatBoost: {
     type: "statBoost",
     trigger: "onBuffApply",
@@ -152,6 +98,91 @@ export const actionDefs = {
       { hp: 10, }
     ]
   },
+  AttackStatBoost: {
+    type: "attackStatBoost",
+    trigger: "onActivate",
+    levels: [
+      { attack: 3, },
+      { attack: 5, },
+      { attack: 10, }
+    ]
+  },
+  // =================================================================
+  // 1. Effector
+  // =================================================================
+  MuzzleFlash: { // 총열 불꽃 효과
+    type: "muzzleFlash",
+    trigger: "onFire",
+    texture: "https://hons.ghostwebservice.com/assets/texture/particlepack/muzzle_02.png",
+    socket: "muzzlePoint",
+    size: 1,
+    duration: 0.1
+  },
+  Casing: { // 탄피 배출
+    type: "casing",
+    trigger: "onFire",
+    socket: "casingEjectionPoint",
+  },
+  Shaker: { // 나무에 도끼 충격과 같은 강한 흔들림 효과를 적용합니다.
+    type: "shaker",
+    trigger: "onHit",
+  },
+  Fluffy: { // 나무에 바람에 흔들림 효과를 적용합니다.
+    type: "fluffy",
+    trigger: "onActivate",
+  },
+  Swing: { // 칼을 휘두를때 발생하는 효과
+    type: "swing",
+    trigger: "onUse",
+    socketA: "localTipAOffset",
+    socketB: "localTipBOffset",
+  },
+  StunStars: { // 머리 위에 별이 도는 효과
+    type: "stunstars",
+    trigger: "onActivate" as TriggerType,
+  },
+  DarkParticle: { // 어둠 덩어리가 배출되는 효과
+    type: "darkparticle",
+    trigger: "onActivate",
+  },
+  FireFlame: { // 물체에 불꽃 효과를 엊는다.
+    type: "fireflame",
+    trigger: "onActivate",
+  },
+  GhostAura: { // 물체에 유령효과를 엊는다.
+    type: "ghostaura",
+    trigger: "onActivate",
+  },
+  FireDefence: {
+    type: "firedefence",
+    trigger: "onActivate",
+  },
+  ElectricAura: { // 물체에 전기가 흐르는 효과를 엊는다. 
+    type: "electricaura",
+    trigger: "onActivate",
+  },
+  // =================================================================
+  // friendly
+  // =================================================================
+  ElectricDefence: {
+    type: "electricdefence",
+    trigger: "onActivate",
+  },
+  WaterDefence: {
+    type: "waterdefence",
+    trigger: "onActivate",
+  },
+  // =================================================================
+  // Skill Effector
+  // =================================================================
+  Knockback: {
+    type: "knockback",
+    trigger: "onHit",
+    force: 1.5
+  },
+  // =================================================================
+  // buff
+  // =================================================================
   Regen: {
     type: "regen",
     trigger: "onBuffTick",
@@ -163,11 +194,9 @@ export const actionDefs = {
     chance: 0.3,
     dps: 5
   },
-  Knockback: {
-    type: "knockback",
-    trigger: "onHit",
-    force: 1.5
-  },
+  // =================================================================
+  // Magic
+  // =================================================================
   FireBall: {
     id: "fireball",
     name: "Fireball",
