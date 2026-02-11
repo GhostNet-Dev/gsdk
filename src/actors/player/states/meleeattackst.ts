@@ -8,7 +8,7 @@ import { IGPhysic } from "@Glibs/interface/igphysics";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { Bind } from "@Glibs/types/assettypes";
-import { ActionType } from "../playertypes";
+import { ActionType, AttackOption } from "../playertypes";
 import { IItem } from "@Glibs/interface/iinven";
 import { Item } from "@Glibs/inventory/items/item";
 import { AttackState } from "./attackstate";
@@ -48,10 +48,10 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
         const closestTarget = this.autoDirection()
         if (closestTarget == null) return
         // 💥 4. 공격 메시지 전송
-        const msg = {
+        const msg: AttackOption = {
             type: AttackType.NormalSwing,
             damage: this.baseSpec.Damage,
-            spec: [this.baseSpec],
+            spec: this.baseSpec,
             obj: closestTarget
         };
 
@@ -71,12 +71,12 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
             intersects.forEach((obj) => {
                 if (obj.distance> this.attackDist) return false
                 const mons = msgs.get(obj.object.name)
-                const msg = {
+                const msg: AttackOption = {
                     type: AttackType.NormalSwing,
                     damage: this.baseSpec.Damage,
-                    spec: [this.baseSpec],
+                    spec: this.baseSpec,
                     obj: obj.object
-                }
+                } 
                 if (mons == undefined) {
                     msgs.set(obj.object.name, [msg])
                 } else {

@@ -38,7 +38,7 @@ export class SparkVfx implements IEffect, ILoop {
     });
 
     this.obj.add(this.sparks)
-    eventCtrl.SendEventMessage(EventTypes.SetGlow, this.sparks)
+    // eventCtrl.SendEventMessage(EventTypes.SetGlow, this.sparks)
     eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
     scene.add(this.obj)
   }
@@ -111,7 +111,7 @@ export interface SpawnOptions {
 
 export const defaultSparkParams: SparkParams = {
   // spawn
-  count: 260,
+  count: 300,
   power: 8.0,
   chunkRatio: 0.18,
   // emission
@@ -120,7 +120,7 @@ export const defaultSparkParams: SparkParams = {
   coneYawDeg: 0,
   conePitchDeg: 0,
   // hot physics
-  gravityY: -12.0,
+  gravityY: -15.0,
   dragHot: 0.985,
   bounce: 0.45,
   // convert to drift
@@ -138,7 +138,7 @@ export const defaultSparkParams: SparkParams = {
   driftDuration: 0.9,
   ashWindow: 0.12,
   // look
-  spriteScale: 0.30,
+  spriteScale: 0.80,
   lengthMulHot: 1.0,
   lengthMulDrift: 0.45,
 };

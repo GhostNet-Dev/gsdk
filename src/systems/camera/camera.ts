@@ -37,10 +37,10 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
 
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         eventCtrl.SendEventMessage(EventTypes.RegisterViewer, this)
-        eventCtrl.RegisterEventListener(EventTypes.CtrlObj, (obj: IPhysicsObject) => {
+        eventCtrl.RegisterEventListener(EventTypes.CtrlObj, (obj: IPhysicsObject, mode = CameraMode.ThirdFollowPerson) => {
             this.lookTarget = true
             this.player = obj
-            this.setMode(CameraMode.ThirdPerson)
+            this.setMode(mode)
         })
         eventCtrl.RegisterEventListener(EventTypes.CtrlObjOff, () => {
             this.lookTarget = false

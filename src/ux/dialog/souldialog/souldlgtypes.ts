@@ -17,6 +17,7 @@ export interface DialogDescriptor<TProps = any> {
     title?: string; 
     icon?: string;
     confetti?: 'blast' | 'rain';
+    dismissible?: boolean;
   };
 }
 
@@ -43,7 +44,8 @@ export interface RendererShell {
 }
 
 export type RendererAPI = {
-  openShell(opts: { title: string; wide?: boolean; icon?: string }): RendererShell;
+  // [수정] 여기에 dismissible?: boolean 을 추가합니다.
+  openShell(opts: { title: string; wide?: boolean; icon?: string; dismissible?: boolean }): RendererShell;
   closeShell(shell: RendererShell): void;
   setActions(shell: RendererShell, actions: ActionSpec[]): void;
   setTheme(name: string): void;

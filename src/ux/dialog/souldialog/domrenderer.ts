@@ -21,7 +21,8 @@ export class DomRenderer implements RendererAPI {
     this.styles.ensureGlobal(document, THEMES[this.themeKey], 'theme:root');
   }
 
-  openShell({ title, wide }: { title: string; wide?: boolean; icon?: string }): RendererShell {
+  // [수정] openShell 서명에 dismissible 옵션 추가
+  openShell({ title, wide, dismissible }: { title: string; wide?: boolean; icon?: string; dismissible?: boolean }): RendererShell {
     const host = document.createElement('div'); host.className = 'gnx-shell-host';
     this.root.appendChild(host);
 
@@ -35,6 +36,10 @@ export class DomRenderer implements RendererAPI {
     this.applyThemeTo(sr);
 
     const overlay = createEl(sr, 'div'); overlay.className = 'gnx-overlay';
+    
+    // [수정] 외부 클릭이 불가할 때 시각적 피드백(예: cursor: not-allowed) 처리를 위해 속성 추가
+    overlay.setAttribute('data-dismissible', String(dismissible ?? true));
+    
     const dlg = createEl(sr, 'div'); dlg.className = 'gnx-dialog' + (wide ? ' gnx-dialog--wide' : '');
     
     // 1. 헤더 생성
@@ -104,11 +109,8 @@ export class DomRenderer implements RendererAPI {
 
     // 포커스/ESC/바깥클릭 등 초기화
     setTimeout(() => overlay.setAttribute('data-open', 'true'), 0);
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        // DialogManager.close() 호출 필요 (여기서는 닫기 로직 없음)
-      }
-    });
+    
+    // [수정] 원본에 있던 overlay.addEventListener는 dlgmanager.ts에서 전담하여 처리하도록 제거했습니다.
 
     return shellObj;
   }

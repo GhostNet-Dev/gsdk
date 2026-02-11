@@ -1,12 +1,3 @@
-// ComboMeleeState.ts — Timer + Catch-up + Re-ChangeAction Resync 보조 버전
-//  - 총 재생시간(초) = attackSpeed (ChangeAction(anim, attackSpeed))
-//  - 스윙/히트 setTimeout 예약 + Update catch-up 즉시 실행
-//  - 드리프트 감지 → (가능시) 애니메이션 소프트 시크 / (초반) 하드 리셋(ChangeAction 재호출)
-//  - 입력창 소비 정책: "히트 이후 + 리커버리" 유지
-//  - 수정: 콤보 입력 시 플래그만 설정, 애니메이션 종료 시점에 다음 스텝 전환
-//  - 수정: 콤보 스텝 진행 시 가속 (COMBO_STEP_SPEED_INCREASE)
-//  - 수정: 콤보 체인/스텝별 애니메이션 재생 비율(playThroughRatio) 적용 (스텝 우선)
-
 import * as THREE from "three";
 import { IPlayerAction } from "./playerstate";
 import { Player } from "../player";
@@ -24,7 +15,7 @@ import { KeyType } from "@Glibs/types/eventtypes";
 import { GlobalEffectType } from "@Glibs/types/effecttypes";
 
 /* -------------------------------------------------------------------------- */
-/* Types                                   */
+/* Types                                                                      */
 /* -------------------------------------------------------------------------- */
 
 type ComboPhase = "idle" | "windup" | "hit" | "recovery";
@@ -45,7 +36,7 @@ interface ComboStep {
     recoveryT?: SecOrFrac;
     inputWindowT?: [SecOrFrac, SecOrFrac];
 
-    playThroughRatio?: number; // <-- [신규] 스텝별 애니메이션 재생 비율 (0.0 ~ 1.0)
+    playThroughRatio?: number; // 스텝별 애니메이션 재생 비율 (0.0 ~ 1.0)
 
     damageMul?: number;
     rangeMul?: number;
@@ -67,7 +58,7 @@ interface ComboChain {
     inputBufferSec?: number;
     hitstopSec?: number;
     triggerPolicy?: "afterHitOnly" | "anytimeRecovery";
-    playThroughRatio?: number; // <-- 체인 기본 재생 비율 (0.0 ~ 1.0)
+    playThroughRatio?: number; // 체인 기본 재생 비율 (0.0 ~ 1.0)
 }
 
 interface ResolvedTimes {
@@ -80,15 +71,15 @@ interface ResolvedTimes {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Chain Presets                               */
+/* Chain Presets                                                              */
 /* -------------------------------------------------------------------------- */
 
 const Unarmed3: ComboChain = {
     name: "Unarmed-3",
     inputBufferSec: 0.25,
-    hitstopSec: 0.04,
+    hitstopSec: 0.08, // 타격감을 위해 조금 늘림
     triggerPolicy: "afterHitOnly",
-    playThroughRatio: 0.85, // 체인 기본값
+    playThroughRatio: 0.85,
     steps: [
         {
             anim: ActionType.Punch,
@@ -106,13 +97,12 @@ const Unarmed3: ComboChain = {
 const OneHandSword3: ComboChain = {
     name: "Sword-3",
     inputBufferSec: 0.28,
-    hitstopSec: 0.05,
+    hitstopSec: 0.1, // 타격감을 위해 조금 늘림
     triggerPolicy: "afterHitOnly",
-    playThroughRatio: 0.85, // <-- 체인 기본값 (85%)
+    playThroughRatio: 0.85,
     steps: [
         {
             anim: ActionType.TwoHandSword1,
-            // playThroughRatio: 0.8, // (스텝 0만 80%로 개별 설정)
             windupT: { sec: 0.14 }, hitT: { sec: 0.20 }, recoveryT: { sec: 0.22 },
             inputWindowT: [{ sec: 0.18 }, { sec: 0.34 }],
             damageMul: 1.2, rangeMul: 1.1,
@@ -121,7 +111,6 @@ const OneHandSword3: ComboChain = {
         },
         {
             anim: ActionType.TwoHandSword2,
-            // (설정 안함) -> 체인 기본값 0.85 사용
             windupT: { sec: 0.12 }, hitT: { sec: 0.18 }, recoveryT: { sec: 0.24 },
             inputWindowT: [{ sec: 0.18 }, { sec: 0.34 }],
             damageMul: 1.3, rangeMul: 1.15,
@@ -130,7 +119,7 @@ const OneHandSword3: ComboChain = {
         },
         {
             anim: ActionType.TwoHandSwordFinish,
-            playThroughRatio: 1.0, // <-- [신규] 피니시 스텝은 100% 재생 (기본값 덮어쓰기)
+            playThroughRatio: 1.0,
             windupT: { sec: 0.16 }, hitT: { sec: 0.24 }, recoveryT: { sec: 0.30 },
             inputWindowT: [{ sec: 0.26 }, { sec: 0.40 }],
             damageMul: 1.6, rangeMul: 1.25,
@@ -140,30 +129,19 @@ const OneHandSword3: ComboChain = {
 };
 
 /* -------------------------------------------------------------------------- */
-/* Tunables: 지연/드리프트/리셋 정책                        */
+/* Tunables                                                                   */
 /* -------------------------------------------------------------------------- */
 
-// 사운드 지연이 없다면 0 유지
 const AUDIO_LAG_COMP_SEC = 0.00;
-
-// catch-up 즉시 실행 허용 오차(초)
 const CATCHUP_EPSILON_SEC = 0.001;
-
-// 드리프트 임계치(초) — 이보다 크면 보조 동기화 시도
-const RESYNC_SOFT_SEEK_SEC = 0.020;  // 이 이상 어긋나면 애니메이션 seek 시도
-const RESYNC_HARD_RESET_SEC = 0.060; // 이 이상 + 스텝 초반이면 ChangeAction 재호출
-
-// 하드 리셋 허용 구간(스텝 시작 후 몇 초 이내만 허용 — 중/후반 리셋은 시각적으로 거슬림)
+const RESYNC_SOFT_SEEK_SEC = 0.020;
+const RESYNC_HARD_RESET_SEC = 0.060;
 const RESYNC_HARD_WINDOW_SEC = 0.20;
-
-// 디버그 로그 on/off
 const DEBUG_SYNC = false;
-
-// 콤보 스텝당 속도 증가량 (0.5 = 스텝 2에서 2배속)
 const COMBO_STEP_SPEED_INCREASE = 0.25;
 
 /* -------------------------------------------------------------------------- */
-/* ComboMeleeState                              */
+/* ComboMeleeState                                                            */
 /* -------------------------------------------------------------------------- */
 
 export class ComboMeleeState extends AttackState implements IPlayerAction {
@@ -176,7 +154,7 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
     private hitstopLeft = 0;
     private comboWindowOpen = false;
     private nextStepQueued = false;
-    private currentPlayThroughRatio = 1.0; // <-- [수정] 현재 스텝의 재생 비율
+    private currentPlayThroughRatio = 1.0;
 
     // 입력 버퍼/엣지
     private prevAttackPressed = false;
@@ -201,6 +179,10 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
     private swingTimerFired = false;
     private hitTimerFired = false;
     private autoAttack = false;
+
+    // [New] 타격감 개선용 변수
+    private readonly STEP_IN_SPEED = 6.0; // 전진 속도
+    private readonly STEP_IN_DURATION_RATIO = 0.4; // Windup 초반 몇% 동안 전진할지
 
     constructor(
         playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic,
@@ -273,7 +255,7 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         );
     }
 
-    // 충돌/대미지 처리
+    // 충돌/대미지 처리 + [개선] 히트스톱 설정
     private doHit() {
         const dmgMul = this.currentStep.damageMul ?? 1;
         const rangeMul = this.currentStep.rangeMul ?? 1;
@@ -286,13 +268,15 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         const hits = this.raycast.intersectObjects(this.playerCtrl.targets);
         let anyHit = false;
 
+        // 히트 이펙트 위치 저장용
+        let hitPoint: THREE.Vector3 | null = null;
+        let hitNormal = new THREE.Vector3(0, 1, 0);
+
         if (hits.length > 0 && hits[0].distance < baseRange) {
-            const hit = hits[0]
-            const faceNormal = hit.face?.normal.clone() ?? new THREE.Vector3(0, 1, 0);
-            // InstancedMesh면 instanceMatrix까지 고려
-            const normalMatrix = new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld);
-            const impactNormal = faceNormal.applyMatrix3(normalMatrix).normalize();
-    
+            const hit = hits[0];
+            hitPoint = hit.point;
+            if (hit.face) hitNormal = hit.face.normal;
+
             const buckets = new Map<string, any[]>();
             for (const h of hits) {
                 if (h.distance > baseRange) continue;
@@ -300,7 +284,7 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
                 arr.push({
                     type: AttackType.NormalSwing,
                     damage: baseDamage,
-                    spec: [this.baseSpec],
+                    spec: this.baseSpec,
                     obj: h.object
                 });
                 buckets.set(h.object.name, arr);
@@ -308,16 +292,27 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
             buckets.forEach((v, k) => {
                 this.keytimeout.push(setTimeout(() => {
                     const particleCount = (this.stepIndex == this.chain.steps.length - 1) ? 40 : 20;
-                    this.eventCtrl.SendEventMessage(EventTypes.GlobalEffect, GlobalEffectType.SparkEshSystem, hit.point, impactNormal, { count: particleCount })
+                    if (hitPoint) {
+                        this.eventCtrl.SendEventMessage(EventTypes.GlobalEffect, GlobalEffectType.SparkEshSystem, hitPoint, hitNormal, { count: particleCount })
+                    }
                     this.eventCtrl.SendEventMessage(EventTypes.Attack + k, v);
                 }, this.attackSpeed * 1000 * 0.4))
             });
             anyHit = buckets.size > 0;
         }
 
-        if (anyHit && !this.impactSfxPlayed) {
-            this.playSfxOnce(this.currentStep.impactSfx ?? this.currentStep.sfx);
-            this.impactSfxPlayed = true;
+        // [타격감 개선] 히트 시 처리
+        if (anyHit) {
+            // 1. 사운드
+            if (!this.impactSfxPlayed) {
+                this.playSfxOnce(this.currentStep.impactSfx ?? this.currentStep.sfx);
+                this.impactSfxPlayed = true;
+            }
+
+            // 2. 비주얼 히트 스톱 설정 (막타는 조금 더 길게)
+            const extraStop = (this.stepIndex === this.chain.steps.length - 1) ? 0.08 : 0;
+            this.hitstopLeft = this.hitstopSec + extraStop;
+
         } else if (!anyHit && this.currentStep.missSfx) {
             this.playSfxOnce(this.currentStep.missSfx);
         }
@@ -326,14 +321,19 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
     private forceDoHit() {
         this.doHit();
         this.phase = "recovery";
-        this.phaseTime = 0;
-        this.hitstopLeft = this.hitstopSec;
+        // 타격 판정 직후에는 리커버리 진입
+        // phaseTime 리셋하지 않고 계속 진행 (애니메이션 동기화 유지)
+        // 단, 로직상으로는 recovery 단계로 인식
+        // this.phaseTime = 0; // <-- 이거 0으로 하면 애니메이션 튐. wallTime과 동기화 유지
+        
+        // hitstopLeft는 doHit 내부에서 설정됨 (히트 성공 시)
+        // 히트 실패 시에는 hitstopLeft가 0이어야 함
     }
 
     private tryQueueNextIfBuffered(nowSec: number): boolean {
         if (this.phase !== "recovery") return false;
         if (!this.comboWindowOpen) return false;
-        if (this.nextStepQueued) return true; // 이미 큐에 있음
+        if (this.nextStepQueued) return true;
 
         if (!this.tryConsumeBufferedInput(nowSec)) return false;
 
@@ -343,7 +343,6 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
 
     public onAnimationEvent(evtName: string) {
         if (evtName === "Hit") {
-            // 시각 프레임 = 임팩트/판정(타이머 중복 방지)
             if (!this.hitTimerFired) this.clearHitTimer();
             if (!this.impactSfxPlayed) {
                 this.playSfxOnce(this.currentStep.impactSfx ?? this.currentStep.sfx);
@@ -417,16 +416,13 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         return performance.now() / 1000.0 - this.stepStartWallSec;
     }
 
-    // 플레이어가 애니메이션 시간을 설정할 수 있으면 사용
     private trySeekAnimation(sec: number): boolean {
         try {
-            // 우선순위: 플레이어 제공 헬퍼
             const p: any = this.player as any;
             if (typeof p.seekActionTime === "function") {
                 p.seekActionTime(sec);
                 return true;
             }
-            // 핸들에 직접 접근
             const handle = p.getCurrentActionHandle?.();
             if (handle) {
                 if (typeof handle.setTime === "function") {
@@ -436,7 +432,6 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
                 if ("time" in handle) {
                     handle.time = sec;
                     if (typeof handle.paused === "boolean") handle.paused = false;
-                    // mixer 즉시 반영용 헬퍼가 있다면 호출
                     if (typeof p.updateMixer === "function") p.updateMixer(0);
                     return true;
                 }
@@ -447,14 +442,15 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         return false;
     }
 
-    // 스텝 재시작(처음부터) — ChangeAction 재호출 + 타이머/상태 리셋
     private hardRestartCurrentStep() {
         if (DEBUG_SYNC) console.log("[ComboSync] hard restart step", this.stepIndex);
         this.startStep(this.stepIndex);
     }
 
-    // 드리프트 감지/보정: Update에서 주기적으로 호출
     private maybeResyncByDrift(nowPhaseSec: number) {
+        // 히트스톱 중에는 싱크 맞추지 않음
+        if (this.hitstopLeft > 0) return;
+
         const wallNow = this.wallNowSec;
         const drift = Math.abs(nowPhaseSec - wallNow);
 
@@ -463,21 +459,18 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
             console.log(`[ComboSync] now=${nowPhaseSec.toFixed(3)} wall=${wallNow.toFixed(3)} drift=${drift.toFixed(3)}`);
         }
 
-        if (drift < RESYNC_SOFT_SEEK_SEC) return; // 미세 오차 무시
+        if (drift < RESYNC_SOFT_SEEK_SEC) return;
 
-        // 소프트 시크 먼저 시도(애니 API가 있으면 부드럽게 맞춤)
         if (this.trySeekAnimation(wallNow)) {
-            this.phaseTime = wallNow; // 내부 시간도 함께 보정
+            this.phaseTime = wallNow;
             return;
         }
 
-        // 소프트 시크가 불가하고, 스텝 초반이며 드리프트가 크면 하드 리셋
         if (drift >= RESYNC_HARD_RESET_SEC && wallNow <= RESYNC_HARD_WINDOW_SEC) {
             this.hardRestartCurrentStep();
             return;
         }
 
-        // 그 외: 내부 시간만 벽시계에 맞춰 보정(비주얼은 다음 프레임에서 점진적으로 수렴)
         this.phaseTime = wallNow;
     }
 
@@ -487,7 +480,6 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         this.chain = this.pickChain();
         this.inputBufferSec = this.chain.inputBufferSec ?? 0.25;
         this.hitstopSec = this.chain.hitstopSec ?? 0.04;
-        // this.playThroughRatio = this.chain.playThroughRatio ?? 1.0; // <-- [제거]
 
         this.attackProcess = false;
         this.attackDist = this.baseSpec.AttackRange;
@@ -504,20 +496,20 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         this.stepIndex = i;
         this.currentStep = this.chain.steps[i];
 
-        // [수정] 스텝별 playThroughRatio 결정 (스텝 > 체인 > 1.0)
         this.currentPlayThroughRatio = this.currentStep.playThroughRatio
             ?? this.chain.playThroughRatio
             ?? 1.0;
 
-        // 콤보 스텝에 따라 attackSpeed 가속
+        // 콤보 가속
         const baseSpeed = this.baseSpec.AttackSpeed;
         const speedMultiplier = 1.0 + (this.stepIndex * COMBO_STEP_SPEED_INCREASE);
-        this.attackSpeed = baseSpeed / speedMultiplier; // 속도가 빨라지므로 총 시간(attackSpeed)은 줄어듦
+        this.attackSpeed = baseSpeed / speedMultiplier;
 
-        // 애니메이션 시작(처음부터, 총 길이=계산된 attackSpeed)
+        // 애니메이션 시작
         this.player.ChangeAction(this.currentStep.anim, this.attackSpeed);
+        // ChangeAction이 timeScale을 기본 세팅하므로, Update에서 리듬감을 위해 조절함
 
-        // 타이밍 해석(절대초)
+        // 타이밍 해석
         const s = this.currentStep;
         const windupSec = s.windupT ? this.resolveSec(s.windupT, s.windup ?? 0) : (s.windup ?? 0);
         const hitSec = s.hitT ? this.resolveSec(s.hitT, s.hitTime ?? Math.max(0, windupSec + 0.06))
@@ -584,8 +576,55 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         if (d) { this.clearStepTimers(); return d; }
         if (!this.clock) return this;
 
+        // [개선] 히트 스톱 (시각적 정지) 처리
+        if (this.hitstopLeft > 0) {
+            const deltaStop = this.clock.getDelta(); // 시간은 흐르게 하여 델타 소비
+            this.hitstopLeft = Math.max(0, this.hitstopLeft - deltaStop);
+            // 애니메이션 속도를 0으로 만들어 멈춤 효과
+            if (this.player.currentAni) this.player.currentAni.timeScale = 0;
+            return this;
+        }
+
+        // 정상 흐름
         const dt = this.clock.getDelta();
         this.phaseTime += dt;
+
+        // [개선] 리듬감(Easing) 및 스텝 인(전진)
+        if (this.player.currentAni && this.player.currentClip) {
+            // 기본 timeScale (duration 기반 역산)
+            const baseTimeScale = this.player.currentClip.duration / this.attackSpeed;
+            let rhythmFactor = 1.0;
+
+            // Windup: 힘을 모으는 구간
+            if (this.phase === "windup") {
+                const windupTotal = this.resolved.windupSec;
+                const progress = this.phaseTime / (windupTotal || 0.1);
+
+                // 1. 스텝 인 (전진): Windup 초반에만 이동
+                if (progress < this.STEP_IN_DURATION_RATIO) {
+                    const forward = new THREE.Vector3();
+                    this.player.Meshs.getWorldDirection(forward);
+                    forward.y = 0;
+                    forward.normalize();
+                    // gphysic이 있다면 충돌체크 권장, 여기선 단순 이동
+                    this.player.Pos.add(forward.multiplyScalar(this.STEP_IN_SPEED * dt));
+                }
+
+                // 2. 가변 속도: 느리게 시작 -> 타격 직전 가속
+                if (progress < 0.6) {
+                    rhythmFactor = 0.6; // 느림 (무게감)
+                } else {
+                    rhythmFactor = 2.0; // 빠름 (채찍 효과)
+                }
+            } else if (this.phase === "hit") {
+                rhythmFactor = 1.2; // 타격 구간 통과
+            } else {
+                rhythmFactor = 1.0; // Recovery
+            }
+
+            this.player.currentAni.timeScale = baseTimeScale * rhythmFactor;
+        }
+
 
         if (this.autoAttack && !this.detectEnermy) {
             this.clearStepTimers();
@@ -595,13 +634,7 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         const now = this.phaseTime;
         this.pollAttackEdgeAndBuffer(now);
 
-        // 히트스톱
-        if (this.hitstopLeft > 0) {
-            this.hitstopLeft = Math.max(0, this.hitstopLeft - dt);
-            return this;
-        }
-
-        // 1) 프레임 지연 catch-up — 이미 시점을 지나쳤다면 즉시 실행
+        // 타이머 catch-up
         const swingAtSec = Math.max(0, this.resolved.hitSec - this.resolved.swingLeadSec - AUDIO_LAG_COMP_SEC);
         if (!this.swingSfxPlayed && !this.swingTimerFired && now + CATCHUP_EPSILON_SEC >= swingAtSec && this.phase === "windup") {
             this.clearSwingTimer();
@@ -614,43 +647,35 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
             this.hitTimerFired = true;
         }
 
-        // 2) 드리프트 감지/보조 동기화(소프트 시크/하드 리셋)
         this.maybeResyncByDrift(now);
 
-        // 3) 상태 진행(종료는 총 길이 기반)
+        // 상태 진행
         if (this.phase === "recovery") {
             this.maybeOpenInputWindowByTime(this.phaseTime);
-            
-            this.tryQueueNextIfBuffered(this.phaseTime); // 플래그만 설정
 
-            // [수정] 종료 시간을 currentPlayThroughRatio 기준으로 계산
+            this.tryQueueNextIfBuffered(this.phaseTime);
+
             const endT = this.totalDurSec * this.currentPlayThroughRatio;
-            
+
             if (this.phaseTime >= endT) {
                 this.clearStepTimers();
 
                 const hasNext = this.currentStep.next != null;
-                
-                // 콤보창 내 입력(nextStepQueued) 또는 종료 직전 버퍼 입력(tryConsume) 확인
                 const buffered = this.nextStepQueued || this.tryConsumeBufferedInput(this.phaseTime);
 
-                // 버퍼가 있고 다음 스텝이 있으면 정상 진행
                 if (buffered && hasNext) {
                     this.startStep(this.currentStep.next!);
                     return this;
                 }
 
-                // ★ 마지막 스텝 종료 시: (버퍼가 있을 때만) 1단계로 되돌리기
                 const isLast = !hasNext;
                 const hasMulti = this.chain.steps.length > 1;
-                
-                // 입력이 있을 때만 1단계로 루프
-                if (buffered && isLast && hasMulti) { 
+
+                if (buffered && isLast && hasMulti) {
                     this.startStep(0);
                     return this;
                 }
 
-                // 그 외엔(입력이 없었으면) 종료 → Idle
                 this.Uninit();
                 return this.playerCtrl.IdleSt;
             }
@@ -660,6 +685,9 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
     }
 
     Uninit(): void {
+        // 애니메이션 속도 복구
+        if (this.player.currentAni) this.player.currentAni.timeScale = 1.0;
+        
         this.clearStepTimers();
         this.inputQueue.length = 0;
         this.comboWindowOpen = false;

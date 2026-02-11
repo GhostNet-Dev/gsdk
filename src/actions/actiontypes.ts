@@ -137,6 +137,12 @@ export const actionDefs = {
     socketA: "localTipAOffset",
     socketB: "localTipBOffset",
   },
+  SwingArc: { // 칼을 휘두를때 발생하는 효과
+    type: "swingarc",
+    trigger: "onUse",
+    socketA: "localTipAOffset",
+    socketB: "localTipBOffset",
+  },
   StunStars: { // 머리 위에 별이 도는 효과
     type: "stunstars",
     trigger: "onActivate" as TriggerType,

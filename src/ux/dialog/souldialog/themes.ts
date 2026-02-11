@@ -62,6 +62,7 @@ export const SHELL_BASE = css`
     transform:translateY(10px);
     opacity:.0;
     transition:transform .2s ease, opacity .2s ease;
+    cursor: default; /* 다이얼로그 자체는 기본 커서 */
   }
 
   /* 컨텐츠 뒤쪽에서 블러 + 배경색 칠함 */
@@ -81,6 +82,9 @@ export const SHELL_BASE = css`
   .gnx-overlay[data-open="true"] .gnx-dialog{
     transform:translateY(0);
     opacity:1;
+  }
+  .gnx-overlay[data-dismissible="false"] {
+    cursor: not-allowed;
   }
 
   .gnx-dialog__header{
@@ -217,6 +221,7 @@ export const SHELL_BASE = css`
   .gnx-rar-common{ color:var(--gnx-rar-common); box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--gnx-rar-common) 60%, transparent); }
   .gnx-rar-rare{   color:var(--gnx-rar-rare);   box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--gnx-rar-rare)    60%, transparent); }
   .gnx-rar-epic{   color:var(--gnx-rar-epic);   box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--gnx-rar-epic)    60%, transparent); }
+  
 `;
 
 /* -------------------------------------------------------------------------- */

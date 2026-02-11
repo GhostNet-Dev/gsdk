@@ -30,15 +30,29 @@ export class DialogManager {
     const id = `dlg_${++IDSEQ}`;
     const view = this.registry.create<T>(type);
     const title = options?.title ?? this.titleFor(type);
-    const shell = this.renderer.openShell({ title, wide: !!options?.wide, icon: options?.icon });
+    
+    // [수정] 외부 클릭 시 닫기 가능 여부 확인 (기본값 true)
+    const dismissible = options?.dismissible !== false;
+    
+    const shell = this.renderer.openShell({ 
+        title, 
+        wide: !!options?.wide, 
+        icon: options?.icon,
+        dismissible // 렌더러로 옵션 전달
+    });
+    
     (shell.overlay as HTMLElement).setAttribute('data-open','true');
+    
+    // [수정] 오버레이 클릭 시 dismissible 옵션에 따라 닫기 처리
     shell.overlay.addEventListener('click', (e) => {
       if (e.target === shell.overlay) {
-        // 기본: 바깥 클릭 닫기 → DialogManager.close를 통해 닫아야 하므로 noop
-        this.close()
+        if (dismissible) {
+          this.close(id);
+        }
       }
-    })
-// Confetti 로직 확장
+    });
+
+    // Confetti 로직 확장
     if (options?.confetti) {
       if (options.confetti === 'rain') {
         // 지속 효과 시작 + 현재 다이얼로그 ID 기록
@@ -49,6 +63,7 @@ export class DialogManager {
         this.confetti.blast(150);
       }
     }    
+    
     const desc: DialogDescriptor = { id, type, props, options };
     this.opened.push({ desc, view, shell });
 
