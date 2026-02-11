@@ -32,7 +32,7 @@ export const itemDefs = {
     binding: true, autoAttack: true,
     sound: SoundType.BatAttack1,
     stats: { "attack": 3, "damageMin": 3, "damageMax": 5, "speed": 1, "attackRange": 2 },
-    actions: [actionDefs.FireFlame],
+    actions: [actionDefs.FireFlame, actionDefs.SwingArc],
     weight: 1,
   },
   Sword: {

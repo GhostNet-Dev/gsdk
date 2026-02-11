@@ -36,12 +36,14 @@ export default class SwingArcEffectAction implements IActionComponent, ILoop {
                 coreColor: 0x00ffff,
                 bodyColor: 0x0088ff
             });
+        this.scene.add((this.trail))
         this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         console.log("Swing Effect Activated")
     }
     deactivate(target: IActionUser, context?: ActionContext | undefined): void {
         this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
         console.log("Swing Effect Deactivated")
+        if (this.trail) this.scene.remove((this.trail))
     }
     clock = new THREE.Clock()
     update(delta: number): void {
