@@ -12,33 +12,36 @@ export default class SwingArcEffectAction implements IActionComponent, ILoop {
         private eventCtrl: IEventController,
         private scene: THREE.Scene,
         private socketA: string = "localTipAOffset", // 기본값
-        private socketB: string = "localTipAOffset", // 기본값
+        private socketB: string = "localTipBOffset", // 기본값
     ) { }
 
     apply(target: any) {
     }
     trigger(target: IActionUser, triggerType: TriggerType, context?: ActionContext | undefined): void {
+        if (!this.trail) return
         if(triggerType === "onUse") {
-            this.trail!.start()
+            this.trail.start()
 
         } else if(triggerType === "onUnuse") {
-            this.trail!.stop()
+            this.trail.stop()
         }
     }
     activate(target: IActionUser, context?: ActionContext | undefined): void {
         const obj = target.objs
         if (!obj) return
-        const tipA = obj.getObjectByName(this.socketA)!
-        const tipB = obj.getObjectByName(this.socketB)!
+        const tipA = obj.getObjectByName(this.socketA)
+        const tipB = obj.getObjectByName(this.socketB)
+        if (!tipA || !tipB) return
 
-        if(!this.trail) 
+        if(!this.trail) {
             this.trail = new ArcTrailEffect(tipA, tipB, {
                 coreColor: 0x00ffff,
                 bodyColor: 0x0088ff
             });
-        this.scene.add((this.trail))
-        this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
-        console.log("Swing Effect Activated")
+            this.scene.add(this.trail)
+            this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+            console.log("Swing Effect Activated")
+        }
     }
     deactivate(target: IActionUser, context?: ActionContext | undefined): void {
         this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
@@ -47,7 +50,8 @@ export default class SwingArcEffectAction implements IActionComponent, ILoop {
     }
     clock = new THREE.Clock()
     update(delta: number): void {
-        this.trail!.update(delta, this.clock.elapsedTime)
+        if (!this.trail) return
+        this.trail.update(delta, this.clock.getElapsedTime())
     }
 }
 

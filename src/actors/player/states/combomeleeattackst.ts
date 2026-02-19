@@ -545,7 +545,9 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         // 무기 세팅/오토에임
         const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R);
         if (handItem) {
-            (handItem as Item).activate?.();
+            // 아이템 Action.activate는 장착 시점(PlayerCtrl.Equipment)에서 1회 호출됨
+            // 공격 시작/콤보 스텝에서는 onUse 트리거만 발행
+            (handItem as Item).trigger?.("onUse");
             if ((handItem as any).Sound) {
                 this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, (handItem as any).Mesh, (handItem as any).Sound);
             }

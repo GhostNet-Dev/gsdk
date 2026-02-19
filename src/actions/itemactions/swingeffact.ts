@@ -12,36 +12,40 @@ export default class SwingEffectAction implements IActionComponent, ILoop {
         private eventCtrl: IEventController,
         private scene: THREE.Scene,
         private socketA: string = "localTipAOffset", // 기본값
-        private socketB: string = "localTipAOffset", // 기본값
+        private socketB: string = "localTipBOffset", // 기본값
     ) { }
 
     apply(target: any) {
     }
     trigger(target: IActionUser, triggerType: TriggerType, context?: ActionContext | undefined): void {
+        if (!this.trail) return
         if(triggerType === "onUse") {
-            this.trail!.startTrail()
+            this.trail.startTrail()
 
         } else if(triggerType === "onUnuse") {
-            this.trail!.stopTrail()
+            this.trail.stopTrail()
         }
     }
     activate(target: IActionUser, context?: ActionContext | undefined): void {
         const obj = target.objs
         if (!obj) return
-        const objA = obj.getObjectByName(this.socketA)!
-        const objB = obj.getObjectByName(this.socketB)!
+        const objA = obj.getObjectByName(this.socketA)
+        const objB = obj.getObjectByName(this.socketB)
+        if (!objA || !objB) return
 
-        if(!this.trail)
+        if(!this.trail) {
             this.trail = new WeaponTrail(this.scene, objA, objB)
-        this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
-        console.log("Swing Effect Activated")
+            this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+            console.log("Swing Effect Activated")
+        }
     }
     deactivate(target: IActionUser, context?: ActionContext | undefined): void {
         this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
         console.log("Swing Effect Deactivated")
     }
     update(delta: number): void {
-        this.trail!.update(delta)
+        if (!this.trail) return
+        this.trail.update(delta)
     }
 }
 
