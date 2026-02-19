@@ -226,11 +226,13 @@ export class ArcTrailEffect extends THREE.Group {
         this.visible = true;
         this.trailCore.clear();
         this.trailBody.clear();
+        console.log("start-------------");
     }
 
     /** 검 휘두르기가 끝났을 때 호출 (꼬리가 자연스럽게 사라짐) */
     public stop(): void {
         this.isEmitting = false;
+        console.log("stop-------------");
     }
 
     /** 강제로 이펙트를 즉시 숨길 때 사용 */

@@ -40,6 +40,7 @@ export interface TechTreeDefBase {
     kind: TechTreeKind;
     name: string;
     desc?: string;
+    icon?: string; // [추가] 이모지("⚔️") 또는 이미지 경로("assets/icon.png")
     rarity?: Rarity;
     // 검색/필터/시너지/추천(예: “얼음”, “근접”, “보스전”)에 사용.
     // 레벨업 UI에서 카테고리 탭, 빌드 플래너의 자동 추천, 밸런싱 리포트(태그별 분포) 등에 유용.
@@ -70,6 +71,7 @@ export interface TechTreeDefBase {
 const MOCK_TECH = buffDefs.DarkSide; // 실제 기능은 이걸로 통일
 
 // 모든 레벨 비용 1 골드
+const COST_0: LevelCost[] = [{ lv: 1 }];
 const COST_1: LevelCost[] = [{ lv: 1, cost: { gold: 1 } }];
 const COST_3: LevelCost[] = [
     { lv: 1, cost: { gold: 1 } }, { lv: 2, cost: { gold: 1 } }, { lv: 3, cost: { gold: 1 } }
@@ -138,7 +140,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         desc: "거대한 테크트리의 시작점입니다.",
         rarity: "common",
         tags: ["base"],
-        cost: COST_1,
+        cost: COST_0,
         tech: MOCK_TECH
     },
 

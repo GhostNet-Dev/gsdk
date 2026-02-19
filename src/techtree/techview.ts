@@ -1,10 +1,5 @@
-// techtree.view.ts
-// DOM + Canvas/Minimap renderer for TechTreeService
-// by you + ChatGPT
-
-import { TechId, TechTreeKind } from "./techtreedefs";
+import { TechId, Tag, TechTreeKind } from "./techtreedefs";
 import { TechTreeService } from "./techtreeservice";
-
 
 /* =========================== View Models & Options ========================== */
 
@@ -13,11 +8,15 @@ export type NodeStatus = "locked" | "available" | "unlocked" | "maxed";
 export type TreeNodeView = {
   id: TechId;
   name: string;
+  desc?: string;
   kind: TechTreeKind;
   lv: number;
   maxLv: number;
   status: NodeStatus;
-  children: string[]; // edge: this -> childId
+  tags: Tag[];
+  icon?: string;
+  children: string[];
+  parents: string[];
 };
 
 export type TreeLayoutNode = TreeNodeView & {
@@ -25,14 +24,17 @@ export type TreeLayoutNode = TreeNodeView & {
   y: number;
   w: number;
   h: number;
-  col: number;
-  row: number;
+  col?: number;    // Depth (Vertical Level)
+  row?: number;    // Index in Level (Horizontal Position)
+  depth?: number;
+  offset?: number;
 };
 
 export type TreeLayoutEdge = {
   from: string;
   to: string;
-  points: { x: number; y: number }[]; // polyline (ortho)
+  points: { x: number; y: number }[]; 
+  status?: NodeStatus;
 };
 
 export type TreeLayoutResult = {
@@ -40,14 +42,20 @@ export type TreeLayoutResult = {
   edges: TreeLayoutEdge[];
   width: number;
   height: number;
-  gridW: number;
-  gridH: number;
+  gridW?: number;
+  gridH?: number;
+};
+
+export type TabDefinition = {
+  id: string;
+  label: string;
+  nodeIds: Set<string>; 
 };
 
 export type TooltipOptions = {
   enable?: boolean;
-  follow?: boolean;                      // 기본 true: 마우스 따라다님
-  render?: (node: TreeLayoutNode) => string; // HTML string
+  follow?: boolean;
+  render?: (node: TreeLayoutNode) => string;
 };
 
 export type TechTreeRenderCallbacks = {
@@ -55,61 +63,285 @@ export type TechTreeRenderCallbacks = {
   onNodeHover?: (node: TreeLayoutNode | null, ev: MouseEvent) => void;
 };
 
+// --- Render Options ---
+
 export type TechTreeDomOptions = {
-  mount: HTMLElement;             // DOM이 붙을 컨테이너
+  mount: HTMLElement;
   nodeSize?: { w: number; h: number };
   gap?: { x: number; y: number };
   showLegend?: boolean;
-  classNameRoot?: string;         // 기본: ttx-root
-    tooltip?: TooltipOptions;
-} & TechTreeRenderCallbacks;
-
-export type TechTreeCanvasOptions = {
-  canvas: HTMLCanvasElement;               // 메인 캔버스 (필수)
-  // (선택1) 외부 미니맵 캔버스 사용
-  minimap?: HTMLCanvasElement;
-  // (선택2) 내부 오버레이 미니맵 생성
-  minimapInline?: boolean;                 // true면 canvas 부모 위에 오버레이 생성
-  minimapSize?: { w: number; h: number };  // 오버레이 크기(px), 기본 240x140
-  minimapPos?: { right?: number; top?: number; left?: number; bottom?: number }; // 기본: right:8, top:8
-
-  nodeSize?: { w: number; h: number };
-  gap?: { x: number; y: number };
-  zoom?: { min: number; max: number; initial: number };
-  pan?: { x: number; y: number }; // 초기 팬
-  pixelRatio?: number;            // 기본: devicePixelRatio
+  classNameRoot?: string;
   tooltip?: TooltipOptions;
 } & TechTreeRenderCallbacks;
 
-/* ============================== Layout Builder ============================== */
-/** 서비스 상태 → TreeNodeView(상태 포함) */
-function buildTreeView(service: TechTreeService): Map<string, TreeNodeView> {
-  const out = new Map<string, TreeNodeView>();
-  for (const id of service.index.byId.keys()) {
-    const n = service.index.byId.get(id)!;
-    const lv = service.levels[id] ?? 0;
-    const maxed = lv >= n.maxLv;
-    const can = service.canLevelUp(id);
+export type TechTreeCanvasOptions = {
+  canvas: HTMLCanvasElement;
+  minimap?: HTMLCanvasElement;
+  minimapInline?: boolean;
+  minimapSize?: { w: number; h: number };
+  minimapPos?: { right?: number; top?: number; left?: number; bottom?: number };
+  nodeSize?: { w: number; h: number };
+  gap?: { x: number; y: number };
+  zoom?: { min: number; max: number; initial: number };
+  pan?: { x: number; y: number };
+  pixelRatio?: number;
+  tooltip?: TooltipOptions;
+} & TechTreeRenderCallbacks;
 
-    const status: NodeStatus = maxed ? "maxed" : lv > 0 ? "unlocked" : can.ok ? "available" : "locked";
-    const children = [...(service.index.edges.get(id) ?? [])];
+export type TechTreeDiabloOptions = {
+  mount: HTMLElement;
+  nodeSize?: { w: number; h: number };
+  gap?: { x: number; y: number };
+  tabs?: TabDefinition[];
+  showMinimap?: boolean;
+} & TechTreeRenderCallbacks;
 
-    out.set(id, {
-      id, name: n.name, kind: n.kind,
-      lv, maxLv: n.maxLv, status, children,
-    });
+
+/* ============================== CSS Definitions ============================== */
+
+export const CSS_STANDARD_TREE = `
+  .ttx-root { position:relative; background:#0b0f16; color:#e9edf3; font:12px sans-serif; overflow:auto; }
+  .ttx-edges { position:absolute; pointer-events:none; left:0; top:0; }
+  .ttx-edge { stroke:#6f7b91; stroke-width:2; fill:none; opacity:0.6; }
+  .ttx-node { position:absolute; box-sizing:border-box; border:1px solid #333; background:#222; border-radius:8px; padding:8px; cursor:pointer; transition: transform 0.1s; }
+  .ttx-node:hover { border-color:#fff; transform:scale(1.05); z-index:10; }
+  .ttx-node.ttx-available { background:#2a3d2a; border-color:#484; }
+  .ttx-node.ttx-unlocked { background:#2a2a4d; border-color:#66a; }
+  .ttx-node.ttx-maxed { background:#3d2a3d; border-color:#a6a; }
+  .ttx-node-title { font-weight:bold; margin-bottom:4px; font-size:13px; text-align: center; }
+  .ttx-node-meta { font-size:11px; opacity:0.7; text-align: center; }
+  .ttx-tooltip { position:fixed; z-index:9999; background:rgba(0,0,0,0.9); padding:8px 12px; border:1px solid #555; border-radius:4px; pointer-events:none; color:#fff; }
+`;
+
+export const CSS_DIABLO_TREE = `
+  .diablo-root {
+    /* [핵심 수정] 부모 창 밖으로 밀려나지 않도록 절대 고정 */
+    position: absolute;
+    inset: 0; 
+    display: flex; flex-direction: column;
+    background: transparent; 
+    color: var(--gnx-ui-fg, #eee);
+    font-family: system-ui, -apple-system, sans-serif;
+    overflow: hidden;
   }
-  return out;
+  .diablo-tabs {
+    display: flex; justify-content: center; gap: 6px;
+    padding: 10px 16px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+    flex-wrap: wrap; 
+    z-index: 50;
+  }
+  .diablo-tab-btn {
+    appearance: none;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--gnx-ui-sub, #888);
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 13px; font-weight: 600;
+    border-radius: 6px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .diablo-tab-btn:hover {
+    background: rgba(255,255,255,0.05);
+    color: var(--gnx-ui-fg, #fff);
+  }
+  .diablo-tab-btn.active {
+    background: color-mix(in oklab, var(--gnx-ui-accent, #d8b66b) 15%, transparent);
+    color: var(--gnx-ui-accent, #d8b66b);
+    border: 1px solid color-mix(in oklab, var(--gnx-ui-accent, #d8b66b) 30%, transparent);
+    box-shadow: 0 0 12px color-mix(in oklab, var(--gnx-ui-accent, #d8b66b) 10%, transparent);
+  }
+  .diablo-content {
+    /* [핵심 수정] 무한히 팽창하지 않도록 min-size 제약 추가 */
+    flex: 1 1 0px; 
+    min-width: 0; 
+    min-height: 0;
+    position: relative; 
+    overflow: auto; 
+    background-image: 
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    cursor: grab;
+  }
+  .diablo-content:active { cursor: grabbing; }
+  .diablo-scroll-area { 
+    position: relative; 
+    margin: 0 auto;
+  }
+  .diablo-edge {
+    fill: none; stroke-width: 2px;
+    stroke: rgba(255,255,255,0.15);
+    transition: stroke 0.3s;
+  }
+  .diablo-edge.unlocked {
+    stroke: var(--gnx-ui-accent, #d8b66b);
+    filter: drop-shadow(0 0 3px color-mix(in oklab, var(--gnx-ui-accent, #d8b66b) 50%, transparent));
+  }
+  .diablo-node {
+    position: absolute; 
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start;
+    cursor: pointer; z-index: 10;
+    width: 84px;
+    transition: transform 0.2s;
+  }
+  .diablo-node:hover { transform: translateY(-4px) scale(1.05); z-index: 20; }
+  .node-frame {
+    position: relative;
+    width: 56px; height: 56px;
+    border: 2px solid rgba(255,255,255,0.2);
+    background: var(--gnx-ui-bg-strong, #111);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    transition: all 0.2s;
+    margin-bottom: 6px;
+  }
+  .node-icon {
+    font-size: 28px; 
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 100%;
+  }
+  .node-icon img {
+    width: 80%; height: 80%; object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  }
+  .node-label {
+    font-size: 11px;
+    color: var(--gnx-ui-sub, #aaa);
+    text-align: center;
+    line-height: 1.2;
+    width: 100%;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    text-shadow: 0 1px 2px #000;
+    transition: color 0.2s;
+  }
+  .diablo-node:hover .node-label { color: var(--gnx-ui-fg, #fff); }
+  .diablo-node.locked .node-frame { opacity: 0.5; border-color: rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); }
+  .diablo-node.locked .node-icon { opacity: 0.4; filter: grayscale(1); }
+  .diablo-node.available .node-frame { border-color: #4CAF50; box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3); animation: pulse-green 1.5s infinite alternate; }
+  .diablo-node.available .node-label { color: #4CAF50; }
+  .diablo-node.unlocked .node-frame { border-color: var(--gnx-ui-accent, #d8b66b); background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01)); }
+  .diablo-node.unlocked .node-label { color: var(--gnx-ui-accent, #d8b66b); }
+  .diablo-node.maxed .node-frame { border-color: var(--gnx-ui-coin, #ffd700); box-shadow: 0 0 12px color-mix(in oklab, var(--gnx-ui-coin, #ffd700) 30%, transparent); }
+  .diablo-node.maxed .node-label { color: var(--gnx-ui-coin, #ffd700); font-weight: bold; }
+  .node-lv { position: absolute; bottom: -6px; right: -6px; background: #000; border: 1px solid rgba(255,255,255,0.3); color: #fff; font-size: 10px; padding: 1px 5px; border-radius: 8px; z-index: 5; font-weight: 700; min-width: 18px; text-align: center; }
+  .diablo-node.available .node-lv { border-color: #4CAF50; color: #4CAF50; }
+  .diablo-node.unlocked .node-lv { border-color: var(--gnx-ui-accent, #d8b66b); color: var(--gnx-ui-accent, #d8b66b); }
+  .node-tooltip-overlay {
+    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    background: rgba(10,12,16,0.95); border: 1px solid rgba(255,255,255,0.15);
+    padding: 8px 12px; border-radius: 8px; width: max-content; max-width: 220px;
+    pointer-events: none; opacity: 0; transition: opacity 0.2s, transform 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 100;
+  }
+  .diablo-node:hover .node-tooltip-overlay { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+  .tt-desc { color: var(--gnx-ui-sub, #aaa); font-size: 11px; line-height: 1.4; white-space: pre-wrap; text-align: center; }
+  
+  .diablo-minimap {
+    position: absolute; left: 20px; top: 60px;
+    background: rgba(10, 15, 20, 0.85);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.7);
+    z-index: 100;
+    cursor: crosshair;
+  }
+  @keyframes pulse-green { from { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); border-color: #4CAF50; } to { box-shadow: 0 0 8px 2px rgba(76, 175, 80, 0); border-color: #81c784; } }
+`;
+
+
+/* ============================== Helpers & Logic ============================== */
+
+export function generateSubtreeTabs(service: TechTreeService, rootId: string = "root_license"): TabDefinition[] {
+    const tabs: TabDefinition[] = [];
+    const rootEdges = service.index.edges.get(rootId);
+
+    if (!rootEdges || rootEdges.size === 0) {
+        tabs.push({ id: 'main', label: 'Main', nodeIds: new Set(service.index.byId.keys()) });
+        return tabs;
+    }
+
+    const collectDescendants = (startId: string): Set<string> => {
+        const result = new Set<string>();
+        const q = [startId];
+        result.add(startId); 
+
+        while (q.length > 0) {
+            const curr = q.shift()!;
+            const children = service.index.edges.get(curr);
+            if (children) {
+                children.forEach(child => {
+                    if (!result.has(child)) {
+                        result.add(child);
+                        q.push(child);
+                    }
+                });
+            }
+        }
+        return result;
+    };
+
+    rootEdges.forEach(childId => {
+        const childNode = service.index.byId.get(childId);
+        if (!childNode) return;
+        tabs.push({
+            id: childId,
+            label: childNode.name,
+            nodeIds: collectDescendants(childId)
+        });
+    });
+
+    return tabs;
 }
 
-/** 간단한 레이어드 DAG 레이아웃 (열: 위상순서 레벨, 행: 같은 열 내 index) */
-function computeLayout(
+function getIconHtml(icon?: string, kind?: TechTreeKind): string {
+    if (icon) {
+        if (/^(https?:\/\/|\/|\.\.?\/|data:image)/i.test(icon)) return `<img src="${icon}" draggable="false" />`;
+        return icon;
+    }
+    switch (kind) {
+        case 'trait': return "💎"; case 'skill': return "⚡"; case 'buff': return "🛡️"; case 'building': return "🏰"; case 'action': return "⚔️"; default: return "❓";
+    }
+}
+
+function buildTreeView(service: TechTreeService): Map<string, TreeNodeView> {
+    const out = new Map<string, TreeNodeView>();
+    const index = service.index;
+    const parentsMap = new Map<string, string[]>();
+    for (const [p, children] of index.edges) {
+        children.forEach(c => { if (!parentsMap.has(c)) parentsMap.set(c, []); parentsMap.get(c)!.push(p); });
+    }
+    for (const id of index.byId.keys()) {
+        const n = index.byId.get(id)!;
+        const lv = service.levels[id] ?? 0;
+        const maxed = lv >= n.maxLv;
+        const can = service.canLevelUp(id);
+        let status: NodeStatus = "locked";
+        if (maxed) status = "maxed"; else if (lv > 0) status = "unlocked"; else if (can.ok || can.reason.includes("funds")) status = "available";
+        const defIcon = (n as any).icon; 
+        out.set(id, { 
+            id, name: n.name, desc: n.desc, kind: n.kind, lv, maxLv: n.maxLv, status, tags: n.tags || [], icon: defIcon, 
+            children: [...(index.edges.get(id) ?? [])], 
+            parents: parentsMap.get(id) ?? [] 
+        });
+    }
+    return out;
+}
+
+/* ============================== Layout Engines ============================== */
+
+function computeStandardLayout(
   views: Map<string, TreeNodeView>,
   service: TechTreeService,
   cell: { w: number; h: number },
   gap: { x: number; y: number }
 ): TreeLayoutResult {
-  // 1) 레벨(열) 계산: 위상정렬을 따라 각 노드의 longest-path depth
   const depth = new Map<string, number>();
   for (const id of service.index.order) depth.set(id, 0);
   for (const id of service.index.order) {
@@ -119,164 +351,252 @@ function computeLayout(
     }
   }
 
-  // 2) 열별 노드 모으기
-  const cols = new Map<number, string[]>();
+  const levels = new Map<number, string[]>();
   for (const [id, d] of depth) {
-    if (!cols.has(d)) cols.set(d, []);
-    cols.get(d)!.push(id);
+    if (!levels.has(d)) levels.set(d, []);
+    levels.get(d)!.push(id);
   }
 
-  // 3) 배치
   const nodes = new Map<string, TreeLayoutNode>();
-  let maxCol = 0, maxRow = 0;
-  for (const [col, ids] of cols) {
-    maxCol = Math.max(maxCol, col);
-    ids.forEach((id, row) => {
+  let maxDepth = 0;
+  
+  let maxNodesInLevel = 0;
+  for (const ids of levels.values()) {
+    maxNodesInLevel = Math.max(maxNodesInLevel, ids.length);
+  }
+  const totalWidth = maxNodesInLevel * (cell.w + gap.x) - gap.x;
+
+  for (const [d, ids] of levels) {
+    maxDepth = Math.max(maxDepth, d);
+    const currentLevelWidth = ids.length * (cell.w + gap.x) - gap.x;
+    const startX = (totalWidth - currentLevelWidth) / 2;
+
+    ids.forEach((id, idx) => {
       const v = views.get(id)!;
-      const x = col * (cell.w + gap.x);
-      const y = row * (cell.h + gap.y);
-      const node: TreeLayoutNode = { ...v, x, y, w: cell.w, h: cell.h, col, row };
-      nodes.set(id, node);
-      maxRow = Math.max(maxRow, row);
+      const x = startX + idx * (cell.w + gap.x);
+      const y = d * (cell.h + gap.y);
+      nodes.set(id, { ...v, x, y, w: cell.w, h: cell.h, col: d, row: idx });
     });
   }
 
-  // 4) 엣지 polyline(직교) 계산: from center-right → to center-left → 중간 수평/수직
   const edges: TreeLayoutEdge[] = [];
   for (const node of nodes.values()) {
     for (const to of node.children) {
-      const A = node;
-      const B = nodes.get(to)!;
-      const p1 = { x: A.x + A.w, y: A.y + A.h / 2 };
-      const p4 = { x: B.x, y: B.y + B.h / 2 };
-      const midX = (p1.x + p4.x) / 2;
-      const pts = [p1, { x: midX, y: p1.y }, { x: midX, y: p4.y }, p4];
-      edges.push({ from: A.id, to, points: pts });
+      const target = nodes.get(to);
+      if (!target) continue;
+      const p1 = { x: node.x + node.w / 2, y: node.y + node.h }; 
+      const p4 = { x: target.x + target.w / 2, y: target.y };     
+      const midY = (p1.y + p4.y) / 2;
+      edges.push({ from: node.id, to, points: [p1, { x: p1.x, y: midY }, { x: p4.x, y: midY }, p4] });
     }
   }
 
-  const width = (maxCol + 1) * (cell.w + gap.x) - gap.x;
-  const height = (maxRow + 1) * (cell.h + gap.y) - gap.y;
-  return { nodes, edges, width, height, gridW: cell.w + gap.x, gridH: cell.h + gap.y };
+  return {
+    nodes, edges,
+    width: totalWidth,
+    height: (maxDepth + 1) * (cell.h + gap.y) - gap.y,
+    gridW: cell.w + gap.x,
+    gridH: cell.h + gap.y
+  };
 }
 
-/* =================================== DOM ==================================== */
+function computeDiabloLayout(
+  nodes: TreeNodeView[],
+  allNodesMap: Map<string, TreeNodeView>,
+  nodeSize: { w: number; h: number },
+  gap: { x: number; y: number }
+): TreeLayoutResult {
+  const layoutNodes = new Map<string, TreeLayoutNode>();
+  const nodeSet = new Set(nodes.map(n => n.id));
+
+  const depthMap = new Map<string, number>();
+  const queue: { id: string, d: number }[] = [];
+
+  nodes.forEach(n => {
+    const parentsInTab = n.parents.filter(p => nodeSet.has(p));
+    if (parentsInTab.length === 0) queue.push({ id: n.id, d: 0 });
+  });
+
+  let maxDepth = 0;
+  while (queue.length > 0) {
+    const { id, d } = queue.shift()!;
+    if (depthMap.has(id) && depthMap.get(id)! >= d) continue;
+    depthMap.set(id, d);
+    maxDepth = Math.max(maxDepth, d);
+
+    const node = allNodesMap.get(id);
+    if (node) {
+      node.children.forEach(childId => {
+        if (nodeSet.has(childId)) queue.push({ id: childId, d: d + 1 });
+      });
+    }
+  }
+
+  const depthGroups: string[][] = Array.from({ length: maxDepth + 1 }, () => []);
+  depthMap.forEach((d, id) => depthGroups[d].push(id));
+
+  const MAX_COLS = 6; 
+  const paddingY = 40; 
+  let currentY = paddingY;
+  let maxContentWidth = 0;
+
+  depthGroups.forEach((groupNodes) => {
+    const chunks: string[][] = [];
+    for (let i = 0; i < groupNodes.length; i += MAX_COLS) {
+        chunks.push(groupNodes.slice(i, i + MAX_COLS));
+    }
+    chunks.forEach((chunk) => {
+        const rowW = chunk.length * nodeSize.w + (chunk.length - 1) * gap.x;
+        maxContentWidth = Math.max(maxContentWidth, rowW);
+    });
+  });
+
+  const canvasWidth = maxContentWidth + (gap.x * 2) + 100;
+  const centerX = canvasWidth / 2;
+
+  depthGroups.forEach((groupNodes, d) => {
+    const chunks: string[][] = [];
+    for (let i = 0; i < groupNodes.length; i += MAX_COLS) {
+        chunks.push(groupNodes.slice(i, i + MAX_COLS));
+    }
+
+    chunks.forEach((chunk, chunkIndex) => {
+        const rowW = chunk.length * nodeSize.w + (chunk.length - 1) * gap.x;
+        const startX = centerX - (rowW / 2);
+        
+        chunk.forEach((id, idx) => {
+           const node = allNodesMap.get(id)!;
+           const x = startX + idx * (nodeSize.w + gap.x);
+           layoutNodes.set(id, { ...node, x, y: currentY, w: nodeSize.w, h: nodeSize.h, depth: d, offset: idx });
+        });
+        
+        currentY += nodeSize.h + gap.y;
+    });
+  });
+
+  const canvasHeight = currentY + paddingY;
+
+  const edges: TreeLayoutEdge[] = [];
+  layoutNodes.forEach(source => {
+    source.children.forEach(targetId => {
+      if (!layoutNodes.has(targetId)) return;
+      const target = layoutNodes.get(targetId)!;
+      
+      const p1 = { x: source.x + source.w / 2, y: source.y + source.h }; 
+      const p2 = { x: target.x + target.w / 2, y: target.y };            
+      
+      const c1 = { x: p1.x, y: p1.y + 20 }; 
+      const c2 = { x: p2.x, y: p2.y - 20 }; 
+      
+      edges.push({
+        from: source.id, to: targetId,
+        status: source.status === 'maxed' || target.status !== 'locked' ? 'unlocked' : 'locked',
+        points: [p1, c1, c2, p2] 
+      });
+    });
+  });
+
+  return {
+    nodes: layoutNodes, edges,
+    width: canvasWidth, 
+    height: canvasHeight
+  };
+}
+
+
+/* ============================== Renderers ============================== */
 
 export class DomTreeRenderer {
   private opts: TechTreeDomOptions;
-  private layout!: TreeLayoutResult;
   private root!: HTMLElement;
-  private edgeLayer!: SVGSVGElement;
   private tooltipEl: HTMLDivElement | null = null;
+  private styleId = "ttx-style-standard";
 
   constructor(opts: TechTreeDomOptions) {
     this.opts = opts;
-    injectCssOnce();
+    this.injectCss();
     if (this.opts.tooltip?.enable) this.tooltipEl = createTooltipEl();
   }
 
   mount(layout: TreeLayoutResult) {
-    this.layout = layout;
     const root = document.createElement("div");
     root.className = this.opts.classNameRoot ?? "ttx-root";
-    root.style.position = "relative";
-    root.style.width = `${layout.width}px`;
-    root.style.height = `${layout.height}px`;
-    root.style.userSelect = "none";
+    root.style.width = "100%"; 
+    root.style.height = "100%";
+    
+    const content = document.createElement("div");
+    content.style.position = "relative";
+    content.style.minWidth = `${layout.width}px`;
+    content.style.minHeight = `${layout.height}px`;
+    content.style.margin = "0 auto";
 
-    // SVG edge layer
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("class", "ttx-edges");
     svg.setAttribute("width", String(layout.width));
     svg.setAttribute("height", String(layout.height));
-    root.appendChild(svg);
-    this.edgeLayer = svg;
+    content.appendChild(svg);
 
-    // Nodes
+    for (const e of layout.edges) {
+      const path = document.createElementNS(svg.namespaceURI, "path");
+      path.setAttribute("class", "ttx-edge");
+      path.setAttribute("d", polylineToPath(e.points));
+      svg.appendChild(path);
+    }
+
     for (const nd of layout.nodes.values()) {
       const el = document.createElement("div");
       el.className = `ttx-node ttx-${nd.status} ttx-kind-${nd.kind}`;
       el.style.left = `${nd.x}px`; el.style.top = `${nd.y}px`;
       el.style.width = `${nd.w}px`; el.style.height = `${nd.h}px`;
-      el.innerHTML = `<div class="ttx-node-title">${escapeHtml(nd.name)}</div><div class="ttx-node-meta">Lv ${nd.lv}/${nd.maxLv} — ${nd.kind}</div>`;
-      el.addEventListener("click", (ev) => this.opts.onNodeClick?.(nd, ev as MouseEvent));
-      el.addEventListener("mouseenter", (ev) => {
-        this.opts.onNodeHover?.(nd, ev as MouseEvent);
-        if (this.tooltipEl && this.opts.tooltip?.enable) {
-          this.tooltipEl.innerHTML = (this.opts.tooltip.render?.(nd)) ?? defaultTooltipHTML(nd);
-          // ★ enter 시 즉시 위치 지정 (마우스가 안 움직여도 보이게)
-          positionTooltip(this.tooltipEl, (ev as MouseEvent).clientX, (ev as MouseEvent).clientY);
-          this.tooltipEl.style.opacity = "1";
-        }
-      });
-      el.addEventListener("mousemove", (ev) => {
-        if (this.tooltipEl && this.opts.tooltip?.enable && (this.opts.tooltip.follow ?? true)) {
-          positionTooltip(this.tooltipEl, (ev as MouseEvent).clientX, (ev as MouseEvent).clientY);
-        }
-      });
-      el.addEventListener("mouseleave", (ev) => {
-        this.opts.onNodeHover?.(null, ev as MouseEvent);
-        if (this.tooltipEl) this.tooltipEl.style.opacity = "0";
-      });
-
-      // ★ Pointer 이벤트(모바일/펜 대응)
-      el.addEventListener("pointerenter", (ev) => {
-        this.opts.onNodeHover?.(nd, ev as any);
-        if (this.tooltipEl && this.opts.tooltip?.enable) {
-          this.tooltipEl.innerHTML = (this.opts.tooltip.render?.(nd)) ?? defaultTooltipHTML(nd);
-          positionTooltip(this.tooltipEl, (ev as PointerEvent).clientX, (ev as PointerEvent).clientY);
-          this.tooltipEl.style.opacity = "1";
-        }
-      });
-      el.addEventListener("pointermove", (ev) => {
-        if (this.tooltipEl && this.opts.tooltip?.enable && (this.opts.tooltip.follow ?? true)) {
-          positionTooltip(this.tooltipEl, (ev as PointerEvent).clientX, (ev as PointerEvent).clientY);
-        }
-      });
-      el.addEventListener("pointerleave", (ev) => {
-        this.opts.onNodeHover?.(null, ev as any);
-        if (this.tooltipEl) this.tooltipEl.style.opacity = "0";
-      });
-
-      root.appendChild(el);
+      el.innerHTML = `<div class="ttx-node-title">${escapeHtml(nd.name)}</div><div class="ttx-node-meta">Lv ${nd.lv}/${nd.maxLv}</div>`;
+      this.attachEvents(el, nd);
+      content.appendChild(el);
     }
 
-    // edges
-    for (const e of layout.edges) {
-      const path = document.createElementNS(svg.namespaceURI, "path");
-      path.setAttribute("class", "ttx-edge");
-      const d = polylineToPath(e.points);
-      path.setAttribute("d", d);
-      svg.appendChild(path);
-    }
-
-    // legend(optional)
     if (this.opts.showLegend) {
       const lg = document.createElement("div");
       lg.className = "ttx-legend";
-      lg.innerHTML = `
-        <span class="ttx-dot ttx-locked"></span> locked
-        <span class="ttx-dot ttx-available"></span> available
-        <span class="ttx-dot ttx-unlocked"></span> unlocked
-        <span class="ttx-dot ttx-maxed"></span> maxed
-      `;
+      lg.style.cssText = "position:absolute; bottom:10px; right:10px; font-size:10px; opacity:0.7; pointer-events:none;";
+      lg.innerHTML = `Lck/Avl/Unl/Max`;
       root.appendChild(lg);
     }
 
-    // mount
+    root.appendChild(content);
     this.opts.mount.innerHTML = "";
     this.opts.mount.appendChild(root);
     this.root = root;
   }
 
   unmount() {
-    if (this.root && this.root.parentElement) {
-      this.root.parentElement.removeChild(this.root);
-    }
+    this.root?.remove();
+    this.tooltipEl?.remove();
+  }
+
+  private injectCss() {
+    if (document.getElementById(this.styleId)) return;
+    const el = document.createElement("style"); el.id = this.styleId; 
+    el.textContent = CSS_STANDARD_TREE; document.head.appendChild(el);
+  }
+
+  private attachEvents(el: HTMLElement, node: TreeLayoutNode) {
+    el.onclick = (e) => this.opts.onNodeClick?.(node, e);
+    el.onmouseenter = (e) => {
+      this.opts.onNodeHover?.(node, e);
+      if (this.tooltipEl) {
+        this.tooltipEl.innerHTML = this.opts.tooltip?.render?.(node) ?? defaultTooltipHTML(node);
+        this.tooltipEl.style.opacity = "1";
+        positionTooltip(this.tooltipEl, e.clientX, e.clientY);
+      }
+    };
+    el.onmousemove = (e) => {
+      if (this.tooltipEl && (this.opts.tooltip?.follow ?? true)) positionTooltip(this.tooltipEl, e.clientX, e.clientY);
+    };
+    el.onmouseleave = (e) => {
+      this.opts.onNodeHover?.(null, e);
+      if (this.tooltipEl) this.tooltipEl.style.opacity = "0";
+    };
   }
 }
-
-/* ================================= Canvas =================================== */
 
 export class CanvasTreeRenderer {
   private opts: TechTreeCanvasOptions;
@@ -284,514 +604,414 @@ export class CanvasTreeRenderer {
   private ctx!: CanvasRenderingContext2D;
   private dpr = 1;
   private zoom = 1;
-  private panX = 0;
-  private panY = 0;
-
+  private panX = 0; private panY = 0;
   private hovered: TreeLayoutNode | null = null;
   private isPanning = false;
   private panStart = { x: 0, y: 0 };
   private worldStart = { x: 0, y: 0 };
-
-  // tooltip
-  private tooltipEl: HTMLDivElement | null = null;
-
-  // minimap
   private mmCanvas?: HTMLCanvasElement;
   private mmCtx?: CanvasRenderingContext2D;
-  private mmOverlayHost?: HTMLDivElement;
-  private mmDragging = false;
-  private mmDragStart = { x: 0, y: 0 };
-  private mmViewStart = { x: 0, y: 0 };
+  private tooltipEl: HTMLDivElement | null = null;
 
   constructor(opts: TechTreeCanvasOptions) {
     this.opts = opts;
-    if (opts.tooltip?.enable) this.tooltipEl = createTooltipEl();
+    if (this.opts.tooltip?.enable) this.tooltipEl = createTooltipEl();
   }
 
   mount(layout: TreeLayoutResult) {
     this.layout = layout;
-    const dpr = this.opts.pixelRatio ?? window.devicePixelRatio ?? 1;
-    this.dpr = dpr;
+    this.dpr = this.opts.pixelRatio ?? window.devicePixelRatio ?? 1;
     this.zoom = this.opts.zoom?.initial ?? 1;
-    this.panX = this.opts.pan?.x ?? 0;
-    this.panY = this.opts.pan?.y ?? 0;
-
-    // main canvas
+    
     const c = this.opts.canvas;
     const rect = c.getBoundingClientRect();
-    c.width = Math.max(2, Math.round(rect.width * dpr));
-    c.height = Math.max(2, Math.round(rect.height * dpr));
-    const ctx = c.getContext("2d");
-    if (!ctx) throw new Error("2D context not available");
-    this.ctx = ctx;
+    if (this.opts.pan) {
+        this.panX = this.opts.pan.x;
+        this.panY = this.opts.pan.y;
+    } else {
+        this.panX = (rect.width / this.zoom - layout.width) / 2;
+        this.panY = 50; 
+    }
 
-    // Events
-    c.addEventListener("wheel", this.onWheel, { passive: false });
-    c.addEventListener("mousedown", this.onDown);
-    window.addEventListener("mousemove", this.onMove);
-    window.addEventListener("mouseup", this.onUp);
-    c.addEventListener("click", this.onClick);
-    c.addEventListener("mousemove", (ev) => {
-      if (!this.tooltipEl || !this.opts.tooltip?.enable) return;
-      if ((this.opts.tooltip.follow ?? true)) positionTooltip(this.tooltipEl, ev.clientX, ev.clientY);
-    });
-    // ★ Pointer 이벤트(모바일/펜 대응): 위치/탭 시 툴팁 표시
-    c.addEventListener("pointermove", (ev) => {
-      if (!this.tooltipEl || !this.opts.tooltip?.enable) return;
-      if ((this.opts.tooltip.follow ?? true)) positionTooltip(this.tooltipEl, ev.clientX, ev.clientY);
-    });
-    c.addEventListener("pointerdown", (ev) => {
-      if (!this.tooltipEl || !this.opts.tooltip?.enable) return;
-      const w = this.toWorldFromClient(ev as any);
-      const h = hitTest(w.x, w.y, this.layout.nodes);
-      if (h) {
-        this.tooltipEl.innerHTML = (this.opts.tooltip.render?.(h)) ?? defaultTooltipHTML(h);
-        positionTooltip(this.tooltipEl, ev.clientX, ev.clientY);
-        this.tooltipEl.style.opacity = "1";
-      }
-    });
-    c.addEventListener("pointerleave", () => {
-      if (this.tooltipEl) this.tooltipEl.style.opacity = "0";
-    });
+    c.width = rect.width * this.dpr; c.height = rect.height * this.dpr;
+    this.ctx = c.getContext("2d")!;
 
-    // minimap
-    this.setupMinimap();
-
+    this.bindEvents();
+    if (this.opts.minimap) this.setupMinimap();
+    
     this.draw();
-    this.drawMinimap();
+    if (this.mmCtx) this.drawMinimap();
   }
 
   unmount() {
+    this.tooltipEl?.remove();
     const c = this.opts.canvas;
-    c.removeEventListener("wheel", this.onWheel as any);
-    c.removeEventListener("mousedown", this.onDown as any);
-    window.removeEventListener("mousemove", this.onMove as any);
-    window.removeEventListener("mouseup", this.onUp as any);
-    c.removeEventListener("click", this.onClick as any);
-
-    if (this.mmCanvas) {
-      this.mmCanvas.removeEventListener("mousedown", this.onMmDown as any);
-      window.removeEventListener("mousemove", this.onMmMove as any);
-      window.removeEventListener("mouseup", this.onMmUp as any);
-      if (this.mmOverlayHost?.parentElement) this.mmOverlayHost.parentElement.removeChild(this.mmOverlayHost);
+    c.onmousedown = null; c.onwheel = null; c.onclick = null;
+    window.onmousemove = null; window.onmouseup = null;
   }
-  }
-
-  /* --------------------------- Main canvas interactions --------------------------- */
-  private onWheel = (ev: WheelEvent) => {
-    ev.preventDefault();
-    const zmin = this.opts.zoom?.min ?? 0.25;
-    const zmax = this.opts.zoom?.max ?? 2.5;
-    const scale = Math.exp(-ev.deltaY * 0.001);
-    const { x: cx, y: cy } = this.toWorldFromEvent(ev);
-    const nz = clamp(this.zoom * scale, zmin, zmax);
-    // adjust pan to keep cursor stationary in world coords
-    const { x: sx, y: sy } = this.toScreen(cx, cy, nz);
-    this.panX += (ev.offsetX * this.dpr - sx) / nz;
-    this.panY += (ev.offsetY * this.dpr - sy) / nz;
-    this.zoom = nz;
-    this.draw();
-    this.drawMinimap();
-  };
-
-  private onDown = (ev: MouseEvent) => {
-    this.isPanning = true;
-    this.panStart = { x: ev.clientX, y: ev.clientY };
-    this.worldStart = { x: this.panX, y: this.panY };
-  };
-  private onMove = (ev: MouseEvent) => {
-    if (this.isPanning) {
-      const dx = (ev.clientX - this.panStart.x) / this.zoom;
-      const dy = (ev.clientY - this.panStart.y) / this.zoom;
-      this.panX = this.worldStart.x + dx;
-      this.panY = this.worldStart.y + dy;
-      this.draw();
-      this.drawMinimap();
-      return;
-    }
-    // hover detect
-    const w = this.toWorldFromClient(ev);
-    const h = hitTest(w.x, w.y, this.layout.nodes);
-    if (h !== this.hovered) {
-      this.hovered = h;
-      this.opts.onNodeHover?.(h, ev);
-      if (this.tooltipEl && this.opts.tooltip?.enable) {
-        if (h) {
-          this.tooltipEl.innerHTML = (this.opts.tooltip.render?.(h)) ?? defaultTooltipHTML(h);
-          this.tooltipEl.style.opacity = "1";
+  
+  private bindEvents() {
+    const c = this.opts.canvas;
+    c.onwheel = (e) => {
+      e.preventDefault();
+      const scale = Math.exp(-e.deltaY * 0.001);
+      this.zoom = Math.max(0.1, Math.min(5, this.zoom * scale));
+      this.draw(); if(this.mmCtx) this.drawMinimap();
+    };
+    c.onmousedown = (e) => { this.isPanning = true; this.panStart = { x: e.clientX, y: e.clientY }; this.worldStart = { x: this.panX, y: this.panY }; };
+    window.onmousemove = (e) => {
+        if (this.isPanning) {
+            this.panX = this.worldStart.x + (e.clientX - this.panStart.x) / this.zoom;
+            this.panY = this.worldStart.y + (e.clientY - this.panStart.y) / this.zoom;
+            this.draw(); if(this.mmCtx) this.drawMinimap();
         } else {
-          this.tooltipEl.style.opacity = "0";
+            const rect = this.opts.canvas.getBoundingClientRect();
+            const wx = (e.clientX - rect.left) * this.dpr / this.zoom - this.panX;
+            const wy = (e.clientY - rect.top) * this.dpr / this.zoom - this.panY;
+            const hit = hitTest(wx, wy, this.layout.nodes);
+            if (hit !== this.hovered) {
+                this.hovered = hit;
+                this.draw();
+                if(this.tooltipEl) {
+                   if(hit) {
+                       this.tooltipEl.innerHTML = this.opts.tooltip?.render?.(hit) ?? defaultTooltipHTML(hit);
+                       this.tooltipEl.style.opacity = '1';
+                   } else this.tooltipEl.style.opacity = '0';
+                }
+            }
+            if(this.tooltipEl && this.hovered) positionTooltip(this.tooltipEl, e.clientX, e.clientY);
         }
-      }
-      this.draw();
-    }
-  };
-  private onUp = () => (this.isPanning = false);
-
-  private onClick = (ev: MouseEvent) => {
-    const w = this.toWorldFromClient(ev);
-    const h = hitTest(w.x, w.y, this.layout.nodes);
-    if (h) this.opts.onNodeClick?.(h, ev);
-  };
-
-  private toWorldFromEvent(ev: MouseEvent | WheelEvent) {
-    const c = this.opts.canvas;
-    const rect = c.getBoundingClientRect();
-    const sx = (ev.clientX - rect.left) * this.dpr;
-    const sy = (ev.clientY - rect.top) * this.dpr;
-    return this.toWorld(sx, sy);
-  }
-  private toWorldFromClient(ev: MouseEvent | PointerEvent) {
-    const c = this.opts.canvas;
-    const rect = c.getBoundingClientRect();
-    const sx = (ev.clientX - rect.left) * this.dpr;
-    const sy = (ev.clientY - rect.top) * this.dpr;
-    return this.toWorld(sx, sy);
-  }
-  private toWorld(sx: number, sy: number) {
-    const x = sx / this.zoom - this.panX;
-    const y = sy / this.zoom - this.panY;
-    return { x, y };
-  }
-  private toScreen(wx: number, wy: number, zoom = this.zoom) {
-    return { x: (wx + this.panX) * zoom, y: (wy + this.panY) * zoom };
+    };
+    window.onmouseup = () => this.isPanning = false;
+    c.onclick = (e) => { if (this.hovered) this.opts.onNodeClick?.(this.hovered, e); }
   }
 
-  /* -------------------------------- Minimap overlay -------------------------------- */
-  private setupMinimap() {
-    // prefer provided canvas; else create overlay
-    if (this.opts.minimap) {
-      this.mmCanvas = this.opts.minimap;
-    } else if (this.opts.minimapInline) {
-      const host = document.createElement("div");
-      host.className = "ttx-mm-host";
-      const canvas = document.createElement("canvas");
-      canvas.className = "ttx-mm";
-      host.appendChild(canvas);
-      // attach above main canvas (absolute overlay)
-      const parent = this.opts.canvas.parentElement!;
-      parent.style.position ||= "relative";
-      const pos = this.opts.minimapPos ?? { right: 8, top: 8 };
-      host.style.position = "absolute";
-      if (pos.left != null) host.style.left = `${pos.left}px`;
-      if (pos.right != null) host.style.right = `${pos.right}px`;
-      if (pos.top != null) host.style.top = `${pos.top}px`;
-      if (pos.bottom != null) host.style.bottom = `${pos.bottom}px`;
-      const size = this.opts.minimapSize ?? { w: 240, h: 140 };
-      host.style.width = `${size.w}px`;
-      host.style.height = `${size.h}px`;
-      parent.appendChild(host);
-      this.mmOverlayHost = host;
-      this.mmCanvas = canvas;
-    }
-
-    if (!this.mmCanvas) return;
-    const r = this.mmCanvas.getBoundingClientRect();
-    this.mmCanvas.width = Math.max(2, Math.round(r.width * this.dpr));
-    this.mmCanvas.height = Math.max(2, Math.round(r.height * this.dpr));
-    this.mmCtx = this.mmCanvas.getContext("2d")!;
-
-    // interactions
-    this.mmCanvas.addEventListener("mousedown", this.onMmDown);
-    window.addEventListener("mousemove", this.onMmMove);
-    window.addEventListener("mouseup", this.onMmUp);
-    this.mmCanvas.addEventListener("click", this.onMmClick);
-  }
-
-  private onMmDown = (ev: MouseEvent) => {
-    if (!this.mmCanvas) return;
-    this.mmDragging = true;
-    this.mmDragStart = { x: ev.clientX, y: ev.clientY };
-    this.mmViewStart = { x: this.panX, y: this.panY };
-  };
-  private onMmMove = (ev: MouseEvent) => {
-    if (!this.mmDragging || !this.mmCanvas) return;
-    // drag viewport in minimap space → translate to world pan
-    const mm = this.mmCanvas;
-    const scale = this.mmScale();
-    const dx = (ev.clientX - this.mmDragStart.x) * this.dpr / scale;
-    const dy = (ev.clientY - this.mmDragStart.y) * this.dpr / scale;
-    this.panX = this.mmViewStart.x - dx;
-    this.panY = this.mmViewStart.y - dy;
-    this.draw(); this.drawMinimap();
-  };
-  private onMmUp = () => { this.mmDragging = false; };
-  private onMmClick = (ev: MouseEvent) => {
-    if (!this.mmCanvas) return;
-    const rect = this.mmCanvas.getBoundingClientRect();
-    const mx = (ev.clientX - rect.left) * this.dpr;
-    const my = (ev.clientY - rect.top) * this.dpr;
-    // jump center to clicked point
-    const { ox, oy, scale } = this.mmParams();
-    const wx = (mx - ox) / scale;
-    const wy = (my - oy) / scale;
-    // center main viewport at (wx, wy)
-    const viewW = this.opts.canvas.width / this.zoom;
-    const viewH = this.opts.canvas.height / this.zoom;
-    this.panX = -wx + viewW / 2;
-    this.panY = -wy + viewH / 2;
-    this.draw(); this.drawMinimap();
-  };
-
-  private mmScale() { const { scale } = this.mmParams(); return scale; }
-  private mmParams() {
-    const mm = this.mmCanvas!;
-    const W = this.layout.width, H = this.layout.height;
-    const sx = mm.width / W, sy = mm.height / H;
-    const scale = Math.min(sx, sy);
-    const ox = (mm.width - W * scale) / 2;
-    const oy = (mm.height - H * scale) / 2;
-    return { ox, oy, scale };
-  }
-
-  /* ---------------------------------- Drawing ---------------------------------- */
   private draw() {
-    const { ctx } = this;
-    const c = this.opts.canvas;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, c.width, c.height);
-    ctx.scale(this.zoom, this.zoom);
-    ctx.translate(this.panX, this.panY);
+    const ctx = this.ctx;
+    const { width, height } = this.opts.canvas;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "#0b0f16"; ctx.fillRect(0,0, width, height);
+    ctx.scale(this.zoom, this.zoom); ctx.translate(this.panX, this.panY);
 
-    // grid bg
-    ctx.save();
-    drawGrid(ctx, this.layout);
-    // edges
-    ctx.lineWidth = 2 / this.zoom;
-    ctx.strokeStyle = "#6f7b91";
-    ctx.globalAlpha = 0.6;
+    ctx.strokeStyle = "#445"; ctx.lineWidth = 2;
     for (const e of this.layout.edges) {
-      ctx.beginPath();
-      e.points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.beginPath(); 
+      if (e.points.length === 4) {
+          const [p0, c1, c2, p3] = e.points;
+          ctx.moveTo(p0.x, p0.y);
+          ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, p3.x, p3.y);
+      } else {
+          e.points.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+      }
       ctx.stroke();
     }
-    ctx.globalAlpha = 1;
 
-    // nodes
     for (const n of this.layout.nodes.values()) {
-      const hovered = this.hovered && this.hovered.id === n.id;
-      drawNodeBox(ctx, n, hovered ?? false);
+        const hover = this.hovered === n;
+        ctx.fillStyle = statusColor(n.status);
+        if(hover) ctx.fillStyle = "#556";
+        roundRect(ctx, n.x, n.y, n.w, n.h, 8, true, true);
+        ctx.fillStyle = "#fff"; ctx.font = "bold 14px sans-serif"; ctx.fillText(n.name, n.x + 10, n.y + 20);
+        ctx.font = "12px sans-serif"; ctx.fillStyle = "#aaa"; ctx.fillText(`Lv ${n.lv}/${n.maxLv}`, n.x + 10, n.y + n.h - 10);
     }
-
-    ctx.restore();
   }
 
+  private setupMinimap() { 
+      this.mmCanvas = this.opts.minimap; if (!this.mmCanvas) return;
+      const r = this.mmCanvas.getBoundingClientRect();
+      this.mmCanvas.width = r.width * this.dpr; this.mmCanvas.height = r.height * this.dpr;
+      this.mmCtx = this.mmCanvas.getContext("2d")!;
+  }
+  
   private drawMinimap() {
-    if (!this.mmCanvas || !this.mmCtx) return;
-    const g = this.mmCtx;
-    const { ox, oy, scale } = this.mmParams();
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.clearRect(0, 0, this.mmCanvas.width, this.mmCanvas.height);
-
-    // bg
-    g.fillStyle = "#0e1116";
-    g.fillRect(0, 0, this.mmCanvas.width, this.mmCanvas.height);
-
-    // content
-    g.save();
-    g.translate(ox, oy);
-    g.scale(scale, scale);
-
-    // edges
-    g.strokeStyle = "#59708e";
-    g.lineWidth = 1 / scale;
-    g.globalAlpha = 0.5;
-    for (const e of this.layout.edges) {
-      g.beginPath();
-      e.points.forEach((p, i) => (i === 0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y)));
-      g.stroke();
-    }
-    g.globalAlpha = 1;
-
-    // nodes
-    for (const n of this.layout.nodes.values()) {
-      g.fillStyle = statusColor(n.status);
-      g.fillRect(n.x, n.y, n.w, n.h);
-    }
-
-    // viewport rect
-    const vw = (this.opts.canvas.width / this.zoom);
-    const vh = (this.opts.canvas.height / this.zoom);
-    const vx = -this.panX;
-    const vy = -this.panY;
-    g.strokeStyle = "#ffffff";
-    g.lineWidth = 2 / scale;
-    g.strokeRect(vx, vy, vw, vh);
-
-    g.restore();
+      if (!this.mmCtx || !this.mmCanvas) return;
+      const ctx = this.mmCtx;
+      const w = this.mmCanvas.width; const h = this.mmCanvas.height;
+      ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,w,h); ctx.fillStyle="#000"; ctx.fillRect(0,0,w,h);
+      const scale = Math.min(w / this.layout.width, h / this.layout.height) * 0.9;
+      const ox = (w - this.layout.width * scale)/2; const oy = (h - this.layout.height * scale)/2;
+      ctx.translate(ox, oy); ctx.scale(scale, scale);
+      for(const n of this.layout.nodes.values()) { ctx.fillStyle = statusColor(n.status); ctx.fillRect(n.x, n.y, n.w, n.h); }
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = 2 / scale;
+      const vx = -this.panX; const vy = -this.panY;
+      const vw = this.opts.canvas.width / this.zoom; const vh = this.opts.canvas.height / this.zoom;
+      ctx.strokeRect(vx, vy, vw, vh);
   }
 }
 
-/* ================================ Facade ==================================== */
+export class DiabloTreeRenderer {
+  private rootEl: HTMLElement;
+  private service: TechTreeService;
+  private options: TechTreeDiabloOptions;
+  
+  private currentTabId: string;
+  private nodeViews: Map<string, TreeNodeView> = new Map();
+  private minimapCanvas?: HTMLCanvasElement;
+  private updateMinimapFrame?: number;
+  private styleId = "ttx-style-diablo";
+
+  constructor(service: TechTreeService, options: TechTreeDiabloOptions) {
+    this.service = service;
+    this.options = { showMinimap: true, ...options };
+    this.injectCss();
+    this.rootEl = document.createElement("div");
+    this.rootEl.className = "diablo-root";
+    this.currentTabId = (options.tabs && options.tabs.length > 0) ? options.tabs[0].id : "all";
+  }
+
+  private injectCss() {
+    if (document.getElementById(this.styleId)) return;
+    const el = document.createElement("style"); 
+    el.id = this.styleId; 
+    el.textContent = CSS_DIABLO_TREE; 
+    document.head.appendChild(el);
+  }
+
+  mount() {
+    // 마운트 될 대상 엘리먼트가 static이면 절대 좌표(absolute)가 어긋나는 것을 방지
+    const computed = window.getComputedStyle(this.options.mount);
+    if (computed.position === 'static') {
+        this.options.mount.style.position = 'relative';
+    }
+
+    this.options.mount.innerHTML = "";
+    this.options.mount.appendChild(this.rootEl);
+    this.refresh();
+  }
+
+  refresh() {
+    this.nodeViews = buildTreeView(this.service);
+    this.render();
+  }
+
+  private render() {
+    this.rootEl.innerHTML = "";
+
+    if (this.options.tabs && this.options.tabs.length > 0) {
+      const tabBar = document.createElement("div");
+      tabBar.className = "diablo-tabs";
+      this.options.tabs.forEach(tab => {
+        const btn = document.createElement("button");
+        const isActive = this.currentTabId === tab.id;
+        btn.className = `diablo-tab-btn ${isActive ? "active" : ""}`;
+        btn.textContent = tab.label;
+        btn.dataset.id = tab.id;
+        btn.onclick = () => this.onTabClick(tab.id);
+        tabBar.appendChild(btn);
+      });
+      this.rootEl.appendChild(tabBar);
+    }
+
+    const content = document.createElement("div");
+    content.className = "diablo-content";
+    this.rootEl.appendChild(content);
+    
+    this.renderTreeContent(content);
+  }
+
+  private onTabClick(tabId: string) {
+      if (this.currentTabId === tabId) return;
+      this.currentTabId = tabId;
+
+      const buttons = this.rootEl.querySelectorAll('.diablo-tab-btn');
+      buttons.forEach(b => {
+          const btn = b as HTMLElement;
+          if (btn.dataset.id === tabId) btn.classList.add('active');
+          else btn.classList.remove('active');
+      });
+
+      const content = this.rootEl.querySelector('.diablo-content') as HTMLElement;
+      if (content) this.renderTreeContent(content);
+  }
+
+  private renderTreeContent(container: HTMLElement) {
+    container.innerHTML = "";
+    
+    const currentTabDef = this.options.tabs?.find(t => t.id === this.currentTabId);
+    const allNodes = Array.from(this.nodeViews.values());
+    const filteredNodes = currentTabDef ? allNodes.filter(n => currentTabDef.nodeIds.has(n.id)) : allNodes;
+
+    const nodeSize = this.options.nodeSize || { w: 84, h: 84 };
+    const gap = this.options.gap || { x: 10, y: 50 };
+    const layout = computeDiabloLayout(filteredNodes, this.nodeViews, nodeSize, gap);
+
+    const scrollArea = document.createElement("div");
+    scrollArea.className = "diablo-scroll-area";
+    // 스크롤 내부 영역을 layout 크기에 딱 맞춤 (margin auto로 중앙 정렬)
+    scrollArea.style.width = `${layout.width}px`; 
+    scrollArea.style.height = `${layout.height}px`;
+    
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", "100%"); svg.setAttribute("height", "100%");
+    svg.style.position = "absolute"; svg.style.top = "0"; svg.style.left = "0"; svg.style.pointerEvents = "none";
+    
+    layout.edges.forEach(edge => {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      const [p0, c1, c2, p3] = edge.points;
+      const d = `M ${p0.x} ${p0.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p3.x} ${p3.y}`;
+      path.setAttribute("d", d); path.setAttribute("class", `diablo-edge ${edge.status}`);
+      svg.appendChild(path);
+    });
+    scrollArea.appendChild(svg);
+
+    layout.nodes.forEach(node => {
+      const el = document.createElement("div");
+      el.className = `diablo-node ${node.status} kind-${node.kind}`;
+      el.style.left = `${node.x}px`; el.style.top = `${node.y}px`;
+      el.style.width = `${node.w}px`; el.style.height = `${node.h}px`;
+      
+      const iconHtml = getIconHtml(node.icon, node.kind);
+      el.innerHTML = `<div class="node-frame"><div class="node-icon">${iconHtml}</div><div class="node-lv">${node.lv}</div></div><div class="node-label">${node.name}</div><div class="node-tooltip-overlay"><div class="tt-desc">${node.desc || node.kind}</div></div>`;
+      el.onclick = (e) => this.options.onNodeClick?.(node, e);
+      scrollArea.appendChild(el);
+    });
+
+    container.appendChild(scrollArea);
+    
+    this.attachDragToPan(container);
+
+    if (this.options.showMinimap) {
+        this.renderMinimap(container, layout);
+    }
+    
+    requestAnimationFrame(() => {
+        container.scrollTop = 0;
+        if (layout.width > container.clientWidth) {
+            container.scrollLeft = (layout.width - container.clientWidth) / 2;
+        }
+        if (this.options.showMinimap) this.updateMinimap(container, layout);
+    });
+  }
+
+  private attachDragToPan(container: HTMLElement) {
+      let isDown = false;
+      let startX = 0, startY = 0;
+      let scrollLeft = 0, scrollTop = 0;
+
+      container.addEventListener('mousedown', (e) => {
+          if ((e.target as HTMLElement).tagName.toLowerCase() === 'canvas') return;
+          isDown = true;
+          startX = e.pageX - container.offsetLeft;
+          startY = e.pageY - container.offsetTop;
+          scrollLeft = container.scrollLeft;
+          scrollTop = container.scrollTop;
+      });
+
+      container.addEventListener('mouseleave', () => isDown = false);
+      container.addEventListener('mouseup', () => isDown = false);
+
+      container.addEventListener('mousemove', (e) => {
+          if (!isDown) return;
+          e.preventDefault();
+          const x = e.pageX - container.offsetLeft;
+          const y = e.pageY - container.offsetTop;
+          // 마우스 드래그 감도 1:1로 수정
+          const walkX = (x - startX); 
+          const walkY = (y - startY);
+          container.scrollLeft = scrollLeft - walkX;
+          container.scrollTop = scrollTop - walkY;
+      });
+  }
+
+  private renderMinimap(container: HTMLElement, layout: TreeLayoutResult) {
+      if (this.minimapCanvas) this.minimapCanvas.remove();
+      
+      const canvas = document.createElement('canvas');
+      canvas.className = 'diablo-minimap';
+      const MAX_SIZE = 150;
+      
+      // 실제 컨텐츠가 그려진 layout.width 와 컨테이너의 clientWidth 중 큰 쪽이 진짜 세계 크기
+      const worldW = Math.max(layout.width, container.clientWidth);
+      const worldH = Math.max(layout.height, container.clientHeight);
+
+      // 균일한 배율(Uniform Scale) 유지 (가로, 세로 찌그러짐 방지)
+      const scale = Math.min(MAX_SIZE / worldW, MAX_SIZE / worldH);
+
+      const w = worldW * scale;
+      const h = worldH * scale;
+
+      canvas.width = w;
+      canvas.height = h;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      
+      this.minimapCanvas = canvas;
+      this.rootEl.appendChild(canvas);
+
+      container.addEventListener('scroll', () => {
+          if (this.updateMinimapFrame) cancelAnimationFrame(this.updateMinimapFrame);
+          this.updateMinimapFrame = requestAnimationFrame(() => this.updateMinimap(container, layout));
+      });
+
+      let isDraggingMap = false;
+      const moveViewport = (e: MouseEvent) => {
+          const rect = canvas.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          container.scrollLeft = (x / scale) - (container.clientWidth / 2);
+          container.scrollTop = (y / scale) - (container.clientHeight / 2);
+      };
+
+      canvas.addEventListener('mousedown', (e) => {
+          isDraggingMap = true;
+          moveViewport(e);
+      });
+      canvas.addEventListener('mousemove', (e) => {
+          if (isDraggingMap) moveViewport(e);
+      });
+      canvas.addEventListener('mouseup', () => isDraggingMap = false);
+      canvas.addEventListener('mouseleave', () => isDraggingMap = false);
+  }
+
+  private updateMinimap(container: HTMLElement, layout: TreeLayoutResult) {
+      if (!this.minimapCanvas) return;
+      const ctx = this.minimapCanvas.getContext('2d');
+      if (!ctx) return;
+
+      const worldW = Math.max(layout.width, container.clientWidth);
+      const worldH = Math.max(layout.height, container.clientHeight);
+      if (worldW === 0 || worldH === 0) return;
+
+      // X, Y 독립 배율이 아닌 단일 비율(Uniform Scale) 적용
+      const scale = this.minimapCanvas.width / worldW;
+      
+      ctx.clearRect(0, 0, this.minimapCanvas.width, this.minimapCanvas.height);
+
+      // margin: 0 auto 로 인해 발생하는 x, y 오프셋 계산
+      const offsetX = Math.max(0, (container.clientWidth - layout.width) / 2);
+      const offsetY = Math.max(0, (container.clientHeight - layout.height) / 2);
+
+      layout.nodes.forEach(node => {
+          ctx.fillStyle = statusColor(node.status);
+          ctx.fillRect((node.x + offsetX) * scale, (node.y + offsetY) * scale, node.w * scale, node.h * scale);
+      });
+
+      const vx = container.scrollLeft * scale;
+      const vy = container.scrollTop * scale;
+      const vw = container.clientWidth * scale;
+      const vh = container.clientHeight * scale;
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(vx, vy, vw, vh);
+      
+      ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.fillRect(vx, vy, vw, vh);
+  }
+}
 
 export class TechTreeView {
-  private service: TechTreeService;
-  private layout!: TreeLayoutResult;
-
-  constructor(service: TechTreeService) {
-    this.service = service;
-  }
-
-  /** 레이아웃 계산(두 렌더러가 공유) */
-  computeLayout(opts: { nodeSize?: { w: number; h: number }, gap?: { x: number; y: number } } = {}) {
-    const nodeSize = opts.nodeSize ?? { w: 160, h: 72 };
-    const gap = opts.gap ?? { x: 72, y: 48 };
-    const views = buildTreeView(this.service);
-    this.layout = computeLayout(views, this.service, nodeSize, gap);
-    return this.layout;
-  }
-
-  /** DOM 렌더러 마운트 */
-  mountDom(opts: TechTreeDomOptions): DomTreeRenderer {
-    const dom = new DomTreeRenderer(opts);
-    if (!this.layout) this.computeLayout({ nodeSize: opts.nodeSize, gap: opts.gap });
-    dom.mount(this.layout);
-    return dom;
-  }
-
-  /** Canvas 렌더러 마운트 */
-  mountCanvas(opts: TechTreeCanvasOptions): CanvasTreeRenderer {
-    const cvs = new CanvasTreeRenderer(opts);
-    if (!this.layout) this.computeLayout({ nodeSize: opts.nodeSize, gap: opts.gap });
-    cvs.mount(this.layout);
-    return cvs;
-  }
-
-  /** 상태가 바뀌었을 때(레벨업, 환급 등) 레이아웃/뷰 갱신 */
-  refresh(renderer?: DomTreeRenderer | CanvasTreeRenderer) {
-    // 상태 반영(레이아웃 재계산은 노드 좌표 유지 원하면 생략 가능)
-    const first = this.layout.nodes.values().next().value;
-    const nodeSize = { w: first.w, h: first.h };
-    const gap = { x: this.layout.gridW - nodeSize.w, y: this.layout.gridH - nodeSize.h };
-    this.layout = computeLayout(buildTreeView(this.service), this.service, nodeSize, gap);
-    if (renderer instanceof DomTreeRenderer) renderer.mount(this.layout);
-    if (renderer instanceof CanvasTreeRenderer) renderer.mount(this.layout);
-  }
+    constructor(private s: TechTreeService){}
+    computeLayout(o:any){ return computeStandardLayout(buildTreeView(this.s), this.s, o.nodeSize, o.gap); }
+    mountDom(o:TechTreeDomOptions){ const d=new DomTreeRenderer(o); d.mount(this.computeLayout(o)); return d; }
+    mountCanvas(o:TechTreeCanvasOptions){ const c=new CanvasTreeRenderer(o); c.mount(this.computeLayout(o)); return c; }
 }
 
-/* ============================== Helpers & CSS =============================== */
-
-function drawGrid(ctx: CanvasRenderingContext2D, L: TreeLayoutResult) {
-  ctx.save();
-  ctx.fillStyle = "#0e1116";
-  ctx.fillRect(0, 0, L.width, L.height);
-  ctx.strokeStyle = "#1a2230";
-  ctx.lineWidth = 1;
-  for (let x = 0; x <= L.width; x += L.gridW) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, L.height); ctx.stroke();
-  }
-  for (let y = 0; y <= L.height; y += L.gridH) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(L.width, y); ctx.stroke();
-  }
-  ctx.restore();
-}
-function drawNodeBox(ctx: CanvasRenderingContext2D, n: TreeLayoutNode, hovered: boolean) {
-  const r = 12;
-  ctx.save();
-  // body
-  ctx.fillStyle = statusColor(n.status);
-  roundRect(ctx, n.x, n.y, n.w, n.h, r, true, false);
-  // title
-  ctx.fillStyle = "#0b0f16";
-  ctx.font = "700 14px system-ui, -apple-system, Segoe UI, Roboto";
-  ctx.fillText(n.name, n.x + 10, n.y + 22);
-  ctx.fillStyle = "rgba(12,17,22,.85)";
-  ctx.fillRect(n.x, n.y + n.h - 22, n.w, 22);
-  ctx.fillStyle = "#cfe7ff";
-  ctx.font = "12px system-ui";
-  ctx.fillText(`Lv ${n.lv}/${n.maxLv} — ${n.kind}`, n.x + 10, n.y + n.h - 7);
-  // hover
-  if (hovered) {
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 2 / (ctx.getTransform().a || 1);
-    roundRect(ctx, n.x, n.y, n.w, n.h, r, false, true);
-  }
-  ctx.restore();
-}
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, fill: boolean, stroke: boolean) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  if (fill) ctx.fill();
-  if (stroke) ctx.stroke();
-}
-function statusColor(s: NodeStatus) {
-  switch (s) {
-    case "locked": return "#263244";
-    case "available": return "#314d3e";
-    case "unlocked": return "#2c3f64";
-    case "maxed": return "#3f2f4f";
-  }
-}
-function clamp(v: number, a: number, b: number) { return Math.max(a, Math.min(b, v)); }
-function polylineToPath(pts: { x: number; y: number }[]) {
-  let d = `M ${pts[0].x} ${pts[0].y}`;
-  for (let i = 1; i < pts.length; i++) d += ` L ${pts[i].x} ${pts[i].y}`;
-  return d;
-}
-function hitTest(wx: number, wy: number, nodes: Map<string, TreeLayoutNode>): TreeLayoutNode | null {
-  for (const n of nodes.values()) if (wx >= n.x && wx <= n.x + n.w && wy >= n.y && wy <= n.y + n.h) return n; return null;
-}
-function escapeHtml(s: string) { return s.replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" } as any)[m]); }
-
-/* ---------------------------- Tooltip helpers ---------------------------- */
-function createTooltipEl() {
-  injectCssOnce();
-  const el = document.createElement("div");
-  el.className = "ttx-tooltip";
-  el.style.opacity = "0";
-  // ★ 기본 위치 지정 (첫 진입시 좌표 미설정 문제 방지)
-  el.style.left = "12px";
-  el.style.top = "12px";
-  document.body.appendChild(el);
-  return el;
-  }
-function positionTooltip(el: HTMLElement, clientX: number, clientY: number) {
-  const pad = 12;
-  el.style.left = `${clientX + pad}px`;
-  el.style.top = `${clientY + pad}px`;
-}
-function defaultTooltipHTML(n: TreeLayoutNode) {
-  return `<div class="ttx-tt-title">${escapeHtml(n.name)}</div>
-          <div class="ttx-tt-meta">Lv ${n.lv}/${n.maxLv} • ${n.kind}</div>
-          <div class="ttx-tt-desc">${escapeHtml(n.status)}</div>`;
-}
-
-/* ----------------------------------- CSS ----------------------------------- */
-let ttxCssInjected = false;
-function injectCssOnce() {
-  if (ttxCssInjected) return; ttxCssInjected = true;
-  const css = `
-  .ttx-root { position:relative; background:#0b0f16; color:#e9edf3; font:12px/1.4 system-ui, -apple-system, Segoe UI, Roboto; border-radius:12px; padding:0 }
-  .ttx-edges { position:absolute; left:0; top:0; pointer-events:none }
-  .ttx-node { position:absolute; box-sizing:border-box; border-radius:12px; padding:8px 10px 26px 10px; cursor:pointer;
-              border:1px solid #1c2838; box-shadow:0 4px 16px rgba(0,0,0,.25) }
-  .ttx-node .ttx-node-title { font-weight:700; font-size:14px; margin-bottom:6px; text-shadow:0 1px 0 #000 }
-  .ttx-node .ttx-node-meta { position:absolute; left:0; right:0; bottom:0; padding:3px 10px; font-size:11px; color:#cfe7ff;
-                              background:linear-gradient(180deg, rgba(14,17,22,0), rgba(14,17,22,.9)) ; border-radius:0 0 12px 12px }
-  .ttx-node.ttx-locked   { background:#263244 }
-  .ttx-node.ttx-available{ background:#314d3e }
-  .ttx-node.ttx-unlocked { background:#2c3f64 }
-  .ttx-node.ttx-maxed    { background:#3f2f4f }
-  .ttx-edge { stroke:#6f7b91; stroke-width:2; fill:none; opacity:.65 }
-
-  /* tooltip */
-  .ttx-tooltip { position:fixed; z-index:99999; pointer-events:none; transform:translateZ(0);
-                 background:#0e1116f2; color:#e9edf3; border:1px solid #1c2838; border-radius:10px; padding:8px 10px; min-width:160px;
-                 box-shadow:0 8px 24px rgba(0,0,0,.35); transition:opacity .12s ease; font-size:12px }
-  .ttx-tt-title { font-weight:700; margin-bottom:4px; font-size:13px }
-  .ttx-tt-meta { opacity:.85; margin-bottom:6px }
-  .ttx-tt-desc { opacity:.9 }
-
-  /* minimap overlay */
-  .ttx-mm-host { backdrop-filter: blur(4px); background: #0e1116cc; border:1px solid #1c2838; border-radius:10px; padding:6px; box-shadow:0 8px 18px rgba(0,0,0,.35) }
-  .ttx-mm { width:100%; height:100%; display:block; }
-  `;
-  const el = document.createElement("style");
-  el.id = "ttx-style";
-  el.textContent = css;
-  document.head.appendChild(el);
-}
+function createTooltipEl() { const d=document.createElement("div"); d.className="ttx-tooltip"; document.body.appendChild(d); return d; }
+function positionTooltip(el:HTMLElement, x:number, y:number) { el.style.left=`${x+15}px`; el.style.top=`${y+15}px`; }
+function defaultTooltipHTML(n:any) { return `<b>${escapeHtml(n.name)}</b><br>${n.kind}`; }
+function escapeHtml(s:string) { return s.replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" } as any)[m]); }
+function polylineToPath(pts: {x:number,y:number}[]) { return pts.length ? `M ${pts[0].x} ${pts[0].y} ` + pts.slice(1).map(p=>`L ${p.x} ${p.y}`).join(" ") : ""; }
+function hitTest(x:number, y:number, nodes:Map<string, TreeLayoutNode>) { for(const n of nodes.values()) if(x>=n.x && x<=n.x+n.w && y>=n.y && y<=n.y+n.h) return n; return null; }
+function statusColor(s: NodeStatus) { if(s==='locked') return '#444'; if(s==='available') return '#4CAF50'; if(s==='unlocked') return '#d8b66b'; if(s==='maxed') return '#ffd700'; return '#555'; }
+function roundRect(ctx:CanvasRenderingContext2D, x:number, y:number, w:number, h:number, r:number, f:boolean, s:boolean) { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); if(f) ctx.fill(); if(s) ctx.stroke(); }
