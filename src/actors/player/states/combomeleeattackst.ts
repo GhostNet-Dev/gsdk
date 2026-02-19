@@ -546,6 +546,7 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R);
         if (handItem) {
             (handItem as Item).activate?.();
+            (handItem as Item).trigger?.("onUse");
             if ((handItem as any).Sound) {
                 this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, (handItem as any).Mesh, (handItem as any).Sound);
             }
