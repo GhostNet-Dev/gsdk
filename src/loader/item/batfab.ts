@@ -44,8 +44,8 @@ export class BatFab extends AssetModel implements IAsset {
 
             this.meshs.add(this.localTipAOffset)
             this.meshs.add(this.localTipBOffset)
-            this.localTipAOffset.position.set(0, 7, 0)
-            this.localTipBOffset.position.set(0, 0, 0)
+            this.localTipAOffset.position.set(0, 0, 0)
+            this.localTipBOffset.position.set(0, 7, 0)
         })
     }
     GetSize(mesh: THREE.Group): THREE.Vector3 {
