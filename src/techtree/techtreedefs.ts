@@ -415,7 +415,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["fire", "projectile"],
         requires: [{ type: "has", id: "elem_fire", minLv: 1 }],
         cost: COST_1,
-        tech: MOCK_TECH
+        tech: actionDefs.FireBall
     },
     {
         id: "skill_meteor",
@@ -685,5 +685,4 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tech: MOCK_TECH
     }
 ]
-
 
