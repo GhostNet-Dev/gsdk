@@ -42,7 +42,7 @@ const DEFAULT_OPTIONS: SkillSlotsOptions = {
   position: "right",
   slotSize: 58,
   gap: 8,
-  maxSlots: 1,
+  maxSlots: 4,
   iconFallback: "✨",
   keyLabels: ["Action5"],
   showTooltip: true,
