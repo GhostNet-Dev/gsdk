@@ -22,8 +22,8 @@ import SwingArcEffectAction from "./itemactions/swingarcact";
 export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scene, camera: Camera) {
     ActionRegistry.register("statBoost", def => new StatBoostAction(def))
     ActionRegistry.register("hpStatBoost", def => new StatBoostAction(def))
-    ActionRegistry.register("fireball", def => new FireballAction(def))
-    ActionRegistry.register("projectileFire", def => new FireballAction(def))
+    ActionRegistry.register("fireball", def => new FireballAction(eventCtrl, def))
+    ActionRegistry.register("projectileFire", def => new FireballAction(eventCtrl, def))
     ActionRegistry.register("casing", def => new BulletCasingAct(eventCtrl, scene, def.socket))
     ActionRegistry.register("muzzleFlash", def => {
         const texture = new THREE.TextureLoader().load(def.texture)

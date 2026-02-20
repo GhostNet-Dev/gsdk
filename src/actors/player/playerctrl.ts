@@ -264,11 +264,17 @@ export class PlayerCtrl implements ILoop, IActionUser {
         eventCtrl.RegisterEventListener(EventTypes.UpdateSkill + "player", (skill: LearnedSkillMessage) => {
             this.learnedSkills.set(skill.nodeId, skill)
             this.assignSkillToSlot(skill, 0)
+            this.applyLearnedSkill(skill)
         })
         eventCtrl.RegisterEventListener(EventTypes.RemoveSkill + "player", (skill: LearnedSkillMessage) => {
             this.learnedSkills.delete(skill.nodeId)
             this.removeSkillFromSlot(skill.nodeId)
+            const action = this.skillActions.get(skill.nodeId)
+            if (action) this.removeAction(action, { source: this, level: skill.level, skillId: skill.techId, via: "skill" })
             this.skillActions.delete(skill.nodeId)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.SkillSlotCast + "player", (slotIndex = 0) => {
+            this.castLearnedSkill(slotIndex)
         })
         eventCtrl.RegisterEventListener(EventTypes.ActionAttach + "player", (act: ActionDef) => {
         })
@@ -308,11 +314,8 @@ export class PlayerCtrl implements ILoop, IActionUser {
         )
     }
 
-    private castLearnedSkill(slotIndex = 0) {
-        const skill = this.skillActionSlots[slotIndex]
-        if (!skill) return false
-
-        if (!this.isActionDef(skill.tech)) return false
+    private applyLearnedSkill(skill: LearnedSkillMessage) {
+        if (!this.isActionDef(skill.tech)) return
 
         let action = this.skillActions.get(skill.nodeId)
         if (!action) {
@@ -320,12 +323,44 @@ export class PlayerCtrl implements ILoop, IActionUser {
             this.skillActions.set(skill.nodeId, action)
         }
 
-        this.applyAction(action, {
+        action.apply?.(this, {
             source: this,
             level: skill.level,
             skillId: skill.techId,
             via: "skill",
         })
+    }
+
+    private castLearnedSkill(slotIndex = 0) {
+        const skill = this.skillActionSlots[slotIndex]
+        if (!skill) return false
+        if (!this.isActionDef(skill.tech)) return false
+
+        let action = this.skillActions.get(skill.nodeId)
+        if (!action) {
+            action = ActionRegistry.create(skill.tech)
+            this.skillActions.set(skill.nodeId, action)
+            action.apply?.(this, {
+                source: this,
+                level: skill.level,
+                skillId: skill.techId,
+                via: "skill",
+            })
+        }
+
+        const context: ActionContext = {
+            source: this,
+            level: skill.level,
+            skillId: skill.techId,
+            via: "skill",
+        }
+
+        if (typeof action.trigger === "function") {
+            action.trigger(this, "onCast", context)
+            return true
+        }
+
+        action.activate?.(this, context)
         return true
     }
 

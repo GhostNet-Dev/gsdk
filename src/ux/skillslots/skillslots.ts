@@ -88,6 +88,11 @@ export class SkillSlotsUX extends GUX {
       if (!slot) return
       slot.castUntil = performance.now() + slot.cooldownMs
     })
+    this.eventCtrl.RegisterEventListener(EventTypes.SkillSlotCast + "player", (slotIndex = 0) => {
+      const slot = this.slots[slotIndex]
+      if (!slot) return
+      slot.castUntil = performance.now() + slot.cooldownMs
+    })
 
     this.loop()
   }
@@ -179,6 +184,13 @@ export class SkillSlotsUX extends GUX {
     const el = document.createElement("div")
     el.className = "gux-skill-slot"
     el.dataset.index = String(index)
+    el.onclick = () => {
+      const slotIndex = Number(el.dataset.index ?? 0)
+      this.eventCtrl.SendEventMessage(
+        EventTypes.SkillSlotCast + "player",
+        Number.isFinite(slotIndex) ? slotIndex : 0,
+      )
+    }
 
     const fill = document.createElement("i")
     fill.className = "gux-skill-cd"
