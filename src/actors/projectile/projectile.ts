@@ -9,9 +9,10 @@ import { MonsterDb } from "@Glibs/types/monsterdb";
 import { BulletLine } from "./bulletline";
 import { StatFactory } from "../battle/statfactory";
 import { BaseSpec } from "../battle/basespec";
+import { FireballModel } from "./fireballmodel";
 
 export interface IProjectileModel {
-    get Meshs(): THREE.Mesh | THREE.Points | THREE.Line | undefined
+    get Meshs(): THREE.Mesh | THREE.Object3D | THREE.Points | THREE.Line | undefined
     create(position: THREE.Vector3): void
     update(position:THREE.Vector3): void
     release(): void
@@ -52,6 +53,8 @@ export class Projectile implements ILoop {
                 return new Bullet3()
             case MonsterId.BulletLine:
                 return new BulletLine()
+            case MonsterId.Fireball: // (정의하신 Enum 값으로 맞춰주세요)
+                return new FireballModel()
             case MonsterId.DefaultBall:
             default:
                 return new DefaultBall(.1)
