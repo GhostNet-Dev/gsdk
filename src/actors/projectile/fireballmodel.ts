@@ -19,7 +19,7 @@ export class FireballModel implements IProjectileModel {
         this.core.root.visible = true;
         this.alive = true;
         this.clock.start();
-        this.core.setPosition(position);
+        this.core.reset(position);
     }
 
     update(position: THREE.Vector3): void {

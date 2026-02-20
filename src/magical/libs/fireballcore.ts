@@ -88,6 +88,11 @@ export class FireballCore {
     this.emitter.position.copy(position)
   }
 
+  reset(position: THREE.Vector3) {
+    this.setPosition(position)
+    this.particles.forEach((sprite) => this.spawnParticle(sprite))
+  }
+
   update(elapsedSec: number, deltaSec: number) {
     this.particles.forEach((sprite) => {
       const u = sprite.userData
