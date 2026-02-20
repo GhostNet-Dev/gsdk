@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { IProjectileModel } from "./projectile";
-import { createFireballCore, FireballCore } from "@Glibs/magical/libs/fireballcore";
+import { createFireballCore, FireballCore, FireballCoreOptions } from "@Glibs/magical/libs/fireballcore";
 
 export class FireballModel implements IProjectileModel {
     private group: THREE.Group;
@@ -10,9 +10,9 @@ export class FireballModel implements IProjectileModel {
 
     get Meshs() { return this.group; }
 
-    constructor() {
+    constructor(options: FireballCoreOptions = { scale: 1 }) {
         this.group = new THREE.Group();
-        this.core = createFireballCore({ scale: 1 });
+        this.core = createFireballCore(options);
         this.group.add(this.core.root);
         this.group.visible = false;
         this.clock = new THREE.Clock();

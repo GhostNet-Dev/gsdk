@@ -44,8 +44,7 @@ export class FireballAction implements IActionComponent {
     const speed = typeof levelStat?.speed === "number" ? levelStat.speed : 10
     const radius = typeof levelStat?.radius === "number" ? levelStat.radius : 1
 
-    const startPos = new THREE.Vector3()
-    caster.getWorldPosition(startPos)
+    const startPos = this.resolveCastOrigin(caster)
 
     const attackDir = this.resolveDirection(startPos, caster, context)
 
@@ -58,6 +57,35 @@ export class FireballAction implements IActionComponent {
       dir: attackDir.multiplyScalar(Math.max(0.1, speed / 10)),
       range: Math.max(4, radius * 8),
     })
+  }
+
+  private resolveCastOrigin(caster: THREE.Object3D): THREE.Vector3 {
+    const socketNames = [
+      "muzzlePoint",
+      "hand_r",
+      "RightHand",
+      "mixamorigRightHand",
+      "mixamorig:RightHand",
+      "spine_03",
+      "Head",
+      "mixamorigHead",
+      "mixamorig:Head",
+    ]
+
+    for (const socketName of socketNames) {
+      const socket = caster.getObjectByName(socketName)
+      if (socket) return socket.getWorldPosition(new THREE.Vector3())
+    }
+
+    const fallback = caster.getWorldPosition(new THREE.Vector3())
+    const box = new THREE.Box3().setFromObject(caster)
+    if (!box.isEmpty()) {
+      const height = Math.max(0.4, box.max.y - box.min.y)
+      fallback.y += height * 0.55
+    } else {
+      fallback.y += 1.05
+    }
+    return fallback
   }
 
   private getCasterObject(target: IActionUser): THREE.Object3D | undefined {

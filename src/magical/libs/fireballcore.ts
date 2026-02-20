@@ -5,6 +5,32 @@ export type FireballCoreOptions = {
   colorCore?: THREE.ColorRepresentation
   colorAura?: THREE.ColorRepresentation
   colorRing?: THREE.ColorRepresentation
+
+  coreRadius?: number
+  coreSegments?: number
+  coreOpacity?: number
+
+  auraRadius?: number
+  auraSegments?: number
+  auraOpacity?: number
+
+  ringCount?: number
+  ringInnerRadius?: number
+  ringOuterRadius?: number
+  ringSegments?: number
+  ringOpacity?: number
+  ringBaseSpin?: number
+  ringRandomSpin?: number
+
+  pulseSpeed?: number
+  pulseAmplitude?: number
+  ringFlickerBase?: number
+  ringFlickerAmplitude?: number
+  ringFlickerSpeed?: number
+
+  lightColor?: THREE.ColorRepresentation
+  lightIntensity?: number
+  lightRange?: number
 }
 
 export class FireballCore {
@@ -15,26 +41,54 @@ export class FireballCore {
   private rings: THREE.Mesh[] = []
   private rotSpeed: number[] = []
 
+  private pulseSpeed: number
+  private pulseAmplitude: number
+  private ringFlickerBase: number
+  private ringFlickerAmplitude: number
+  private ringFlickerSpeed: number
+
   constructor(options: FireballCoreOptions = {}) {
     const scale = options.scale ?? 1
+
+    const coreRadius = options.coreRadius ?? 0.24
+    const coreSegments = options.coreSegments ?? 24
+    const coreOpacity = options.coreOpacity ?? 1.0
+
+    const auraRadius = options.auraRadius ?? 0.5
+    const auraSegments = options.auraSegments ?? 22
+    const auraOpacity = options.auraOpacity ?? 0.62
+
+    const ringCount = options.ringCount ?? 4
+    const ringInnerRadius = options.ringInnerRadius ?? 0.34
+    const ringOuterRadius = options.ringOuterRadius ?? 0.46
+    const ringSegments = options.ringSegments ?? 48
+    const ringOpacity = options.ringOpacity ?? 0.65
+    const ringBaseSpin = options.ringBaseSpin ?? 0.9
+    const ringRandomSpin = options.ringRandomSpin ?? 1.7
+
+    this.pulseSpeed = options.pulseSpeed ?? 11
+    this.pulseAmplitude = options.pulseAmplitude ?? 0.12
+    this.ringFlickerBase = options.ringFlickerBase ?? 0.46
+    this.ringFlickerAmplitude = options.ringFlickerAmplitude ?? 0.22
+    this.ringFlickerSpeed = options.ringFlickerSpeed ?? 8.5
 
     this.root = new THREE.Group()
 
     this.core = new THREE.Mesh(
-      new THREE.SphereGeometry(0.26 * scale, 20, 20),
+      new THREE.SphereGeometry(coreRadius * scale, coreSegments, coreSegments),
       new THREE.MeshBasicMaterial({
-        color: options.colorCore ?? "#ffd7a3",
+        color: options.colorCore ?? "#fff1c2",
         transparent: true,
-        opacity: 0.95,
+        opacity: coreOpacity,
       }),
     )
 
     this.aura = new THREE.Mesh(
-      new THREE.SphereGeometry(0.42 * scale, 18, 18),
+      new THREE.SphereGeometry(auraRadius * scale, auraSegments, auraSegments),
       new THREE.MeshBasicMaterial({
-        color: options.colorAura ?? "#ff6a00",
+        color: options.colorAura ?? "#ff5b00",
         transparent: true,
-        opacity: 0.42,
+        opacity: auraOpacity,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       }),
@@ -42,25 +96,29 @@ export class FireballCore {
 
     this.root.add(this.core, this.aura)
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < ringCount; i++) {
       const ring = new THREE.Mesh(
-        new THREE.RingGeometry(0.34 * scale, 0.43 * scale, 32),
+        new THREE.RingGeometry(ringInnerRadius * scale, ringOuterRadius * scale, ringSegments),
         new THREE.MeshBasicMaterial({
           color: options.colorRing ?? "#ffb347",
           transparent: true,
-          opacity: 0.5,
+          opacity: ringOpacity,
           blending: THREE.AdditiveBlending,
           side: THREE.DoubleSide,
           depthWrite: false,
         }),
       )
       ring.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI)
-      this.rotSpeed.push(0.5 + Math.random() * 1.3)
+      this.rotSpeed.push(ringBaseSpin + Math.random() * ringRandomSpin)
       this.rings.push(ring)
       this.root.add(ring)
     }
 
-    const light = new THREE.PointLight(0xff8a2a, 3, 8)
+    const light = new THREE.PointLight(
+      options.lightColor ?? 0xff6a00,
+      options.lightIntensity ?? 4.6,
+      options.lightRange ?? 10,
+    )
     this.root.add(light)
   }
 
@@ -69,7 +127,7 @@ export class FireballCore {
   }
 
   update(elapsedSec: number, deltaSec: number) {
-    const pulse = 1 + Math.sin(elapsedSec * 8) * 0.06
+    const pulse = 1 + Math.sin(elapsedSec * this.pulseSpeed) * this.pulseAmplitude
     this.aura.scale.setScalar(pulse)
 
     this.rings.forEach((ring, i) => {
@@ -77,7 +135,8 @@ export class FireballCore {
       ring.rotation.x += spin
       ring.rotation.y -= spin * 0.7
       ring.rotation.z += spin * 0.45
-      ;(ring.material as THREE.MeshBasicMaterial).opacity = 0.32 + Math.sin(elapsedSec * 6 + i) * 0.14
+      ;(ring.material as THREE.MeshBasicMaterial).opacity =
+        this.ringFlickerBase + Math.sin(elapsedSec * this.ringFlickerSpeed + i * 0.8) * this.ringFlickerAmplitude
     })
   }
 
