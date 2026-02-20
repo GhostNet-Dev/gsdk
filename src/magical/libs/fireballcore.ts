@@ -33,6 +33,7 @@ export class FireballCore {
   readonly root: THREE.Group
 
   private emitter: THREE.Mesh
+  private coreLight: THREE.PointLight
   private particles: FireballParticle[] = []
   private particleTexture: THREE.CanvasTexture
 
@@ -44,6 +45,10 @@ export class FireballCore {
   private baseScale: number
   private lifeTime: number
   private opacity: number
+
+  private emissionEnabled = true
+  private fadeMultiplier = 1
+  private baseLightIntensity: number
 
   private colorCore: THREE.Color
   private colorAura: THREE.Color
@@ -72,12 +77,13 @@ export class FireballCore {
       new THREE.MeshBasicMaterial({ visible: false }),
     )
 
-    const coreLight = new THREE.PointLight(
+    this.baseLightIntensity = options.lightIntensity ?? 20
+    this.coreLight = new THREE.PointLight(
       options.lightColor ?? 0xffaa00,
-      options.lightIntensity ?? 20,
+      this.baseLightIntensity,
       options.lightRange ?? 10,
     )
-    this.emitter.add(coreLight)
+    this.emitter.add(this.coreLight)
     this.root.add(this.emitter)
 
     this.particleTexture = this.createHexagonTexture()
@@ -88,8 +94,23 @@ export class FireballCore {
     this.emitter.position.copy(position)
   }
 
+  setFade(multiplier: number) {
+    this.fadeMultiplier = THREE.MathUtils.clamp(multiplier, 0, 1)
+    this.coreLight.intensity = this.baseLightIntensity * this.fadeMultiplier
+  }
+
+  startEmission() {
+    this.emissionEnabled = true
+  }
+
+  stopEmission() {
+    this.emissionEnabled = false
+  }
+
   reset(position: THREE.Vector3) {
     this.setPosition(position)
+    this.setFade(1)
+    this.startEmission()
     this.particles.forEach((sprite) => this.spawnParticle(sprite))
   }
 
@@ -98,7 +119,10 @@ export class FireballCore {
       const u = sprite.userData
       u.age += deltaSec
 
-      if (u.age > u.life) this.spawnParticle(sprite)
+      if (u.age > u.life) {
+        if (this.emissionEnabled) this.spawnParticle(sprite)
+        else u.age = u.life
+      }
 
       sprite.position.x += u.velocity.x * this.expansionSpeed * deltaSec
       sprite.position.y += (u.velocity.y + this.riseSpeed) * deltaSec
@@ -107,14 +131,14 @@ export class FireballCore {
       sprite.position.x += Math.sin(elapsedSec * 5 + u.noiseOffset) * deltaSec * this.turbulence
       sprite.position.y += Math.cos(elapsedSec * 3 + u.noiseOffset) * deltaSec * this.turbulence
 
-      const lifeRatio = u.age / u.life
+      const lifeRatio = Math.min(1, u.age / u.life)
       const scaleCurve = Math.sin(lifeRatio * Math.PI)
       const scale = scaleCurve * this.baseScale * (1 + lifeRatio * 1.5)
 
       sprite.scale.setScalar(scale)
 
       const mat = sprite.material as THREE.SpriteMaterial
-      mat.opacity = this.opacity * scaleCurve
+      mat.opacity = this.opacity * scaleCurve * this.fadeMultiplier
 
       const finalColor = this.colorCore.clone()
       if (lifeRatio < 0.3) {
