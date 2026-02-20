@@ -14,8 +14,13 @@ import { FireballModel } from "./fireballmodel";
 export interface IProjectileModel {
     get Meshs(): THREE.Mesh | THREE.Object3D | THREE.Points | THREE.Line | undefined
     create(position: THREE.Vector3): void
-    update(position:THREE.Vector3): void
+    update(position: THREE.Vector3): void
     release(): void
+}
+
+type ReleaseAnimatedProjectile = IProjectileModel & {
+    updateRelease?: (delta: number) => void
+    isReleaseFinished?: () => boolean
 }
 
 export type ProjectileMsg = {
@@ -30,6 +35,7 @@ export type ProjectileMsg = {
 export type ProjectileSet = {
     model: IProjectileModel
     ctrl: ProjectileCtrl
+    releasing: boolean
 }
 
 export class Projectile implements ILoop {
@@ -69,13 +75,22 @@ export class Projectile implements ILoop {
         ctrl.start(src, dir, damage, ownerSpec)
 
         const set: ProjectileSet = {
-            model: ball, ctrl: ctrl
+            model: ball, ctrl: ctrl, releasing: false
         }
         return set
     }
     update(delta: number): void {
         this.projectiles.forEach(a => {
             a.forEach(s => {
+                if (s.releasing) {
+                    const releaseModel = s.model as ReleaseAnimatedProjectile
+                    releaseModel.updateRelease?.(delta)
+                    if (releaseModel.isReleaseFinished?.() ?? true) {
+                        this.FinalizeRelease(s)
+                    }
+                    return
+                }
+
                 s.ctrl.update(delta)
                 if (s.ctrl.attack() || !s.ctrl.checkLifeTime()) {
                     this.Release(s)
@@ -86,17 +101,31 @@ export class Projectile implements ILoop {
     resize(): void { }
 
     Release(entry: ProjectileSet) {
-        if (entry.model.Meshs) this.game.remove(entry.model.Meshs)
         entry.ctrl.Release()
+
+        const releaseModel = entry.model as ReleaseAnimatedProjectile
+        if (releaseModel.updateRelease && releaseModel.isReleaseFinished) {
+            entry.releasing = true
+            return
+        }
+
+        this.FinalizeRelease(entry)
     }
+
+    FinalizeRelease(entry: ProjectileSet) {
+        entry.releasing = false
+        if (entry.model.Meshs) this.game.remove(entry.model.Meshs)
+    }
+
     AllocateProjPool(id: MonsterId, src: THREE.Vector3, dir: THREE.Vector3, damage: number, ownerSpec: BaseSpec, range: number) {
         let pool = this.projectiles.get(id)
         if(!pool) pool = []
-        let set = pool.find((e) => e.ctrl.Live == false)
+        let set = pool.find((e) => e.ctrl.Live == false && !e.releasing)
         if (!set) {
             set = this.CreateProjectile(id, src, dir, damage, ownerSpec, range)
             pool.push(set)
         } else {
+            set.releasing = false
             set.ctrl.start(src, dir, damage, ownerSpec)
         }
         this.projectiles.set(id, pool)
@@ -106,6 +135,7 @@ export class Projectile implements ILoop {
     ReleaseAllProjPool() {
         this.projectiles.forEach(a => {
             a.forEach(s => {
+                s.releasing = false
                 s.ctrl.Release()
                 if (s.model.Meshs) this.game.remove(s.model.Meshs)
             })

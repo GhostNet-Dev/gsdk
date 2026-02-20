@@ -55,7 +55,7 @@ export class FireballAction implements IActionComponent {
       damage,
       src: startPos,
       dir: attackDir.multiplyScalar(Math.max(0.1, speed / 10)),
-      range: Math.max(4, radius * 8),
+      range: Math.max(12, radius * 24),
     })
   }
 
