@@ -284,7 +284,7 @@ const SKILL_SLOTS_CSS = `
   position: fixed;
   display: flex;
   gap: var(--gux-skill-slot-gap);
-  pointer-events: none;
+  pointer-events: auto;
 }
 .gux-skill-slots[data-position="right"] {
   right: 14px;
