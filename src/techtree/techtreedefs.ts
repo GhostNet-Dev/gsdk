@@ -666,12 +666,12 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         id: "curse_torment",
         kind: "trait",
         name: "고행 (Curse)",
-        desc: "적들이 강력해지지만 보상이 증가합니다.",
+        desc: "레벨이 오를수록 생존력이 감소하지만 보상이 증가합니다.",
         rarity: "epic",
         tags: ["curse"],
         requires: [{ type: "has", id: "stat_greed", minLv: 5 }],
         cost: COST_5,
-        tech: MOCK_TECH
+        tech: buffDefs.CurseTorment
     },
     {
         id: "wpn_pentagram",

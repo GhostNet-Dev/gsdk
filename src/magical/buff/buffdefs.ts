@@ -47,6 +47,22 @@ export const buffDefs = {
         duration: 0,
         actions: [actionDefs.StunStars],
     },
+
+    CurseTorment: {
+        id: "curse_torment",
+        name: "Torment",
+        nameKr: "고행",
+        descriptionKr: "레벨이 오를수록 생존력이 감소하지만 보상이 증가합니다.",
+        description: "High risk high reward curse scaling by tech level.",
+        type: "curse",
+        levelRequirement: 0,
+        level: "epic",
+        stackable: false,
+        binding: true,
+        icon: "☠️",
+        duration: 0,
+        actions: [actionDefs.CurseTorment],
+    },
 }
 
 export type Buffdefs = typeof buffDefs

@@ -14,6 +14,7 @@ import { Effector } from "@Glibs/magical/effects/effector";
 import { calculateCompositeDamage } from "../battle/damagecalc";
 import { BaseSpec } from "../battle/basespec";
 import { Zombie } from "./zombie";
+import { itemDefs } from "@Glibs/inventory/items/itemdefs";
 
 export type MonsterSet = {
     monModel: IPhysicsObject,
@@ -108,18 +109,35 @@ export class Monsters {
         //     })
         // })
     }
+
+    private hasExpDrop(drop?: MonDrop[]) {
+        return !!drop?.some(d => d.itemId === itemDefs.Exp.id)
+    }
+
+    private resolveExpReward(baseExp: number, baseDrop: MonDrop[] | undefined) {
+        // auto 정책: EXP 아이템 드랍이 정의되어 있으면 item 경로, 없으면 direct 경로
+        if (this.hasExpDrop(baseDrop)) {
+            return { drop: baseDrop, directExp: 0 }
+        }
+        return { drop: baseDrop, directExp: baseExp }
+    }
+
     ReceiveDemage(z: MonsterSet, damage: number, effect?: EffectType) {
         if (z && !z.monCtrl.ReceiveDemage(damage, effect)) {
             z.live = false
             z.deadtime = new Date().getTime()
             this.mobCount--
+            const property = this.monDb.GetItem(z.monCtrl.MonsterBox.MonId)
+            const baseExp = property.stats?.expBonus ?? 0
+            const expReward = this.resolveExpReward(baseExp, z.monCtrl.Drop)
+
             this.eventCtrl.SendEventMessage(EventTypes.Drop,
                 new THREE.Vector3(z.monModel.Meshs.position.x, this.player.CenterPos.y, z.monModel.Meshs.position.z), 
-                z.monCtrl.Drop, z.monCtrl.MonsterBox.MonId
+                expReward.drop, z.monCtrl.MonsterBox.MonId
             )
-            const property = this.monDb.GetItem(z.monCtrl.MonsterBox.MonId)
-            const exp = property.stats?.expBonus
-            exp ?? this.eventCtrl.SendEventMessage(EventTypes.Exp, exp)
+            if (expReward.directExp > 0) {
+                this.eventCtrl.SendEventMessage(EventTypes.Exp, expReward.directExp)
+            }
             
             this.eventCtrl.SendEventMessage(EventTypes.Death, z.monCtrl.MonsterBox.MonId)
             this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, z.monCtrl.MonsterBox)
