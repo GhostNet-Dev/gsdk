@@ -1,13 +1,22 @@
 import IEventController from "@Glibs/interface/ievent";
 import { TechNode } from "@Glibs/techtree/technode";
 import { TechTreeService } from "@Glibs/techtree/techtreeservice";
-import { BuffProperty } from "@Glibs/magical/buff/buffdefs";
+import { Buff } from "@Glibs/magical/buff/buff";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { TechTreeKind } from "@Glibs/techtree/techtreedefs";
+import { ActionProperty } from "@Glibs/types/actiontypes";
+
+type LearnedSkillMessage = {
+    nodeId: string;
+    techId: string;
+    level: number;
+    tech: unknown;
+};
 
 export default class GameManager {
-    // 활성화된 버프 객체들을 추적하기 위한 Map (key: nodeId, value: Buff Object)
-    private activeBuffs = new Map<string, BuffProperty>();
+    // 활성화된 패시브/버프 객체 추적 (key: nodeId, value: Runtime Buff)
+    private activeBuffs = new Map<string, Buff>();
+    private activeSkills = new Map<string, LearnedSkillMessage>();
 
     constructor(
         private eventCtrl: IEventController,
@@ -115,7 +124,8 @@ export default class GameManager {
 
             case "buff":   // 지속 효과 (메시지 기반)
             case "action": // 액션 컴포넌트 (메시지 기반)
-                this.applyBuffByEvent(node, level);
+            case "trait":  // 패시브 특성 (메시지 기반)
+                this.applyPassiveByEvent(node, level);
                 break;
             
             case "building": // 건물 해금 (예시: 이벤트 전송)
@@ -128,49 +138,91 @@ export default class GameManager {
      * [Message Based] 버프/액션 적용
      * ActionRegistry로 컴포넌트를 생성하고, Buff 객체로 래핑하여 이벤트 메시지를 보냅니다.
      */
-    private applyBuffByEvent(node: TechNode, level: number) {
-        // ⚠️ 중요: 원본 객체 오염 방지를 위해 얕은 복사(...)를 사용합니다.
-        const def = { ...node.tech } as BuffProperty; 
+    private applyPassiveByEvent(node: TechNode, level: number) {
+        // 단일 action 정의도 런타임 Buff 형태로 표준화하여 동일 파이프라인으로 처리
+        const runtimeBuff = this.createRuntimeBuff(node);
 
-        // 3. 추적을 위해 저장 (activeBuffs)
-        this.activeBuffs.set(node.id, def);
+        // 추적을 위해 저장
+        this.activeBuffs.set(node.id, runtimeBuff);
 
-        // 4. [핵심] 메시지 기반 등록
-        // "UpdateBuff" + "player" 채널로 버프 객체 전송
-        this.eventCtrl.SendEventMessage(EventTypes.UpdateBuff + "player", def, level);
+        // "UpdateBuff" + "player" 채널로 런타임 버프 전송
+        this.eventCtrl.SendEventMessage(EventTypes.UpdateBuff + "player", runtimeBuff, level);
     }
 
     /**
      * [Message Based] 버프 제거
      */
     private removeBuffByEvent(nodeId: string) {
-        const buff = this.activeBuffs.get(nodeId);
-        if (!buff) return;
+        const runtimeBuff = this.activeBuffs.get(nodeId);
+        if (!runtimeBuff) return;
 
         // 1. 제거 이벤트 전송
-        this.eventCtrl.SendEventMessage(EventTypes.RemoveBuff + "player", buff);
+        this.eventCtrl.SendEventMessage(EventTypes.RemoveBuff + "player", runtimeBuff);
 
         this.activeBuffs.delete(nodeId);
+    }
+
+    /**
+     * Tech 정의(Buff/Action)를 런타임 Buff 객체로 통일
+     */
+
+    private removeSkillByEvent(nodeId: string) {
+        const learned = this.activeSkills.get(nodeId);
+        if (!learned) return;
+
+        this.eventCtrl.SendEventMessage(EventTypes.RemoveSkill + "player", learned);
+        this.activeSkills.delete(nodeId);
+    }
+
+    private createRuntimeBuff(node: TechNode): Buff {
+        const tech = node.tech as any;
+        const buffLike = Array.isArray(tech?.actions)
+            ? { ...tech }
+            : {
+                id: node.techId,
+                name: node.name,
+                nameKr: node.name,
+                descriptionKr: node.desc ?? "",
+                description: node.desc ?? "",
+                type: "tech-passive",
+                levelRequirement: 0,
+                level: "common",
+                stackable: false,
+                binding: true,
+                duration: 0,
+                icon: "✨",
+                actions: [tech as ActionProperty],
+            };
+
+        return new Buff(buffLike);
     }
 
     /**
      * [Skill] 스킬 해금
      */
     private unlockSkill(node: TechNode, level: number) {
-        const skillId = node.techId;
+        // node.id는 트리 내 유니크 키, techId는 실제 액션/스킬 식별자
+        const payload: LearnedSkillMessage = {
+            nodeId: node.id,
+            techId: node.techId,
+            level,
+            tech: node.tech,
+        };
 
-        // (선택) 스킬 습득 알림 이벤트 전송
-        this.eventCtrl.SendEventMessage(EventTypes.SkillLearned + "player", skillId);
+        this.activeSkills.set(node.id, payload);
+        this.eventCtrl.SendEventMessage(EventTypes.UpdateSkill + "player", payload);
+        this.eventCtrl.SendEventMessage(EventTypes.SkillLearned + "player", payload);
 
-        console.log(`Skill unlocked: ${skillId} (Lv.${level})`);
+        console.log(`Skill unlocked: ${payload.techId} (Lv.${level})`);
     }
 
     /**
      * 효과 제거 (Respec/Re-apply용)
      */
     private removeEffect(nodeId: string) {
-        // 2. Buff/Action 제거 (메시지 또는 직접 호출)
+        // Buff/Action/Skill 제거
         this.removeBuffByEvent(nodeId);
+        this.removeSkillByEvent(nodeId);
     }
 
     /**

@@ -8,6 +8,7 @@ import { MonDrop } from '@Glibs/types/monstertypes';
 import { ItemId, itemDefs } from './items/itemdefs';
 import { Loader } from '@Glibs/loader/loader';
 import { Char } from '@Glibs/types/assettypes';
+import { StatKey } from '@Glibs/inventory/stat/stattypes';
 
 
 // 플레이어에게 아이템이 끌려오는 최대 거리 설정
@@ -30,7 +31,9 @@ export class Drops implements ILoop {
             if (drop && drop.length > 0) {
                 drop.forEach(async (item) => {
                     const ticket = Math.random()
-                    if (item.ratio < ticket) return
+                    const dropRateBonus = this.getPlayerStatBonus("itemDropRate", 1)
+                    const finalRatio = Math.min(1, item.ratio * dropRateBonus)
+                    if (finalRatio < ticket) return
 
                     const itemPros = itemDefs[item.itemId]
                     console.log("drop =>", drop)
@@ -41,6 +44,13 @@ export class Drops implements ILoop {
         })
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
     }
+
+    private getPlayerStatBonus(stat: StatKey, fallback = 1): number {
+        const v = (this.player as any)?.baseSpec?.stats?.getStat?.(stat)
+        if (typeof v !== 'number' || Number.isNaN(v)) return fallback
+        return Math.max(0, v)
+    }
+
     update(delta: number): void {
         this.items = this.items.filter((item) => {
             if(item.update(delta)) {

@@ -200,6 +200,19 @@ export const actionDefs = {
     chance: 0.3,
     dps: 5
   },
+
+  CurseTorment: {
+    type: "statBoost",
+    trigger: "onActivate",
+    levels: [
+      { },
+      { goldBonus: 2, expBonus: 2, itemDropRate: 1, defense: -2, hp: -5 },
+      { goldBonus: 4, expBonus: 4, itemDropRate: 2, defense: -4, hp: -10 },
+      { goldBonus: 6, expBonus: 6, itemDropRate: 3, defense: -6, hp: -15 },
+      { goldBonus: 8, expBonus: 8, itemDropRate: 4, defense: -8, hp: -20 },
+      { goldBonus: 10, expBonus: 10, itemDropRate: 5, defense: -10, hp: -25 },
+    ]
+  },
   // =================================================================
   // Magic
   // =================================================================

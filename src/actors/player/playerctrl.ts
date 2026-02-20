@@ -24,6 +24,13 @@ import { EventActionState, EventIdleState } from "./states/eventstate";
 import { Bind } from "@Glibs/types/assettypes";
 import { MonDrop } from "../monsters/monstertypes";
 
+type LearnedSkillMessage = {
+    nodeId: string
+    techId: string
+    level: number
+    tech: unknown
+}
+
 export class PlayerCtrl implements ILoop, IActionUser {
     LoopId = 0
     mode: AppMode = AppMode.Play
@@ -32,6 +39,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     inputVQueue: THREE.Vector3[] = []
     targets: THREE.Object3D[] = []
     actions: IActionComponent[] = []
+    learnedSkills = new Map<string, LearnedSkillMessage>()
 
     contollerEnable = true
     inputMode = false
@@ -186,10 +194,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         eventCtrl.RegisterEventListener(EventTypes.Pickup, (drop: MonDrop) => {
             const id = drop.itemId
             if (id == itemDefs.Exp.id && drop.value) {
-                if(this.baseSpec.ReceiveExp(drop.value)) {
-                    this.eventCtrl.SendEventMessage(EventTypes.LevelUp, this.baseSpec.Status.level)
-                }
-                this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `경험치 ${drop.value}을 얻었습니다.`)
+                this.grantExp(drop.value)
                 return
             }
             const info = this.inventory.GetItemInfo(id)
@@ -197,10 +202,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
             this.inventory.NewItem(id)
         })
         eventCtrl.RegisterEventListener(EventTypes.Exp, (exp: number) => {
-            if (this.baseSpec.ReceiveExp(exp)) {
-                this.eventCtrl.SendEventMessage(EventTypes.LevelUp, this.baseSpec.Status.level)
-            }
-            this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `경험치 ${exp}을 얻었습니다.`)
+            this.grantExp(exp)
         })
         eventCtrl.RegisterEventListener(EventTypes.Reward, (id: ItemId, count: number) => {
             const info = this.inventory.GetItemInfo(id)
@@ -256,6 +258,12 @@ export class PlayerCtrl implements ILoop, IActionUser {
         eventCtrl.RegisterEventListener(EventTypes.RemoveBuff + "player", (buff: Buff) => {
             this.baseSpec.RemoveBuff(buff)
         })
+        eventCtrl.RegisterEventListener(EventTypes.UpdateSkill + "player", (skill: LearnedSkillMessage) => {
+            this.learnedSkills.set(skill.nodeId, skill)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.RemoveSkill + "player", (skill: LearnedSkillMessage) => {
+            this.learnedSkills.delete(skill.nodeId)
+        })
         eventCtrl.RegisterEventListener(EventTypes.ActionAttach + "player", (act: ActionDef) => {
         })
     }
@@ -281,6 +289,21 @@ export class PlayerCtrl implements ILoop, IActionUser {
         if (idx < 0) return
         this.targets.splice(idx, 1)
     }
+
+    private applyExpBonus(baseExp: number): number {
+        const bonus = this.baseSpec.stats.getStat("expBonus")
+        const multiplier = (typeof bonus === "number" && bonus > 0) ? bonus : 1
+        return Math.max(0, Math.round(baseExp * multiplier))
+    }
+
+    private grantExp(baseExp: number) {
+        const finalExp = this.applyExpBonus(baseExp)
+        if (this.baseSpec.ReceiveExp(finalExp)) {
+            this.eventCtrl.SendEventMessage(EventTypes.LevelUp, this.baseSpec.Status.level)
+        }
+        this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `경험치 ${finalExp}을 얻었습니다.`)
+    }
+
     applyAction(action: IActionComponent, ctx?: ActionContext) {
         action.apply?.(this, ctx)
         action.activate?.(this, ctx)
