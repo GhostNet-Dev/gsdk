@@ -13,6 +13,7 @@ import { IGPhysic } from "@Glibs/interface/igphysics";
 import IInventory, { IItem } from "@Glibs/interface/iinven";
 import { ItemId, itemDefs } from "@Glibs/inventory/items/itemdefs";
 import { ActionContext, ActionDef, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes";
+import { ActionRegistry } from "@Glibs/actions/actionregistry";
 import { CutDownTreeState, TreeIdleState } from "./states/treestates";
 import { Item } from "@Glibs/inventory/items/item";
 import { Buffdefs } from "@Glibs/magical/buff/buffdefs";
@@ -40,6 +41,8 @@ export class PlayerCtrl implements ILoop, IActionUser {
     targets: THREE.Object3D[] = []
     actions: IActionComponent[] = []
     learnedSkills = new Map<string, LearnedSkillMessage>()
+    skillActionSlots: Array<LearnedSkillMessage | undefined> = [undefined]
+    skillActions = new Map<string, IActionComponent>()
 
     contollerEnable = true
     inputMode = false
@@ -260,9 +263,12 @@ export class PlayerCtrl implements ILoop, IActionUser {
         })
         eventCtrl.RegisterEventListener(EventTypes.UpdateSkill + "player", (skill: LearnedSkillMessage) => {
             this.learnedSkills.set(skill.nodeId, skill)
+            this.assignSkillToSlot(skill, 0)
         })
         eventCtrl.RegisterEventListener(EventTypes.RemoveSkill + "player", (skill: LearnedSkillMessage) => {
             this.learnedSkills.delete(skill.nodeId)
+            this.removeSkillFromSlot(skill.nodeId)
+            this.skillActions.delete(skill.nodeId)
         })
         eventCtrl.RegisterEventListener(EventTypes.ActionAttach + "player", (act: ActionDef) => {
         })
@@ -288,6 +294,45 @@ export class PlayerCtrl implements ILoop, IActionUser {
         const idx = this.targets.indexOf(obj)
         if (idx < 0) return
         this.targets.splice(idx, 1)
+    }
+
+    private assignSkillToSlot(skill: LearnedSkillMessage, slotIndex = 0) {
+        if (slotIndex < 0 || slotIndex >= this.skillActionSlots.length) return
+        if (!this.isActionDef(skill.tech)) return
+        this.skillActionSlots[slotIndex] = skill
+    }
+
+    private removeSkillFromSlot(nodeId: string) {
+        this.skillActionSlots = this.skillActionSlots.map((slot) =>
+            slot?.nodeId === nodeId ? undefined : slot
+        )
+    }
+
+    private castLearnedSkill(slotIndex = 0) {
+        const skill = this.skillActionSlots[slotIndex]
+        if (!skill) return false
+
+        if (!this.isActionDef(skill.tech)) return false
+
+        let action = this.skillActions.get(skill.nodeId)
+        if (!action) {
+            action = ActionRegistry.create(skill.tech)
+            this.skillActions.set(skill.nodeId, action)
+        }
+
+        this.applyAction(action, {
+            source: this,
+            level: skill.level,
+            skillId: skill.techId,
+            via: "skill",
+        })
+        return true
+    }
+
+    private isActionDef(value: unknown): value is ActionDef {
+        if (value == null || typeof value !== "object") return false
+        const candidate = value as Record<string, unknown>
+        return typeof candidate.type === "string" && typeof candidate.trigger === "string"
     }
 
     private applyExpBonus(baseExp: number): number {
@@ -362,6 +407,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.KeyState[cmd.Type] = true
 
         this.keyType = cmd.Type
+        if (cmd.Type == KeyType.Action5) this.castLearnedSkill(0)
         const position = cmd.ExecuteKeyDown()
         if (position.x != 0) { this.moveDirection.x = position.x }
         if (position.y != 0) { this.moveDirection.y = position.y }

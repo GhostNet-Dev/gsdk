@@ -8,6 +8,7 @@ import { AttackOption } from "@Glibs/types/playertypes";
 import { BuffStatus } from "@Glibs/ux/hud/soul/soulbuffstatus";
 import { DefaultStatusBar } from "@Glibs/ux/hud/soul/soulstatusbar";
 import { WideStatusBar } from "@Glibs/ux/hud/soul/soulstatuswidebar";
+import { SkillSlotsOptions, SkillSlotsUX } from "@Glibs/ux/skillslots/skillslots";
 
 export default class StatusCtrl {
     constructor(
@@ -17,7 +18,11 @@ export default class StatusCtrl {
         private mp: DefaultStatusBar,
         private exp: WideStatusBar,
         private buff: BuffStatus,
+        skillSlotOptions?: Partial<SkillSlotsOptions>,
     ) {
+        const skillSlots = new SkillSlotsUX(this.eventCtrl, skillSlotOptions)
+        skillSlots.Show()
+
         this.heart.UpdateStatus(100)
         this.mp.UpdateStatus(100)
         this.exp.UpdateStatus(0)
