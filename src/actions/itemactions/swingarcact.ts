@@ -18,6 +18,7 @@ export default class SwingArcEffectAction implements IActionComponent, ILoop {
     apply(target: any) {
     }
     trigger(target: IActionUser, triggerType: TriggerType, context?: ActionContext | undefined): void {
+        if (!this.trail) this.activate(target, context)
         if (!this.trail) return
         if(triggerType === "onUse") {
             this.trail.start()
