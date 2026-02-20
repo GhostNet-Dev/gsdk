@@ -143,8 +143,12 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
     'attack': 2,
     'speed': 10.0
   },
+  [MonsterId.Fireball]: {
+    hp: 1,
+    attack: 8,
+    speed: 10.0,
+  },
 };
 
 
 export type MonsterGrade = 'normal' | 'elite' | 'boss';
-

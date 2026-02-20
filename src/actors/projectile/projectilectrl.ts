@@ -63,11 +63,15 @@ export class ProjectileCtrl implements IActionUser {
     }
     update(delta: number): void {
         if (!this.live) return
-        const mov = this.baseSpec.Speed * delta
+        const dirLen = this.moveDirection.length()
+        if (dirLen <= 0.000001) return
+
+        const speed = Math.max(0.1, this.baseSpec.Speed) * Math.max(0.1, dirLen)
+        const mov = speed * delta
         this.currenttime += delta
         this.moving += mov
         this.prevPosition.copy(this.position)
-        this.position.addScaledVector(this.moveDirection, mov);
+        this.position.addScaledVector(this.moveDirection, mov / dirLen);
 
         this.projectile.update(this.position)
     }

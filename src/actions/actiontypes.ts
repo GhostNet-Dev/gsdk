@@ -228,6 +228,22 @@ export const actionDefs = {
       { damage: 20, radius: 1.5, speed: 10 }
     ]
   },
+  Meteor: {
+    id: "skill_meteor",
+    name: "Meteor",
+    trigger: "onCast",
+    type: "meteor",
+    cooldown: 7,
+    distance: 8,
+    fallDuration: 0.65,
+    ringRadius: 1.9,
+    ringCount: 6,
+    levels: [
+      { damage: 20, radius: 2.0 },
+      { damage: 28, radius: 2.4 },
+      { damage: 36, radius: 2.8 }
+    ]
+  },
   Heal: {
     id: "heal",
     name: "Heal",

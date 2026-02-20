@@ -17,6 +17,7 @@ import { FireballDefenceAction } from "./skillactions/firedefenceact";
 import { ElectricDefenceAction } from "./skillactions/electricdefenceact";
 import { GhostAction } from "./visualactions/ghostact";
 import { WaterDefenceAction } from "./skillactions/waterdefenceact";
+import { MeteorAction } from "./skillactions/meteoract";
 import SwingArcEffectAction from "./itemactions/swingarcact";
 
 export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scene, camera: Camera) {
@@ -24,6 +25,7 @@ export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scen
     ActionRegistry.register("hpStatBoost", def => new StatBoostAction(def))
     ActionRegistry.register("fireball", def => new FireballAction(eventCtrl, def))
     ActionRegistry.register("projectileFire", def => new FireballAction(eventCtrl, def))
+    ActionRegistry.register("meteor", def => new MeteorAction(eventCtrl, scene, def))
     ActionRegistry.register("casing", def => new BulletCasingAct(eventCtrl, scene, def.socket))
     ActionRegistry.register("muzzleFlash", def => {
         const texture = new THREE.TextureLoader().load(def.texture)

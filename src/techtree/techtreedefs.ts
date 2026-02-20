@@ -426,7 +426,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["fire", "aoe"],
         requires: [{ type: "has", id: "skill_fireball", minLv: 1 }],
         cost: COST_1,
-        tech: MOCK_TECH
+        tech: actionDefs.Meteor
     },
 
     // --- 냉기 (Ice) ---
