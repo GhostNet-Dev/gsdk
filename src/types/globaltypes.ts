@@ -67,6 +67,7 @@ export const EventTypes = {
     SkillLearned: "skilllearned",
     UpdateSkill: "updateskill",
     RemoveSkill: "removeskill",
+    SkillSlotCast: "skillslotcast",
     Death: "death",
     ActionAttach: "actionattach",
     ActionDettach: "actiondetach",
