@@ -23,6 +23,7 @@ import SwingArcEffectAction from "./itemactions/swingarcact";
 export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scene, camera: Camera) {
     ActionRegistry.register("statBoost", def => new StatBoostAction(def))
     ActionRegistry.register("hpStatBoost", def => new StatBoostAction(def))
+    ActionRegistry.register("attackStatBoost", def => new StatBoostAction(def))
     ActionRegistry.register("fireball", def => new FireballAction(eventCtrl, def))
     ActionRegistry.register("projectileFire", def => new FireballAction(eventCtrl, def))
     ActionRegistry.register("meteor", def => new MeteorAction(eventCtrl, scene, def))

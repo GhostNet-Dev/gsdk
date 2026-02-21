@@ -104,7 +104,9 @@ export const actionDefs = {
     levels: [
       { attack: 3, },
       { attack: 5, },
-      { attack: 10, }
+      { attack: 7, },
+      { attack: 10, },
+      { attack: 14, }
     ]
   },
   // =================================================================
