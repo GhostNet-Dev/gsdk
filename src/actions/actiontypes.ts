@@ -182,6 +182,44 @@ export const actionDefs = {
       { defense: 12 },
     ]
   },
+  SpeedStatBoost: {
+    type: "speedStatBoost",
+    trigger: "onActivate",
+    levels: [
+      { movementSpeed: 0.05 },
+      { movementSpeed: 0.1 },
+      { movementSpeed: 0.15 },
+    ]
+  },
+  GreedStatBoost: {
+    type: "greedStatBoost",
+    trigger: "onActivate",
+    levels: [
+      { goldBonus: 0.05 },
+      { goldBonus: 0.1 },
+      { goldBonus: 0.15 },
+      { goldBonus: 0.2 },
+      { goldBonus: 0.25 },
+    ]
+  },
+  LuckStatBoost: {
+    type: "luckStatBoost",
+    trigger: "onActivate",
+    levels: [
+      { luck: 1 },
+      { luck: 2 },
+      { luck: 3 },
+    ]
+  },
+  MagnetStatBoost: {
+    type: "magnetStatBoost",
+    trigger: "onActivate",
+    levels: [
+      { itemDropRate: 0.05 },
+      { itemDropRate: 0.1 },
+      { itemDropRate: 0.15 },
+    ]
+  },
   // =================================================================
   // 1. Effector
   // =================================================================

@@ -28,9 +28,9 @@ export class DropItem {
     private bounces: number;
     private maxBounces: number;
 
-    // 아이템 획득 범위
-    private readonly ACQUISITION_RANGE = 1; // 플레이어 반지름 고려 (0.8) + 아이템 반지름 (0.2) + 여유분
-    private readonly MaxTrackingDistance = 8; // 아이템이 가속되는 최대 거리
+    // 아이템 획득/추적 범위
+    private acquisitionRange = 1; // 플레이어 반지름 고려 (0.8) + 아이템 반지름 (0.2) + 여유분
+    private maxTrackingDistance = 8; // 아이템이 가속되는 최대 거리
     private readonly GroundLevel = 0.5
 
     public ItemId: ItemId = this.drop.itemId
@@ -65,6 +65,8 @@ export class DropItem {
         this.friction = options?.friction ?? 0.5;
         this.bounces = 0;
         this.maxBounces = options?.maxBounces ?? 5;
+        this.acquisitionRange = options?.acquisitionRange ?? 1;
+        this.maxTrackingDistance = options?.maxTrackingDistance ?? 8;
 
         // 초기 폭발 방향 및 속도 설정
         const angle = Math.random() * Math.PI * 2;
@@ -103,8 +105,8 @@ export class DropItem {
             const directionToPlayer = playerPosition.clone().sub(this.mesh.position).normalize();
 
             let currentSpeed = this.initialTrackingSpeed;
-            if (distance < this.MaxTrackingDistance) {
-                const speedFactor = 1 - (distance / this.MaxTrackingDistance);
+            if (distance < this.maxTrackingDistance) {
+                const speedFactor = 1 - (distance / this.maxTrackingDistance);
                 currentSpeed = this.initialTrackingSpeed + (this.maxTrackingSpeed - this.initialTrackingSpeed) * speedFactor * this.trackingAccelerationFactor;
             } else {
                 this.isTracking = false
@@ -117,7 +119,7 @@ export class DropItem {
             this.mesh.position.addScaledVector(this.velocity, deltaTime);
 
             // 아이템 획득 로직
-            if (distance < this.ACQUISITION_RANGE) {
+            if (distance < this.acquisitionRange) {
                 return true; // 아이템 획득됨
             }
         }
@@ -126,8 +128,8 @@ export class DropItem {
             this.applyPhysics(deltaTime);
             // 바닥에 닿아 완전히 멈춘 아이템은 더 이상 업데이트할 필요 없음
             const distance = this.mesh.position.distanceTo(this.player.CenterPos);
-            if (distance < this.MaxTrackingDistance && this.canTrack) this.isTracking = true
-            if (distance < this.ACQUISITION_RANGE) return true
+            if (distance < this.maxTrackingDistance && this.canTrack) this.isTracking = true
+            if (distance < this.acquisitionRange) return true
 
             if (this.bounces >= this.maxBounces && this.mesh.position.y <= 0.1 && this.velocity.lengthSq() < 0.01) {
                 this.velocity.set(0,0,0); // 완전히 멈춤

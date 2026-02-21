@@ -252,7 +252,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["stat", "utility"],
         requires: [{ type: "has", id: "root_license" }],
         cost: COST_3,
-        tech: MOCK_TECH
+        tech: actionDefs.SpeedStatBoost
     },
     {
         id: "stat_greed",
@@ -263,7 +263,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["stat", "economy"],
         requires: [{ type: "has", id: "root_license" }],
         cost: COST_5,
-        tech: MOCK_TECH
+        tech: actionDefs.GreedStatBoost
     },
     {
         id: "stat_luck",
@@ -274,7 +274,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["stat", "utility"],
         requires: [{ type: "has", id: "stat_greed", minLv: 2 }],
         cost: COST_3,
-        tech: MOCK_TECH
+        tech: actionDefs.LuckStatBoost
     },
     {
         id: "stat_magnet",
@@ -285,7 +285,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["stat", "utility"],
         requires: [{ type: "has", id: "stat_speed", minLv: 2 }],
         cost: COST_3,
-        tech: MOCK_TECH
+        tech: actionDefs.MagnetStatBoost
     },
 
     // =================================================================

@@ -181,4 +181,6 @@ export interface ItemDropOptions {
     restitution?: number; // 탄성 계수 (바운스)
     friction?: number; // 바닥 마찰
     maxBounces?: number; // 최대 바운스 횟수
+    acquisitionRange?: number; // 아이템 획득 판정 반경
+    maxTrackingDistance?: number; // 플레이어 추적 시작/유지 최대 거리
 }

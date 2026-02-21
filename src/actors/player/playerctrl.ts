@@ -202,6 +202,14 @@ export class PlayerCtrl implements ILoop, IActionUser {
                 this.grantExp(drop.value)
                 return
             }
+
+            if (id === "Gold" && drop.value) {
+                const finalGold = this.applyGoldBonus(drop.value)
+                this.eventCtrl.SendEventMessage(EventTypes.Gold, finalGold)
+                this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `골드 ${finalGold}을 얻었습니다.`)
+                return
+            }
+
             const info = this.inventory.GetItemInfo(id)
             this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, `${info.name}을 얻었습니다.`)
             this.inventory.NewItem(id)
@@ -376,6 +384,12 @@ export class PlayerCtrl implements ILoop, IActionUser {
         const bonus = this.baseSpec.stats.getStat("expBonus")
         const multiplier = (typeof bonus === "number" && bonus > 0) ? bonus : 1
         return Math.max(0, Math.round(baseExp * multiplier))
+    }
+
+    private applyGoldBonus(baseGold: number): number {
+        const bonus = this.baseSpec.stats.getStat("goldBonus")
+        const multiplier = (typeof bonus === "number" && bonus > 0) ? bonus : 1
+        return Math.max(0, Math.round(baseGold * multiplier))
     }
 
     private grantExp(baseExp: number) {
