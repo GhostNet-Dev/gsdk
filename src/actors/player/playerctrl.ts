@@ -43,6 +43,8 @@ export class PlayerCtrl implements ILoop, IActionUser {
     learnedSkills = new Map<string, LearnedSkillMessage>()
     skillActionSlots: Array<LearnedSkillMessage | undefined> = [undefined]
     skillActions = new Map<string, IActionComponent>()
+    private hpRegenAccumulator = 0
+    private mpRegenAccumulator = 0
 
     contollerEnable = true
     inputMode = false
@@ -408,6 +410,45 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.currentState = this.currentIdleState
         this.currentState.Init()
     }
+
+    private applyHpRegen(delta: number) {
+        const maxHp = this.baseSpec.stats.getStat("hp")
+        const currentHp = this.baseSpec.status.health
+        if (currentHp >= maxHp) {
+            this.hpRegenAccumulator = 0
+            return
+        }
+
+        const hpRegenPerSec = Math.max(0, this.baseSpec.stats.getStat("hpRegen"))
+        if (hpRegenPerSec <= 0) return
+
+        this.hpRegenAccumulator += hpRegenPerSec * Math.max(0, delta)
+        const healAmount = Math.floor(this.hpRegenAccumulator)
+        if (healAmount <= 0) return
+
+        this.hpRegenAccumulator -= healAmount
+        this.baseSpec.ReceiveCalcHeal(healAmount)
+    }
+
+    private applyMpRegen(delta: number) {
+        const maxMp = this.baseSpec.stats.getStat("mp")
+        const currentMp = this.baseSpec.status.mana
+        if (currentMp >= maxMp) {
+            this.mpRegenAccumulator = 0
+            return
+        }
+
+        const mpRegenPerSec = Math.max(0, this.baseSpec.stats.getStat("mpRegen"))
+        if (mpRegenPerSec <= 0) return
+
+        this.mpRegenAccumulator += mpRegenPerSec * Math.max(0, delta)
+        const manaAmount = Math.floor(this.mpRegenAccumulator)
+        if (manaAmount <= 0) return
+
+        this.mpRegenAccumulator -= manaAmount
+        this.baseSpec.ReceiveCalcMana(manaAmount)
+    }
+
     update(delta: number) {
         this.updateInputVector()
         this.updateDownKey()
@@ -415,6 +456,8 @@ export class PlayerCtrl implements ILoop, IActionUser {
 
         if (!this.player.meshs.visible) return
 
+        this.applyHpRegen(delta)
+        this.applyMpRegen(delta)
         this.currentState = this.currentState.Update(delta, this.moveDirection)
         this.player.Update(delta)
         this.actionReset()

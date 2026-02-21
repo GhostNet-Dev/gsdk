@@ -151,6 +151,37 @@ export const actionDefs = {
       { criticalRate: 15 },
     ]
   },
+  RecoveryStatBoost: {
+    type: "recoveryStatBoost",
+    trigger: "onActivate",
+    levels: [
+      { hpRegen: 0.5 },
+      { hpRegen: 1.0 },
+      { hpRegen: 1.5 },
+      { hpRegen: 2.0 },
+      { hpRegen: 2.5 },
+    ]
+  },
+  MaxHpStatBoost: {
+    type: "maxHpStatBoost",
+    trigger: "onActivate",
+    levels: [
+      { hp: 20 },
+      { hp: 35 },
+      { hp: 50 },
+      { hp: 70 },
+      { hp: 95 },
+    ]
+  },
+  ArmorStatBoost: {
+    type: "armorStatBoost",
+    trigger: "onActivate",
+    levels: [
+      { defense: 4 },
+      { defense: 8 },
+      { defense: 12 },
+    ]
+  },
   // =================================================================
   // 1. Effector
   // =================================================================
