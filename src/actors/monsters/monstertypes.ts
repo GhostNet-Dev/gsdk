@@ -34,6 +34,7 @@ export class MonsterId {
     public static DefaultBullet = "DefaultBullet"
     public static BulletLine = "BulletL"
     public static Fireball = "fb"
+    public static Knife = "knife"
     public static List = [
         this.Zombie, this.Minotaur, this.Batpig, this.Bilby, this.Birdmon,
         this.Crab, this.Builder, this.Golem, this.BigGolem, this.KittenMonk,
