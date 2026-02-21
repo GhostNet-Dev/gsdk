@@ -31,8 +31,9 @@ export class Drops implements ILoop {
             if (drop && drop.length > 0) {
                 drop.forEach(async (item) => {
                     const ticket = Math.random()
-                    const dropRateBonus = this.getPlayerStatBonus("itemDropRate", 1)
-                    const finalRatio = Math.min(1, item.ratio * dropRateBonus)
+                    const luck = this.getPlayerStatBonus("luck", 1)
+                    const luckDropMultiplier = 1 + Math.max(0, luck - 1) * 0.03
+                    const finalRatio = Math.min(1, item.ratio * luckDropMultiplier)
                     if (finalRatio < ticket) return
 
                     const itemPros = itemDefs[item.itemId]
@@ -49,6 +50,18 @@ export class Drops implements ILoop {
         const v = (this.player as any)?.baseSpec?.stats?.getStat?.(stat)
         if (typeof v !== 'number' || Number.isNaN(v)) return fallback
         return Math.max(0, v)
+    }
+
+
+    private buildMagnetizedDropOptions(): ItemDropOptions {
+        const magnet = this.getPlayerStatBonus("itemDropRate", 1)
+        const clamped = Math.max(1, magnet)
+
+        return {
+            ...(this.options ?? {}),
+            acquisitionRange: (this.options?.acquisitionRange ?? 1) * clamped,
+            maxTrackingDistance: (this.options?.maxTrackingDistance ?? 8) * clamped,
+        }
     }
 
     update(delta: number): void {
@@ -77,7 +90,7 @@ export class Drops implements ILoop {
         }
 
         const item = new DropItem(mesh, monsterPosition,
-            this.player, drop, this.options);
+            this.player, drop, this.buildMagnetizedDropOptions());
         this.scene.add(item.mesh);
         this.items.push(item);
     }

@@ -31,6 +31,10 @@ export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scen
     ActionRegistry.register("recoveryStatBoost", def => new StatBoostAction(def))
     ActionRegistry.register("maxHpStatBoost", def => new StatBoostAction(def))
     ActionRegistry.register("armorStatBoost", def => new StatBoostAction(def))
+    ActionRegistry.register("speedStatBoost", def => new StatBoostAction(def))
+    ActionRegistry.register("greedStatBoost", def => new StatBoostAction(def))
+    ActionRegistry.register("luckStatBoost", def => new StatBoostAction(def))
+    ActionRegistry.register("magnetStatBoost", def => new StatBoostAction(def))
     ActionRegistry.register("fireball", def => new FireballAction(eventCtrl, def))
     ActionRegistry.register("projectileFire", def => new FireballAction(eventCtrl, def))
     ActionRegistry.register("meteor", def => new MeteorAction(eventCtrl, scene, def))
@@ -52,4 +56,3 @@ export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scen
     ActionRegistry.register("electricdefence", def => new ElectricDefenceAction(eventCtrl, def))
     ActionRegistry.register("waterdefence", def => new WaterDefenceAction(eventCtrl, def))
 }
-

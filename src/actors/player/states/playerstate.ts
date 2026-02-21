@@ -365,6 +365,12 @@ export class RunState extends State implements IPlayerAction {
     QT = new THREE.Quaternion()
     dir = new THREE.Vector3()
 
+    private getCurrentMoveSpeed() {
+        const moveMultiplier = this.baseSpec.stats.getStat("movementSpeed")
+        const safeMultiplier = Number.isFinite(moveMultiplier) && moveMultiplier > 0 ? moveMultiplier : 1
+        return this.speed * safeMultiplier
+    }
+
     Update(delta: number, v: THREE.Vector3): IPlayerAction {
         const d = this.DefaultCheck({ magic: false, run: false })
         if (d != undefined) {
@@ -414,8 +420,9 @@ export class RunState extends State implements IPlayerAction {
             const stepDir = worldDir.clone().normalize();
             
             // OptPhysics의 CheckDirection은 slope에 따른 move 벡터를 리턴합니다.
-            const dis = this.gphysic.CheckDirection(this.player, stepDir, this.speed);
-            const step = (delta * this.speed) / stepCount;
+            const moveSpeed = this.getCurrentMoveSpeed();
+            const dis = this.gphysic.CheckDirection(this.player, stepDir, moveSpeed);
+            const step = (delta * moveSpeed) / stepCount;
 
             let moved = false;
 
@@ -482,6 +489,12 @@ export class JumpState implements IPlayerAction {
     QT = new THREE.Quaternion()
     dir = new THREE.Vector3()
 
+    private getCurrentMoveSpeed() {
+        const moveMultiplier = this.playerCtrl.baseSpec.stats.getStat("movementSpeed")
+        const safeMultiplier = Number.isFinite(moveMultiplier) && moveMultiplier > 0 ? moveMultiplier : 1
+        return this.speed * safeMultiplier
+    }
+
     constructor(private playerCtrl: PlayerCtrl, private player: Player, private camera: THREE.Camera, private gphysic: IGPhysic) { }
     Init(): void {
         console.log("Jump Init!!")
@@ -518,8 +531,9 @@ export class JumpState implements IPlayerAction {
         }
 
         // ✅ 이동 처리 (카메라 기준 방향 적용)
-        const dirdis = this.gphysic.CheckDirection(this.player, this.dir.copy(worldDir), this.speed);
-        const moveAmount = worldDir.clone().multiplyScalar(delta * this.speed);
+        const moveSpeed = this.getCurrentMoveSpeed();
+        const dirdis = this.gphysic.CheckDirection(this.player, this.dir.copy(worldDir), moveSpeed);
+        const moveAmount = worldDir.clone().multiplyScalar(delta * moveSpeed);
         const moveDis = moveAmount.length();
 
         // console.log("jump movedis ", moveDis, ", dist", dirdis.distance);
@@ -527,7 +541,7 @@ export class JumpState implements IPlayerAction {
         if (moveDis < dirdis.distance) {
             this.player.Pos.add(moveAmount);
         } else if (dirdis.move) {
-            this.player.Pos.add(dirdis.move.normalize().multiplyScalar(delta * this.speed));
+            this.player.Pos.add(dirdis.move.normalize().multiplyScalar(delta * moveSpeed));
         }
 
         // ✅ 점프/낙하 처리
