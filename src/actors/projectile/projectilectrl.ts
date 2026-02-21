@@ -15,7 +15,7 @@ export class ProjectileCtrl implements IActionUser {
     moveDirection = new THREE.Vector3()
     prevPosition = new THREE.Vector3()
     position = new THREE.Vector3()
-    attackDist = 2
+    attackDist = 1
     maxTarget = 1
     currenttime = 0
     live = false
@@ -143,6 +143,14 @@ export class ProjectileCtrl implements IActionUser {
 
         return closest.distanceTo(sphereCenter) <= sphereRadius;
     }
+
+    private getTargetRadius(target: THREE.Object3D): number {
+        const box = new THREE.Box3().setFromObject(target)
+        if (box.isEmpty()) return 0
+
+        const sphere = box.getBoundingSphere(new THREE.Sphere())
+        return Math.max(0, sphere.radius)
+    }
     getClosestHit(
         p1: THREE.Vector3,
         p2: THREE.Vector3,
@@ -164,8 +172,9 @@ export class ProjectileCtrl implements IActionUser {
             // 충돌 지점 계산
             const closestPoint = p1.clone().add(segDir.clone().multiplyScalar(projLen));
             const distToCenter = closestPoint.distanceTo(center);
+            const targetRadius = this.getTargetRadius(target) + radius;
 
-            if (distToCenter <= radius) {
+            if (distToCenter <= targetRadius) {
                 const distFromStart = p1.distanceTo(closestPoint);
                 if (!closest || distFromStart < closest.distance) {
                     closest = {

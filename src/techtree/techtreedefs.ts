@@ -156,7 +156,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["stat", "attack"],
         requires: [{ type: "has", id: "root_license" }],
         cost: COST_5,
-        tech: MOCK_TECH
+        tech: actionDefs.AttackStatBoost
     },
     {
         id: "stat_proj_speed",
