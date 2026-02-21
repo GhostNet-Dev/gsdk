@@ -127,7 +127,7 @@ export const DefaultStatus: CharacterStatus = {
         block: .01,
 
         hp:100,
-        hpRegen:1,
+        hpRegen:0,
         mp: 100,
         mpRegen: 1,
         stamina: 100,

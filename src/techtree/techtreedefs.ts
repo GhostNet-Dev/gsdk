@@ -215,7 +215,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["stat", "defense"],
         requires: [{ type: "has", id: "root_license" }],
         cost: COST_5,
-        tech: MOCK_TECH
+        tech: actionDefs.MaxHpStatBoost
     },
     {
         id: "stat_recovery",
@@ -226,7 +226,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["stat", "defense"],
         requires: [{ type: "has", id: "stat_maxhp", minLv: 2 }],
         cost: COST_5,
-        tech: MOCK_TECH
+        tech: actionDefs.RecoveryStatBoost
     },
     {
         id: "stat_armor",
@@ -237,7 +237,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["stat", "defense"],
         requires: [{ type: "has", id: "stat_maxhp", minLv: 3 }],
         cost: COST_3,
-        tech: MOCK_TECH
+        tech: actionDefs.ArmorStatBoost
     },
 
     // =================================================================

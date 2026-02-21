@@ -208,6 +208,15 @@ export class BaseSpec {
         }
     }
 
+    ReceiveCalcMana(mana: number) {
+        const maxMp = this.stats.getStat("mp");
+        if (this.status.mana + mana >= maxMp) {
+            this.status.mana = maxMp;
+        } else {
+            this.status.mana += mana;
+        }
+    }
+
     CheckDie(): boolean {
         return (this.status.immortal === false && this.status.health <= 0);
     }
