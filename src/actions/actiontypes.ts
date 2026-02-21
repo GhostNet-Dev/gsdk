@@ -109,6 +109,48 @@ export const actionDefs = {
       { attack: 14, }
     ]
   },
+  ProjectileSpeedStatBoost: {
+    type: "projectileSpeedStatBoost",
+    trigger: "onActivate",
+    levels: [
+      { projectileSpeed: 0.1 },
+      { projectileSpeed: 0.2 },
+      { projectileSpeed: 0.3 },
+    ]
+  },
+  AreaStatBoost: {
+    type: "areaStatBoost",
+    trigger: "onActivate",
+    levels: [
+      { attackRange: 0.4 },
+      { attackRange: 0.8 },
+      { attackRange: 1.2 },
+      { attackRange: 1.6 },
+      { attackRange: 2.0 },
+    ]
+  },
+  CooldownStatBoost: {
+    type: "cooldownStatBoost",
+    trigger: "onActivate",
+    levels: [
+      { cooldownReduction: 0.05 },
+      { cooldownReduction: 0.10 },
+      { cooldownReduction: 0.15 },
+      { cooldownReduction: 0.20 },
+      { cooldownReduction: 0.25 },
+    ]
+  },
+  CritRateStatBoost: {
+    type: "critRateStatBoost",
+    trigger: "onActivate",
+    levels: [
+      { criticalRate: 3 },
+      { criticalRate: 6 },
+      { criticalRate: 9 },
+      { criticalRate: 12 },
+      { criticalRate: 15 },
+    ]
+  },
   // =================================================================
   // 1. Effector
   // =================================================================

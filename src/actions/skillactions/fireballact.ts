@@ -4,6 +4,7 @@ import { MonsterId } from "@Glibs/types/monstertypes"
 import { EventTypes } from "@Glibs/types/globaltypes"
 import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes"
 import { ActionDef } from "../actiontypes"
+import { isCooldownReady } from "./cooldownhelper"
 
 export class FireballAction implements IActionComponent {
   id = "fireball"
@@ -27,14 +28,14 @@ export class FireballAction implements IActionComponent {
   }
 
   private castProjectile(target: IActionUser, context?: ActionContext) {
+    const baseSpec = target.baseSpec
+    if (!baseSpec) return
+
     const now = performance.now()
-    if (now - this.lastUsed < this.cooldown) return
+    if (!isCooldownReady(this.lastUsed, this.cooldown, target, now)) return
 
     const caster = this.getCasterObject(target)
     if (!caster) return
-
-    const baseSpec = target.baseSpec
-    if (!baseSpec) return
 
     const level = Math.max(1, context?.level ?? 1)
     const levelDefs = Array.isArray(this.def.levels) ? this.def.levels : []
