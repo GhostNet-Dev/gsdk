@@ -4,6 +4,7 @@ import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actio
 import { ActionDef } from "../actiontypes"
 import { EventTypes } from "@Glibs/types/globaltypes"
 import { createFireballCore, FireballCore } from "@Glibs/magical/libs/fireballcore"
+import { isCooldownReady } from "./cooldownhelper"
 
 type ActiveMeteor = {
   core: FireballCore
@@ -53,7 +54,7 @@ export class MeteorAction implements IActionComponent, ILoop {
     if (triggerType !== "onCast") return
 
     const now = performance.now()
-    if (now - this.lastUsed < this.cooldown) return
+    if (!isCooldownReady(this.lastUsed, this.cooldown, target, now)) return
 
     const caster = this.getCasterObject(target)
     if (!caster) return

@@ -57,6 +57,7 @@ export class ProjectileCtrl implements IActionUser {
         this.damage = damage
         this.moving = 0
         this.creatorSpec = spec
+        this.attackDist = Math.max(0.5, spec.AttackRange)
     }
     checkLifeTime(): boolean {
         return this.moving < this.range
@@ -66,7 +67,9 @@ export class ProjectileCtrl implements IActionUser {
         const dirLen = this.moveDirection.length()
         if (dirLen <= 0.000001) return
 
-        const speed = Math.max(0.1, this.baseSpec.Speed) * Math.max(0.1, dirLen)
+        const projectileSpeedBonus = this.creatorSpec?.stats.getStat("projectileSpeed") ?? 0
+        const projectileSpeedMultiplier = Math.max(0.1, 1 + projectileSpeedBonus)
+        const speed = Math.max(0.1, this.baseSpec.Speed) * Math.max(0.1, dirLen) * projectileSpeedMultiplier
         const mov = speed * delta
         this.currenttime += delta
         this.moving += mov

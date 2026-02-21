@@ -167,7 +167,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["stat", "attack"],
         requires: [{ type: "has", id: "stat_might", minLv: 1 }],
         cost: COST_3,
-        tech: MOCK_TECH
+        tech: actionDefs.ProjectileSpeedStatBoost
     },
     {
         id: "stat_area",
@@ -178,7 +178,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["stat", "aoe"],
         requires: [{ type: "has", id: "stat_might", minLv: 2 }],
         cost: COST_5,
-        tech: MOCK_TECH
+        tech: actionDefs.AreaStatBoost
     },
     {
         id: "stat_cooldown",
@@ -189,7 +189,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["stat", "magic"],
         requires: [{ type: "has", id: "stat_might", minLv: 3 }],
         cost: COST_5,
-        tech: MOCK_TECH
+        tech: actionDefs.CooldownStatBoost
     },
     {
         id: "stat_crit_rate",
@@ -200,7 +200,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["stat", "crit"],
         requires: [{ type: "has", id: "stat_might", minLv: 5 }],
         cost: COST_5,
-        tech: MOCK_TECH
+        tech: actionDefs.CritRateStatBoost
     },
 
     // =================================================================
