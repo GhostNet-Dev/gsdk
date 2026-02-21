@@ -48,6 +48,12 @@ export class FireballAction implements IActionComponent {
 
     const attackDir = this.resolveDirection(startPos, caster, context)
 
+    const defaultRange = Math.max(12, radius * 24)
+    const destination = this.asVector3(context?.destination)
+    const range = destination
+      ? Math.max(defaultRange, startPos.distanceTo(destination) + radius * 2)
+      : defaultRange
+
     this.lastUsed = now
     this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
       id: MonsterId.Fireball,
@@ -55,7 +61,7 @@ export class FireballAction implements IActionComponent {
       damage,
       src: startPos,
       dir: attackDir.multiplyScalar(Math.max(0.1, speed / 10)),
-      range: Math.max(12, radius * 24),
+      range,
     })
   }
 

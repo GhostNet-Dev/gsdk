@@ -19,9 +19,13 @@ export class StatBoostAction implements IActionComponent {
     if ("stats" in this.def) {
       this.modifiers = Object.entries(this.def.stats).map(([stat, value]) =>
         new Modifier(stat as StatKey, value! as number, this.type, this.source))
-     } else {
-      const level = context?.level ?? 0
-      this.modifiers = Object.entries(this.def.levels[level]).map(([stat, value]) =>
+    } else {
+      const levels = Array.isArray(this.def.levels) ? this.def.levels : []
+      if (levels.length === 0) return
+
+      const currentLevel = Math.max(1, context?.level ?? 1)
+      const levelIndex = Math.min(levels.length - 1, currentLevel - 1)
+      this.modifiers = Object.entries(levels[levelIndex]).map(([stat, value]) =>
         new Modifier(stat as StatKey, value! as number, this.type, this.source))
     }
 
