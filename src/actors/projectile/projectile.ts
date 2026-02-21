@@ -10,6 +10,9 @@ import { BulletLine } from "./bulletline";
 import { StatFactory } from "../battle/statfactory";
 import { BaseSpec } from "../battle/basespec";
 import { FireballModel } from "./fireballmodel";
+import { KnifeModel } from "./knifemodel";
+import { Loader } from "@Glibs/loader/loader";
+import { Char } from "@Glibs/types/assettypes";
 
 export interface IProjectileModel {
     get Meshs(): THREE.Mesh | THREE.Object3D | THREE.Points | THREE.Line | undefined
@@ -46,6 +49,7 @@ export class Projectile implements ILoop {
         private eventCtrl: IEventController,
         private game: THREE.Scene,
         private targetList: THREE.Object3D[],
+        private loader?: Loader,
     ) {
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         eventCtrl.RegisterEventListener(EventTypes.Projectile, (opt: ProjectileMsg) => {
@@ -61,6 +65,8 @@ export class Projectile implements ILoop {
                 return new BulletLine()
             case MonsterId.Fireball: // (정의하신 Enum 값으로 맞춰주세요)
                 return new FireballModel()
+            case MonsterId.Knife:
+                return new KnifeModel(this.loader?.GetAssets(Char.KayKitAdvDagger))
             case MonsterId.DefaultBall:
             default:
                 return new DefaultBall(.1)

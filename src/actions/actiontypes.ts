@@ -329,6 +329,30 @@ export const actionDefs = {
   // =================================================================
   // Magic
   // =================================================================
+  KnifeThrow: {
+    id: "skill_knife",
+    name: "Knife Throw",
+    trigger: "onCast",
+    type: "projectileKnife",
+    cooldown: 1.2,
+    levels: [
+      { damage: 8, radius: 0.3, speed: 16 },
+      { damage: 12, radius: 0.35, speed: 17 },
+      { damage: 16, radius: 0.4, speed: 18 }
+    ]
+  },
+  FanOfKnives: {
+    id: "skill_fan_of_knives",
+    name: "Fan Of Knives",
+    trigger: "onCast",
+    type: "projectileKnifeFan",
+    cooldown: 2.2,
+    levels: [
+      { damage: 7, radius: 0.3, speed: 15, projectileCount: 5, spreadAngleDeg: 55 },
+      { damage: 10, radius: 0.35, speed: 16, projectileCount: 7, spreadAngleDeg: 70 },
+      { damage: 13, radius: 0.4, speed: 17, projectileCount: 9, spreadAngleDeg: 85 }
+    ]
+  },
   FireBall: {
     id: "fireball",
     name: "Fireball",

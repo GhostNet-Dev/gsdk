@@ -376,7 +376,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["rogue", "projectile"],
         requires: [{ type: "has", id: "class_rogue", minLv: 1 }],
         cost: COST_1,
-        tech: MOCK_TECH
+        tech: actionDefs.KnifeThrow
     },
     {
         id: "skill_fan_of_knives",
@@ -387,7 +387,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["rogue", "aoe"],
         requires: [{ type: "has", id: "skill_knife", minLv: 1 }],
         cost: COST_1,
-        tech: MOCK_TECH
+        tech: actionDefs.FanOfKnives
     },
 
     // =================================================================

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { ActionRegistry } from "./actionregistry"
 import { StatBoostAction } from "./traitaction/statboostact"
 import { FireballAction } from "./skillactions/fireballact"
+import { KnifeAction } from "./skillactions/knifeact"
 import { MuzzleAction } from "./itemactions/muzzleact";
 import { EventController } from "@Glibs/systems/event/eventctrl";
 import { BulletCasingAct } from "./itemactions/bulletcasingact";
@@ -37,6 +38,8 @@ export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scen
     ActionRegistry.register("magnetStatBoost", def => new StatBoostAction(def))
     ActionRegistry.register("fireball", def => new FireballAction(eventCtrl, def))
     ActionRegistry.register("projectileFire", def => new FireballAction(eventCtrl, def))
+    ActionRegistry.register("projectileKnife", def => new KnifeAction(eventCtrl, def))
+    ActionRegistry.register("projectileKnifeFan", def => new KnifeAction(eventCtrl, def))
     ActionRegistry.register("meteor", def => new MeteorAction(eventCtrl, scene, def))
     ActionRegistry.register("casing", def => new BulletCasingAct(eventCtrl, scene, def.socket))
     ActionRegistry.register("muzzleFlash", def => {
