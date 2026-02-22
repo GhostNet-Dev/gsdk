@@ -43,6 +43,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     learnedSkills = new Map<string, LearnedSkillMessage>()
     skillActionSlots: Array<LearnedSkillMessage | undefined> = [undefined, undefined, undefined, undefined]
     skillActions = new Map<string, IActionComponent>()
+    private skillCastAnimTimeout?: NodeJS.Timeout
     private hpRegenAccumulator = 0
     private mpRegenAccumulator = 0
 
@@ -361,6 +362,8 @@ export class PlayerCtrl implements ILoop, IActionUser {
         if (!skill) return false
         if (!this.isActionDef(skill.tech)) return false
 
+        this.playSkillCastMotion(skill.tech)
+
         let action = this.skillActions.get(skill.nodeId)
         if (!action) {
             action = ActionRegistry.create(skill.tech)
@@ -387,6 +390,36 @@ export class PlayerCtrl implements ILoop, IActionUser {
 
         action.activate?.(this, context)
         return true
+    }
+
+    private playSkillCastMotion(tech: ActionDef) {
+        if (this.currentState === this.RollSt || this.currentState === this.DyingSt) return
+
+        const castAction = this.resolveCastActionType(tech)
+        const duration = this.player.ChangeAction(castAction)
+        if (duration == undefined) return
+
+        if (this.skillCastAnimTimeout) clearTimeout(this.skillCastAnimTimeout)
+        this.skillCastAnimTimeout = setTimeout(() => {
+            if (this.player.currentActionType !== castAction) return
+            this.player.ChangeAction(ActionType.Idle)
+            this.skillCastAnimTimeout = undefined
+        }, duration * 1000)
+    }
+
+    private resolveCastActionType(tech: ActionDef): ActionType {
+        if (typeof tech.castAction === "number") {
+            const castAction = tech.castAction as number
+            if (Number.isInteger(castAction) && ActionType[castAction] !== undefined) return castAction
+            return ActionType.MagicH1
+        }
+
+        const castAction = typeof tech.castAction === "string" ? tech.castAction : ""
+        if (castAction === "MagicH2") return ActionType.MagicH2
+        if (castAction === "MagicH1") return ActionType.MagicH1
+
+        if (tech.type === "meteor") return ActionType.MagicH2
+        return ActionType.MagicH1
     }
 
     private isActionDef(value: unknown): value is ActionDef {
