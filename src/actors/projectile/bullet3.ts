@@ -16,7 +16,7 @@ export class Bullet3 implements IProjectileModel {
         this.mesh.visible = false
     }
 
-    create(pos: THREE.Vector3,) {
+    create(pos: THREE.Vector3, _dir?: THREE.Vector3) {
         for (let i = 0; i < this.trailPositions.length; i += 3) {
             this.trailPositions[i] = pos.x
             this.trailPositions[i + 1] = pos.y

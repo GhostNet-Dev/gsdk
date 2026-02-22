@@ -116,9 +116,9 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
             { lv: 1, cost: { points: 1 } },
         ],
         requires: [
-            { type: "playerLv", atLeast: 2 }
+            { type: "playerLv", atLeast: 1 }
         ],
-        tech: actionDefs.KnifeThrow
+        tech: actionDefs.FanOfKnives
     },
     {
         id: "hpboost",

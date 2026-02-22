@@ -148,6 +148,11 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
     attack: 8,
     speed: 10.0,
   },
+  [MonsterId.Knife]: {
+    hp: 1,
+    attack: 5,
+    speed: 10.0,
+  },
 };
 
 

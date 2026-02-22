@@ -51,7 +51,7 @@ export class ProjectileCtrl implements IActionUser {
         this.position.copy(src)
         this.prevPosition.copy(src)
         this.moveDirection.copy(dir)
-        this.projectile.create(src)
+        this.projectile.create(src, dir)
         this.live = true
         this.currenttime = 0
         this.damage = damage

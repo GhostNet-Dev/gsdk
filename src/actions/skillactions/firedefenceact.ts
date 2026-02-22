@@ -46,10 +46,18 @@ export class FireballDefenceAction implements IActionComponent, ILoop {
     // 캐릭터의 높이를 계산하여 중심점(가슴 높이) 설정
     const box = new THREE.Box3().setFromObject(obj);
     if (!box.isEmpty()) {
-      const height = box.max.y - box.min.y;
-      this.moonOrbit.position.y = height * 0.55;
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      // obj.position.y가 캐릭터의 발 위치(바닥)라고 가정할 때, 
+      // 로컬 y 좌표는 (박스 중심 y - 발 위치 y)가 됩니다.
+      this.moonOrbit.position.y = center.y - obj.position.y;
+      
+      // 만약 계산된 높이가 너무 낮으면(예: 0.5 미만) 최소 높이 보정
+      if (this.moonOrbit.position.y < 0.5) {
+        this.moonOrbit.position.y = 1.2;
+      }
     } else {
-      this.moonOrbit.position.y = 1.1; // 폴백 값
+      this.moonOrbit.position.y = 1.2; // 폴백 값
     }
 
     obj.add(this.moonOrbit)

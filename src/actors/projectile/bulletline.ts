@@ -13,8 +13,7 @@ export class BulletLine implements IProjectileModel {
     return this.line;
   }
 
-  create(position: THREE.Vector3): void {
-    const colors: number[] = [];
+      create(position: THREE.Vector3, _direction?: THREE.Vector3): void {    const colors: number[] = [];
     const color = new THREE.Color();
 
     for (let i = 0; i < this.segmentCount; i++) {

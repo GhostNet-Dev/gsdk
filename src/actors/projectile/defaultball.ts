@@ -17,7 +17,7 @@ export class DefaultBall extends GhostObject implements IProjectileModel {
 
         super(geometry, material)
     }
-    create(position: THREE.Vector3): void {
+    create(position: THREE.Vector3, _direction?: THREE.Vector3): void {
        this.Pos.copy(position) 
        this.Visible = true
     }

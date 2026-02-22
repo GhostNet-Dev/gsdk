@@ -19,7 +19,7 @@ export class KnifeAction implements IActionComponent {
 
   activate(_target: IActionUser, _context?: ActionContext) {}
 
-  trigger(target: IActionUser, triggerType: "onCast", context?: ActionContext) {
+  trigger(target: IActionUser, triggerType: string, context?: ActionContext) {
     if (triggerType !== "onCast") return
     this.castProjectile(target, context)
   }
@@ -102,15 +102,21 @@ export class KnifeAction implements IActionComponent {
       if (socket) return socket.getWorldPosition(new THREE.Vector3())
     }
 
-    const fallback = caster.getWorldPosition(new THREE.Vector3())
+    // 소켓을 찾지 못한 경우 Fallback 로직: 캐릭터의 높이를 계산하여 중앙에서 발사
+    const worldPos = caster.getWorldPosition(new THREE.Vector3())
     const box = new THREE.Box3().setFromObject(caster)
+
     if (!box.isEmpty()) {
-      const height = Math.max(0.4, box.max.y - box.min.y)
-      fallback.y += height * 0.55
+      const center = new THREE.Vector3()
+      box.getCenter(center)
+      // 캐릭터 발밑이 아닌 몸 중앙 높이를 유지 (최소 지면 위 0.5 높이 보장)
+      worldPos.y = Math.max(worldPos.y + 0.5, center.y)
     } else {
-      fallback.y += 1.05
+      // 박스가 비어있으면(메시 로드 전 등) 기본 1.2 높이 부여
+      worldPos.y += 1.2
     }
-    return fallback
+    
+    return worldPos
   }
 
   private getCasterObject(target: IActionUser): THREE.Object3D | undefined {

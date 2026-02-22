@@ -41,6 +41,20 @@ export class ElectricDefenceAction implements IActionComponent, ILoop {
     this.elec.attachTo(this.sphere);
     this.moonOrbit.add(this.sphere)
     this.sphere.position.x = 10
+
+    // 캐릭터의 높이를 계산하여 중심점(가슴 높이) 설정
+    const box = new THREE.Box3().setFromObject(obj);
+    if (!box.isEmpty()) {
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      this.moonOrbit.position.y = center.y - obj.position.y;
+      if (this.moonOrbit.position.y < 0.5) {
+        this.moonOrbit.position.y = 1.2;
+      }
+    } else {
+      this.moonOrbit.position.y = 1.2; // 폴백 값
+    }
+
     obj.add(this.moonOrbit)
     this.moonOrbit.rotation.y -= 2 * Math.random();
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)

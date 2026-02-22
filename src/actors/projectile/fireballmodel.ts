@@ -18,7 +18,7 @@ export class FireballModel implements IProjectileModel {
         this.clock = new THREE.Clock();
     }
 
-    create(position: THREE.Vector3): void {
+    create(position: THREE.Vector3, _direction?: THREE.Vector3): void {
         this.core.root.visible = true;
         this.alive = true;
         this.fading = false;
