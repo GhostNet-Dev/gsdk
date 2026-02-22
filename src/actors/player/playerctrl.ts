@@ -180,8 +180,9 @@ export class PlayerCtrl implements ILoop, IActionUser {
         eventCtrl.RegisterEventListener(EventTypes.Equipment, (id: ItemId) => {
             const slot = this.inventory.GetItemSlot(id)
             if (slot == undefined) throw new Error("item is undefined")
-            if (slot.item.Bind) {
-                const prevItem = this.baseSpec.GetBindItem(slot.item.Bind);
+            const targetSlot = slot.item.ItemType === "rangeattack" ? Bind.Weapon_Ranged : slot.item.Bind
+            if (targetSlot) {
+                const prevItem = this.baseSpec.GetBindItem(targetSlot);
                 if (prevItem) (prevItem as Item).deactivate()
             }
             this.baseSpec.Equip(slot.item);

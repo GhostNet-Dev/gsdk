@@ -85,19 +85,20 @@ export class Player extends PhysicsObject {
         delete this.bindMesh[bind]
     }
     ReloadBindingItem(item: IItem) {
-        if(item.Bind == undefined) throw new Error("item bind is undefined")
+        const bind = item.ItemType === "rangeattack" ? Bind.Weapon_Ranged : item.Bind
+        if(bind == undefined) throw new Error("item bind is undefined")
 
-        const rightId = this.asset.GetBodyMeshId(item.Bind)
+        const rightId = this.asset.GetBodyMeshId(bind)
         if (rightId == undefined) return
 
         const mesh = this.meshs.getObjectByName(rightId)
         if (!mesh) return
-        const prev = this.bindMesh[item.Bind]
+        const prev = this.bindMesh[bind]
 
         if (prev) {
             //mesh.remove(prev)
             prev.visible = false
-            delete this.bindMesh[item.Bind]
+            delete this.bindMesh[bind]
         }
 
         if (item && item.Mesh != undefined) {
@@ -107,7 +108,7 @@ export class Player extends PhysicsObject {
             } else {
                 mesh.add(item.Mesh)
             }
-            this.bindMesh[item.Bind] = item.Mesh
+            this.bindMesh[bind] = item.Mesh
         }
     }
 

@@ -91,7 +91,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
             new THREE.Vector3(10, 10, 0),
             new THREE.Vector3(0, 5, -10)
         ]));
-        this.strategies.set(CameraMode.AimThirdPerson, new AimThirdPersonCameraStrategy());
+        this.strategies.set(CameraMode.AimThirdPerson, new AimThirdPersonCameraStrategy(this.controls, this));
         // 여기에 다른 전략도 추가하세요
         this.strategy = this.strategies.get(this.mode)!;
     }
