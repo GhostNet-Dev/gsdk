@@ -72,14 +72,17 @@ const MOCK_TECH = buffDefs.DarkSide; // 실제 기능은 이걸로 통일
 
 // 모든 레벨 비용 1 골드
 const COST_0: LevelCost[] = [{ lv: 1 }];
-const COST_1: LevelCost[] = [{ lv: 1, cost: { gold: 1 } }];
-const COST_3: LevelCost[] = [
-    { lv: 1, cost: { gold: 1 } }, { lv: 2, cost: { gold: 1 } }, { lv: 3, cost: { gold: 1 } }
-];
-const COST_5: LevelCost[] = [
-    { lv: 1, cost: { gold: 1 } }, { lv: 2, cost: { gold: 1 } }, { lv: 3, cost: { gold: 1 } },
-    { lv: 4, cost: { gold: 1 } }, { lv: 5, cost: { gold: 1 } }
-];
+const COST_1: LevelCost[] = COST_0
+const COST_3: LevelCost[] = COST_0;
+const COST_5: LevelCost[] = COST_0;
+// const COST_1: LevelCost[] = [{ lv: 1, cost: { gold: 1 } }];
+// const COST_3: LevelCost[] = [
+//     { lv: 1, cost: { gold: 1 } }, { lv: 2, cost: { gold: 1 } }, { lv: 3, cost: { gold: 1 } }
+// ];
+// const COST_5: LevelCost[] = [
+//     { lv: 1, cost: { gold: 1 } }, { lv: 2, cost: { gold: 1 } }, { lv: 3, cost: { gold: 1 } },
+//     { lv: 4, cost: { gold: 1 } }, { lv: 5, cost: { gold: 1 } }
+// ];
 
 
 export const DefaultTechTreeDefs: TechTreeDefBase[] = [

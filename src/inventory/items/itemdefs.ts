@@ -15,6 +15,15 @@ export const itemDefs = {
     stackable: true,
     description : "exp", 
   },
+  Gold: { 
+    id: "Gold",
+    name: "Gold",
+    icon: itemIcons.Topazstaff,
+    type: "meleeattack",
+    binding: false,
+    stackable: true,
+    description : "Gold", 
+  },
   Hanhwasbat: {
     id: "Hanhwasbat",
     name: "Hanhwa's Bat",
