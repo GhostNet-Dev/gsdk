@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { ICameraStrategy } from "./cameratypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 
@@ -11,22 +12,48 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
     private readonly lookAheadDistance = 25;
     private readonly lerpFactor = 0.18;
 
+    constructor(
+        private controls: OrbitControls,
+        private camera: THREE.Camera,
+    ) {
+        this.controls.enableRotate = true
+        this.controls.enablePan = false
+        this.controls.enableZoom = false
+        this.controls.minPolarAngle = 0.25
+        this.controls.maxPolarAngle = Math.PI / 2 - 0.05
+    }
+
+    orbitStart(): void {
+        this.controls.enabled = true
+    }
+
+    orbitEnd(): void {
+        this.controls.enabled = true
+    }
+
     update(camera: THREE.Camera, player?: IPhysicsObject): void {
         if (!player) return;
 
-        const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.Meshs.quaternion).setY(0).normalize();
+        const target = player.CenterPos.clone().add(new THREE.Vector3(0, this.shoulderOffset.y, 0))
+        this.controls.target.copy(target)
+
+        const camDir = new THREE.Vector3().subVectors(camera.position, target).setY(0)
+        if (camDir.lengthSq() < 1e-4) camDir.set(0, 0, -1)
+        camDir.normalize()
+        const forward = camDir.clone().multiplyScalar(-1)
         const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
 
-        const desired = player.CenterPos.clone()
+        const desired = target.clone()
             .add(right.multiplyScalar(this.shoulderOffset.x))
-            .add(new THREE.Vector3(0, this.shoulderOffset.y, 0))
             .add(forward.clone().multiplyScalar(-this.backDistance));
 
         this.targetPosition.lerp(desired, this.lerpFactor);
         camera.position.copy(this.targetPosition);
 
-        const aimTarget = player.CenterPos.clone().add(new THREE.Vector3(0, this.shoulderOffset.y, 0)).add(forward.multiplyScalar(this.lookAheadDistance));
+        const aimTarget = target.clone().add(forward.multiplyScalar(this.lookAheadDistance));
         this.lookTarget.lerp(aimTarget, this.lerpFactor * 1.4);
         camera.lookAt(this.lookTarget);
+
+        this.controls.update()
     }
 }

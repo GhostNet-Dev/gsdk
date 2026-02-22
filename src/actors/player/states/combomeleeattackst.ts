@@ -13,6 +13,7 @@ import { Item } from "@Glibs/inventory/items/item";
 import { AttackState } from "./attackstate";
 import { KeyType } from "@Glibs/types/eventtypes";
 import { GlobalEffectType } from "@Glibs/types/effecttypes";
+import { CameraMode } from "@Glibs/systems/camera/cameratypes";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
@@ -543,7 +544,7 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         this.hitTimerFired = false;
 
         // 무기 세팅/오토에임
-        const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R);
+        const handItem = this.playerCtrl.baseSpec.GetMeleeItem();
         if (handItem) {
             // 아이템 Action.activate는 장착 시점(PlayerCtrl.Equipment)에서 1회 호출됨
             // 공격 시작/콤보 스텝에서는 onUse 트리거만 발행
@@ -552,7 +553,15 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
                 this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, (handItem as any).Mesh, (handItem as any).Sound);
             }
             this.autoAttack = handItem.AutoAttack;
-            if (this.autoAttack) this.autoDirection();
+            if (this.autoAttack) {
+                this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, false)
+                this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.ThirdFollowPerson)
+                this.autoDirection();
+            } else {
+                this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.AimThirdPerson)
+                this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, true)
+                this.detectEnermy = true
+            }
         }
 
         // 예약 스케줄
@@ -695,6 +704,8 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         this.comboWindowOpen = false;
         this.nextStepQueued = false;
         this.hitstopLeft = 0;
+        this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, false)
+        this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.ThirdFollowPerson)
         super.Uninit();
     }
 }
