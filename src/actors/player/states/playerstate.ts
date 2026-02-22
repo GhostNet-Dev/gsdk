@@ -54,9 +54,10 @@ export class State {
     CheckAttack() {
         if (this.playerCtrl.KeyState[KeyType.Action1]) {
             if (this.playerCtrl.mode == AppMode.Play) {
-                const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
-                const state = (handItem?.ItemType == "meleeattack") ?
-                    this.playerCtrl.ComboMeleeSt : this.playerCtrl.RangeAttackSt
+                const meleeItem = this.playerCtrl.baseSpec.GetMeleeItem()
+                const rangedItem = this.playerCtrl.baseSpec.GetRangedItem()
+                const state = (!rangedItem && (meleeItem?.ItemType == "meleeattack" || !meleeItem))
+                    ? this.playerCtrl.ComboMeleeSt : this.playerCtrl.RangeAttackSt
                 state.Init()
                 return state
             } else if (this.playerCtrl.mode == AppMode.Weapon) {
@@ -118,9 +119,10 @@ export class State {
         for (const v of this.playerCtrl.targets) {
             const dis = this.player.CenterPos.distanceTo(v.position)
             if (attackRange > dis) {
-                const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
-                const state = (handItem?.ItemType == "meleeattack") ?
-                    this.playerCtrl.ComboMeleeSt : this.playerCtrl.RangeAttackSt
+                const meleeItem = this.playerCtrl.baseSpec.GetMeleeItem()
+                const rangedItem = this.playerCtrl.baseSpec.GetRangedItem()
+                const state = (!rangedItem && (meleeItem?.ItemType == "meleeattack" || !meleeItem))
+                    ? this.playerCtrl.ComboMeleeSt : this.playerCtrl.RangeAttackSt
                 state.Init()
                 return state
             }

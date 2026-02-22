@@ -28,7 +28,7 @@ export class RangeAttackState extends AttackState implements IPlayerAction {
         this.attackProcess = false
         this.attackSpeed = this.baseSpec.AttackSpeed
         this.attackDist = this.baseSpec.AttackRange
-        const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
+        const handItem = this.playerCtrl.baseSpec.GetRangedItem()
         if(handItem == undefined) {
             this.player.ChangeAction(ActionType.Punch, this.attackSpeed)
         } else {
@@ -87,7 +87,7 @@ export class RangeAttackState extends AttackState implements IPlayerAction {
             return this.ChangeMode(this.playerCtrl.currentIdleState)
         }
         this.attackProcess = true
-        const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
+        const handItem = this.playerCtrl.baseSpec.GetRangedItem()
         if (handItem == undefined) return this;
 
         this.eventCtrl.SendEventMessage(EventTypes.PlaySound, handItem.Mesh, handItem.Sound)

@@ -22,6 +22,7 @@ export type EquipSlots = {
     hands?: IItem | null;
     legs?: IItem | null;
     weapon?: IItem | null;
+    weapon_ranged?: IItem | null;
     offhand?: IItem | null;
     ring1?: IItem | null;
     ring2?: IItem | null;

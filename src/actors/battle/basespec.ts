@@ -232,6 +232,14 @@ export class BaseSpec {
         return this.equipment[slot];
     }
 
+    GetRangedItem() {
+        return this.equipment[Bind.Weapon_Ranged] ?? this.equipment[Bind.Hands_R]
+    }
+
+    GetMeleeItem() {
+        return this.equipment[Bind.Hands_R] ?? this.equipment[Bind.Hands_L]
+    }
+
     Buff(buff: Buff, level: number) {
         if ("actions" in buff && buff.actions && Array.isArray(buff.actions)) {
             for (const action of buff.actions) {
@@ -249,11 +257,12 @@ export class BaseSpec {
     }
 
     Equip(item: IItem) {
-        if (item.Bind == undefined) throw new Error("item bind is undefined");
-        
-        const prevItem = this.equipment[item.Bind];
+        const targetSlot = item.ItemType === "rangeattack" ? Bind.Weapon_Ranged : item.Bind
+        if (targetSlot == undefined) throw new Error("item bind is undefined");
+
+        const prevItem = this.equipment[targetSlot];
         if (prevItem) {
-            this.Unequip(item.Bind); // 기존 아이템 해제 시 modifiers도 제거됨
+            this.Unequip(targetSlot); // 기존 아이템 해제 시 modifiers도 제거됨
         }
 
         // ActionComponent 실행
@@ -263,7 +272,7 @@ export class BaseSpec {
             }
         }
 
-        this.equipment[item.Bind] = item;
+        this.equipment[targetSlot] = item;
         this.addItemModifiers(item);
     }
 
