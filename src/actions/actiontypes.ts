@@ -334,6 +334,7 @@ export const actionDefs = {
     name: "Knife Throw",
     trigger: "onCast",
     type: "projectileKnife",
+    castAction: "MagicH1",
     cooldown: 1.2,
     levels: [
       { damage: 8, radius: 0.3, speed: 16 },
@@ -346,6 +347,7 @@ export const actionDefs = {
     name: "Fan Of Knives",
     trigger: "onCast",
     type: "projectileKnifeFan",
+    castAction: "MagicH1",
     cooldown: 2.2,
     levels: [
       { damage: 7, radius: 0.3, speed: 15, projectileCount: 5, spreadAngleDeg: 55 },
@@ -358,6 +360,7 @@ export const actionDefs = {
     name: "Fireball",
     trigger: "onCast",
     type: "projectileFire",
+    castAction: "MagicH1",
     cooldown: 3,
     levels: [
       { damage: 10, radius: 1.0, speed: 10 },
@@ -370,6 +373,7 @@ export const actionDefs = {
     name: "Meteor",
     trigger: "onCast",
     type: "meteor",
+    castAction: "MagicH2",
     cooldown: 7,
     distance: 8,
     fallDuration: 0.65,
@@ -386,6 +390,7 @@ export const actionDefs = {
     name: "Heal",
     trigger: "onCast",
     type: "regen",
+    castAction: "MagicH2",
     cooldown: 5,
     levels: [
       { amount: 20 },

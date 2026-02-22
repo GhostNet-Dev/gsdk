@@ -227,9 +227,9 @@ export class Player extends PhysicsObject {
     clock = new THREE.Clock()
 
     ChangeAction(action: ActionType, speed?: number) {
-        let clip: THREE.AnimationClip | undefined
+        const clip = this.clipMap.get(action)
         this.currentActionType = action
-        this.changeAnimate(this.clipMap.get(action), speed)
+        this.changeAnimate(clip, speed)
         return clip?.duration
     }
 
