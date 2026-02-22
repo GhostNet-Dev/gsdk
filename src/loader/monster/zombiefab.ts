@@ -67,6 +67,7 @@ export abstract class BaseZombieFab extends AssetModel implements IAsset {
         await this.LoadAnimation("assets/monster/Zombie_Agonizing.fbx", Ani.MonAgonizing);
         await this.LoadAnimation("assets/monster/Running_Crawl.fbx", Ani.MonRunningCrawl);
         await this.LoadAnimation("assets/monster/zombie_headbutt.fbx", Ani.MonHurt);
+        await this.LoadAnimation("assets/monster/Zombie_Reaction_Hit.fbx", Ani.MonHurt2);
     }
 
     // 자식 클래스에서 오버라이드하여 사용할 메서드 (기본은 빈 동작)

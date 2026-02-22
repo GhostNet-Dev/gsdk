@@ -27,6 +27,7 @@ export type CharacterStatus = {
     maxExp: number
     exp: number
     immortal: boolean
+    hit?: boolean
     actions: ActionDefs[],
 /*
 기타 특수 스탯 

@@ -55,6 +55,7 @@ export enum Ani {
     MonBiting,
     MonScream,
     MonHurt,
+    MonHurt2,
     MonBiteNeck,
     MonAgonizing,
     MonRunningCrawl,

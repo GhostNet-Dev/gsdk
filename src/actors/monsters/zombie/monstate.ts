@@ -26,6 +26,7 @@ export function NewDefaultMonsterState(
     defSt["JumpSt"] = new JumpZState(defSt, zombie, gphysic)
     defSt["RunSt"] = new RunZState(defSt, zombie, gphysic, spec)
     defSt["DyingSt"] = new DyingZState(defSt, zombie, prop, gphysic, eventCtrl, spec)
+    defSt["HurtSt"] = new HurtZState(defSt, zombie, gphysic, spec)
 
     return defSt.IdleSt
 }
@@ -67,12 +68,56 @@ export abstract class MonState {
             return this.states.DyingSt
         }
     }
+    CheckHurt() {
+        if (this.spec.Status.hit) {
+            this.Uninit()
+            this.states.HurtSt.Init()
+            return this.states.HurtSt
+        }
+    }
     CheckAttack(dist: number) {
         if (dist < this.attackDist) {
             this.Uninit()
             this.states.AttackSt.Init()
             return this.states.AttackSt
         }
+    }
+}
+export class HurtZState extends MonState implements IMonsterAction {
+    hurtTime = 0
+    hurtDuration = 0.5
+
+    constructor(states: States, zombie: Zombie, gphysic: IGPhysic, spec: BaseSpec) {
+        super(states, zombie, gphysic, spec)
+    }
+    Init(): void {
+        this.spec.Status.hit = false
+        const duration = this.zombie.ChangeAction(ActionType.MonHurt2)
+        if (duration != undefined) this.hurtDuration = duration
+        this.hurtTime = 0
+    }
+    Uninit(): void {
+    }
+    Update(delta: number, v: THREE.Vector3): IMonsterAction {
+        const checkDying = this.CheckDying()
+        if (checkDying != undefined) return checkDying
+
+        // 피격 동작 중에는 추가 피격 플래그를 계속 소모하여 무한 경직 방지
+        if (this.spec.Status.hit) {
+            this.spec.Status.hit = false
+        }
+
+        this.hurtTime += delta
+        if (this.hurtTime >= this.hurtDuration) {
+            this.Uninit()
+            if (v.x || v.z) {
+                this.states.RunSt.Init()
+                return this.states.RunSt
+            }
+            this.states.IdleSt.Init()
+            return this.states.IdleSt
+        }
+        return this
     }
 }
 export class JumpZState implements IMonsterAction {
@@ -157,6 +202,8 @@ export class AttackZState extends MonState implements IMonsterAction {
     QT = new THREE.Quaternion()
 
     Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+        const checkHurt = this.CheckHurt()
+        if (checkHurt != undefined) return checkHurt
         const dist = this.zombie.Pos.distanceTo(target.Pos)
         const checkDying = this.CheckDying()
         if (checkDying != undefined) return checkDying
@@ -208,6 +255,8 @@ export class IdleZState extends MonState implements IMonsterAction {
         
     }
     Update(_delta: number, v: THREE.Vector3): IMonsterAction {
+        const checkHurt = this.CheckHurt()
+        if (checkHurt != undefined) return checkHurt
         const checkRun = this.CheckRun(v)
         if (checkRun != undefined) return checkRun
         const checkDying = this.CheckDying()
@@ -256,6 +305,8 @@ export class RunZState extends MonState implements IMonsterAction {
     dir = new THREE.Vector3()
 
     Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+        const checkHurt = this.CheckHurt()
+        if (checkHurt != undefined) return checkHurt
         const checkGravity = this.CheckGravity()
         if (checkGravity != undefined) return checkGravity
         const checkDying = this.CheckDying()

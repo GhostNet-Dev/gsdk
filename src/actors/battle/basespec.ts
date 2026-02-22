@@ -184,6 +184,7 @@ export class BaseSpec {
 
         // 실제 체력 차감
         this.status.health -= result.finalDamage;
+        this.status.hit = true;
 
         // 사망 체크
         if (this.CheckDie()) {
@@ -196,6 +197,7 @@ export class BaseSpec {
         // 더 이상 독자 공식을 쓰지 않고, 방어력이 이미 계산된 데미지가 들어온다고 가정하거나
         // 간단한 처리만 수행
         this.status.health -= damage;
+        this.status.hit = true;
         this.status.health = Math.max(0, this.status.health);
     }
 
