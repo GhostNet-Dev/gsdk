@@ -6,7 +6,8 @@ export enum CameraMode {
     ThirdFollowPerson,
     FirstPerson,
     Free,
-    Cinematic
+    Cinematic,
+    AimThirdPerson
 }
 
 export interface ICameraStrategy {

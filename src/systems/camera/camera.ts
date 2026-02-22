@@ -12,6 +12,7 @@ import ThirdPersonFollowCameraStrategy from "./followcam";
 import FirstPersonCameraStrategy from "./firstperson";
 import FreeCameraStrategy from "./freeview";
 import CinematicCameraStrategy from "./cinemaview";
+import AimThirdPersonCameraStrategy from "./aimview";
 import { AttackOption } from "@Glibs/types/playertypes";
 
 export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
@@ -22,6 +23,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     private strategy: ICameraStrategy
     private strategies: Map<CameraMode, ICameraStrategy> = new Map()
     private mode: CameraMode = CameraMode.TopView
+    private aimReticle?: HTMLDivElement
     lookTarget = true
 
     constructor(
@@ -58,6 +60,12 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         eventCtrl.RegisterEventListener(EventTypes.Attack + "mon", (opts: AttackOption[]) => {
             this.cameraPushIn(this.player!.Meshs)
         })
+        eventCtrl.RegisterEventListener(EventTypes.CameraMode, (mode: CameraMode) => {
+            this.setMode(mode)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.AimOverlay, (enabled: boolean) => {
+            this.toggleAimOverlay(enabled)
+        })
         this.position.set(7, 5, 7)
         this.lookTarget = lookTarget
         if (lookTarget) this.lookAt(player!.Pos)
@@ -83,8 +91,31 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
             new THREE.Vector3(10, 10, 0),
             new THREE.Vector3(0, 5, -10)
         ]));
+        this.strategies.set(CameraMode.AimThirdPerson, new AimThirdPersonCameraStrategy());
         // 여기에 다른 전략도 추가하세요
         this.strategy = this.strategies.get(this.mode)!;
+    }
+
+    private toggleAimOverlay(enabled: boolean) {
+        if (!this.aimReticle) {
+            const reticle = document.createElement("div")
+            reticle.style.position = "fixed"
+            reticle.style.left = "50%"
+            reticle.style.top = "50%"
+            reticle.style.width = "22px"
+            reticle.style.height = "22px"
+            reticle.style.marginLeft = "-11px"
+            reticle.style.marginTop = "-11px"
+            reticle.style.borderRadius = "50%"
+            reticle.style.pointerEvents = "none"
+            reticle.style.border = "2px solid rgba(255,255,255,0.95)"
+            reticle.style.boxShadow = "0 0 6px rgba(0,0,0,0.8)"
+            reticle.style.zIndex = "9999"
+            reticle.style.display = "none"
+            document.body.appendChild(reticle)
+            this.aimReticle = reticle
+        }
+        this.aimReticle.style.display = enabled ? "block" : "none"
     }
 
     shakeCamera(intensity = 0.5, duration = 0.3) {
