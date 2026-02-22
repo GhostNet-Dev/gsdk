@@ -362,11 +362,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         if (!skill) return false
         if (!this.isActionDef(skill.tech)) return false
 
-<<<<<<< codex/define-animations-for-character-actions-rgsc1e
         const castDelayMs = this.playSkillCastMotion(skill.tech)
-=======
-        this.playSkillCastMotion(skill.tech)
->>>>>>> main
 
         let action = this.skillActions.get(skill.nodeId)
         if (!action) {
@@ -404,7 +400,6 @@ export class PlayerCtrl implements ILoop, IActionUser {
         return true
     }
 
-<<<<<<< codex/define-animations-for-character-actions-rgsc1e
     private playSkillCastMotion(tech: ActionDef): number {
         if (this.currentState === this.RollSt || this.currentState === this.DyingSt) return 0
 
@@ -414,21 +409,12 @@ export class PlayerCtrl implements ILoop, IActionUser {
 
         const totalDurationMs = duration * 1000
         const impactRatio = this.resolveCastImpactRatio(tech)
-=======
-    private playSkillCastMotion(tech: ActionDef) {
-        if (this.currentState === this.RollSt || this.currentState === this.DyingSt) return
-
-        const castAction = this.resolveCastActionType(tech)
-        const duration = this.player.ChangeAction(castAction)
-        if (duration == undefined) return
->>>>>>> main
 
         if (this.skillCastAnimTimeout) clearTimeout(this.skillCastAnimTimeout)
         this.skillCastAnimTimeout = setTimeout(() => {
             if (this.player.currentActionType !== castAction) return
             this.player.ChangeAction(ActionType.Idle)
             this.skillCastAnimTimeout = undefined
-<<<<<<< codex/define-animations-for-character-actions-rgsc1e
         }, totalDurationMs)
 
         return totalDurationMs * impactRatio
@@ -437,9 +423,6 @@ export class PlayerCtrl implements ILoop, IActionUser {
     private resolveCastImpactRatio(tech: ActionDef): number {
         const impact = typeof tech.castImpactRatio === "number" ? tech.castImpactRatio : 0.6
         return Math.min(1, Math.max(0, impact))
-=======
-        }, duration * 1000)
->>>>>>> main
     }
 
     private resolveCastActionType(tech: ActionDef): ActionType {
