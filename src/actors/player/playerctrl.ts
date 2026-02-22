@@ -16,7 +16,6 @@ import { ActionContext, ActionDef, IActionComponent, IActionUser, TriggerType } 
 import { ActionRegistry } from "@Glibs/actions/actionregistry";
 import { CutDownTreeState, TreeIdleState } from "./states/treestates";
 import { Item } from "@Glibs/inventory/items/item";
-import { Buffdefs } from "@Glibs/magical/buff/buffdefs";
 import { Buff } from "@Glibs/magical/buff/buff";
 import { MeleeAttackState } from "./states/meleeattackst";
 import { RangeAttackState } from "./states/rangeattackst";
@@ -41,7 +40,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     targets: THREE.Object3D[] = []
     actions: IActionComponent[] = []
     learnedSkills = new Map<string, LearnedSkillMessage>()
-    skillActionSlots: Array<LearnedSkillMessage | undefined> = [undefined]
+    skillActionSlots: Array<LearnedSkillMessage | undefined> = [undefined, undefined, undefined, undefined]
     skillActions = new Map<string, IActionComponent>()
     private hpRegenAccumulator = 0
     private mpRegenAccumulator = 0
@@ -273,7 +272,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         })
         eventCtrl.RegisterEventListener(EventTypes.UpdateSkill + "player", (skill: LearnedSkillMessage) => {
             this.learnedSkills.set(skill.nodeId, skill)
-            this.assignSkillToSlot(skill, 0)
+            this.assignSkillToSlot(skill)
             this.applyLearnedSkill(skill)
         })
         eventCtrl.RegisterEventListener(EventTypes.RemoveSkill + "player", (skill: LearnedSkillMessage) => {
@@ -312,10 +311,25 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.targets.splice(idx, 1)
     }
 
-    private assignSkillToSlot(skill: LearnedSkillMessage, slotIndex = 0) {
-        if (slotIndex < 0 || slotIndex >= this.skillActionSlots.length) return
+    private assignSkillToSlot(skill: LearnedSkillMessage) {
         if (!this.isActionDef(skill.tech)) return
-        this.skillActionSlots[slotIndex] = skill
+
+        // 1. 이미 등록된 스킬인지 확인
+        const existingIdx = this.skillActionSlots.findIndex(s => s?.nodeId === skill.nodeId)
+        if (existingIdx !== -1) {
+            this.skillActionSlots[existingIdx] = skill
+            return
+        }
+
+        // 2. 빈 슬롯 찾기
+        const emptyIdx = this.skillActionSlots.findIndex(s => s === undefined)
+        if (emptyIdx !== -1) {
+            this.skillActionSlots[emptyIdx] = skill
+            return
+        }
+
+        // 3. 자리가 없으면 첫 번째 슬롯 덮어쓰기 (또는 슬롯 확장 정책에 따라 변경 가능)
+        this.skillActionSlots[0] = skill
     }
 
     private removeSkillFromSlot(nodeId: string) {
@@ -499,7 +513,9 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.KeyState[cmd.Type] = true
 
         this.keyType = cmd.Type
-        if (cmd.Type == KeyType.Action5) this.castLearnedSkill(0)
+        if (cmd.Type >= KeyType.Action5 && cmd.Type <= KeyType.Action8) {
+            this.castLearnedSkill(cmd.Type - KeyType.Action5)
+        }
         const position = cmd.ExecuteKeyDown()
         if (position.x != 0) { this.moveDirection.x = position.x }
         if (position.y != 0) { this.moveDirection.y = position.y }

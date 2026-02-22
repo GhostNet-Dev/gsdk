@@ -96,7 +96,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
     },
     {
         id: "fireDefence",
-        kind: "skill",
+        kind: "trait",
         name: "Fire Defence",
         desc: "화염이 시전자를 보호합니다.",
         cost: [
@@ -108,9 +108,9 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tech: actionDefs.FireDefence
     },
     {
-        id: "darkside",
-        kind: "buff",
-        name: "Dark Side",
+        id: "KnifeThrow",
+        kind: "skill",
+        name: "Knife Throw",
         desc: "암흑 저항이 증가합니다",
         cost: [
             { lv: 1, cost: { points: 1 } },
@@ -118,7 +118,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         requires: [
             { type: "playerLv", atLeast: 2 }
         ],
-        tech: buffDefs.DarkSide
+        tech: actionDefs.KnifeThrow
     },
     {
         id: "hpboost",

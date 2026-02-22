@@ -42,6 +42,16 @@ export class FireballDefenceAction implements IActionComponent, ILoop {
     this.flames.attachTo(this.sphere);
     this.moonOrbit.add(this.sphere)
     this.sphere.position.x = 10
+    
+    // 캐릭터의 높이를 계산하여 중심점(가슴 높이) 설정
+    const box = new THREE.Box3().setFromObject(obj);
+    if (!box.isEmpty()) {
+      const height = box.max.y - box.min.y;
+      this.moonOrbit.position.y = height * 0.55;
+    } else {
+      this.moonOrbit.position.y = 1.1; // 폴백 값
+    }
+
     obj.add(this.moonOrbit)
     this.moonOrbit.rotation.y += 2 * Math.random();
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)

@@ -44,7 +44,7 @@ const DEFAULT_OPTIONS: SkillSlotsOptions = {
   gap: 8,
   maxSlots: 4,
   iconFallback: "✨",
-  keyLabels: ["Action5"],
+  keyLabels: ["Action5", "Action6", "Action7", "Action8"],
   showTooltip: true,
   showLevel: true,
   showKeyHint: true,
@@ -83,10 +83,13 @@ export class SkillSlotsUX extends GUX {
       this.unbindSkill(skill.nodeId)
     })
     this.eventCtrl.RegisterEventListener(EventTypes.KeyDown, (keyCommand: IKeyCommand) => {
-      if (keyCommand.Type !== KeyType.Action5) return
-      const slot = this.slots[0]
-      if (!slot) return
-      slot.castUntil = performance.now() + slot.cooldownMs
+      const type = keyCommand.Type
+      if (type >= KeyType.Action5 && type <= KeyType.Action8) {
+        const index = type - KeyType.Action5
+        const slot = this.slots[index]
+        if (!slot) return
+        slot.castUntil = performance.now() + slot.cooldownMs
+      }
     })
     this.eventCtrl.RegisterEventListener(EventTypes.SkillSlotCast + "player", (slotIndex = 0) => {
       const slot = this.slots[slotIndex]
