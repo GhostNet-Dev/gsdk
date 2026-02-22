@@ -349,6 +349,8 @@ export class PlayerCtrl implements ILoop, IActionUser {
             this.skillActions.set(skill.nodeId, action)
         }
 
+        if (!action) return
+
         action.apply?.(this, {
             source: this,
             level: skill.level,
@@ -376,6 +378,9 @@ export class PlayerCtrl implements ILoop, IActionUser {
             })
         }
 
+        if (!action) return false
+
+        const targetAction = action
         const context: ActionContext = {
             source: this,
             level: skill.level,
@@ -384,11 +389,11 @@ export class PlayerCtrl implements ILoop, IActionUser {
         }
 
         const runCast = () => {
-            if (typeof action.trigger === "function") {
-                action.trigger(this, "onCast", context)
+            if (typeof targetAction.trigger === "function") {
+                targetAction.trigger(this, "onCast", context)
                 return
             }
-            action.activate?.(this, context)
+            targetAction.activate?.(this, context)
         }
 
         if (castDelayMs > 0) {
@@ -421,7 +426,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     }
 
     private resolveCastImpactRatio(tech: ActionDef): number {
-        const impact = typeof tech.castImpactRatio === "number" ? tech.castImpactRatio : 0.6
+        const impact = typeof tech.castImpactRatio === "number" ? tech.castImpactRatio : 0.4
         return Math.min(1, Math.max(0, impact))
     }
 
