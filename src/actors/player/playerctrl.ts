@@ -8,7 +8,7 @@ import { DeckState } from "./states/deckstate";
 import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
 import IEventController, { IKeyCommand, ILoop } from "@Glibs/interface/ievent";
 import { KeyType } from "@Glibs/types/eventtypes";
-import { AttackOption, AttackType, DefaultStatus, PlayMode } from "./playertypes";
+import { ActionType, AttackOption, AttackType, DefaultStatus, PlayMode } from "./playertypes";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import IInventory, { IItem } from "@Glibs/interface/iinven";
 import { ItemId, itemDefs } from "@Glibs/inventory/items/itemdefs";
@@ -43,6 +43,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     learnedSkills = new Map<string, LearnedSkillMessage>()
     skillActionSlots: Array<LearnedSkillMessage | undefined> = [undefined, undefined, undefined, undefined]
     skillActions = new Map<string, IActionComponent>()
+    private skillCastAnimTimeout?: NodeJS.Timeout
     private hpRegenAccumulator = 0
     private mpRegenAccumulator = 0
 
@@ -361,6 +362,8 @@ export class PlayerCtrl implements ILoop, IActionUser {
         if (!skill) return false
         if (!this.isActionDef(skill.tech)) return false
 
+        const castDelayMs = this.playSkillCastMotion(skill.tech)
+
         let action = this.skillActions.get(skill.nodeId)
         if (!action) {
             action = ActionRegistry.create(skill.tech)
@@ -380,13 +383,61 @@ export class PlayerCtrl implements ILoop, IActionUser {
             via: "skill",
         }
 
-        if (typeof action.trigger === "function") {
-            action.trigger(this, "onCast", context)
+        const runCast = () => {
+            if (typeof action.trigger === "function") {
+                action.trigger(this, "onCast", context)
+                return
+            }
+            action.activate?.(this, context)
+        }
+
+        if (castDelayMs > 0) {
+            setTimeout(runCast, castDelayMs)
             return true
         }
 
-        action.activate?.(this, context)
+        runCast()
         return true
+    }
+
+    private playSkillCastMotion(tech: ActionDef): number {
+        if (this.currentState === this.RollSt || this.currentState === this.DyingSt) return 0
+
+        const castAction = this.resolveCastActionType(tech)
+        const duration = this.player.ChangeAction(castAction)
+        if (duration == undefined) return 0
+
+        const totalDurationMs = duration * 1000
+        const impactRatio = this.resolveCastImpactRatio(tech)
+
+        if (this.skillCastAnimTimeout) clearTimeout(this.skillCastAnimTimeout)
+        this.skillCastAnimTimeout = setTimeout(() => {
+            if (this.player.currentActionType !== castAction) return
+            this.player.ChangeAction(ActionType.Idle)
+            this.skillCastAnimTimeout = undefined
+        }, totalDurationMs)
+
+        return totalDurationMs * impactRatio
+    }
+
+    private resolveCastImpactRatio(tech: ActionDef): number {
+        const impact = typeof tech.castImpactRatio === "number" ? tech.castImpactRatio : 0.6
+        return Math.min(1, Math.max(0, impact))
+    }
+
+    private resolveCastActionType(tech: ActionDef): ActionType {
+        if (typeof tech.castAction === "number") {
+            const castAction = tech.castAction as number
+            if (Number.isInteger(castAction) && ActionType[castAction] !== undefined) return castAction
+            return ActionType.MagicH1
+        }
+
+        const castAction = typeof tech.castAction === "string" ? tech.castAction : ""
+        if (castAction === "MagicH2") return ActionType.MagicH2
+        if (castAction === "MagicH1") return ActionType.MagicH1
+
+        if (tech.type === "meteor") return ActionType.MagicH2
+        return ActionType.MagicH1
     }
 
     private isActionDef(value: unknown): value is ActionDef {
