@@ -8,6 +8,7 @@ export enum Bind {
     Finger_L = "fngerl",
     Finger_R = "fngerr",
     Amulet = "amu",
+    Weapon_Ranged = "weapon_ranged",
 }
 
 export enum Ani {

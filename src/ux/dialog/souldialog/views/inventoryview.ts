@@ -8,7 +8,7 @@ import { InventorySlot } from '@Glibs/types/inventypes';
 import { IItem } from '@Glibs/interface/iinven';
 import { TooltipComponent } from '../core/tooltip';
 
-type Slot = 'head' | 'chest' | 'hands' | 'legs' | 'weapon' | 'offhand';
+type Slot = 'head' | 'chest' | 'hands' | 'legs' | 'weapon' | 'weapon_ranged' | 'offhand';
 
 const CSS_INV = css`
   .gnx-invwrap{ display:grid; gap:14px; grid-template-columns: 360px 1fr; align-items:start; }
@@ -19,7 +19,7 @@ const CSS_INV = css`
 
   /* 장비 슬롯 */
   .gnx-equip{ display:grid; gap:10px; grid-template-columns: repeat(3, 1fr); }
-  @media (min-width: 1200px) { .gnx-equip{ grid-template-columns: repeat(6, 1fr); } }
+  @media (min-width: 1200px) { .gnx-equip{ grid-template-columns: repeat(7, 1fr); } }
 
   .gnx-e-slot{
     height:70px; border:1px solid rgba(255,255,255,.14); border-radius:10px;
@@ -68,7 +68,7 @@ export class InventoryView implements IDialogView<Props> {
   private shell?: any; private key?: string; private ctx!: ViewContext; private props!: Props;
   private state = { tab: '전체', sort: 'name' as 'name' | 'weight' | 'qty', rar: 'all' as 'all' | 'Common' | 'Rare' | 'Epic', q: '' };
   private selectedIndex = 0;
-  private eqSlots: Slot[] = ['head', 'chest', 'hands', 'legs', 'weapon', 'offhand'];
+  private eqSlots: Slot[] = ['head', 'chest', 'hands', 'legs', 'weapon', 'weapon_ranged', 'offhand'];
   
   // 공통 툴팁 컴포넌트
   private tip!: TooltipComponent;
@@ -189,7 +189,8 @@ export class InventoryView implements IDialogView<Props> {
           const item = slotData.item; 
           const typeStr = this.getItemTypeStr(item); 
           
-          if (s==='weapon' && typeStr !== '무기') return; 
+          if (s==='weapon' && item.ItemType !== 'meleeattack') return; 
+          if (s==='weapon_ranged' && item.ItemType !== 'rangeattack') return; 
           if (['head','chest','hands','legs','offhand'].includes(s) && typeStr !== '방어구') return; 
           
           this.props.onEquip?.(s, index, item); 
@@ -316,7 +317,8 @@ export class InventoryView implements IDialogView<Props> {
   /* Helpers */
   private equipOrUse(index: number, it: IItem){ 
       const type = this.getItemTypeStr(it); 
-      if (type === '무기'){ this.props.onEquip?.('weapon', index, it); return; } 
+      if (it.ItemType === 'meleeattack'){ this.props.onEquip?.('weapon', index, it); return; } 
+      if (it.ItemType === 'rangeattack'){ this.props.onEquip?.('weapon_ranged', index, it); return; } 
       if (type === '방어구'){ this.props.onEquip?.(this.pickArmorSlot(it), index, it); return; } 
       this.props.onUse?.(it); 
   }

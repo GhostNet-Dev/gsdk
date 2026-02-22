@@ -18,10 +18,10 @@ export interface ICharacterRenderer {
 
 export type EquipSlot = 
     | 'head' | 'chest' | 'hands' | 'legs' 
-    | 'weapon' | 'offhand' 
+    | 'weapon' | 'weapon_ranged' | 'offhand' 
     | 'ring1' | 'ring2' | 'amulet';
 
-const SLOTS: EquipSlot[] = ['head', 'chest', 'hands', 'legs', 'weapon', 'offhand', 'ring1', 'ring2', 'amulet'];
+const SLOTS: EquipSlot[] = ['head', 'chest', 'hands', 'legs', 'weapon', 'weapon_ranged', 'offhand', 'ring1', 'ring2', 'amulet'];
 
 export interface IStatValue {
     total: number; // 최종 수치
