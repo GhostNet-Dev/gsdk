@@ -10,6 +10,11 @@ import { TooltipComponent } from '../core/tooltip';
 
 type Slot = 'head' | 'chest' | 'hands' | 'legs' | 'weapon' | 'weapon_ranged' | 'offhand';
 
+const SLOT_ALIASES: Partial<Record<Slot, string[]>> = {
+  weapon: ['handr'],
+  offhand: ['handl'],
+};
+
 const CSS_INV = css`
   .gnx-invwrap{ display:grid; gap:14px; grid-template-columns: 360px 1fr; align-items:start; }
   @media (max-width:1000px){ .gnx-invwrap{ grid-template-columns: 1fr; } }
@@ -163,7 +168,7 @@ export class InventoryView implements IDialogView<Props> {
     this.eqSlots.forEach(s => {
       const slot = createEl(doc,'div'); slot.className='gnx-e-slot'; (slot as any).dataset.slot=s;
       const cap = createEl(doc,'div'); cap.className='cap'; cap.textContent = s;
-      const it = this.props.equip?.[s] ?? null;
+      const it = this.resolveEquipItem(s) ?? null;
       slot.appendChild(cap);
       
       const iconWrap = createEl(doc, 'div');
@@ -312,6 +317,18 @@ export class InventoryView implements IDialogView<Props> {
     right.appendChild(grid);
 
     this.updateActions();
+  }
+
+  private resolveEquipItem(slot: Slot): IItem | null | undefined {
+    const direct = this.props.equip?.[slot];
+    if (direct) return direct;
+
+    const aliases = SLOT_ALIASES[slot] ?? [];
+    for (const key of aliases) {
+      const aliasItem = (this.props.equip as Record<string, IItem | null | undefined> | undefined)?.[key];
+      if (aliasItem) return aliasItem;
+    }
+    return direct;
   }
 
   /* Helpers */

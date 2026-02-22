@@ -22,6 +22,13 @@ export type EquipSlot =
     | 'ring1' | 'ring2' | 'amulet';
 
 const SLOTS: EquipSlot[] = ['head', 'chest', 'hands', 'legs', 'weapon', 'weapon_ranged', 'offhand', 'ring1', 'ring2', 'amulet'];
+const SLOT_ALIASES: Partial<Record<EquipSlot, string[]>> = {
+    weapon: ['handr'],
+    offhand: ['handl'],
+    ring1: ['fngerl'],
+    ring2: ['fngerr'],
+    amulet: ['amu'],
+};
 
 export interface IStatValue {
     total: number; // 최종 수치
@@ -307,7 +314,7 @@ export class CharacterView implements IDialogView<Props> {
         const grid = createEl(doc, 'div'); grid.className = 'gnx-equip-grid';
 
         SLOTS.forEach((slot) => {
-            const item = this.props.equip?.[slot];
+            const item = this.resolveEquipItem(slot);
             const cell = this.createEquipSlot(doc, slot, item);
             grid.appendChild(cell);
         });
@@ -319,6 +326,18 @@ export class CharacterView implements IDialogView<Props> {
         this.shell.body.appendChild(wrap);
 
         this.ctx.render.setActions(this.shell, [{ id: 'close', label: '닫기', onClick: () => this.ctx.manager.close() }]);
+    }
+
+    private resolveEquipItem(slot: EquipSlot): IItem | null | undefined {
+        const direct = this.props.equip?.[slot];
+        if (direct) return direct;
+
+        const aliases = SLOT_ALIASES[slot] ?? [];
+        for (const key of aliases) {
+            const aliasItem = (this.props.equip as Record<string, IItem | null | undefined> | undefined)?.[key];
+            if (aliasItem) return aliasItem;
+        }
+        return direct;
     }
 
     private mountRenderer() {

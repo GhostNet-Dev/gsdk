@@ -16,9 +16,11 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
         private controls: OrbitControls,
         private camera: THREE.Camera,
     ) {
+        this.controls.autoRotate = false
         this.controls.enableRotate = true
         this.controls.enablePan = false
         this.controls.enableZoom = false
+        this.controls.enableDamping = false
         this.controls.minPolarAngle = 0.25
         this.controls.maxPolarAngle = Math.PI / 2 - 0.05
     }
