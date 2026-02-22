@@ -14,8 +14,12 @@ import { ActionType } from "../playertypes";
 import { IItem } from "@Glibs/interface/iinven";
 import { Item } from "@Glibs/inventory/items/item";
 import { AttackState } from "./attackstate";
+import { CameraMode } from "@Glibs/systems/camera/cameratypes";
+import { KeyType } from "@Glibs/types/eventtypes";
 
 export class RangeAttackState extends AttackState implements IPlayerAction {
+    private manualAimMode = false
+
     constructor(playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic, 
         protected eventCtrl: IEventController, spec: BaseSpec
     ) {
@@ -28,13 +32,23 @@ export class RangeAttackState extends AttackState implements IPlayerAction {
         this.attackProcess = false
         this.attackSpeed = this.baseSpec.AttackSpeed
         this.attackDist = this.baseSpec.AttackRange
+        this.manualAimMode = false
         const handItem = this.playerCtrl.baseSpec.GetRangedItem()
         if(handItem == undefined) {
             this.player.ChangeAction(ActionType.Punch, this.attackSpeed)
         } else {
             const anim = this.getAnimationForItem(handItem)
             this.player.ChangeAction(anim, this.attackSpeed)
-            if (handItem.AutoAttack) this.autoDirection();
+            if (handItem.AutoAttack) {
+                this.autoDirection();
+                this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, false)
+                this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.ThirdFollowPerson)
+            } else {
+                this.manualAimMode = true
+                this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.AimThirdPerson)
+                this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, true)
+                this.detectEnermy = true
+            }
 
             (handItem as Item).activate()
             this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, handItem.Mesh, handItem.Sound)
@@ -66,8 +80,13 @@ export class RangeAttackState extends AttackState implements IPlayerAction {
         this.attackProcess = false
         return true
     }
+    override Uninit(): void {
+        super.Uninit()
+        this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, false)
+        this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.ThirdFollowPerson)
+    }
     Update(delta: number): IPlayerAction {
-        const d = this.DefaultCheck()
+        const d = this.DefaultCheck({ attack: false })
         if(d != undefined) {
             this.Uninit()
             return d
@@ -83,9 +102,14 @@ export class RangeAttackState extends AttackState implements IPlayerAction {
         }
         this.attackTime -= this.attackSpeed
 
-        if (!this.detectEnermy) {
+        if (!this.manualAimMode && !this.detectEnermy) {
             return this.ChangeMode(this.playerCtrl.currentIdleState)
         }
+
+        if (this.manualAimMode && this.playerCtrl.keyType != KeyType.Action1) {
+            return this
+        }
+
         this.attackProcess = true
         const handItem = this.playerCtrl.baseSpec.GetRangedItem()
         if (handItem == undefined) return this;

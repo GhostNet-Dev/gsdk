@@ -104,7 +104,7 @@ export const itemDefs = {
             Its small size makes it easy to handle and ideal as a backup weapon.`,
     icon: itemIcons.Bow,
     sound: SoundType.Pistol9mm,
-    stackable: false, binding: true, autoAttack: true,
+    stackable: false, binding: true, autoAttack: false,
     stats: { "attack": 1, "attackSpeed": 1, "speed": 1, "attackRange": 7 },
     actions: [actionDefs.MuzzleFlash, actionDefs.Casing],
   },
