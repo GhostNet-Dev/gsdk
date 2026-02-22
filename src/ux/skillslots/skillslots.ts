@@ -11,6 +11,7 @@ type LearnedSkillMessage = {
   techId: string
   level: number
   tech: unknown
+  icon?: string
 }
 
 type SkillSlotData = {
@@ -234,7 +235,21 @@ export class SkillSlotsUX extends GUX {
     const levelText = `Lv.${slot.skill.level}`
     const techName = this.asString(tech?.name) ?? slot.skill.techId
 
-    slot.iconEl.textContent = this.opts.iconFallback
+    const icon = slot.skill.icon || this.opts.iconFallback
+    
+    // 이모지 또는 텍스트인 경우 처리
+    if (icon.length < 10) {
+        slot.iconEl.textContent = icon
+        slot.iconEl.style.backgroundImage = 'none'
+    } else {
+        // URL인 경우 배경 이미지로 처리
+        slot.iconEl.textContent = ""
+        slot.iconEl.style.backgroundImage = `url(${icon})`
+        slot.iconEl.style.backgroundSize = 'contain'
+        slot.iconEl.style.backgroundRepeat = 'no-repeat'
+        slot.iconEl.style.backgroundPosition = 'center'
+    }
+
     slot.keyEl.textContent = this.opts.showKeyHint ? (this.opts.keyLabels[Number(slot.el.dataset.index)] ?? "") : ""
     slot.levelEl.textContent = this.opts.showLevel ? levelText : ""
     slot.nameEl.textContent = techName

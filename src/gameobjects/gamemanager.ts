@@ -11,6 +11,7 @@ type LearnedSkillMessage = {
     techId: string;
     level: number;
     tech: unknown;
+    icon?: string;
 };
 
 export default class GameManager {
@@ -207,6 +208,7 @@ export default class GameManager {
             techId: node.techId,
             level,
             tech: node.tech,
+            icon: node.icon,
         };
 
         this.activeSkills.set(node.id, payload);

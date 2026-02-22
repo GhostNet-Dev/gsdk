@@ -29,6 +29,7 @@ type LearnedSkillMessage = {
     techId: string
     level: number
     tech: unknown
+    icon?: string
 }
 
 export class PlayerCtrl implements ILoop, IActionUser {

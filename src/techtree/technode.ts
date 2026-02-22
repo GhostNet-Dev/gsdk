@@ -6,6 +6,7 @@ export class TechNode {
   readonly kind: TechTreeKind;
   readonly name: string;
   readonly desc?: string;
+  readonly icon?: string; // ✨ 추가된 필드
   readonly rarity?: Rarity; // ✨ 추가된 필드 (readonly로 안전하게 선언)
   readonly tags?: Tag[];
   readonly requires?: Requirement[];
@@ -26,6 +27,7 @@ export class TechNode {
     this.kind = def.kind;
     this.name = def.name;
     this.desc = def.desc;
+    this.icon = def.icon; // ✨ 아이콘 초기화
     this.rarity = def.rarity;
     this.tags = def.tags;
     this.requires = def.requires;
