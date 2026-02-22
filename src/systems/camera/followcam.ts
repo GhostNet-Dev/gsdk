@@ -18,6 +18,11 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
     private prevPlayerPos = new THREE.Vector3();
     private followDistance = 6;
     private followHeight = 3;
+    private smoothedBackDir = new THREE.Vector3(0, 0, -1);
+
+    private readonly DIRECTION_SMOOTHING = 0.08;
+    private readonly MAX_LERP_FACTOR = 0.05;
+    private readonly MIN_LERP_FACTOR = 0.02;
 
     private readonly MIN_CAMERA_Y = 0.5;
     private readonly MIN_DISTANCE = 2.0; 
@@ -103,16 +108,24 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
             this.currentLerpFactor = 0.02; 
         } else {
             // 일반 주행: 캐릭터 등 뒤로 이동
-            const backDir = new THREE.Vector3(0, 0, -1).applyQuaternion(player.Meshs.quaternion);
-            backDir.y = 0;
-            backDir.normalize();
+            const targetBackDir = new THREE.Vector3(0, 0, -1).applyQuaternion(player.Meshs.quaternion);
+            targetBackDir.y = 0;
+            targetBackDir.normalize();
+
+            // 좌/우로 살짝 조향할 때 카메라가 과민하게 회전하지 않도록 뒤 방향을 완만히 보간
+            this.smoothedBackDir.lerp(targetBackDir, this.DIRECTION_SMOOTHING).normalize();
 
             desiredCameraPos = player.CenterPos.clone()
-                .add(backDir.multiplyScalar(this.followDistance))
+                .add(this.smoothedBackDir.clone().multiplyScalar(this.followDistance))
                 .add(new THREE.Vector3(0, this.followHeight, 0));
             
-            // 일반 주행은 적당한 속도
-            this.currentLerpFactor = this.defaultLerpFactor;
+            // 조향량이 클수록 카메라 이동 속도를 줄여 과도한 방향 증폭 방지
+            const turnIntensity = 1 - Math.abs(dot);
+            this.currentLerpFactor = THREE.MathUtils.clamp(
+                this.defaultLerpFactor - (turnIntensity * 0.03),
+                this.MIN_LERP_FACTOR,
+                this.MAX_LERP_FACTOR,
+            );
         }
 
         // --- 3. 장애물 충돌 검사 ---
