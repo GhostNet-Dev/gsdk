@@ -8,7 +8,7 @@ import { DeckState } from "./states/deckstate";
 import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
 import IEventController, { IKeyCommand, ILoop } from "@Glibs/interface/ievent";
 import { KeyType } from "@Glibs/types/eventtypes";
-import { AttackOption, AttackType, DefaultStatus, PlayMode } from "./playertypes";
+import { ActionType, AttackOption, AttackType, DefaultStatus, PlayMode } from "./playertypes";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import IInventory, { IItem } from "@Glibs/interface/iinven";
 import { ItemId, itemDefs } from "@Glibs/inventory/items/itemdefs";
