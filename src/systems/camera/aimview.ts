@@ -6,8 +6,8 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
     private targetPosition = new THREE.Vector3();
     private lookTarget = new THREE.Vector3();
 
-    private readonly shoulderOffset = new THREE.Vector3(0.9, 1.8, 0);
-    private readonly backDistance = 3.2;
+    private readonly shoulderOffset = new THREE.Vector3(0.9, 2.1, 0);
+    private readonly backDistance = 5.2;
     private readonly lookAheadDistance = 25;
     private readonly lerpFactor = 0.18;
 
