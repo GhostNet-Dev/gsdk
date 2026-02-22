@@ -95,21 +95,34 @@ export class RangeAttackState extends AttackState implements IPlayerAction {
 
         delta = this.clock?.getDelta()
         this.attackTime += delta
+
+        if (this.manualAimMode) {
+            const camForward = new THREE.Vector3();
+            this.playerCtrl.camera.getWorldDirection(camForward);
+            camForward.y = 0;
+            camForward.normalize();
+            this.player.Meshs.lookAt(
+                this.player.Pos.x + camForward.x,
+                this.player.Pos.y,
+                this.player.Pos.z + camForward.z
+            );
+        }
+
         if(this.attackProcess) return this
 
         if(this.attackTime / this.attackSpeed < 1) {
             return this
         }
-        this.attackTime -= this.attackSpeed
 
         if (!this.manualAimMode && !this.detectEnermy) {
             return this.ChangeMode(this.playerCtrl.currentIdleState)
         }
 
-        if (this.manualAimMode && this.playerCtrl.keyType != KeyType.Action1) {
+        if (this.manualAimMode && !this.playerCtrl.KeyState[KeyType.Action1]) {
             return this
         }
 
+        this.attackTime -= this.attackSpeed
         this.attackProcess = true
         const handItem = this.playerCtrl.baseSpec.GetRangedItem()
         if (handItem == undefined) return this;

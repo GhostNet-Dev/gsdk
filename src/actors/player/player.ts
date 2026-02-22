@@ -81,11 +81,14 @@ export class Player extends PhysicsObject {
         
         const mesh = this.meshs.getObjectByName(rightId)
         if (!mesh) return
-        mesh.visible = false
-        delete this.bindMesh[bind]
+        const prev = this.bindMesh[bind]
+        if (prev) {
+            prev.visible = false
+            delete this.bindMesh[bind]
+        }
     }
     ReloadBindingItem(item: IItem) {
-        const bind = item.ItemType === "rangeattack" ? Bind.Weapon_Ranged : item.Bind
+        const bind = item.Bind
         if(bind == undefined) throw new Error("item bind is undefined")
 
         const rightId = this.asset.GetBodyMeshId(bind)

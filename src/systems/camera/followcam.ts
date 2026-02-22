@@ -34,6 +34,7 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         private camera: THREE.Camera,
         private obstacles: THREE.Object3D[],
     ) {
+        this.controls.enableZoom = true;
         this.controls.maxPolarAngle = Math.PI / 2 - 0.1; 
     }
 

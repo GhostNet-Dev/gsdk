@@ -101,7 +101,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         private player: Player,
         public inventory: IInventory,
         private gphysic: IGPhysic,
-        private camera: THREE.Camera,
+        public camera: THREE.Camera,
         private eventCtrl: IEventController,
     ) {
         this.baseSpec = new BaseSpec(DefaultStatus.stats, this)
@@ -180,7 +180,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         eventCtrl.RegisterEventListener(EventTypes.Equipment, (id: ItemId) => {
             const slot = this.inventory.GetItemSlot(id)
             if (slot == undefined) throw new Error("item is undefined")
-            const targetSlot = slot.item.ItemType === "rangeattack" ? Bind.Weapon_Ranged : slot.item.Bind
+            const targetSlot = slot.item.Bind
             if (targetSlot) {
                 const prevItem = this.baseSpec.GetBindItem(targetSlot);
                 if (prevItem) (prevItem as Item).deactivate()
@@ -546,17 +546,11 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.applyMpRegen(delta)
         this.currentState = this.currentState.Update(delta, this.moveDirection)
         this.player.Update(delta)
-        this.actionReset()
     }
     changeState(state: IPlayerAction) {
         this.currentState.Uninit()
         this.currentState = state
         this.currentState.Init()
-    }
-    actionReset() {
-        for (let i = KeyType.Action0; i < KeyType.Count; i++) {
-            this.KeyState[i] = false
-        }
     }
 
     KeyState = new Array<boolean>(KeyType.Count)

@@ -600,6 +600,18 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         const dt = this.clock.getDelta();
         this.phaseTime += dt;
 
+        if (!this.autoAttack) {
+            const camForward = new THREE.Vector3();
+            this.playerCtrl.camera.getWorldDirection(camForward);
+            camForward.y = 0;
+            camForward.normalize();
+            this.player.Meshs.lookAt(
+                this.player.Pos.x + camForward.x,
+                this.player.Pos.y,
+                this.player.Pos.z + camForward.z
+            );
+        }
+
         // [개선] 리듬감(Easing) 및 스텝 인(전진)
         if (this.player.currentAni && this.player.currentClip) {
             // 기본 timeScale (duration 기반 역산)
@@ -640,6 +652,10 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         if (this.autoAttack && !this.detectEnermy) {
             this.clearStepTimers();
             return this.ChangeMode(this.playerCtrl.currentIdleState)
+        }
+
+        if (!this.autoAttack && !this.playerCtrl.KeyState[KeyType.Action1]) {
+            return this
         }
 
         const now = this.phaseTime;

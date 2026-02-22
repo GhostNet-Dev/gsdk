@@ -40,7 +40,7 @@ export class Inventory implements IInventory {
         })
     }
     EquipItem(item: IItem) {
-        const bind = item.ItemType === "rangeattack" ? Bind.Weapon_Ranged : item.Bind
+        const bind = item.Bind
         if (!bind) throw new Error("item bind is undefined")
         const prevItem = this.bodySlot.get(bind)
         if (prevItem) this.InsertInventory(prevItem)

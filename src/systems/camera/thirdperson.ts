@@ -18,6 +18,7 @@ export default class ThirdPersonCameraStrategy implements ICameraStrategy {
         /** 충돌 감지할 장애물 설정 */
         private obstacles: THREE.Object3D[],
     ) {
+        this.controls.enableZoom = true;
     }
     orbitStart(): void {
         this.isFreeView = true

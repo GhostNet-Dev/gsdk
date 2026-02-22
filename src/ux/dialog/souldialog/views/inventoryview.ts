@@ -194,8 +194,8 @@ export class InventoryView implements IDialogView<Props> {
           const item = slotData.item; 
           const typeStr = this.getItemTypeStr(item); 
           
-          if (s==='weapon' && item.ItemType !== 'meleeattack') return; 
-          if (s==='weapon_ranged' && item.ItemType !== 'rangeattack') return; 
+          if (s==='weapon' && item.ItemType !== 'rangeattack') return; 
+          if (s==='weapon_ranged' && item.ItemType !== 'meleeattack') return; 
           if (['head','chest','hands','legs','offhand'].includes(s) && typeStr !== '방어구') return; 
           
           this.props.onEquip?.(s, index, item); 
@@ -334,8 +334,8 @@ export class InventoryView implements IDialogView<Props> {
   /* Helpers */
   private equipOrUse(index: number, it: IItem){ 
       const type = this.getItemTypeStr(it); 
-      if (it.ItemType === 'meleeattack'){ this.props.onEquip?.('weapon', index, it); return; } 
-      if (it.ItemType === 'rangeattack'){ this.props.onEquip?.('weapon_ranged', index, it); return; } 
+      if (it.ItemType === 'meleeattack'){ this.props.onEquip?.('weapon_ranged', index, it); return; } 
+      if (it.ItemType === 'rangeattack'){ this.props.onEquip?.('weapon', index, it); return; } 
       if (type === '방어구'){ this.props.onEquip?.(this.pickArmorSlot(it), index, it); return; } 
       this.props.onUse?.(it); 
   }
