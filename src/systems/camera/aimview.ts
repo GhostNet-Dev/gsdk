@@ -6,6 +6,7 @@ import { IPhysicsObject } from "@Glibs/interface/iobject";
 export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
     private purePosition = new THREE.Vector3();
     private pureQuaternion = new THREE.Quaternion();
+    private isOrbiting = false;
 
     private readonly shoulderOffset = new THREE.Vector3(0.45, 1.6, 0);
     private readonly backDistance = 1.2;
@@ -28,12 +29,12 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
         this.controls.enabled = true;
         this.controls.autoRotate = false;
         this.controls.enableRotate = true;
-        this.controls.enablePan = false;
-        this.controls.enableZoom = false; 
+        this.controls.enablePan = true;
+        this.controls.enableZoom = true;
         this.controls.enableDamping = false;
         
-        this.controls.minDistance = this.backDistance;
-        this.controls.maxDistance = this.backDistance;
+        this.controls.minDistance = 0.8;
+        this.controls.maxDistance = 8;
         
         this.controls.minPolarAngle = 0.1;
         this.controls.maxPolarAngle = Math.PI - 0.1;
@@ -41,10 +42,12 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
 
     orbitStart(): void {
         this.controls.enabled = true;
+        this.isOrbiting = true;
     }
 
     orbitEnd(): void {
         this.controls.enabled = true;
+        this.isOrbiting = false;
     }
 
     update(camera: THREE.Camera, player?: IPhysicsObject): void {
@@ -64,7 +67,9 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
         }
 
         // 2. Update OrbitControls using the pure camera
-        this.controls.target.copy(target);
+        if (!this.isOrbiting) {
+            this.controls.target.copy(target);
+        }
         this.controls.update();
 
         // 3. Save new pure state
