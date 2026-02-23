@@ -64,6 +64,10 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         }, this.dragTimeoutMs);
     }
 
+
+    syncFromCameraPose() {
+        this.recalculateOffset()
+    }
     private recalculateOffset() {
         const camToTarget = new THREE.Vector3().subVectors(this.camera.position, this.controls.target);
         this.followHeight = Math.max(camToTarget.y, this.MIN_CAMERA_Y);

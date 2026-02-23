@@ -124,9 +124,12 @@ export class State {
                 const meleeItem = this.playerCtrl.baseSpec.GetMeleeItem()
                 const rangedItem = this.playerCtrl.baseSpec.GetRangedItem()
                 const useMeleeState = (!rangedItem && (meleeItem?.ItemType == "meleeattack" || !meleeItem))
+                const isManualRanged = !!rangedItem && !rangedItem.AutoAttack
+                if (isManualRanged) return
+
                 const state = useMeleeState
                     ? this.playerCtrl.ComboMeleeSt
-                    : (rangedItem?.AutoAttack ? this.playerCtrl.RangeAttackSt : this.playerCtrl.RangeAimSt)
+                    : this.playerCtrl.RangeAttackSt
                 state.Init()
                 return state
             }
