@@ -7,16 +7,12 @@ import { AttackType } from "@Glibs/types/playertypes";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
-import { Bind } from "@Glibs/types/assettypes";
 import { ActionType, AttackOption } from "../playertypes";
 import { IItem } from "@Glibs/interface/iinven";
 import { Item } from "@Glibs/inventory/items/item";
 import { AttackState } from "./attackstate";
-import { CameraMode } from "@Glibs/systems/camera/cameratypes";
-import { KeyType } from "@Glibs/types/eventtypes";
 
 export class MeleeAttackState extends AttackState implements IPlayerAction {
-    private manualAimMode = false
 
     constructor(playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic, 
         protected eventCtrl: IEventController, spec: BaseSpec
@@ -30,7 +26,6 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
         this.attackProcess = false
         this.attackSpeed = this.baseSpec.AttackSpeed
         this.attackDist = this.baseSpec.AttackRange
-        this.manualAimMode = false
         const handItem = this.playerCtrl.baseSpec.GetMeleeItem()
         if(handItem == undefined) {
             this.player.ChangeAction(ActionType.Punch, this.attackSpeed)
@@ -40,9 +35,7 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
             if (handItem.AutoAttack) {
                 this.autoDirection();
             } else {
-                this.manualAimMode = true
-                this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.AimThirdPerson)
-                this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, true)
+                // Manual attack: always allow swinging
                 this.detectEnermy = true
             }
 
@@ -103,8 +96,6 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
 
     override Uninit(): void {
         super.Uninit()
-        this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, false)
-        this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.ThirdFollowPerson)
     }
 
     Update(delta: number): IPlayerAction {
@@ -118,26 +109,8 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
         delta = this.clock?.getDelta()
         this.attackTime += delta
 
-        // Manual Aim Logic: Rotate player to face camera direction
-        const camForward = new THREE.Vector3();
-        this.playerCtrl.camera.getWorldDirection(camForward);
-        camForward.y = 0;
-        camForward.normalize();
-        this.player.Meshs.lookAt(
-            this.player.Pos.x + camForward.x,
-            this.player.Pos.y,
-            this.player.Pos.z + camForward.z
-        );
-
         if (!this.detectEnermy) {
             return this.ChangeMode(this.playerCtrl.currentIdleState)
-        }
-
-        const isFireButtonPressed = this.playerCtrl.KeyState[KeyType.Action1];
-
-        // EXIT CONDITION for Manual Mode: Release button to stop aiming
-        if (this.manualAimMode && !isFireButtonPressed) {
-            return this.ChangeMode(this.playerCtrl.currentIdleState);
         }
 
         if(this.attackProcess) return this

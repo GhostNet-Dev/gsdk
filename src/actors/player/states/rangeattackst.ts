@@ -34,7 +34,7 @@ export class RangeAttackState extends AttackState implements IPlayerAction {
             this.player.ChangeAction(anim, this.attackSpeed)
             this.autoDirection();
             this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, false)
-            this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.ThirdFollowPerson)
+            this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.ThirdFollowPerson);
 
             (handItem as Item).activate()
             this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, handItem.Mesh, handItem.Sound)

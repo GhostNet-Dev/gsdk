@@ -30,6 +30,12 @@ export default class ThirdPersonCameraStrategy implements ICameraStrategy {
         this.controls.maxDistance = 20.0;
         this.controls.maxPolarAngle = Math.PI - 0.1;
     }
+
+    uninit() {
+        this.controls.minDistance = 0;
+        this.controls.maxDistance = Infinity;
+        this.controls.maxPolarAngle = Math.PI;
+    }
     orbitStart(): void {
         this.isFreeView = true
     }

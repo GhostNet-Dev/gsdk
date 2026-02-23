@@ -182,6 +182,8 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
             }
         }
 
+        this.strategy?.uninit?.();
+
         this.mode = mode
         this.strategy = this.strategies.get(mode)!
         this.strategy.init?.()

@@ -20,8 +20,11 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
         this.raycast.params.Points.threshold = 20
     }
 
+    private hasFired = false;
+
     Init(): void {
         this.attackProcess = false
+        this.hasFired = false
         this.attackSpeed = this.baseSpec.AttackSpeed
         this.attackDist = this.baseSpec.AttackRange
         const handItem = this.playerCtrl.baseSpec.GetRangedItem()
@@ -86,8 +89,14 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
         if (this.attackProcess) return this
         if (this.attackTime / this.attackSpeed < 1) return this
 
+        // If we have already fired and cooldown is done, return to Aim State
+        if (this.hasFired) {
+             return this.ChangeMode(this.playerCtrl.RangeAimSt)
+        }
+
         this.attackTime = 0;
-        this.attackProcess = true
+        this.attackProcess = true;
+        this.hasFired = true; // Mark as fired
         const handItem = this.playerCtrl.baseSpec.GetRangedItem()
         if (handItem == undefined) return this;
 
@@ -97,6 +106,6 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
             this.rangedAttack(handItem)
         }, this.attackSpeed * 1000 * 0.3))
 
-        return this.ChangeMode(this.playerCtrl.RangeAimSt)
+        return this
     }
 }
