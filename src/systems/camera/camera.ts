@@ -170,6 +170,8 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     }
     setMode(mode: CameraMode) {
         if (!this.strategies.has(mode)) return
+        // ✅ 방어 코드 추가: 현재 카메라 모드와 변경하려는 모드가 같으면 초기화를 무시합니다.
+        if (this.mode === mode) return;
 
         const prevMode = this.mode
 

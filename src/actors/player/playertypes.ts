@@ -39,10 +39,12 @@ export enum ActionType {
 
     OneHandGun,
     PistolRun,
+    PistolAimIdle,
 
     TwoHandGun,
     RifleRun,
     RifleIdle,
+    RifleAimIdle,
 
     Bow,
     Wand,

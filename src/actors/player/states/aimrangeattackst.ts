@@ -52,7 +52,7 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
         const shootDir = this.computeShootDirectionFromGun(gunPos, targetPos)
         this.attackDir.copy(shootDir)
 
-        (itemInfo as Item).trigger("onFire", { direction: this.attackDir })
+        ;(itemInfo as Item).trigger("onFire", { direction: this.attackDir })
 
         this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
             id: MonsterId.BulletLine,

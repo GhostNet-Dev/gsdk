@@ -38,10 +38,12 @@ export enum Ani {
 
     Shooting, // pistol
     PistolRun,
+    PistolAimIdle,
 
     Gunplay, // rifle
     RifleRun,
     RifleIdle,
+    RifleAimIdle,
 
     AxeAttack,
     AxeAttack360,

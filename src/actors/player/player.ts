@@ -190,7 +190,9 @@ export class Player extends PhysicsObject {
 
         this.clipMap.set(ActionType.SwordRun, asset.GetAnimationClip(Ani.SwordRun))
         this.clipMap.set(ActionType.PistolRun, asset.GetAnimationClip(Ani.PistolRun))
+        this.clipMap.set(ActionType.PistolAimIdle, asset.GetAnimationClip(Ani.PistolAimIdle))
         this.clipMap.set(ActionType.RifleIdle, asset.GetAnimationClip(Ani.RifleIdle))
+        this.clipMap.set(ActionType.RifleAimIdle, asset.GetAnimationClip(Ani.RifleAimIdle))
         this.clipMap.set(ActionType.RifleRun, asset.GetAnimationClip(Ani.RifleRun))
         
         this.changeAnimate(this.clipMap.get(this.currentActionType))

@@ -92,9 +92,9 @@ export class RangeAimState extends State implements IPlayerAction {
     private getAnimationForItem(item: any): ActionType {
         switch (item.AttackType) {
             case AttackItemType.OneHandGun:
-                return ActionType.OneHandGun
+                return ActionType.PistolAimIdle
             case AttackItemType.TwoHandGun:
-                return ActionType.TwoHandGun
+                return ActionType.RifleAimIdle
             default:
                 return ActionType.Punch
         }
