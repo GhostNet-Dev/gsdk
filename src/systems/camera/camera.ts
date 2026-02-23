@@ -24,6 +24,12 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     private strategies: Map<CameraMode, ICameraStrategy> = new Map()
     private mode: CameraMode = CameraMode.TopView
     private aimReticle?: HTMLDivElement
+    private preAimSnapshot?: {
+        mode: CameraMode
+        position: THREE.Vector3
+        quaternion: THREE.Quaternion
+        target: THREE.Vector3
+    }
     lookTarget = true
 
     constructor(
@@ -163,10 +169,34 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         })
     }
     setMode(mode: CameraMode) {
-        if (this.strategies.has(mode)) {
-            this.mode = mode;
-            this.strategy = this.strategies.get(mode)!;
-            this.strategy.init?.();
+        if (!this.strategies.has(mode)) return
+
+        const prevMode = this.mode
+
+        if (mode === CameraMode.AimThirdPerson && prevMode !== CameraMode.AimThirdPerson) {
+            this.preAimSnapshot = {
+                mode: prevMode,
+                position: this.position.clone(),
+                quaternion: this.quaternion.clone(),
+                target: this.controls.target.clone(),
+            }
+        }
+
+        this.mode = mode
+        this.strategy = this.strategies.get(mode)!
+        this.strategy.init?.()
+
+        if (
+            prevMode === CameraMode.AimThirdPerson &&
+            mode === CameraMode.ThirdFollowPerson &&
+            this.preAimSnapshot
+        ) {
+            this.position.copy(this.preAimSnapshot.position)
+            this.quaternion.copy(this.preAimSnapshot.quaternion)
+            this.controls.target.copy(this.preAimSnapshot.target)
+
+            const followStrategy = this.strategies.get(CameraMode.ThirdFollowPerson) as any
+            followStrategy?.syncFromCameraPose?.()
         }
     }
 

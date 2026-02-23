@@ -56,8 +56,10 @@ export class State {
             if (this.playerCtrl.mode == AppMode.Play) {
                 const meleeItem = this.playerCtrl.baseSpec.GetMeleeItem()
                 const rangedItem = this.playerCtrl.baseSpec.GetRangedItem()
-                const state = (!rangedItem && (meleeItem?.ItemType == "meleeattack" || !meleeItem))
-                    ? this.playerCtrl.ComboMeleeSt : this.playerCtrl.RangeAttackSt
+                const useMeleeState = (!rangedItem && (meleeItem?.ItemType == "meleeattack" || !meleeItem))
+                const state = useMeleeState
+                    ? this.playerCtrl.ComboMeleeSt
+                    : (rangedItem?.AutoAttack ? this.playerCtrl.RangeAttackSt : this.playerCtrl.RangeAimSt)
                 state.Init()
                 return state
             } else if (this.playerCtrl.mode == AppMode.Weapon) {
@@ -121,8 +123,13 @@ export class State {
             if (attackRange > dis) {
                 const meleeItem = this.playerCtrl.baseSpec.GetMeleeItem()
                 const rangedItem = this.playerCtrl.baseSpec.GetRangedItem()
-                const state = (!rangedItem && (meleeItem?.ItemType == "meleeattack" || !meleeItem))
-                    ? this.playerCtrl.ComboMeleeSt : this.playerCtrl.RangeAttackSt
+                const useMeleeState = (!rangedItem && (meleeItem?.ItemType == "meleeattack" || !meleeItem))
+                const isManualRanged = !!rangedItem && !rangedItem.AutoAttack
+                if (isManualRanged) return
+
+                const state = useMeleeState
+                    ? this.playerCtrl.ComboMeleeSt
+                    : this.playerCtrl.RangeAttackSt
                 state.Init()
                 return state
             }
