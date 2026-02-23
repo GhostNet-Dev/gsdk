@@ -43,9 +43,14 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
     }
 
     rangedAttack(itemInfo: IItem) {
-        const startPos = new THREE.Vector3()
-        this.player.Meshs.getWorldDirection(this.attackDir)
-        this.player.GetMuzzlePosition(startPos);
+        const gunPos = new THREE.Vector3()
+        this.player.GetMuzzlePosition(gunPos)
+
+        // 화면 중앙 조준점이 가리키는 월드 좌표를 얻는다.
+        const targetPos = this.getReticleWorldTarget(this.attackDist)
+        // 실제 총구 기준 발사 벡터를 계산해 시차(parallax)를 제거한다.
+        const shootDir = this.computeShootDirectionFromGun(gunPos, targetPos)
+        this.attackDir.copy(shootDir)
 
         (itemInfo as Item).trigger("onFire", { direction: this.attackDir })
 
@@ -53,7 +58,7 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
             id: MonsterId.BulletLine,
             ownerSpec: this.baseSpec,
             damage: this.baseSpec.Damage,
-            src: startPos,
+            src: gunPos,
             dir: this.attackDir,
             range: this.attackDist
         })
