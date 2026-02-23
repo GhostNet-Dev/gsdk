@@ -8,6 +8,7 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
     private dragTimer: ReturnType<typeof setTimeout> | null = null;
     private readonly dragTimeoutMs = 2000;
     private readonly backwardIgnoreThreshold = -0.15;
+    private readonly cameraApproachIgnoreThreshold = 0.35;
     
     private prevPlayerPos = new THREE.Vector3();
     private raycaster = new THREE.Raycaster();
@@ -70,37 +71,44 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
             const playerForward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.Meshs.quaternion);
             const moveDir = moveDelta.normalize();
             const moveForwardness = moveDir.dot(playerForward);
+            const cameraApproachness = moveDir.dot(offset.clone().normalize());
 
-            // When moving backwards, keep current camera heading to avoid rapid yaw flips.
-            if (moveForwardness < this.backwardIgnoreThreshold) {
+            // When moving backwards or directly toward the camera, keep heading stable
+            // to prevent unwanted yaw corrections.
+            const shouldIgnoreAutoFollow =
+                moveForwardness < this.backwardIgnoreThreshold ||
+                cameraApproachness > this.cameraApproachIgnoreThreshold;
+
+            if (shouldIgnoreAutoFollow) {
                 this.controls.update();
                 this.controls.minAzimuthAngle = -Infinity;
                 this.controls.maxAzimuthAngle = Infinity;
-                return;
-            }
-
-            const offsetDir = offset.clone().normalize();
-            
-            const dot = playerForward.dot(offsetDir);
+            } else {
+                const offsetDir = offset.clone().normalize();
+                
+                const dot = playerForward.dot(offsetDir);
             
             // Only rotate if player is facing away (Zelda style)
-            if (dot < -0.1) {
-                const backDir = playerForward.clone().multiplyScalar(-1);
-                const targetTheta = Math.atan2(backDir.x, backDir.z);
-                const currentTheta = this.controls.getAzimuthalAngle();
-                
-                let diff = targetTheta - currentTheta;
-                while (diff > Math.PI) diff -= 2 * Math.PI;
-                while (diff < -Math.PI) diff += 2 * Math.PI;
-                
-                const newTheta = currentTheta + diff * 0.04; // Smooth turn speed
-                
-                this.controls.minAzimuthAngle = newTheta;
-                this.controls.maxAzimuthAngle = newTheta;
-            }
-        }
+                if (dot < -0.1) {
+                    const backDir = playerForward.clone().multiplyScalar(-1);
+                    const targetTheta = Math.atan2(backDir.x, backDir.z);
+                    const currentTheta = this.controls.getAzimuthalAngle();
+                    
+                    let diff = targetTheta - currentTheta;
+                    while (diff > Math.PI) diff -= 2 * Math.PI;
+                    while (diff < -Math.PI) diff += 2 * Math.PI;
+                    
+                    const newTheta = currentTheta + diff * 0.04; // Smooth turn speed
+                    
+                    this.controls.minAzimuthAngle = newTheta;
+                    this.controls.maxAzimuthAngle = newTheta;
+                }
 
-        this.controls.update();
+                this.controls.update();
+            }
+        } else {
+            this.controls.update();
+        }
 
         // Release Azimuth Lock immediately so user can rotate next frame if they want
         this.controls.minAzimuthAngle = -Infinity;
