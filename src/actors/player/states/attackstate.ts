@@ -25,6 +25,7 @@ export abstract class AttackState extends State implements IPlayerAction {
     clock?: THREE.Clock
     meleeAttackMode = true
     detectEnermy = false
+    private static readonly FAR_AIM_DISTANCE = 1000
 
     constructor(playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic, 
         protected eventCtrl: IEventController, spec: BaseSpec
@@ -111,6 +112,49 @@ export abstract class AttackState extends State implements IPlayerAction {
         this.Uninit()
         state.Init()
         return state
+    }
+
+    /**
+     * 화면 중앙(조준점) 기준 레이캐스트로 타겟 좌표를 계산한다.
+     * - 충돌체가 있으면 충돌 지점 반환
+     * - 충돌체가 없으면 카메라 전방의 먼 지점 반환
+     */
+    protected getReticleWorldTarget(maxDistance = this.attackDist): THREE.Vector3 {
+        const targetPoint = new THREE.Vector3()
+        const forward = new THREE.Vector3()
+
+        this.raycast.setFromCamera(new THREE.Vector2(0, 0), this.playerCtrl.camera)
+        this.raycast.far = maxDistance
+
+        // 월드 충돌체 + 전투 타겟을 함께 검사해 지형/장애물/적 모두 조준 가능하게 한다.
+        const collisionTargets = [...this.gphysic.GetObjects(), ...this.playerCtrl.targets]
+        const hit = this.raycast.intersectObjects(collisionTargets, true)
+            .find((intersect) => !this.isPlayerOwnedObject(intersect.object))
+
+        if (hit) return targetPoint.copy(hit.point)
+
+        this.playerCtrl.camera.getWorldDirection(forward)
+        return targetPoint
+            .copy(this.playerCtrl.camera.position)
+            .add(forward.multiplyScalar(Math.max(maxDistance, AttackState.FAR_AIM_DISTANCE)))
+    }
+
+
+    private isPlayerOwnedObject(obj: THREE.Object3D): boolean {
+        let current: THREE.Object3D | null = obj
+        while (current) {
+            if (current.uuid === this.player.Meshs.uuid) return true
+            current = current.parent
+        }
+        return false
+    }
+
+    /**
+     * 총구 위치에서 조준 좌표를 향하는 발사 방향 벡터를 계산한다.
+     * V_shoot = normalize(P_target - P_gun)
+     */
+    protected computeShootDirectionFromGun(gunPos: THREE.Vector3, targetPos: THREE.Vector3): THREE.Vector3 {
+        return new THREE.Vector3().subVectors(targetPos, gunPos).normalize()
     }
 }
 
