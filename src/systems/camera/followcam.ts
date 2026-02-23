@@ -9,8 +9,11 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
     private readonly dragTimeoutMs = 2000;
     private readonly backwardIgnoreThreshold = -0.15;
     private readonly cameraApproachIgnoreThreshold = 0.35;
-    
+    private readonly safeMinDistancePadding = 0.4;
+
     private prevPlayerPos = new THREE.Vector3();
+    private stableOffset = new THREE.Vector3();
+    private hasStableOffset = false;
     private raycaster = new THREE.Raycaster();
 
     constructor(
@@ -65,13 +68,19 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         // Sync Controls Target
         this.controls.target.copy(player.CenterPos);
 
+        const offset = new THREE.Vector3().subVectors(camera.position, player.CenterPos);
+        if (!this.hasStableOffset && offset.lengthSq() > 0.0001) {
+            this.stableOffset.copy(offset);
+            this.hasStableOffset = true;
+        }
+
         // Auto-Follow Logic: Manipulate OrbitControls Limits to force rotation
         if (!this.isFreeView && isMoving) {
-            const offset = new THREE.Vector3().subVectors(camera.position, player.CenterPos);
             const playerForward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.Meshs.quaternion);
-            const moveDir = moveDelta.normalize();
+            const moveDir = moveDelta.clone().normalize();
+            const offsetDir = offset.clone().normalize();
             const moveForwardness = moveDir.dot(playerForward);
-            const cameraApproachness = moveDir.dot(offset.clone().normalize());
+            const cameraApproachness = moveDir.dot(offsetDir);
 
             // When moving backwards or directly toward the camera, keep heading stable
             // to prevent unwanted yaw corrections.
@@ -80,34 +89,50 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
                 cameraApproachness > this.cameraApproachIgnoreThreshold;
 
             if (shouldIgnoreAutoFollow) {
+                const isCameraInFrontHemisphere = playerForward.dot(offsetDir) > 0;
+                const minSafeDistance = this.controls.minDistance + this.safeMinDistancePadding;
+                const isTooClose = offset.length() < minSafeDistance;
+
+                if (this.hasStableOffset && (isCameraInFrontHemisphere || isTooClose)) {
+                    camera.position.copy(player.CenterPos).add(this.stableOffset);
+                }
+
                 this.controls.update();
-                this.controls.minAzimuthAngle = -Infinity;
-                this.controls.maxAzimuthAngle = Infinity;
             } else {
-                const offsetDir = offset.clone().normalize();
-                
                 const dot = playerForward.dot(offsetDir);
-            
-            // Only rotate if player is facing away (Zelda style)
+
+                // Only rotate if player is facing away (Zelda style)
                 if (dot < -0.1) {
                     const backDir = playerForward.clone().multiplyScalar(-1);
                     const targetTheta = Math.atan2(backDir.x, backDir.z);
                     const currentTheta = this.controls.getAzimuthalAngle();
-                    
+
                     let diff = targetTheta - currentTheta;
                     while (diff > Math.PI) diff -= 2 * Math.PI;
                     while (diff < -Math.PI) diff += 2 * Math.PI;
-                    
+
                     const newTheta = currentTheta + diff * 0.04; // Smooth turn speed
-                    
+
                     this.controls.minAzimuthAngle = newTheta;
                     this.controls.maxAzimuthAngle = newTheta;
                 }
 
                 this.controls.update();
+
+                const updatedOffset = new THREE.Vector3().subVectors(camera.position, player.CenterPos);
+                if (updatedOffset.lengthSq() > 0.0001) {
+                    this.stableOffset.copy(updatedOffset);
+                    this.hasStableOffset = true;
+                }
             }
         } else {
             this.controls.update();
+
+            const updatedOffset = new THREE.Vector3().subVectors(camera.position, player.CenterPos);
+            if (updatedOffset.lengthSq() > 0.0001) {
+                this.stableOffset.copy(updatedOffset);
+                this.hasStableOffset = true;
+            }
         }
 
         // Release Azimuth Lock immediately so user can rotate next frame if they want
