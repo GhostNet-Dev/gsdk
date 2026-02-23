@@ -19,6 +19,8 @@ import { Item } from "@Glibs/inventory/items/item";
 import { Buff } from "@Glibs/magical/buff/buff";
 import { MeleeAttackState } from "./states/meleeattackst";
 import { RangeAttackState } from "./states/rangeattackst";
+import { RangeAimState } from "./states/rangeaimst";
+import { AimRangeAttackState } from "./states/aimrangeattackst";
 import { ComboMeleeState } from "./states/combomeleeattackst";
 import { EventActionState, EventIdleState } from "./states/eventstate";
 import { Bind } from "@Glibs/types/assettypes";
@@ -59,6 +61,8 @@ export class PlayerCtrl implements ILoop, IActionUser {
     MeleeAttackSt: MeleeAttackState
     ComboMeleeSt: ComboMeleeState
     RangeAttackSt: RangeAttackState
+    RangeAimSt: RangeAimState
+    AimRangeAttackSt: AimRangeAttackState
     MagicH1St: MagicH1State
     MagicH2St: MagicH2State
     AttackIdleSt: AttackIdleState
@@ -108,6 +112,8 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.MeleeAttackSt = new MeleeAttackState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
         this.ComboMeleeSt = new ComboMeleeState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
         this.RangeAttackSt = new RangeAttackState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
+        this.RangeAimSt = new RangeAimState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
+        this.AimRangeAttackSt = new AimRangeAttackState(this, this.player, this.gphysic, this.eventCtrl, this.baseSpec)
         this.MagicH1St = new MagicH1State(this, this.player, this.gphysic, this.baseSpec)
         this.MagicH2St = new MagicH2State(this, this.player, this.gphysic, this.baseSpec)
         this.AttackIdleSt = new AttackIdleState(this, this.player, this.gphysic, this.baseSpec)
