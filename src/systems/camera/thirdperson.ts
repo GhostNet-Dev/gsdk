@@ -18,7 +18,17 @@ export default class ThirdPersonCameraStrategy implements ICameraStrategy {
         /** 충돌 감지할 장애물 설정 */
         private obstacles: THREE.Object3D[],
     ) {
+        this.init();
+    }
+
+    init() {
         this.controls.enableZoom = true;
+        this.controls.enableRotate = true;
+        this.controls.enablePan = false;
+        this.controls.enableDamping = true;
+        this.controls.minDistance = 2.0;
+        this.controls.maxDistance = 20.0;
+        this.controls.maxPolarAngle = Math.PI - 0.1;
     }
     orbitStart(): void {
         this.isFreeView = true
@@ -35,6 +45,10 @@ export default class ThirdPersonCameraStrategy implements ICameraStrategy {
 
         this.controls.target.copy(player.CenterPos);
         this.controls.update();
+
+        if (this.isFreeView) {
+            this.offset.subVectors(this.camera.position, this.controls.target);
+        }
 
         // OrbitControls 또는 자동 위치 계산
         const intendedCameraPos = this.isFreeView

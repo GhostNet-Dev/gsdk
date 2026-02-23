@@ -9,7 +9,7 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
 
     private isFreeView = false;
     
-    private defaultLerpFactor = 0.05; // 기본 부드러움
+    private defaultLerpFactor = 0.05;
     private currentLerpFactor = 0.03;
 
     private dragTimer: ReturnType<typeof setTimeout> | null = null;
@@ -34,13 +34,27 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         private camera: THREE.Camera,
         private obstacles: THREE.Object3D[],
     ) {
+        this.init();
+    }
+
+    init() {
         this.controls.enableZoom = true;
+        this.controls.enableRotate = true;
+        this.controls.enablePan = false;
+        this.controls.enableDamping = true;
         this.controls.maxPolarAngle = Math.PI / 2 - 0.1; 
+        this.controls.minDistance = 2.0;
+        this.controls.maxDistance = 20.0;
     }
 
     orbitStart(): void {
         this.isFreeView = true;
         if (this.dragTimer) clearTimeout(this.dragTimer);
+
+        // ✨ [진짜 원인 해결] AimView 등 다른 모드에 의해 1.2로 고정된 거리 제한을 해제
+        this.controls.minDistance = this.MIN_DISTANCE;
+        this.controls.maxDistance = Infinity; // 원하는 만큼 멀어질 수 있게 허용
+        this.controls.enablePan = true;
     }
 
     orbitEnd(): void {
@@ -60,67 +74,50 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
     update(camera: THREE.Camera, player?: IPhysicsObject) {
         if (!player) return;
 
-        // 1. 이동 감지
-        const moved = this.prevPlayerPos.distanceToSquared(player.CenterPos) > 0.0001;
         this.prevPlayerPos.copy(player.CenterPos);
 
-        if (this.isFreeView && moved) {
-            this.isFreeView = false;
-            this.recalculateOffset();
-            if (this.dragTimer) clearTimeout(this.dragTimer);
-        }
-
         if (this.isFreeView) {
+            // 조작 중일 때는 OrbitControls가 거리/각도를 계산하게 둠
+            this.controls.target.copy(player.CenterPos);
             this.controls.update();
             return;
         }
 
-        // --- 2. 방향 벡터 계산 (핵심 수정 부분) ---
-
-        // 캐릭터가 바라보는 방향 (Forward)
+        // --- 2. 방향 벡터 계산 ---
         const playerForward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.Meshs.quaternion);
         playerForward.y = 0;
         playerForward.normalize();
 
-        // 카메라가 캐릭터를 바라보는 방향 (Camera to Player)
         const camToPlayerDir = new THREE.Vector3().subVectors(player.CenterPos, camera.position);
         camToPlayerDir.y = 0;
         camToPlayerDir.normalize();
 
-        // 내적(Dot Product) 계산: 
-        // 1에 가까움 = 캐릭터가 카메라 등지고 있음 (일반 주행)
-        // -1에 가까움 = 캐릭터가 카메라 보면서 달려옴 (후진)
         const dot = playerForward.dot(camToPlayerDir);
 
         let desiredCameraPos: THREE.Vector3;
 
-        // ✨ [해결책] 캐릭터가 카메라를 향해 다가오는 경우 (dot < -0.2 정도)
-        // 카메라를 캐릭터 등 뒤로 보내지 말고, 현재 카메라 각도를 유지하며 위치만 따라감
+        // ✨ 앞서 수정한 수학적 계산 보정 (y=0 이후 normalize)
         if (dot < -0.2) {
-            // 현재 카메라가 있는 방향 그대로 거리만 유지
             const currentCamDir = new THREE.Vector3().subVectors(camera.position, player.CenterPos).normalize();
-            currentCamDir.y = 0; // 높이 영향 제거
+            currentCamDir.y = 0; 
+            currentCamDir.normalize(); 
             
             desiredCameraPos = player.CenterPos.clone()
-                .add(currentCamDir.multiplyScalar(this.followDistance)) // 현재 방향 유지
+                .add(currentCamDir.multiplyScalar(this.followDistance))
                 .add(new THREE.Vector3(0, this.followHeight, 0));
             
-            // 후진 중에는 카메라는 느리게 따라오는 게 자연스러움
             this.currentLerpFactor = 0.02; 
         } else {
-            // 일반 주행: 캐릭터 등 뒤로 이동
             const targetBackDir = new THREE.Vector3(0, 0, -1).applyQuaternion(player.Meshs.quaternion);
             targetBackDir.y = 0;
             targetBackDir.normalize();
 
-            // 좌/우로 살짝 조향할 때 카메라가 과민하게 회전하지 않도록 뒤 방향을 완만히 보간
             this.smoothedBackDir.lerp(targetBackDir, this.DIRECTION_SMOOTHING).normalize();
 
             desiredCameraPos = player.CenterPos.clone()
                 .add(this.smoothedBackDir.clone().multiplyScalar(this.followDistance))
                 .add(new THREE.Vector3(0, this.followHeight, 0));
             
-            // 조향량이 클수록 카메라 이동 속도를 줄여 과도한 방향 증폭 방지
             const turnIntensity = 1 - Math.abs(dot);
             this.currentLerpFactor = THREE.MathUtils.clamp(
                 this.defaultLerpFactor - (turnIntensity * 0.03),
@@ -135,13 +132,16 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         this.raycaster.far = this.followDistance;
 
         const hits = this.raycaster.intersectObjects(this.obstacles, true);
-        if (hits.length > 0) {
-            this.targetPosition.copy(hits[0].point);
+        
+        // ✨ [개선] 1.0 거리 이내의 충돌은 무조건 캐릭터 본인(또는 무기)이므로 무시
+        const validHits = hits.filter(hit => hit.distance > 1.0);
+
+        if (validHits.length > 0) {
+            this.targetPosition.copy(validHits[0].point);
         } else {
             this.targetPosition.copy(desiredCameraPos);
         }
 
-        // 지면 뚫림 방지
         if (this.targetPosition.y < this.MIN_CAMERA_Y) {
             this.targetPosition.y = this.MIN_CAMERA_Y;
         }
@@ -149,7 +149,6 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         // --- 4. 위치/회전 적용 ---
         camera.position.lerp(this.targetPosition, this.currentLerpFactor);
         
-        // 시선 처리
         this.lookTarget.lerp(player.CenterPos, this.currentLerpFactor * 2);
         camera.lookAt(this.lookTarget);
 

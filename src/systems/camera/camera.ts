@@ -80,19 +80,18 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         this.controls.addEventListener("end", () => {
             this.strategy?.orbitEnd?.()
         });
-        // 전략 초기화
-        this.strategies.set(CameraMode.TopView, new TopViewCameraStrategy())
-        this.strategies.set(CameraMode.ThirdPerson, new ThirdPersonCameraStrategy(this.controls, this, this.targetObjs));
-        this.strategies.set(CameraMode.ThirdFollowPerson, new ThirdPersonFollowCameraStrategy(this.controls, this, this.targetObjs));
-        this.strategies.set(CameraMode.FirstPerson, new FirstPersonCameraStrategy());
-        this.strategies.set(CameraMode.Free, new FreeCameraStrategy(this.controls));
-        this.strategies.set(CameraMode.Cinematic, new CinematicCameraStrategy([
-            new THREE.Vector3(0, 10, 20),
-            new THREE.Vector3(10, 10, 0),
-            new THREE.Vector3(0, 5, -10)
-        ]));
-        this.strategies.set(CameraMode.AimThirdPerson, new AimThirdPersonCameraStrategy(this.controls, this));
-        // 여기에 다른 전략도 추가하세요
+            // 전략 초기화
+            this.strategies.set(CameraMode.TopView, new TopViewCameraStrategy(this.controls));
+            this.strategies.set(CameraMode.ThirdPerson, new ThirdPersonCameraStrategy(this.controls, this, this.targetObjs));
+            this.strategies.set(CameraMode.ThirdFollowPerson, new ThirdPersonFollowCameraStrategy(this.controls, this, this.targetObjs));
+            this.strategies.set(CameraMode.FirstPerson, new FirstPersonCameraStrategy(this.controls));
+            this.strategies.set(CameraMode.Free, new FreeCameraStrategy(this.controls));
+            this.strategies.set(CameraMode.Cinematic, new CinematicCameraStrategy([
+                new THREE.Vector3(0, 10, 20),
+                new THREE.Vector3(10, 10, 0),
+                new THREE.Vector3(0, 5, -10)
+            ], this.controls));
+            this.strategies.set(CameraMode.AimThirdPerson, new AimThirdPersonCameraStrategy(this.controls, this));        // 여기에 다른 전략도 추가하세요
         this.strategy = this.strategies.get(this.mode)!;
     }
 
@@ -167,6 +166,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         if (this.strategies.has(mode)) {
             this.mode = mode;
             this.strategy = this.strategies.get(mode)!;
+            this.strategy.init?.();
         }
     }
 

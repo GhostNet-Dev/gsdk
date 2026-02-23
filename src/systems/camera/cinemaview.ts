@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { ICameraStrategy } from "./cameratypes";
 
 export default class CinematicCameraStrategy implements ICameraStrategy {
@@ -8,8 +9,15 @@ export default class CinematicCameraStrategy implements ICameraStrategy {
     private index = 0;
     private lerpFactor = 0.02;
 
-    constructor(path: THREE.Vector3[]) {
+    constructor(path: THREE.Vector3[], private controls?: OrbitControls) {
         this.path = path;
+        this.init();
+    }
+
+    init() {
+        if (this.controls) {
+            this.controls.enabled = false;
+        }
     }
 
     update(camera: THREE.Camera, player?: IPhysicsObject) {
