@@ -7,6 +7,7 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
     private isFreeView = false;
     private dragTimer: ReturnType<typeof setTimeout> | null = null;
     private readonly dragTimeoutMs = 2000;
+    private readonly backwardIgnoreThreshold = -0.15;
     
     private prevPlayerPos = new THREE.Vector3();
     private raycaster = new THREE.Raycaster();
@@ -56,7 +57,8 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
     update(camera: THREE.Camera, player?: IPhysicsObject) {
         if (!player) return;
 
-        const isMoving = player.CenterPos.distanceToSquared(this.prevPlayerPos) > 0.0001;
+        const moveDelta = new THREE.Vector3().subVectors(player.CenterPos, this.prevPlayerPos);
+        const isMoving = moveDelta.lengthSq() > 0.0001;
         this.prevPlayerPos.copy(player.CenterPos);
 
         // Sync Controls Target
@@ -66,6 +68,17 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         if (!this.isFreeView && isMoving) {
             const offset = new THREE.Vector3().subVectors(camera.position, player.CenterPos);
             const playerForward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.Meshs.quaternion);
+            const moveDir = moveDelta.normalize();
+            const moveForwardness = moveDir.dot(playerForward);
+
+            // When moving backwards, keep current camera heading to avoid rapid yaw flips.
+            if (moveForwardness < this.backwardIgnoreThreshold) {
+                this.controls.update();
+                this.controls.minAzimuthAngle = -Infinity;
+                this.controls.maxAzimuthAngle = Infinity;
+                return;
+            }
+
             const offsetDir = offset.clone().normalize();
             
             const dot = playerForward.dot(offsetDir);
