@@ -192,13 +192,8 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
 
         if (
             prevMode === CameraMode.AimThirdPerson &&
-            mode === CameraMode.ThirdFollowPerson &&
-            this.preAimSnapshot
+            mode === CameraMode.ThirdFollowPerson
         ) {
-            this.position.copy(this.preAimSnapshot.position)
-            this.quaternion.copy(this.preAimSnapshot.quaternion)
-            this.controls.target.copy(this.preAimSnapshot.target)
-
             const followStrategy = this.strategies.get(CameraMode.ThirdFollowPerson) as any
             followStrategy?.syncFromCameraPose?.()
         }

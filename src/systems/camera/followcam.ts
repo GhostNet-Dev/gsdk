@@ -46,6 +46,27 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         this.isResuming = true; 
     }
 
+    /**
+     * 🌟 외부에서 카메라 모드 전환 시 호출됨.
+     * 현재 카메라의 실제 위치와 회전 상태를 dummyCamera와 lookTarget에 동기화하여
+     * 'update' 시 lerp가 현재 위치에서부터 부드럽게 시작되도록 함.
+     */
+    syncFromCameraPose() {
+        // 1. 현재 카메라 위치를 dummyCamera로 복사
+        this.dummyCamera.position.copy(this.camera.position);
+        this.dummyCamera.quaternion.copy(this.camera.quaternion);
+
+        // 2. 현재 카메라가 바라보고 있는 지점을 계산하여 lookTarget 초기화
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+        this.lookTarget.copy(this.camera.position).add(forward.multiplyScalar(10));
+        
+        // 3. OrbitControls의 내부 상태도 갱신 (반드시 dummyCamera 기준으로)
+        this.controls.update();
+        
+        // 4. 리줌 플래그는 유지하되, 위치 튀는 현상 방지
+        this.isResuming = true;
+    }
+
     uninit() {
         this.controls.object = this.camera; 
         this.controls.minDistance = 0;

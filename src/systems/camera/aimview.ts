@@ -24,6 +24,11 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
         // Sync dummy camera to real camera to avoid jumps
         this.dummyCamera.position.copy(this.camera.position);
         this.dummyCamera.quaternion.copy(this.camera.quaternion);
+
+        // 🌟 Fix: Initialize currentLookAt to the camera's current forward point 
+        // to avoid snapping from (0,0,0) to the target on first frame.
+        const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+        this.currentLookAt.copy(this.camera.position).add(forward.multiplyScalar(this.lookAheadDistance));
         
         // Hijack OrbitControls to control our dummy camera
         this.controls.object = this.dummyCamera;
@@ -33,7 +38,7 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
         // Restore OrbitControls to control the real camera
         this.controls.object = this.camera;
         this.controls.enabled = true;
-        this.controls.reset(); // Optional: reset to clean state if needed, but might lose angle
+        
         // Better to just ensure standard settings:
         this.controls.minDistance = 0;
         this.controls.maxDistance = Infinity;
@@ -75,11 +80,13 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
         const desiredPos = this.dummyCamera.position.clone().add(right.multiplyScalar(this.shoulderOffset.x));
 
         // 4. Move real camera
-        camera.position.lerp(desiredPos, this.lerpFactor);
+        // Using a slightly lower lerp factor during the first frames could make it even smoother,
+        // but 0.15~0.2 is usually a good balance for responsiveness and smoothness.
+        camera.position.lerp(desiredPos, 0.15);
 
         // 5. Look ahead
         const lookTarget = target.clone().add(direction.multiplyScalar(-this.lookAheadDistance));
-        this.currentLookAt.lerp(lookTarget, this.lerpFactor);
+        this.currentLookAt.lerp(lookTarget, 0.15);
         camera.lookAt(this.currentLookAt);
     }
 }
