@@ -121,29 +121,30 @@ export default class Input {
     /**
      * DOM 요소에 터치 및 클릭 이벤트를 바인딩합니다.
      */
-    // 수정 후
     private _attachDOMListeners(): void {
         for (const key in this.domActionMap) {
             const element = this.domElements[key];
             const action = this.domActionMap[key as keyof typeof this.domActionMap] as ActionType;
             if (element) {
-                // --- [수정] 버튼이 비활성화 상태인지 확인하는 로직 추가 ---
                 const handleKeyDown = (e: any) => {
                     if (this.disabledButtons.has(action)) return;
-                    e.preventDefault();
+                    if (e.cancelable) e.preventDefault();
                     this.keyDownHandlers.get(action)?.();
                 };
-                const handleKeyUp = () => {
+                const handleKeyUp = (e: any) => {
                     if (this.disabledButtons.has(action)) return;
                     this.keyUpHandlers.get(action)?.();
                 };
                 
+                // Touch Events
                 element.ontouchstart = handleKeyDown;
                 element.ontouchend = handleKeyUp;
+                element.ontouchcancel = handleKeyUp;
 
-                // if (key.includes('up') || key.includes('down') || key.includes('left') || key.includes('right') || key.includes('jump')) {
-                    element.onclick = handleKeyDown;
-                // }
+                // Mouse Events
+                element.onmousedown = handleKeyDown;
+                element.onmouseup = handleKeyUp;
+                element.onmouseleave = handleKeyUp; // 영역을 벗어나면 뗀 것으로 처리
             }
         }
     }

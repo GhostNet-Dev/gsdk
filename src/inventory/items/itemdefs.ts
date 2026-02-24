@@ -121,7 +121,7 @@ export const itemDefs = {
     description: "A versatile and widely-used assault rifle. The M4A1 offers a solid balance of firepower, accuracy, and rate of fire. Its customizable nature makes it a favorite among experienced fighters who need a dependable weapon for a variety of situations.",
     icon: itemIcons.Bow,
     sound: SoundType.NATO556,
-    stackable: false, binding: true, autoAttack: true,
+    stackable: false, binding: true, autoAttack: false,
     stats: {
       "attack": 3, "attackSpeed": .2, "speed": 1, "attackRange": 10
     },

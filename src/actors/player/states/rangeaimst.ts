@@ -38,7 +38,7 @@ export class RangeAimState extends State implements IPlayerAction {
         }
 
         this.keepAimCameraOnExit = false
-        this.player.ChangeAction(this.getAnimationForItem(handItem), this.baseSpec.AttackSpeed)
+        this.player.ChangeAction(this.getAnimationForItem(handItem))
         this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.AimThirdPerson)
         this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, true)
         this.player.createDashedCircle(this.baseSpec.AttackRange)

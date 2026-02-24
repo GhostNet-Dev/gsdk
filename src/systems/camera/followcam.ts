@@ -4,9 +4,17 @@ import { ICameraStrategy } from "./cameratypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 
 export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy {
+    private dummyCamera = new THREE.PerspectiveCamera();
+    
+    private isResuming = false;
+    private defaultOffset = new THREE.Vector3(0, 2.5, -6);
+    private lookTarget = new THREE.Vector3();
+    private lerpFactor = 0.15; // 부드러움 조절
+
     private isFreeView = false;
     private dragTimer: ReturnType<typeof setTimeout> | null = null;
     private readonly dragTimeoutMs = 2000;
+    
     private readonly backwardIgnoreThreshold = -0.15;
     private readonly cameraApproachIgnoreThreshold = 0.35;
     private readonly safeMinDistancePadding = 0.4;
@@ -20,9 +28,7 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         private controls: OrbitControls,
         private camera: THREE.Camera,
         private obstacles: THREE.Object3D[],
-    ) {
-        // No init here
-    }
+    ) {}
 
     init() {
         this.controls.enabled = true;
@@ -33,18 +39,20 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         this.controls.maxPolarAngle = Math.PI / 2 - 0.1; 
         this.controls.minDistance = 2.0;
         this.controls.maxDistance = 20.0;
-        
         this.controls.minAzimuthAngle = -Infinity;
         this.controls.maxAzimuthAngle = Infinity;
+
+        this.controls.object = this.dummyCamera;
+        this.isResuming = true; 
     }
 
     uninit() {
+        this.controls.object = this.camera; 
         this.controls.minDistance = 0;
         this.controls.maxDistance = Infinity;
         this.controls.minAzimuthAngle = -Infinity;
         this.controls.maxAzimuthAngle = Infinity;
         this.controls.maxPolarAngle = Math.PI;
-        // Keep enabled=true for next strategy
     }
 
     orbitStart(): void { 
@@ -61,20 +69,52 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
     update(camera: THREE.Camera, player?: IPhysicsObject) {
         if (!player) return;
 
+        // 1. 복귀 로직
+        if (this.isResuming) {
+            this.isResuming = false;
+            let targetOffset = this.defaultOffset.clone();
+            
+            if (this.hasStableOffset) {
+                const horizontalDist = Math.sqrt(this.stableOffset.x ** 2 + this.stableOffset.z ** 2);
+                const verticalDist = this.stableOffset.y;
+                
+                const playerBackward = new THREE.Vector3(0, 0, -1).applyQuaternion(player.Meshs.quaternion);
+                targetOffset = playerBackward.multiplyScalar(horizontalDist);
+                targetOffset.y = verticalDist;
+            }
+
+            this.dummyCamera.position.copy(player.CenterPos).add(targetOffset);
+            this.controls.target.copy(player.CenterPos);
+
+            // 🌟 핵심 픽스 1: 댐핑 관성 우회 🌟
+            // 순간적으로 댐핑을 끄고 업데이트하여 OrbitControls가 어깨 쪽으로 튕겨 돌아가려는 현상 방지
+            const wasDamping = this.controls.enableDamping;
+            this.controls.enableDamping = false;
+            this.controls.update();
+            this.controls.enableDamping = wasDamping;
+
+            this.prevPlayerPos.copy(player.CenterPos);
+        }
+
+        // 2. 줌 거리 유지
+        if (this.prevPlayerPos.lengthSq() > 0) {
+            const moveDeltaCam = new THREE.Vector3().subVectors(player.CenterPos, this.prevPlayerPos);
+            this.dummyCamera.position.add(moveDeltaCam);
+        }
+
         const moveDelta = new THREE.Vector3().subVectors(player.CenterPos, this.prevPlayerPos);
         const isMoving = moveDelta.lengthSq() > 0.0001;
         this.prevPlayerPos.copy(player.CenterPos);
 
-        // Sync Controls Target
         this.controls.target.copy(player.CenterPos);
 
-        const offset = new THREE.Vector3().subVectors(camera.position, player.CenterPos);
+        const offset = new THREE.Vector3().subVectors(this.dummyCamera.position, player.CenterPos);
         if (!this.hasStableOffset && offset.lengthSq() > 0.0001) {
             this.stableOffset.copy(offset);
             this.hasStableOffset = true;
         }
 
-        // Auto-Follow Logic: Manipulate OrbitControls Limits to force rotation
+        // 3. 오토 팔로우 로직
         if (!this.isFreeView && isMoving) {
             const playerForward = new THREE.Vector3(0, 0, 1).applyQuaternion(player.Meshs.quaternion);
             const moveDir = moveDelta.clone().normalize();
@@ -82,11 +122,7 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
             const moveForwardness = moveDir.dot(playerForward);
             const cameraApproachness = moveDir.dot(offsetDir);
 
-            // When moving backwards or directly toward the camera, keep heading stable
-            // to prevent unwanted yaw corrections.
-            const shouldIgnoreAutoFollow =
-                moveForwardness < this.backwardIgnoreThreshold ||
-                cameraApproachness > this.cameraApproachIgnoreThreshold;
+            const shouldIgnoreAutoFollow = moveForwardness < this.backwardIgnoreThreshold || cameraApproachness > this.cameraApproachIgnoreThreshold;
 
             if (shouldIgnoreAutoFollow) {
                 const isCameraInFrontHemisphere = playerForward.dot(offsetDir) > 0;
@@ -94,14 +130,11 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
                 const isTooClose = offset.length() < minSafeDistance;
 
                 if (this.hasStableOffset && (isCameraInFrontHemisphere || isTooClose)) {
-                    camera.position.copy(player.CenterPos).add(this.stableOffset);
+                    this.dummyCamera.position.copy(player.CenterPos).add(this.stableOffset);
                 }
-
                 this.controls.update();
             } else {
                 const dot = playerForward.dot(offsetDir);
-
-                // Only rotate if player is facing away (Zelda style)
                 if (dot < -0.1) {
                     const backDir = playerForward.clone().multiplyScalar(-1);
                     const targetTheta = Math.atan2(backDir.x, backDir.z);
@@ -111,15 +144,13 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
                     while (diff > Math.PI) diff -= 2 * Math.PI;
                     while (diff < -Math.PI) diff += 2 * Math.PI;
 
-                    const newTheta = currentTheta + diff * 0.04; // Smooth turn speed
-
+                    const newTheta = currentTheta + diff * 0.04;
                     this.controls.minAzimuthAngle = newTheta;
                     this.controls.maxAzimuthAngle = newTheta;
                 }
-
                 this.controls.update();
-
-                const updatedOffset = new THREE.Vector3().subVectors(camera.position, player.CenterPos);
+                
+                const updatedOffset = new THREE.Vector3().subVectors(this.dummyCamera.position, player.CenterPos);
                 if (updatedOffset.lengthSq() > 0.0001) {
                     this.stableOffset.copy(updatedOffset);
                     this.hasStableOffset = true;
@@ -127,37 +158,43 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
             }
         } else {
             this.controls.update();
-
-            const updatedOffset = new THREE.Vector3().subVectors(camera.position, player.CenterPos);
+            const updatedOffset = new THREE.Vector3().subVectors(this.dummyCamera.position, player.CenterPos);
             if (updatedOffset.lengthSq() > 0.0001) {
                 this.stableOffset.copy(updatedOffset);
                 this.hasStableOffset = true;
             }
         }
 
-        // Release Azimuth Lock immediately so user can rotate next frame if they want
         this.controls.minAzimuthAngle = -Infinity;
         this.controls.maxAzimuthAngle = Infinity;
 
-        // Collision Check (Visual Clamping)
-        const idealPos = camera.position.clone();
-        const direction = new THREE.Vector3().subVectors(idealPos, player.CenterPos);
+        // 4. 충돌 및 보간 연출
+        let finalIdealPos = this.dummyCamera.position.clone();
+        const direction = new THREE.Vector3().subVectors(finalIdealPos, player.CenterPos);
         const distance = direction.length();
         direction.normalize();
 
         this.raycaster.set(player.CenterPos, direction);
         this.raycaster.far = distance;
 
-        const hits = this.raycaster.intersectObjects(this.obstacles, true);
-        
-        if (hits.length > 0) {
-            const hitDist = hits[0].distance;
-            // Prevent getting too close
-            if (hitDist > 0.5) {
-                const hitPos = hits[0].point;
-                // Move camera slightly in front of wall
-                camera.position.copy(hitPos.add(direction.multiplyScalar(-0.2)));
+        // 🌟 핵심 픽스 2: 레이캐스터가 '플레이어 자신'을 타격하여 강제 줌인되는 현상 방지 🌟
+        const hits = this.raycaster.intersectObjects(this.obstacles, true).filter(hit => {
+            let current: THREE.Object3D | null = hit.object;
+            while (current) {
+                if (current.uuid === player.Meshs.uuid) return false;
+                current = current.parent;
             }
+            return true;
+        });
+
+        if (hits.length > 0 && hits[0].distance > 0.5) {
+            finalIdealPos = hits[0].point.clone().add(direction.multiplyScalar(-0.2));
         }
+
+        // 실제 카메라 위치 보간 (부드러운 시점 복귀)
+        camera.position.lerp(finalIdealPos, this.lerpFactor);
+        
+        this.lookTarget.lerp(player.CenterPos, this.lerpFactor);
+        camera.lookAt(this.lookTarget);
     }
 }

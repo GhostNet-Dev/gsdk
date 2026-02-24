@@ -50,7 +50,7 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
         this.controls.enableDamping = false; // Crisp aiming
         
         this.controls.minDistance = 0.5;
-        this.controls.maxDistance = 4.0; 
+        this.controls.maxDistance = 6.0; 
         
         this.controls.minPolarAngle = 0.1;
         this.controls.maxPolarAngle = Math.PI - 0.1;

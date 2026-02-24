@@ -11,6 +11,7 @@ import { ActionType } from "../playertypes";
 import { IItem } from "@Glibs/interface/iinven";
 import { Item } from "@Glibs/inventory/items/item";
 import { AttackState } from "./attackstate";
+import { KeyType } from "@Glibs/types/eventtypes";
 
 export class AimRangeAttackState extends AttackState implements IPlayerAction {
     constructor(playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic,
@@ -40,6 +41,20 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
         this.attackTime = this.attackSpeed
         this.clock = new THREE.Clock()
         this.player.createDashedCircle(this.attackDist)
+    }
+
+    private startFiring() {
+        this.attackTime = 0;
+        this.attackProcess = true;
+        this.hasFired = true; 
+        const handItem = this.playerCtrl.baseSpec.GetRangedItem()
+        if (handItem == undefined) return;
+
+        this.eventCtrl.SendEventMessage(EventTypes.PlaySound, handItem.Mesh, handItem.Sound)
+
+        this.keytimeout.push(setTimeout(() => {
+            this.rangedAttack(handItem)
+        }, this.attackSpeed * 1000 * 0.3))
     }
 
     rangedAttack(itemInfo: IItem) {
@@ -92,24 +107,26 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
         );
 
         if (this.attackProcess) return this
+
+        // Cooldown/Animation Duration Check
         if (this.attackTime / this.attackSpeed < 1) return this
 
-        // If we have already fired and cooldown is done, return to Aim State
+        // Cooldown finished.
+        const firePressed = this.playerCtrl.KeyState[KeyType.Action1] === true
+
+        if (firePressed) {
+            // Keep firing in this state
+            this.startFiring()
+            return this
+        }
+
+        // If we already fired once and the button is released, return to Aim State
         if (this.hasFired) {
              return this.ChangeMode(this.playerCtrl.RangeAimSt)
         }
 
-        this.attackTime = 0;
-        this.attackProcess = true;
-        this.hasFired = true; // Mark as fired
-        const handItem = this.playerCtrl.baseSpec.GetRangedItem()
-        if (handItem == undefined) return this;
-
-        this.eventCtrl.SendEventMessage(EventTypes.PlaySound, handItem.Mesh, handItem.Sound)
-
-        this.keytimeout.push(setTimeout(() => {
-            this.rangedAttack(handItem)
-        }, this.attackSpeed * 1000 * 0.3))
+        // First fire trigger
+        this.startFiring()
 
         return this
     }
