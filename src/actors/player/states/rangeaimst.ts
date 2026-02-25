@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { IPlayerAction, State } from "./playerstate";
+import { IPlayerAction } from "./playerstate";
 import { Player } from "../player";
 import { BaseSpec } from "../../battle/basespec";
 import { IGPhysic } from "@Glibs/interface/igphysics";
@@ -11,8 +11,9 @@ import { ActionType } from "../playertypes";
 import { Item } from "@Glibs/inventory/items/item";
 import { KeyType } from "@Glibs/types/eventtypes";
 import { AttackItemType } from "@Glibs/types/inventypes";
+import { AttackState } from "./attackstate";
 
-export class RangeAimState extends State implements IPlayerAction {
+export class RangeAimState extends AttackState implements IPlayerAction {
     private waitReleaseBeforeFire = false
     private keepAimCameraOnExit = false
 
@@ -20,10 +21,10 @@ export class RangeAimState extends State implements IPlayerAction {
         playerCtrl: PlayerCtrl,
         player: Player,
         gphysic: IGPhysic,
-        private eventCtrl: IEventController,
+        protected eventCtrl: IEventController,
         baseSpec: BaseSpec,
     ) {
-        super(playerCtrl, player, gphysic, baseSpec)
+        super(playerCtrl, player, gphysic, eventCtrl, baseSpec)
     }
 
     Init(): void {
@@ -48,12 +49,12 @@ export class RangeAimState extends State implements IPlayerAction {
         this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, handItem.Mesh, handItem.Sound)
     }
 
-    Uninit(): void {
+    override Uninit(): void {
         if (!this.keepAimCameraOnExit) {
             this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, false)
             this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.ThirdFollowPerson)
         }
-        this.player.releaseDashsedCircle()
+        super.Uninit()
     }
 
     Update(): IPlayerAction {
@@ -63,15 +64,21 @@ export class RangeAimState extends State implements IPlayerAction {
             return d
         }
 
-        const camForward = new THREE.Vector3();
-        this.playerCtrl.camera.getWorldDirection(camForward);
-        camForward.y = 0;
-        camForward.normalize();
+        // 🎯 핵심 개선: 조준 시차(Parallax) 수정
+        // 1. 화면 중앙 조준점이 가리키는 월드 상의 실제 지점을 찾습니다.
+        const targetPos = this.getReticleWorldTarget(100); 
+
+        // 2. 캐릭터가 그 지점을 바라보게 합니다.
+        // Y축은 캐릭터의 높이를 유지하여 캐릭터가 앞으로 고꾸라지거나 뒤로 젖혀지지 않게 합니다.
         this.player.Meshs.lookAt(
-            this.player.Pos.x + camForward.x,
+            targetPos.x,
             this.player.Pos.y,
-            this.player.Pos.z + camForward.z
+            targetPos.z
         );
+
+        // 🎯 추가: 총구 방향 충돌 지점에 가늠자 배치
+        const muzzleHitPoint = this.getMuzzleWorldTarget(100);
+        (this.playerCtrl.camera as any).setCrosshairWorldPosition(muzzleHitPoint);
 
         const firePressed = this.playerCtrl.KeyState[KeyType.Action1] === true
         if (this.waitReleaseBeforeFire) {
@@ -89,7 +96,7 @@ export class RangeAimState extends State implements IPlayerAction {
         return this
     }
 
-    private getAnimationForItem(item: any): ActionType {
+    public override getAnimationForItem(item: any): ActionType {
         switch (item.AttackType) {
             case AttackItemType.OneHandGun:
                 return ActionType.PistolAimIdle

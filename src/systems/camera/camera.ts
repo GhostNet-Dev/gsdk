@@ -23,7 +23,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     private strategy: ICameraStrategy
     private strategies: Map<CameraMode, ICameraStrategy> = new Map()
     private mode: CameraMode = CameraMode.TopView
-    private aimReticle?: HTMLDivElement
+    private crosshair?: THREE.Group;
     private preAimSnapshot?: {
         mode: CameraMode
         position: THREE.Vector3
@@ -43,6 +43,8 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         super(45, canvas.Width / canvas.Height, 0.1, 1000)
         if (audioListener) this.add(audioListener)
 
+        this.createCrosshair();
+
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         eventCtrl.SendEventMessage(EventTypes.RegisterViewer, this)
         eventCtrl.RegisterEventListener(EventTypes.CtrlObj, (obj: IPhysicsObject, mode = CameraMode.ThirdFollowPerson) => {
@@ -56,6 +58,9 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         })
         eventCtrl.RegisterEventListener(EventTypes.OrbitControlsOnOff, (onOff:boolean) => {
             this.controls.enabled = onOff
+        })
+        eventCtrl.RegisterEventListener(EventTypes.RegisterLandPhysic, (obj: THREE.Object3D) => {
+            this.targetObjs.push(obj)
         })
         eventCtrl.RegisterEventListener(EventTypes.RegisterPhysic, (obj: THREE.Object3D) => {
             this.targetObjs.push(obj)
@@ -101,26 +106,75 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         this.strategy = this.strategies.get(this.mode)!;
     }
 
+    private createCrosshair() {
+        const group = new THREE.Group();
+        // Line은 1px로 고정되므로 가장 밝은 노란색과 1.0의 불투명도를 사용합니다.
+        const mat = new THREE.LineBasicMaterial({ 
+            color: 0xffff00, 
+            depthTest: false, 
+            depthWrite: false,
+            transparent: true,
+            opacity: 1.0
+        });
+
+        const size = 0.5; // 월드 단위 크기 (나중에 거리별로 스케일 조절됨)
+        const gap = 0.2; 
+
+        const hPoints = [
+            new THREE.Vector3(-size, 0, 0), new THREE.Vector3(-gap, 0, 0),
+            new THREE.Vector3(gap, 0, 0), new THREE.Vector3(size, 0, 0)
+        ];
+        const hGeo = new THREE.BufferGeometry().setFromPoints(hPoints);
+        const hLine = new THREE.LineSegments(hGeo, mat);
+
+        const vPoints = [
+            new THREE.Vector3(0, size, 0), new THREE.Vector3(0, gap, 0),
+            new THREE.Vector3(0, -gap, 0), new THREE.Vector3(0, -size, 0)
+        ];
+        const vGeo = new THREE.BufferGeometry().setFromPoints(vPoints);
+        const vLine = new THREE.LineSegments(vGeo, mat);
+
+        group.add(hLine, vLine);
+        group.visible = false;
+        
+        // 렌더링 우선순위 최상위
+        group.renderOrder = 100000;
+        group.traverse(obj => obj.frustumCulled = false);
+        
+        this.add(group);
+        this.crosshair = group;
+    }
+
+    /**
+     * 가늠자를 월드 좌표에 배치하고 카메라를 바라보게 합니다.
+     * 거리에 상관없이 화면상 크기를 일정하게 유지합니다.
+     */
+    public setCrosshairWorldPosition(worldPos: THREE.Vector3) {
+        if (!this.crosshair) return;
+        
+        // 1. 카메라 로컬 좌표계로 변환하여 배치
+        const localPos = this.worldToLocal(worldPos.clone());
+        this.crosshair.position.copy(localPos);
+
+        // 2. 거리 기반 스케일 조정 (원근감에 의한 크기 변화 상쇄)
+        // localPos.z는 카메라로부터의 거리(음수)입니다.
+        const distance = Math.max(0.1, Math.abs(localPos.z));
+        const baseScale = 0.025; // 화면상 크기 조절용 상수
+        this.crosshair.scale.setScalar(distance * baseScale);
+        
+        // 3. 항상 카메라 평면과 평행하게 정렬 (부모가 카메라라 이미 정렬됨)
+    }
+
     private toggleAimOverlay(enabled: boolean) {
-        if (!this.aimReticle) {
-            const reticle = document.createElement("div")
-            reticle.style.position = "fixed"
-            reticle.style.left = "50%"
-            reticle.style.top = "50%"
-            reticle.style.width = "22px"
-            reticle.style.height = "22px"
-            reticle.style.marginLeft = "-11px"
-            reticle.style.marginTop = "-11px"
-            reticle.style.borderRadius = "50%"
-            reticle.style.pointerEvents = "none"
-            reticle.style.border = "2px solid rgba(255,255,255,0.95)"
-            reticle.style.boxShadow = "0 0 6px rgba(0,0,0,0.8)"
-            reticle.style.zIndex = "9999"
-            reticle.style.display = "none"
-            document.body.appendChild(reticle)
-            this.aimReticle = reticle
+        if (this.crosshair) {
+            this.crosshair.visible = enabled;
+            // 활성화될 때 기본 위치(전방 10m)로 초기화
+            if (enabled) {
+                const forward = new THREE.Vector3(0, 0, -10);
+                this.crosshair.position.copy(forward);
+                this.crosshair.scale.setScalar(10 * 0.025);
+            }
         }
-        this.aimReticle.style.display = enabled ? "block" : "none"
     }
 
     shakeCamera(intensity = 0.5, duration = 0.3) {

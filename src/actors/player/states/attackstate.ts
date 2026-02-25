@@ -156,6 +156,30 @@ export abstract class AttackState extends State implements IPlayerAction {
     protected computeShootDirectionFromGun(gunPos: THREE.Vector3, targetPos: THREE.Vector3): THREE.Vector3 {
         return new THREE.Vector3().subVectors(targetPos, gunPos).normalize()
     }
+
+    /**
+     * 총구가 현재 가리키고 있는 실제 월드 좌표를 찾습니다.
+     * @param maxDistance 최대 측정 거리
+     */
+    protected getMuzzleWorldTarget(maxDistance = this.attackDist): THREE.Vector3 {
+        const muzzlePos = new THREE.Vector3();
+        this.player.GetMuzzlePosition(muzzlePos);
+
+        const muzzleDir = new THREE.Vector3();
+        this.player.Meshs.getWorldDirection(muzzleDir);
+
+        this.raycast.set(muzzlePos, muzzleDir.normalize());
+        this.raycast.far = maxDistance;
+
+        const collisionTargets = [...this.gphysic.GetObjects(), ...this.playerCtrl.targets];
+        const hit = this.raycast.intersectObjects(collisionTargets, true)
+            .find((intersect) => !this.isPlayerOwnedObject(intersect.object));
+
+        if (hit) return hit.point;
+
+        // 충돌체가 없으면 총구 방향의 최대 거리 지점 반환
+        return muzzlePos.add(muzzleDir.multiplyScalar(maxDistance));
+    }
 }
 
 export class AttackIdleState extends State implements IPlayerAction {

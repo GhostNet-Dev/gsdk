@@ -7,7 +7,8 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
     private dummyCamera = new THREE.PerspectiveCamera();
     private currentLookAt = new THREE.Vector3();
 
-    private readonly shoulderOffset = new THREE.Vector3(0.7, 1.6, 0);
+    // 캐릭터를 왼쪽으로 밀기 위해 오른쪽 오프셋을 크게 잡음
+    private readonly shoulderOffset = new THREE.Vector3(0.85, 1.7, 0); 
     private readonly lookAheadDistance = 100;
     private readonly lerpFactor = 0.5;
 
@@ -25,8 +26,6 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
         this.dummyCamera.position.copy(this.camera.position);
         this.dummyCamera.quaternion.copy(this.camera.quaternion);
 
-        // 🌟 Fix: Initialize currentLookAt to the camera's current forward point 
-        // to avoid snapping from (0,0,0) to the target on first frame.
         const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
         this.currentLookAt.copy(this.camera.position).add(forward.multiplyScalar(this.lookAheadDistance));
         
@@ -39,7 +38,6 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
         this.controls.object = this.camera;
         this.controls.enabled = true;
         
-        // Better to just ensure standard settings:
         this.controls.minDistance = 0;
         this.controls.maxDistance = Infinity;
         this.controls.minPolarAngle = 0;
@@ -52,10 +50,10 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
         this.controls.enableZoom = true; 
         this.controls.enableRotate = true;
         this.controls.enablePan = false;
-        this.controls.enableDamping = false; // Crisp aiming
+        this.controls.enableDamping = false; 
         
-        this.controls.minDistance = 0.5;
-        this.controls.maxDistance = 6.0; 
+        this.controls.minDistance = 1.0;
+        this.controls.maxDistance = 5.0; 
         
         this.controls.minPolarAngle = 0.1;
         this.controls.maxPolarAngle = Math.PI - 0.1;
@@ -72,20 +70,22 @@ export default class AimThirdPersonCameraStrategy implements ICameraStrategy {
         this.controls.target.copy(target);
         this.controls.update();
 
-        // 2. Calculate rendering position from dummyCamera (which Controls is moving)
+        // 2. Calculate right and direction vectors
         const direction = new THREE.Vector3().subVectors(this.dummyCamera.position, target).normalize();
         const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), direction).normalize();
         
-        // 3. Apply shoulder offset
-        const desiredPos = this.dummyCamera.position.clone().add(right.multiplyScalar(this.shoulderOffset.x));
+        // 3. 카메라 위치: 오른쪽 어깨 뒤쪽으로 배치 (캐릭터는 상대적으로 왼쪽에 위치하게 됨)
+        const desiredPos = this.dummyCamera.position.clone().add(right.clone().multiplyScalar(this.shoulderOffset.x));
 
         // 4. Move real camera
-        // Using a slightly lower lerp factor during the first frames could make it even smoother,
-        // but 0.15~0.2 is usually a good balance for responsiveness and smoothness.
         camera.position.lerp(desiredPos, 0.15);
 
-        // 5. Look ahead
-        const lookTarget = target.clone().add(direction.multiplyScalar(-this.lookAheadDistance));
+        // 5. 🎯 시선 처리: 가늠자를 화면 오른쪽에 두기 위해 시선을 왼쪽으로 살짝 오프셋
+        // 캐릭터를 비스듬히 보면서 타겟은 화면 중앙에서 오른쪽으로 치우쳐 보이게 합니다.
+        const lookTarget = target.clone()
+            .add(direction.multiplyScalar(-this.lookAheadDistance))
+            .add(right.clone().multiplyScalar(-0.35)); // 시선을 캐릭터 쪽(왼쪽)으로 살짝 꺾음
+
         this.currentLookAt.lerp(lookTarget, 0.15);
         camera.lookAt(this.currentLookAt);
     }

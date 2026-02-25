@@ -96,15 +96,18 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
         delta = this.clock?.getDelta()
         this.attackTime += delta
 
-        const camForward = new THREE.Vector3();
-        this.playerCtrl.camera.getWorldDirection(camForward);
-        camForward.y = 0;
-        camForward.normalize();
+        // 🎯 핵심 개선: 조준 시차(Parallax) 수정
+        // 화면 중앙 조준점이 가리키는 월드 상의 실제 지점을 찾고 캐릭터가 그곳을 바라보게 합니다.
+        const targetPos = this.getReticleWorldTarget(100); 
         this.player.Meshs.lookAt(
-            this.player.Pos.x + camForward.x,
+            targetPos.x,
             this.player.Pos.y,
-            this.player.Pos.z + camForward.z
+            targetPos.z
         );
+
+        // 🎯 추가: 총구 방향 충돌 지점에 가늠자 배치
+        const muzzleHitPoint = this.getMuzzleWorldTarget(100);
+        (this.playerCtrl.camera as any).setCrosshairWorldPosition(muzzleHitPoint);
 
         if (this.attackProcess) return this
 
