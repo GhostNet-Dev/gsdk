@@ -71,7 +71,8 @@ export class Projectile implements ILoop {
     private eventCtrl: IEventController,
     private game: THREE.Scene,
     private targetList: THREE.Object3D[],
-    private loader?: Loader
+    private loader?: Loader,
+    private camera?: THREE.Camera
   ) {
     eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
 
@@ -89,7 +90,7 @@ export class Projectile implements ILoop {
       case MonsterId.Fireball:
         return new FireballModel();
       case MonsterId.WarhamerTracer:
-        return new StreakTracerModel();
+        return new StreakTracerModel({ camera: this.camera });
       case MonsterId.Knife:
         return new KnifeModel(this.loader?.GetAssets(Char.KayKitAdvDagger));
       case MonsterId.DefaultBall:

@@ -153,6 +153,11 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
     attack: 5,
     speed: 10.0,
   },
+  [MonsterId.WarhamerTracer]: {
+    hp: 1,
+    attack: 1,
+    speed: 100.0, // High speed for tracer
+  },
 };
 
 

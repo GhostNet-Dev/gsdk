@@ -200,6 +200,10 @@ export class ProjectileCtrl implements IActionUser {
 
     if (!hit) return;
 
+    // hitscan이면 end 지점을 hitPoint로 고정
+    this.position.copy(hit.hitPoint);
+    this.projectile.update(this.position);
+
     const k = hit.target.name;
     const v = {
       type: AttackType.NormalSwing,

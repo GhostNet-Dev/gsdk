@@ -17,6 +17,8 @@ export type StreakTracerOptions = {
 
   depthTest?: boolean;    // 벽 뒤 가려질지
   renderOrder?: number;
+
+  camera?: THREE.Camera;  // 실린더형 빌보드용 카메라 참조
 };
 
 type ReleaseAnimatedProjectile = IProjectileModel & {
@@ -38,7 +40,8 @@ export class StreakTracerModel implements ReleaseAnimatedProjectile {
   private fading = false;
   private fadeElapsed = 0;
 
-  private readonly opt: Required<StreakTracerOptions>;
+  private camera?: THREE.Camera;
+  private readonly opt: Required<Omit<StreakTracerOptions, 'camera'>>;
   private readonly matCore: THREE.MeshBasicMaterial;
   private readonly matGlow: THREE.MeshBasicMaterial;
 
@@ -48,18 +51,19 @@ export class StreakTracerModel implements ReleaseAnimatedProjectile {
   private readonly glow2: THREE.Mesh;
 
   constructor(options: StreakTracerOptions = {}) {
+    this.camera = options.camera;
     this.opt = {
       coreColor: options.coreColor ?? 0xffcc55,
       glowColor: options.glowColor ?? 0xffaa33,
 
-      coreWidth: options.coreWidth ?? 0.045,
-      glowWidth: options.glowWidth ?? 0.09,
+      coreWidth: options.coreWidth ?? 0.08,  // Increased from 0.045
+      glowWidth: options.glowWidth ?? 0.16,  // Increased from 0.09
 
       opacityCore: options.opacityCore ?? 1.0,
-      opacityGlow: options.opacityGlow ?? 0.55,
+      opacityGlow: options.opacityGlow ?? 0.75, // Increased from 0.55
 
-      minLength: options.minLength ?? 0.15,
-      fadeDuration: options.fadeDuration ?? 0.08,
+      minLength: options.minLength ?? 0.25,  // Increased from 0.15
+      fadeDuration: options.fadeDuration ?? 0.12, // Increased from 0.08
 
       depthTest: options.depthTest ?? true,
       renderOrder: options.renderOrder ?? 5,
@@ -92,6 +96,11 @@ export class StreakTracerModel implements ReleaseAnimatedProjectile {
     this.core2 = new THREE.Mesh(StreakTracerModel.sharedGeom, this.matCore);
     this.glow1 = new THREE.Mesh(StreakTracerModel.sharedGeom, this.matGlow);
     this.glow2 = new THREE.Mesh(StreakTracerModel.sharedGeom, this.matGlow);
+
+    this.core1.frustumCulled = false;
+    this.core2.frustumCulled = false;
+    this.glow1.frustumCulled = false;
+    this.glow2.frustumCulled = false;
 
     this.root.add(this.glow1, this.glow2, this.core1, this.core2);
 
@@ -140,6 +149,7 @@ export class StreakTracerModel implements ReleaseAnimatedProjectile {
     const k = Math.max(0, 1 - t);
 
     this.setOpacity(k);
+    this.updateTransform();  // 페이드 중에도 카메라 방향 갱신
 
     if (t >= 1) {
       this.fading = false;
@@ -156,15 +166,43 @@ export class StreakTracerModel implements ReleaseAnimatedProjectile {
     const dir = new THREE.Vector3().subVectors(this.end, this.start);
     const len = Math.max(this.opt.minLength, dir.length());
 
-    // midpoint에 놓고, up(0,1,0) → dir 방향으로 회전
     const mid = new THREE.Vector3().addVectors(this.start, this.end).multiplyScalar(0.5);
     this.root.position.copy(mid);
 
     const forward = dir.lengthSq() < 1e-8 ? new THREE.Vector3(0, 0, 1) : dir.normalize();
-    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), forward);
-    this.root.quaternion.copy(q);
 
-    // 길이=scale.y, 두께=scale.x (plane의 x가 폭, y가 길이라고 가정)
+    if (this.camera) {
+      // ── 실린더형 빌보드 ──────────────────────────────────────
+      // Y축(길이)은 발사방향 고정, 평면 법선(Z)만 카메라를 향하도록 회전
+      const toCam = new THREE.Vector3()
+        .subVectors(this.camera.position, mid);
+
+      // forward 성분을 제거 → forward에 수직인 카메라 방향 벡터만 남김
+      toCam.addScaledVector(forward, -toCam.dot(forward));
+
+      if (toCam.lengthSq() > 1e-8) {
+        toCam.normalize();
+        // right = forward × toCam : 세 축이 직교하는 기저 완성
+        const right = new THREE.Vector3()
+          .crossVectors(forward, toCam)
+          .normalize();
+
+        // makeBasis(X, Y, Z): X=right, Y=forward(길이축), Z=toCam(법선→카메라)
+        const m = new THREE.Matrix4().makeBasis(right, forward, toCam);
+        this.root.quaternion.setFromRotationMatrix(m);
+      } else {
+        // 카메라가 발사선과 완전히 일치하는 예외 케이스 → 기존 방식 폴백
+        const q = new THREE.Quaternion()
+          .setFromUnitVectors(new THREE.Vector3(0, 1, 0), forward);
+        this.root.quaternion.copy(q);
+      }
+    } else {
+      // 카메라 없으면 기존 십자 방식
+      const q = new THREE.Quaternion()
+        .setFromUnitVectors(new THREE.Vector3(0, 1, 0), forward);
+      this.root.quaternion.copy(q);
+    }
+
     this.core1.scale.set(this.opt.coreWidth, len, 1);
     this.core2.scale.set(this.opt.coreWidth, len, 1);
 

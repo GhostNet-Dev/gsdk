@@ -75,7 +75,9 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
             damage: this.baseSpec.Damage,
             src: gunPos,
             dir: this.attackDir,
-            range: this.attackDist
+            range: this.attackDist,
+            hitscan: true,
+            tracerLife: 2.12 // Slightly longer life for better visibility
         })
         this.attackProcess = false
         return true

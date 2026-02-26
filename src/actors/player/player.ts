@@ -65,14 +65,23 @@ export class Player extends PhysicsObject {
     }
     GetItemPosition(target: THREE.Vector3) {
         const rightId = this.asset.GetBodyMeshId(Bind.Hands_R)
-        if (rightId == undefined) return
+        if (rightId == undefined) {
+            target.copy(this.Pos)
+            return
+        }
         const mesh = this.meshs.getObjectByName(rightId)
-        if (!mesh) return
+        if (!mesh) {
+            target.copy(this.Pos)
+            return
+        }
         mesh.getWorldPosition(target)
     }
     GetMuzzlePosition(target: THREE.Vector3) {
         const mesh = this.meshs.getObjectByName("muzzlePoint")
-        if (!mesh) return
+        if (!mesh) {
+            this.GetItemPosition(target)
+            return
+        }
         mesh.getWorldPosition(target)
     }
     UnequipItem(bind: Bind) {
