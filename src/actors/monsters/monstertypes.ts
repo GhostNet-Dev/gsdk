@@ -32,6 +32,7 @@ export class MonsterId {
 
     public static DefaultBall = "DefaultBall"
     public static DefaultBullet = "DefaultBullet"
+    public static WarhamerTracer = "WarT"
     public static BulletLine = "BulletL"
     public static Fireball = "fb"
     public static Knife = "knife"

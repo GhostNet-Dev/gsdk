@@ -70,7 +70,7 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
         ;(itemInfo as Item).trigger("onFire", { direction: this.attackDir })
 
         this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
-            id: MonsterId.BulletLine,
+            id: MonsterId.WarhamerTracer,
             ownerSpec: this.baseSpec,
             damage: this.baseSpec.Damage,
             src: gunPos,

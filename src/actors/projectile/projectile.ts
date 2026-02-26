@@ -1,3 +1,6 @@
+// projectile.ts
+import * as THREE from "three";
+
 import { MonsterId } from "@Glibs/types/monstertypes";
 import { Bullet3 } from "./bullet3";
 import { DefaultBall } from "./defaultball";
@@ -11,153 +14,273 @@ import { FireballModel } from "./fireballmodel";
 import { KnifeModel } from "./knifemodel";
 import { Loader } from "@Glibs/loader/loader";
 import { Char } from "@Glibs/types/assettypes";
+import { StreakTracerModel } from "./streaktracer";
 
 export interface IProjectileModel {
-    get Meshs(): THREE.Mesh | THREE.Object3D | THREE.Points | THREE.Line | undefined
-    create(position: THREE.Vector3, direction?: THREE.Vector3): void
-    update(position: THREE.Vector3): void
-    release(): void
-    init?(): Promise<void>
+  get Meshs():
+    | THREE.Mesh
+    | THREE.Object3D
+    | THREE.Points
+    | THREE.Line
+    | undefined;
+  create(position: THREE.Vector3, direction?: THREE.Vector3): void;
+  update(position: THREE.Vector3): void;
+  release(): void;
+  init?(): Promise<void>;
 }
 
 type ReleaseAnimatedProjectile = IProjectileModel & {
-    updateRelease?: (delta: number) => void
-    isReleaseFinished?: () => boolean
-}
+  updateRelease?: (delta: number) => void;
+  isReleaseFinished?: () => boolean;
+};
 
 export type ProjectileMsg = {
-    id: MonsterId 
-    ownerSpec: BaseSpec
-    damage: number
-    src: THREE.Vector3
-    dir: THREE.Vector3
-    range: number
-}
+  id: MonsterId;
+  ownerSpec: BaseSpec;
+  damage: number;
+  src: THREE.Vector3;
+  dir: THREE.Vector3;
+  range: number;
+
+  // (2) hitscan 지원
+  hitscan?: boolean;    // 오토건/라스건 = true
+  tracerLife?: number;  // hitscan 트레이서 표시 시간(초) 예: 0.06~0.12
+};
 
 export type ProjectileSet = {
-    model: IProjectileModel
-    ctrl: ProjectileCtrl
-    releasing: boolean
-}
+  model: IProjectileModel;
+  ctrl: ProjectileCtrl;
+  releasing: boolean;
+
+  // async init(예: KnifeModel) 레이스 컨디션 방지
+  initializing?: boolean;
+  pendingStart?: {
+    src: THREE.Vector3;
+    dir: THREE.Vector3;
+    damage: number;
+    ownerSpec: BaseSpec;
+    opt?: { hitscan?: boolean; tracerLife?: number };
+  };
+};
 
 export class Projectile implements ILoop {
-    LoopId = 0
-    projectiles = new Map<MonsterId, ProjectileSet[]>()
+  LoopId = 0;
+  projectiles = new Map<MonsterId, ProjectileSet[]>();
 
-    constructor(
-        private eventCtrl: IEventController,
-        private game: THREE.Scene,
-        private targetList: THREE.Object3D[],
-        private loader?: Loader,
-    ) {
-        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
-        eventCtrl.RegisterEventListener(EventTypes.Projectile, (opt: ProjectileMsg) => {
-            this.AllocateProjPool(opt.id, opt.src, opt.dir, opt.damage, opt.ownerSpec, opt.range)
-        })
+  constructor(
+    private eventCtrl: IEventController,
+    private game: THREE.Scene,
+    private targetList: THREE.Object3D[],
+    private loader?: Loader
+  ) {
+    eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
+
+    eventCtrl.RegisterEventListener(EventTypes.Projectile, (opt: ProjectileMsg) => {
+      this.AllocateProjPool(opt);
+    });
+  }
+
+  GetModel(id: MonsterId): IProjectileModel {
+    switch (id) {
+      case MonsterId.DefaultBullet:
+        return new Bullet3();
+      case MonsterId.BulletLine:
+        return new BulletLine(); // hitscan에서도 사용 가능(다만 Line 두께 한계는 존재)
+      case MonsterId.Fireball:
+        return new FireballModel();
+      case MonsterId.WarhamerTracer:
+        return new StreakTracerModel();
+      case MonsterId.Knife:
+        return new KnifeModel(this.loader?.GetAssets(Char.KayKitAdvDagger));
+      case MonsterId.DefaultBall:
+      default:
+        return new DefaultBall(0.1);
     }
-    
-    GetModel(id: MonsterId): IProjectileModel {
-        switch(id) {
-            case MonsterId.DefaultBullet:
-                return new Bullet3()
-            case MonsterId.BulletLine:
-                return new BulletLine()
-            case MonsterId.Fireball:
-                return new FireballModel()
-            case MonsterId.Knife:
-                return new KnifeModel(this.loader?.GetAssets(Char.KayKitAdvDagger))
-            case MonsterId.DefaultBall:
-            default:
-                return new DefaultBall(.1)
+  }
+
+  update(delta: number): void {
+    this.projectiles.forEach((pool) => {
+      pool.forEach((entry) => {
+        // init 중인 세트는 아직 start 전일 수 있으므로 그냥 스킵
+        if (entry.initializing) return;
+
+        if (!entry.ctrl.Live && !entry.releasing) return;
+
+        // release 애니메이션(페이드 등)
+        if (entry.releasing) {
+          const releaseModel = entry.model as ReleaseAnimatedProjectile;
+          releaseModel.updateRelease?.(delta);
+          if (releaseModel.isReleaseFinished?.() ?? true) {
+            this.FinalizeRelease(entry);
+          }
+          return;
         }
-    }
 
-    update(delta: number): void {
-        this.projectiles.forEach(a => {
-            a.forEach(s => {
-                if (!s.ctrl.Live && !s.releasing) return;
+        // 일반 update
+        entry.ctrl.update(delta);
 
-                if (s.releasing) {
-                    const releaseModel = s.model as ReleaseAnimatedProjectile
-                    releaseModel.updateRelease?.(delta)
-                    if (releaseModel.isReleaseFinished?.() ?? true) {
-                        this.FinalizeRelease(s)
-                    }
-                    return
-                }
-
-                s.ctrl.update(delta)
-                if (s.ctrl.attack() || !s.ctrl.checkLifeTime()) {
-                    this.Release(s)
-                }
-            })
-        })
-    }
-
-    resize(): void { }
-
-    Release(entry: ProjectileSet) {
-        entry.ctrl.Release()
-        const releaseModel = entry.model as ReleaseAnimatedProjectile
-        if (releaseModel.updateRelease && releaseModel.isReleaseFinished) {
-            entry.releasing = true
-            return
+        // hitscan이면 attack()은 false(이미 start에서 1회 처리)
+        if (entry.ctrl.attack() || !entry.ctrl.checkLifeTime()) {
+          this.Release(entry);
         }
-        this.FinalizeRelease(entry)
+      });
+    });
+  }
+
+  resize(): void { }
+
+  Release(entry: ProjectileSet) {
+    entry.ctrl.Release();
+
+    const releaseModel = entry.model as ReleaseAnimatedProjectile;
+    if (releaseModel.updateRelease && releaseModel.isReleaseFinished) {
+      entry.releasing = true;
+      return;
     }
 
-    FinalizeRelease(entry: ProjectileSet) {
-        entry.releasing = false
-        if (entry.model.Meshs) this.game.remove(entry.model.Meshs)
+    this.FinalizeRelease(entry);
+  }
+
+  FinalizeRelease(entry: ProjectileSet) {
+    entry.releasing = false;
+    if (entry.model.Meshs) this.game.remove(entry.model.Meshs);
+  }
+
+  // -------- 풀 할당 API (호환용 오버로드) --------
+  AllocateProjPool(msg: ProjectileMsg): void;
+  AllocateProjPool(
+    id: MonsterId,
+    src: THREE.Vector3,
+    dir: THREE.Vector3,
+    damage: number,
+    ownerSpec: BaseSpec,
+    range: number,
+    opt?: { hitscan?: boolean; tracerLife?: number }
+  ): void;
+  AllocateProjPool(
+    a: ProjectileMsg | MonsterId,
+    src?: THREE.Vector3,
+    dir?: THREE.Vector3,
+    damage?: number,
+    ownerSpec?: BaseSpec,
+    range?: number,
+    opt?: { hitscan?: boolean; tracerLife?: number }
+  ) {
+    const msg: ProjectileMsg =
+      typeof a === "object" && "id" in a
+        ? a
+        : ({
+          id: a as MonsterId,
+          src: src!,
+          dir: dir!,
+          damage: damage!,
+          ownerSpec: ownerSpec!,
+          range: range!,
+          hitscan: opt?.hitscan,
+          tracerLife: opt?.tracerLife,
+        } as ProjectileMsg);
+
+    const id = msg.id;
+    const startOpt = { hitscan: msg.hitscan, tracerLife: msg.tracerLife };
+
+    let pool = this.projectiles.get(id);
+    if (!pool) {
+      pool = [];
+      this.projectiles.set(id, pool);
     }
 
-    /**
-     * 투사체 풀 할당 (레이스 컨디션 방지를 위해 동기적으로 풀 관리)
-     */
-    AllocateProjPool(id: MonsterId, src: THREE.Vector3, dir: THREE.Vector3, damage: number, ownerSpec: BaseSpec, range: number) {
-        let pool = this.projectiles.get(id)
-        if(!pool) {
-            pool = []
-            this.projectiles.set(id, pool)
-        }
-        
-        let set = pool.find((e) => e.ctrl.Live == false && !e.releasing)
-        
-        if (!set) {
-            // 새 객체 생성 및 즉시 풀에 등록하여 다음 호출에서 중복 생성을 방지함
-            const model = this.GetModel(id)
-            const stat = StatFactory.getDefaultStats(id as string)
-            const ctrl = new ProjectileCtrl(model, this.targetList, this.eventCtrl, range, stat)
-            
-            set = { model, ctrl, releasing: false }
-            pool.push(set)
+    // 1) 사용 가능한(비어있는) 세트 찾기
+    let set =
+      pool.find((e) => e.ctrl.Live === false && !e.releasing && !e.initializing) ??
+      undefined;
 
-            // 비동기 초기화는 별도로 수행
-            if (typeof model.init === "function") {
-                model.init().then(() => {
-                    this.startProjectile(set!, src, dir, damage, ownerSpec)
-                })
-            } else {
-                this.startProjectile(set, src, dir, damage, ownerSpec)
+    // 2) init 중인 세트가 있으면 거기에 "pendingStart"만 최신으로 덮어쓰기
+    if (!set) {
+      const initSet = pool.find((e) => e.initializing);
+      if (initSet) {
+        initSet.pendingStart = {
+          src: msg.src.clone(),
+          dir: msg.dir.clone(),
+          damage: msg.damage,
+          ownerSpec: msg.ownerSpec,
+          opt: startOpt,
+        };
+        return;
+      }
+    }
+
+    // 3) 없으면 새로 생성
+    if (!set) {
+      const model = this.GetModel(id);
+      const stat = StatFactory.getDefaultStats(id as string);
+      const ctrl = new ProjectileCtrl(model, this.targetList, this.eventCtrl, msg.range, stat);
+
+      set = { model, ctrl, releasing: false, initializing: false };
+      pool.push(set);
+
+      // 비동기 init이 있으면 레이스 방지: initializing 상태로 막아두고 pendingStart 저장
+      if (typeof model.init === "function") {
+        set.initializing = true;
+        set.pendingStart = {
+          src: msg.src.clone(),
+          dir: msg.dir.clone(),
+          damage: msg.damage,
+          ownerSpec: msg.ownerSpec,
+          opt: startOpt,
+        };
+
+        model
+          .init()
+          .then(() => {
+            set!.initializing = false;
+
+            // init 동안 들어온 마지막 발사 요청 실행
+            const p = set!.pendingStart;
+            set!.pendingStart = undefined;
+            if (p) {
+              this.startProjectile(set!, p.src, p.dir, p.damage, p.ownerSpec, p.opt);
             }
-        } else {
-            this.startProjectile(set, src, dir, damage, ownerSpec)
-        }
+          })
+          .catch((err) => {
+            // init 실패 시에도 풀을 막지 않도록 해제
+            console.error("Projectile model init failed:", err);
+            set!.initializing = false;
+            set!.pendingStart = undefined;
+          });
+
+        return; // init 완료 후 pendingStart로 start됨
+      }
     }
 
-    private startProjectile(set: ProjectileSet, src: THREE.Vector3, dir: THREE.Vector3, damage: number, ownerSpec: BaseSpec) {
-        set.releasing = false
-        set.ctrl.start(src, dir, damage, ownerSpec)
-        if (set.model.Meshs) this.game.add(set.model.Meshs)
-    }
+    // 4) 즉시 start
+    this.startProjectile(set, msg.src, msg.dir, msg.damage, msg.ownerSpec, startOpt);
+  }
 
-    ReleaseAllProjPool() {
-        this.projectiles.forEach(a => {
-            a.forEach(s => {
-                s.releasing = false
-                s.ctrl.Release()
-                if (s.model.Meshs) this.game.remove(s.model.Meshs)
-            })
-        })
-    }
+  private startProjectile(
+    set: ProjectileSet,
+    src: THREE.Vector3,
+    dir: THREE.Vector3,
+    damage: number,
+    ownerSpec: BaseSpec,
+    opt?: { hitscan?: boolean; tracerLife?: number }
+  ) {
+    set.releasing = false;
+
+    set.ctrl.start(src, dir, damage, ownerSpec, opt);
+
+    if (set.model.Meshs) this.game.add(set.model.Meshs);
+  }
+
+  ReleaseAllProjPool() {
+    this.projectiles.forEach((pool) => {
+      pool.forEach((set) => {
+        set.releasing = false;
+        set.initializing = false;
+        set.pendingStart = undefined;
+
+        set.ctrl.Release();
+        if (set.model.Meshs) this.game.remove(set.model.Meshs);
+      });
+    });
+  }
 }
