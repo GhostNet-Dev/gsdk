@@ -49,6 +49,7 @@ export class ProjectileCtrl implements IActionUser {
   private isHitscan = false;
   private life = 0;
   private lifeMax = 0.08;
+  private tracerRange?: number;
   private hasAttacked = false;
 
   applyAction(action: IActionComponent, ctx?: ActionContext) {
@@ -70,6 +71,7 @@ export class ProjectileCtrl implements IActionUser {
     this.isHitscan = false;
     this.life = 0;
     this.lifeMax = 0.08;
+    this.tracerRange = undefined;
     this.hasAttacked = false;
   }
 
@@ -78,7 +80,7 @@ export class ProjectileCtrl implements IActionUser {
     dir: THREE.Vector3,
     damage: number,
     spec: BaseSpec,
-    opt?: { hitscan?: boolean; tracerLife?: number }
+    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number }
   ) {
     this.position.copy(src);
     this.prevPosition.copy(src);
@@ -100,6 +102,7 @@ export class ProjectileCtrl implements IActionUser {
     this.isHitscan = !!opt?.hitscan;
     this.life = 0;
     this.lifeMax = opt?.tracerLife ?? 0.08;
+    this.tracerRange = opt?.tracerRange;
     this.hasAttacked = false;
 
     if (this.isHitscan) {
@@ -107,7 +110,7 @@ export class ProjectileCtrl implements IActionUser {
       const nd = d.lengthSq() < 1e-8 ? new THREE.Vector3(0, 0, 1) : d.clone().normalize();
       this.moveDirection.copy(nd);
 
-      this.position.copy(src).addScaledVector(nd, this.range);
+      this.position.copy(src).addScaledVector(nd, this.tracerRange ?? this.range);
 
       // 트레이서 모델이라면 end까지 즉시 갱신
       this.projectile.update(this.position);

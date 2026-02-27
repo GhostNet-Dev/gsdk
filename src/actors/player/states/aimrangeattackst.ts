@@ -77,7 +77,8 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
             dir: this.attackDir,
             range: this.attackDist,
             hitscan: true,
-            tracerLife: 2.12 // Slightly longer life for better visibility
+            tracerLife: 2.12, // Slightly longer life for better visibility
+            tracerRange: Math.max(this.attackDist, 100)
         })
         this.attackProcess = false
         return true
