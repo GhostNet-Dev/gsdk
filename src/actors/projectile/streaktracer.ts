@@ -166,8 +166,9 @@ export class StreakTracerModel implements ReleaseAnimatedProjectile {
     const dir = new THREE.Vector3().subVectors(this.end, this.start);
     const len = Math.max(this.opt.minLength, dir.length());
 
-    const mid = new THREE.Vector3().addVectors(this.start, this.end).multiplyScalar(0.5);
-    this.root.position.copy(mid);
+    // PlaneGeometry는 중심 원점 기준이므로, root를 시작점(총구)에 두고
+    // 각 plane을 +Y로 len/2 오프셋해 "총구 -> 전방"으로만 늘어나게 만든다.
+    this.root.position.copy(this.start);
 
     const forward = dir.lengthSq() < 1e-8 ? new THREE.Vector3(0, 0, 1) : dir.normalize();
 
@@ -175,7 +176,7 @@ export class StreakTracerModel implements ReleaseAnimatedProjectile {
       // ── 실린더형 빌보드 ──────────────────────────────────────
       // Y축(길이)은 발사방향 고정, 평면 법선(Z)만 카메라를 향하도록 회전
       const toCam = new THREE.Vector3()
-        .subVectors(this.camera.position, mid);
+        .subVectors(this.camera.position, this.start);
 
       // forward 성분을 제거 → forward에 수직인 카메라 방향 벡터만 남김
       toCam.addScaledVector(forward, -toCam.dot(forward));
@@ -208,6 +209,13 @@ export class StreakTracerModel implements ReleaseAnimatedProjectile {
 
     this.glow1.scale.set(this.opt.glowWidth, len, 1);
     this.glow2.scale.set(this.opt.glowWidth, len, 1);
+
+    // 중심 기준 plane을 시작점 기준 선분으로 보이게 오프셋
+    const y = len * 0.5;
+    this.core1.position.set(0, y, 0);
+    this.core2.position.set(0, y, 0);
+    this.glow1.position.set(0, y, 0);
+    this.glow2.position.set(0, y, 0);
   }
 
   private setOpacity(k: number) {
