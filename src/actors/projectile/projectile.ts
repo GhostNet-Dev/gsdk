@@ -45,6 +45,7 @@ export type ProjectileMsg = {
   // (2) hitscan 지원
   hitscan?: boolean;    // 오토건/라스건 = true
   tracerLife?: number;  // hitscan 트레이서 표시 시간(초) 예: 0.06~0.12
+  tracerRange?: number; // hitscan 트레이서 시각 길이(피해 판정 range와 분리)
 };
 
 export type ProjectileSet = {
@@ -59,7 +60,7 @@ export type ProjectileSet = {
     dir: THREE.Vector3;
     damage: number;
     ownerSpec: BaseSpec;
-    opt?: { hitscan?: boolean; tracerLife?: number };
+    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number };
   };
 };
 
@@ -156,7 +157,7 @@ export class Projectile implements ILoop {
     damage: number,
     ownerSpec: BaseSpec,
     range: number,
-    opt?: { hitscan?: boolean; tracerLife?: number }
+    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number }
   ): void;
   AllocateProjPool(
     a: ProjectileMsg | MonsterId,
@@ -165,7 +166,7 @@ export class Projectile implements ILoop {
     damage?: number,
     ownerSpec?: BaseSpec,
     range?: number,
-    opt?: { hitscan?: boolean; tracerLife?: number }
+    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number }
   ) {
     const msg: ProjectileMsg =
       typeof a === "object" && "id" in a
@@ -179,10 +180,15 @@ export class Projectile implements ILoop {
           range: range!,
           hitscan: opt?.hitscan,
           tracerLife: opt?.tracerLife,
+          tracerRange: opt?.tracerRange,
         } as ProjectileMsg);
 
     const id = msg.id;
-    const startOpt = { hitscan: msg.hitscan, tracerLife: msg.tracerLife };
+    const startOpt = {
+      hitscan: msg.hitscan,
+      tracerLife: msg.tracerLife,
+      tracerRange: msg.tracerRange,
+    };
 
     let pool = this.projectiles.get(id);
     if (!pool) {
@@ -263,7 +269,7 @@ export class Projectile implements ILoop {
     dir: THREE.Vector3,
     damage: number,
     ownerSpec: BaseSpec,
-    opt?: { hitscan?: boolean; tracerLife?: number }
+    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number }
   ) {
     set.releasing = false;
 
