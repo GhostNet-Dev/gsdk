@@ -114,6 +114,11 @@ export abstract class AttackState extends State implements IPlayerAction {
 
     protected readonly costEngine = new CostEngine()
 
+
+    protected resolveAttackCostSpec(itemInfo: IItem | null | undefined, fallback: ActionCostSpec): ActionCostSpec {
+        return itemInfo?.ResourceCost ?? fallback
+    }
+
     protected tryConsumeAttackCost(spec: ActionCostSpec, failMessage = "자원이 부족합니다.") {
         const pool = new CombatResourcePool({
             spec: this.baseSpec,

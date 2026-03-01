@@ -14,17 +14,15 @@ import { AttackState } from "./attackstate";
 import { CameraMode } from "@Glibs/systems/camera/cameratypes";
 import { ActionCostSpec, cost } from "@Glibs/actors/battle/resourcecosttypes";
 
-export class RangeAttackState extends AttackState implements IPlayerAction {
-    private getRangeCostSpec(itemInfo?: IItem | null): ActionCostSpec {
-        return itemInfo?.ResourceCost ?? {
-            id: "attack.range.basic",
-            cost: cost.all(
-                cost.atom("stamina", 3),
-                cost.optional(cost.atom("mp", 1))
-            )
-        }
-    }
+const DEFAULT_RANGE_ATTACK_COST: ActionCostSpec = {
+    id: "attack.range.basic",
+    cost: cost.all(
+        cost.atom("stamina", 3),
+        cost.optional(cost.atom("mp", 1))
+    )
+}
 
+export class RangeAttackState extends AttackState implements IPlayerAction {
     constructor(playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic, 
         protected eventCtrl: IEventController, spec: BaseSpec
     ) {
@@ -120,7 +118,7 @@ export class RangeAttackState extends AttackState implements IPlayerAction {
         const handItem = this.playerCtrl.baseSpec.GetRangedItem()
         if (handItem == undefined) return this;
 
-        if (!this.tryConsumeAttackCost(this.getRangeCostSpec(handItem), "자원이 부족합니다.")) {
+        if (!this.tryConsumeAttackCost(this.resolveAttackCostSpec(handItem, DEFAULT_RANGE_ATTACK_COST), "자원이 부족합니다.")) {
             this.attackProcess = false
             return this
         }

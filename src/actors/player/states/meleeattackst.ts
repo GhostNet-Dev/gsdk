@@ -13,17 +13,12 @@ import { Item } from "@Glibs/inventory/items/item";
 import { AttackState } from "./attackstate";
 import { ActionCostSpec, cost } from "@Glibs/actors/battle/resourcecosttypes";
 
+const DEFAULT_MELEE_ATTACK_COST: ActionCostSpec = {
+    id: "attack.melee.basic",
+    cost: cost.optional(cost.atom("stamina", 5))
+}
+
 export class MeleeAttackState extends AttackState implements IPlayerAction {
-
-
-
-    private getMeleeCostSpec(itemInfo?: IItem | null): ActionCostSpec {
-        return itemInfo?.ResourceCost ?? {
-            id: "attack.melee.basic",
-            cost: cost.optional(cost.atom("stamina", 5))
-        }
-    }
-
     constructor(playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic, 
         protected eventCtrl: IEventController, spec: BaseSpec
     ) {
@@ -131,7 +126,7 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
         const handItem = this.playerCtrl.baseSpec.GetMeleeItem()
         if (handItem == undefined) return this;
 
-        if (!this.tryConsumeAttackCost(this.getMeleeCostSpec(handItem), "자원이 부족합니다.")) {
+        if (!this.tryConsumeAttackCost(this.resolveAttackCostSpec(handItem, DEFAULT_MELEE_ATTACK_COST), "자원이 부족합니다.")) {
             this.attackProcess = false
             return this
         }

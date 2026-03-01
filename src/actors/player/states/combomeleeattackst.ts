@@ -14,6 +14,7 @@ import { AttackState } from "./attackstate";
 import { KeyType } from "@Glibs/types/eventtypes";
 import { GlobalEffectType } from "@Glibs/types/effecttypes";
 import { CameraMode } from "@Glibs/systems/camera/cameratypes";
+import { ActionCostSpec, cost } from "@Glibs/actors/battle/resourcecosttypes";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
@@ -140,6 +141,11 @@ const RESYNC_HARD_RESET_SEC = 0.060;
 const RESYNC_HARD_WINDOW_SEC = 0.20;
 const DEBUG_SYNC = false;
 const COMBO_STEP_SPEED_INCREASE = 0.25;
+
+const DEFAULT_COMBO_MELEE_ATTACK_COST: ActionCostSpec = {
+    id: "attack.melee.combo",
+    cost: cost.optional(cost.atom("stamina", 4))
+};
 
 /* -------------------------------------------------------------------------- */
 /* ComboMeleeState                                                            */
@@ -539,6 +545,13 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
 
         // 무기 세팅/오토에임
         const handItem = this.playerCtrl.baseSpec.GetMeleeItem();
+        const costSpec = this.resolveAttackCostSpec(handItem, DEFAULT_COMBO_MELEE_ATTACK_COST)
+        if (!this.tryConsumeAttackCost(costSpec, "자원이 부족합니다.")) {
+            this.clearStepTimers();
+            this.ChangeMode(this.playerCtrl.currentIdleState)
+            return;
+        }
+
         if (handItem) {
             // 아이템 Action.activate는 장착 시점(PlayerCtrl.Equipment)에서 1회 호출됨
             // 공격 시작/콤보 스텝에서는 onUse 트리거만 발행
