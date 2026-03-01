@@ -1,5 +1,6 @@
 import { AttackItemType, DeckType, InventorySlot, ItemType } from "@Glibs/inventory/inventypes";
 import { ItemId, ItemProperty } from "@Glibs/inventory/items/itemdefs";
+import { ActionCostSpec } from "@Glibs/actors/battle/resourcecosttypes";
 import { IActionComponent } from "@Glibs/types/actiontypes";
 import { Bind } from "@Glibs/types/assettypes";
 
@@ -29,6 +30,7 @@ export interface IItem {
     get Stats(): Partial<Record<string, number>> | undefined
     get Enchantments(): Partial<Record<string, number>> | undefined
     get Description(): string
+    get ResourceCost(): ActionCostSpec | undefined
     get Weight(): number; // property.weight 접근
     get Level(): string;  // property.level 접근 (Common, Rare 등)
 }

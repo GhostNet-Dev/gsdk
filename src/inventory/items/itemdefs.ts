@@ -4,6 +4,7 @@ import { Bind } from "@Glibs/types/assettypes";
 import { AttackItemType } from "@Glibs/types/inventypes";
 import { SoundType } from "@Glibs/types/soundtypes";
 import { itemIcons } from "@Glibs/ux/icons/itemicons";
+import { cost } from "@Glibs/actors/battle/resourcecosttypes";
 
 export const itemDefs = {
   Exp: { 
@@ -23,6 +24,17 @@ export const itemDefs = {
     binding: false,
     stackable: true,
     description : "Gold", 
+  },
+  Ammo9mm: {
+    id: "Ammo9mm",
+    name: "9mm Ammo",
+    descriptionKr: "권총/소총에서 사용하는 9mm 탄약입니다.",
+    description: "9mm ammunition used by firearms.",
+    icon: itemIcons.Bow,
+    type: "material",
+    levelRequirement: 0,
+    stackable: true,
+    binding: false,
   },
   Hanhwasbat: {
     id: "Hanhwasbat",
@@ -86,6 +98,13 @@ export const itemDefs = {
         }
       }
     ],
+    resourceCost: {
+      id: "item.DefaultGun.fire",
+      cost: cost.all(
+        cost.atom("item:Ammo9mm", 1),
+        cost.optional(cost.atom("stamina", 1))
+      )
+    },
   },
   Pistol: {
     id: "Pistol",
@@ -107,6 +126,13 @@ export const itemDefs = {
     stackable: false, binding: true, autoAttack: false,
     stats: { "attack": 1, "attackSpeed": 1, "speed": 1, "attackRange": 7 },
     actions: [actionDefs.MuzzleFlash, actionDefs.Casing],
+    resourceCost: {
+      id: "item.Pistol.fire",
+      cost: cost.all(
+        cost.atom("item:Ammo9mm", 1),
+        cost.any(cost.atom("stamina", 2), cost.atom("mp", 1))
+      )
+    },
   },
   M4A1: {
     id: "M4A1",
@@ -126,6 +152,13 @@ export const itemDefs = {
       "attack": 3, "attackSpeed": .2, "speed": 1, "attackRange": 10
     },
     actions: [actionDefs.MuzzleFlash, actionDefs.Casing],
+    resourceCost: {
+      id: "item.M4A1.fire",
+      cost: cost.all(
+        cost.atom("item:Ammo9mm", 1),
+        cost.atom("stamina", 2)
+      )
+    },
   },
   M16: {
     id: "M16",
@@ -145,6 +178,13 @@ export const itemDefs = {
       "attack": 3, "attackSpeed": .1, "speed": 1, "attackRange": 10
     },
     actions: [actionDefs.MuzzleFlash, actionDefs.Casing],
+    resourceCost: {
+      id: "item.M16.fire",
+      cost: cost.all(
+        cost.atom("item:Ammo9mm", 1),
+        cost.any(cost.atom("stamina", 2), cost.atom("mp", 2))
+      )
+    },
   },
   SCAR: {
     id: "SCAR",

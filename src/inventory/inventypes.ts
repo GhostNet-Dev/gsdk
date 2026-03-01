@@ -4,6 +4,7 @@ import { EffectDef } from "@Glibs/actions/itemactions/itemeffectdef"
 import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { Bind } from "@Glibs/types/assettypes"
 import { MonsterId } from "@Glibs/types/monstertypes"
+import { ActionCostSpec } from "@Glibs/actors/battle/resourcecosttypes"
 
 
 export type ItemType = "meleeattack" | "rangeattack" | "shield" | "armor" | "potion" | "material" | "farm" | "deck"
@@ -66,6 +67,9 @@ export type ItemProperty = {
 
     // item 효과 
     effects?: EffectDef[]
+
+    // 아이템(특히 공격/사용) 실행 시 소모되는 자원 규칙
+    resourceCost?: ActionCostSpec
     // 접두사/접미사 이름
     prefix?: string;
     suffix?: string;

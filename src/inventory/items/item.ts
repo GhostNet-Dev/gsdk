@@ -6,6 +6,7 @@ import { IAsset } from "@Glibs/interface/iasset"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
 import { ItemIconProperty } from "../../ux/icons/itemicons"
 import { ItemType } from "@Glibs/types/inventypes"
+import { ActionCostSpec } from "@Glibs/actors/battle/resourcecosttypes"
 
 
 export class ItemAbstract implements IItem {
@@ -42,6 +43,7 @@ export class ItemAbstract implements IItem {
   get Stats() { return ("stats" in this.property) ? this.property.stats : undefined }
   get Enchantments() { return ("enchantments" in this.property) ? this.property.enchantments : undefined }
   get Description() { return this.property.description }
+  get ResourceCost(): ActionCostSpec | undefined { return this.property.resourceCost }
   // get Effects() { return this.property.effects }
   get Weight() { return ("weight" in this.property) ? this.property.weight : 0 }
   get Level() { return ("level" in this.property) ? this.property.level : "" }
