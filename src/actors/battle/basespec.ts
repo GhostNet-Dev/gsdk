@@ -253,11 +253,11 @@ export class BaseSpec {
     }
 
     GetRangedItem() {
-        return this.equipment[Bind.Weapon_Ranged] ?? this.equipment[Bind.Hands_R]
+        return this.equipment[Bind.Weapon_Ranged] ?? null;
     }
 
     GetMeleeItem() {
-        return this.equipment[Bind.Hands_R] ?? this.equipment[Bind.Hands_R] ?? this.equipment[Bind.Hands_L]
+        return this.equipment[Bind.Hands_R] ?? this.equipment[Bind.Hands_L] ?? null;
     }
 
     Buff(buff: Buff, level: number) {

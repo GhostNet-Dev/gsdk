@@ -69,18 +69,14 @@ export class State {
                         this.playerCtrl.lastUsedWeaponMode = 'ranged'
                         state = rangedItem!.AutoAttack ? this.playerCtrl.RangeAttackSt : this.playerCtrl.RangeAimSt
                     }
-                    this.playerCtrl.player.synchronizeWeaponVisibility(this.playerCtrl.lastUsedWeaponMode);
+                } else if (hasDedicatedRanged) {
+                    this.playerCtrl.lastUsedWeaponMode = 'ranged'
+                    state = rangedItem!.AutoAttack ? this.playerCtrl.RangeAttackSt : this.playerCtrl.RangeAimSt
                 } else {
-                    const useMeleeState = (!rangedItem && (meleeItem?.ItemType == "meleeattack" || !meleeItem))
-                    if (useMeleeState) {
-                        this.playerCtrl.lastUsedWeaponMode = 'melee'
-                        state = this.playerCtrl.ComboMeleeSt
-                    } else {
-                        this.playerCtrl.lastUsedWeaponMode = rangedItem ? 'ranged' : 'melee'
-                        state = rangedItem?.AutoAttack ? this.playerCtrl.RangeAttackSt : this.playerCtrl.RangeAimSt
-                    }
-                    this.playerCtrl.player.synchronizeWeaponVisibility(this.playerCtrl.lastUsedWeaponMode);
+                    this.playerCtrl.lastUsedWeaponMode = 'melee'
+                    state = this.playerCtrl.ComboMeleeSt
                 }
+                this.playerCtrl.player.synchronizeWeaponVisibility(this.playerCtrl.lastUsedWeaponMode);
                 state.Init()
                 return state
             } else if (this.playerCtrl.mode == AppMode.Weapon) {
@@ -168,21 +164,17 @@ export class State {
                         this.playerCtrl.RangeAttackSt.Init()
                         return this.playerCtrl.RangeAttackSt
                     }
-                }
-
-                const isManualRanged = !!rangedItem && !rangedItem.AutoAttack
-                if (isManualRanged) return
-                const useMeleeState = !rangedItem && (meleeItem?.ItemType == "meleeattack" || !meleeItem)
-                if (useMeleeState) {
-                    this.playerCtrl.lastUsedWeaponMode = 'melee'
-                    this.playerCtrl.player.synchronizeWeaponVisibility('melee');
-                    this.playerCtrl.ComboMeleeSt.Init()
-                    return this.playerCtrl.ComboMeleeSt
-                } else {
+                } else if (hasDedicatedRanged) {
+                    if (!rangedItem?.AutoAttack) return
                     this.playerCtrl.lastUsedWeaponMode = 'ranged'
                     this.playerCtrl.player.synchronizeWeaponVisibility('ranged');
                     this.playerCtrl.RangeAttackSt.Init()
                     return this.playerCtrl.RangeAttackSt
+                } else {
+                    this.playerCtrl.lastUsedWeaponMode = 'melee'
+                    this.playerCtrl.player.synchronizeWeaponVisibility('melee');
+                    this.playerCtrl.ComboMeleeSt.Init()
+                    return this.playerCtrl.ComboMeleeSt
                 }
             }
         }

@@ -40,7 +40,7 @@ export class Inventory implements IInventory {
         })
     }
     EquipItem(item: IItem) {
-        let bind = item.Bind;
+        let bind: Bind = item.Bind!;
         if (!bind) throw new Error("item bind is undefined");
 
         // Logic override for UI/Inventory purposes

@@ -89,7 +89,7 @@ export class Player extends PhysicsObject {
         }
     }
     ReloadBindingItem(item: IItem) {
-        let bind = item.Bind
+        let bind: Bind = item.Bind!
         if(bind == undefined) throw new Error("item bind is undefined")
 
         // Logical override to match inventory slots

@@ -7,7 +7,7 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
     private dummyCamera = new THREE.PerspectiveCamera();
     
     private isResuming = false;
-    private defaultOffset = new THREE.Vector3(0, 2.5, -6);
+    private defaultOffset = new THREE.Vector3(0, 2.5, -20);
     private lookTarget = new THREE.Vector3();
     private lerpFactor = 0.15; // 부드러움 조절
 

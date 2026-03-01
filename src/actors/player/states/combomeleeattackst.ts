@@ -548,7 +548,8 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
             }
             this.autoAttack = handItem.AutoAttack;
             if (this.autoAttack) {
-                this.autoDirection();
+                // 오토 어택 시에는 사거리의 2배 범위까지 적을 찾음
+                this.autoDirection(2.0);
             }
         }
 
@@ -625,9 +626,17 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         }
 
 
+        // Windup 중 지속적 타겟 추적 (AutoAttack 모드 전용)
+        if (this.autoAttack && this.phase === "windup") {
+            this.autoDirection(2.0);
+        }
+
         if (this.autoAttack && !this.detectEnermy) {
-            this.clearStepTimers();
-            return this.ChangeMode(this.playerCtrl.currentIdleState)
+            // 다시 한 번 넓은 범위 검색 시도
+            if (!this.autoDirection(2.5)) {
+                this.clearStepTimers();
+                return this.ChangeMode(this.playerCtrl.currentIdleState)
+            }
         }
 
         const now = this.phaseTime;

@@ -72,10 +72,10 @@ export abstract class AttackState extends State implements IPlayerAction {
         if (handItem) (handItem as Item).trigger("onUnuse")
         this.player.releaseDashsedCircle()
     }
-    autoDirection() {
+    autoDirection(rangeMultiplier = 1.0) {
         const playerPos = this.player.Pos;
         let closestTarget: THREE.Object3D | null = null;
-        let minDistance = this.attackDist;
+        let minDistance = this.attackDist * rangeMultiplier;
 
         // 🎯 1. 모든 적 중에서 가장 가까운 대상 찾기
         for (const target of this.playerCtrl.targets) {

@@ -55,7 +55,13 @@ export default class SwingArcEffectAction implements IActionComponent, ILoop {
     clock = new THREE.Clock()
     update(delta: number): void {
         if (!this.trail) return
-        if (this.target && this.target.objs!.visible == false) return
+        
+        // 부모(아이템)의 가시성에 따라 효과의 가시성 동기화
+        if (this.target && this.target.objs) {
+            this.trail.visible = this.target.objs.visible;
+        }
+
+        if (!this.trail.visible) return;
         this.trail.update(delta, this.clock.getElapsedTime())
     }
 }
