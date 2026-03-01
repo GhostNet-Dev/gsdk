@@ -93,7 +93,7 @@ export class M4A1Fab extends GunFbxFab implements IAsset {
             // const scale = 0.025
             // this.meshs.scale.set(scale, scale, scale)
             // this.meshs.position.set(0, 0.1, 0)
-            // this.meshs.rotation.set(3.5, -0.1, -1.6)
+            this.meshs.rotation.set(3.35, -0.1, -1.6)
 
             this.muzzlePointObject.position.set(68, 8.5, 0)
             this.meshs.add(this.muzzlePointObject)

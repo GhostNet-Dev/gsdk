@@ -43,9 +43,10 @@ export type ProjectileMsg = {
   range: number;
 
   // (2) hitscan 지원
-  hitscan?: boolean;    // 오토건/라스건 = true
-  tracerLife?: number;  // hitscan 트레이서 표시 시간(초) 예: 0.06~0.12
-  tracerRange?: number; // hitscan 트레이서 시각 길이(피해 판정 range와 분리)
+  hitscan?: boolean;      // 오토건/라스건 = true
+  tracerLife?: number;    // hitscan 트레이서 표시 시간(초) 예: 0.06~0.12
+  tracerRange?: number;   // hitscan 트레이서 시각 길이(피해 판정 range와 분리)
+  useRaycast?: boolean;   // true: Ray+Box3 정밀 판정 / false(기본): 세그먼트-구 거리 판정
 };
 
 export type ProjectileSet = {
@@ -60,7 +61,7 @@ export type ProjectileSet = {
     dir: THREE.Vector3;
     damage: number;
     ownerSpec: BaseSpec;
-    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number };
+    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean };
   };
 };
 
@@ -157,7 +158,7 @@ export class Projectile implements ILoop {
     damage: number,
     ownerSpec: BaseSpec,
     range: number,
-    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number }
+    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
   ): void;
   AllocateProjPool(
     a: ProjectileMsg | MonsterId,
@@ -166,7 +167,7 @@ export class Projectile implements ILoop {
     damage?: number,
     ownerSpec?: BaseSpec,
     range?: number,
-    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number }
+    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
   ) {
     const msg: ProjectileMsg =
       typeof a === "object" && "id" in a
@@ -181,6 +182,7 @@ export class Projectile implements ILoop {
           hitscan: opt?.hitscan,
           tracerLife: opt?.tracerLife,
           tracerRange: opt?.tracerRange,
+          useRaycast: opt?.useRaycast,
         } as ProjectileMsg);
 
     const id = msg.id;
@@ -188,6 +190,7 @@ export class Projectile implements ILoop {
       hitscan: msg.hitscan,
       tracerLife: msg.tracerLife,
       tracerRange: msg.tracerRange,
+      useRaycast: msg.useRaycast,
     };
 
     let pool = this.projectiles.get(id);
@@ -269,7 +272,7 @@ export class Projectile implements ILoop {
     dir: THREE.Vector3,
     damage: number,
     ownerSpec: BaseSpec,
-    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number }
+    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
   ) {
     set.releasing = false;
 

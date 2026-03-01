@@ -51,6 +51,7 @@ export class ProjectileCtrl implements IActionUser {
   private lifeMax = 0.08;
   private tracerRange?: number;
   private hasAttacked = false;
+  private useRaycast = false;
 
   applyAction(action: IActionComponent, ctx?: ActionContext) {
     action.apply?.(this, ctx);
@@ -73,6 +74,7 @@ export class ProjectileCtrl implements IActionUser {
     this.lifeMax = 0.08;
     this.tracerRange = undefined;
     this.hasAttacked = false;
+    this.useRaycast = false;
   }
 
   start(
@@ -80,7 +82,7 @@ export class ProjectileCtrl implements IActionUser {
     dir: THREE.Vector3,
     damage: number,
     spec: BaseSpec,
-    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number }
+    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
   ) {
     this.position.copy(src);
     this.prevPosition.copy(src);
@@ -104,6 +106,7 @@ export class ProjectileCtrl implements IActionUser {
     this.lifeMax = opt?.tracerLife ?? 0.08;
     this.tracerRange = opt?.tracerRange;
     this.hasAttacked = false;
+    this.useRaycast = !!opt?.useRaycast;
 
     if (this.isHitscan) {
       // end 확정
@@ -194,12 +197,9 @@ export class ProjectileCtrl implements IActionUser {
     if (this.hasAttacked) return;
     this.hasAttacked = true;
 
-    const hit = this.getClosestHit(
-      this.prevPosition,
-      this.position,
-      this.targetList,
-      this.attackDist
-    );
+    const hit = this.useRaycast
+      ? this.getRaycastHit()
+      : this.getClosestHit(this.prevPosition, this.position, this.targetList, this.attackDist);
 
     if (!hit) return;
 
@@ -216,6 +216,34 @@ export class ProjectileCtrl implements IActionUser {
     };
 
     this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [v]);
+  }
+
+  // Ray + Box3 정밀 판정 (invisible 메시에서도 동작)
+  private getRaycastHit(): { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number } | null {
+    const origin = this.prevPosition.clone();
+    const direction = this.moveDirection.clone().normalize();
+    const ray = new THREE.Ray(origin, direction);
+
+    let closest: { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number } | null = null;
+
+    for (const target of this.targetList) {
+      if (this.isOwnerOrSelfTarget(target)) continue;
+
+      const box = new THREE.Box3().setFromObject(target);
+      if (box.isEmpty()) continue;
+
+      const hitPoint = new THREE.Vector3();
+      if (!ray.intersectBox(box, hitPoint)) continue;
+
+      const distance = origin.distanceTo(hitPoint);
+      if (distance > this.range) continue;
+
+      if (!closest || distance < closest.distance) {
+        closest = { target, hitPoint, distance };
+      }
+    }
+
+    return closest;
   }
 
   // (기존 코드 유지) 필요 시 라인 히트용

@@ -78,6 +78,7 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
             range: gunPos.distanceTo(aimTarget), // 가늠자까지의 실제 거리
             hitscan: true,
             tracerLife: 2.12,
+            useRaycast: true,
         })
         this.attackProcess = false
         return true
