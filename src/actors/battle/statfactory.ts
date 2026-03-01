@@ -97,7 +97,7 @@ export class StatFactory {
         // 가중치: 공격력과 체력은 1점, 방어력은 1.5점, 속도는 10점 등
         let total = 0;
         total += (stats.hp || 0) * 0.1;
-        total += (stats.attack || 0) * 1.0;
+        total += (stats.attackMelee || 0) * 1.0;
         total += (stats.magicAttack || 0) * 1.0;
         total += (stats.defense || 0) * 1.5;
         total += (stats.speed || 0) * 10.0;

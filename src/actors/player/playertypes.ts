@@ -115,13 +115,15 @@ export const DefaultStatus: CharacterStatus = {
     actions: [],
 
     stats: {
-        attack: 1,
+        attackMelee: 1,
+        attackRanged: 1,
         magicAttack: 1,
         defense:1,
         magicDefense: 1,
         attackRange: 1,
         speed: 4,
-        attackSpeed: 1,
+        attackSpeedMelee: 1,
+        attackSpeedRanged: 1,
         criticalRate: .01,
         criticalDamage: 1.5,
         accuracy: .95,

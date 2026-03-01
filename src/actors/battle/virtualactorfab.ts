@@ -6,7 +6,8 @@ type MergeRule = 'sum' | 'avg' | 'max' | 'leader';
 
 const StatMergeRules: Partial<Record<StatKey, MergeRule>> = {
     // ⚔️ [합산] 힘을 합치는 스탯 (공격력, 체력 등)
-    attack: 'sum',
+    attackMelee: 'sum',
+    attackRanged: 'sum',
     magicAttack: 'sum',
     hp: 'sum',
     mp: 'sum',
@@ -39,7 +40,7 @@ export class VirtualActorFactory {
         
         // 모든 스탯 키 순회 (성능을 위해 필요한 키만 지정 가능)
         const allStatKeys = [
-            'attack', 'magicAttack', 'strength', 'intelligence', // 공격
+            'attackMelee', 'attackRanged', 'magicAttack', 'strength', 'intelligence', // 공격
             'criticalRate', 'criticalDamage', 'accuracy',        // 효율
             'hp', 'mp'                                           // 자원
         ] as StatKey[];

@@ -1,8 +1,8 @@
 export type StatKey =
   // 전투 기본 스탯
-  | 'attack' | 'magicAttack' | 'defense' | 'magicDefense'
+  | 'attackMelee' | 'attackRanged' | 'magicAttack' | 'defense' | 'magicDefense'
   | 'attackRange' 
-  | 'speed' | 'attackSpeed'
+  | 'speed' | 'attackSpeedMelee' | 'attackSpeedRanged'
   | 'criticalRate' | 'criticalDamage'
   | 'accuracy' | 'evasion' | 'penetration' | 'block'
 
@@ -38,13 +38,15 @@ export type StatKey =
 
 export const StatDescriptions: Record<StatKey, string> = {
   // ⚔️ 전투 스탯
-  attack: '공격력: 적에게 주는 물리 피해량',
+  attackMelee: '근접 공격력: 적에게 주는 물리 근접 피해량',
+  attackRanged: '원거리 공격력: 적에게 주는 물리 원거리 피해량',
   magicAttack: '마법 공격력: 마법 피해량 증가',
   defense: '방어력: 물리 피해 감소',
   magicDefense: '마법 방어력: 마법 피해 감소',
   attackRange: '공격 사거리: 타격 가능한 거리',
   speed: '속도: 이동 및 공격 판정 속도',
-  attackSpeed: '공격 속도',
+  attackSpeedMelee: '근접 공격 속도',
+  attackSpeedRanged: '원거리 공격 속도',
   criticalRate: '치명타 확률: 공격 시 치명타 발생 확률',
   criticalDamage: '치명타 피해 배율',
   accuracy: '명중률: 공격 적중 가능성',
@@ -121,13 +123,15 @@ export type ModifierType = 'add' | 'mul' | 'max';
 
 export const StatApplyMode: Record<StatKey, ModifierType> = {
   // ⚔️ 전투 기본 스탯
-  attack: 'add',
+  attackMelee: 'add',
+  attackRanged: 'add',
   magicAttack: 'add',
   defense: 'add',
   magicDefense: 'add',
   attackRange: 'add',
   speed: 'mul',               // 퍼센트 증가가 일반적
-  attackSpeed: 'mul',
+  attackSpeedMelee: 'mul',
+  attackSpeedRanged: 'mul',
   criticalRate: 'mul',
   criticalDamage: 'mul',
   accuracy: 'add',

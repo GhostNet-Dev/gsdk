@@ -482,6 +482,7 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         this.startStep(0);
 
         this.prevAttackPressed = false;
+        this.detectEnermy = true;
     }
 
     private startStep(i: number) {

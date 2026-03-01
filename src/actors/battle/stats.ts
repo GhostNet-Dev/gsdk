@@ -8,46 +8,46 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
     hp: 10,
     mp: 0,
     expBonus: 20,
-    attack: 12,
+    attackMelee: 12,
     defense: 8,
     intelligence: 2,
     speed: 0.6,
     lifeSteal: 0.1,
-    attackSpeed: 2,
+    attackSpeedMelee: 2,
   },
   [MonsterId.DashZombie]: {
     hp: 10,
     mp: 0,
     expBonus: 20,
-    attack: 12,
+    attackMelee: 12,
     defense: 8,
     intelligence: 2,
     speed: 0.6,
     lifeSteal: 0.1,
-    attackSpeed: 2,
+    attackSpeedMelee: 2,
   },
   'Minotaur': {
     'hp': 200,
-    'attack': 20,
+     'attackMelee': 20,
     'defense': 10,
     'strength': 15,
     'speed': 0.9
   },
   'Batpig': {
     'hp': 80,
-    'attack': 8,
+     'attackMelee': 8,
     'speed': 1.8,
     'evasion': 10
   },
   'Bilby': {
     'hp': 90,
-    'attack': 10,
+     'attackMelee': 10,
     'speed': 1.4,
     'evasion': 8
   },
   'Birdmon': {
     'hp': 80,
-    'attack': 8,
+     'attackMelee': 8,
     'speed': 1.8,
     'evasion': 10
   },
@@ -64,31 +64,31 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
   'Golem': {
     'hp': 300,
     'defense': 30,
-    'attack': 15,
+     'attackMelee': 15,
     'speed': 0.4
   },
   'BigGolem': {
     'hp': 300,
     'defense': 30,
-    'attack': 15,
+     'attackMelee': 15,
     'speed': 0.4
   },
   'KittenMonk': {
     'hp': 120,
-    'attack': 10,
+     'attackMelee': 10,
     'wisdom': 12,
     'hpRegen': 2
   },
   'Skeleton': {
     'hp': 150,
-    'attack': 12,
+     'attackMelee': 12,
     'defense': 8,
     'speed': 0.6,
     'lifeSteal': 0.1
   },
   'Snake': {
     'hp': 90,
-    'attack': 10,
+     'attackMelee': 10,
     'speed': 1.4,
     'evasion': 8
   },
@@ -100,14 +100,14 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
   },
   'Viking': {
     'hp': 200,
-    'attack': 20,
+     'attackMelee': 20,
     'defense': 10,
     'strength': 15,
     'speed': 0.9
   },
   'WereWolf': {
     'hp': 200,
-    'attack': 20,
+     'attackMelee': 20,
     'defense': 10,
     'strength': 15,
     'speed': 0.9
@@ -124,38 +124,38 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
   },
   'Bee': {
     'hp': 80,
-    'attack': 8,
+     'attackMelee': 8,
     'speed': 1.8,
     'evasion': 10
   },
   'DefaultBall': {
     'hp': 1,
-    'attack': 1,
+     'attackMelee': 1,
     'speed': 5.0
   },
   'DefaultBullet': {
     'hp': 1,
-    'attack': 1,
+     'attackMelee': 1,
     'speed': 10.0
   },
   'BulletL': {
     'hp': 1,
-    'attack': 2,
+     'attackMelee': 2,
     'speed': 10.0
   },
   [MonsterId.Fireball]: {
     hp: 1,
-    attack: 8,
+    attackMelee: 8,
     speed: 10.0,
   },
   [MonsterId.Knife]: {
     hp: 1,
-    attack: 5,
+    attackMelee: 5,
     speed: 10.0,
   },
   [MonsterId.WarhamerTracer]: {
     hp: 1,
-    attack: 1,
+    attackMelee: 1,
     speed: 100.0, // High speed for tracer
   },
 };

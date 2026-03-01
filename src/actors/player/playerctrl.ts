@@ -49,7 +49,14 @@ export class PlayerCtrl implements ILoop, IActionUser {
     private hpRegenAccumulator = 0
     private mpRegenAccumulator = 0
 
-    lastUsedWeaponMode: 'melee' | 'ranged' = 'melee'
+    set lastUsedWeaponMode(mode: 'melee' | 'ranged') {
+        this._lastUsedWeaponMode = mode;
+        if (this.baseSpec) this.baseSpec.lastUsedWeaponMode = mode;
+    }
+    get lastUsedWeaponMode(): 'melee' | 'ranged' {
+        return this._lastUsedWeaponMode;
+    }
+    private _lastUsedWeaponMode: 'melee' | 'ranged' = 'melee';
     meleeSwitchDistance = 5
 
     contollerEnable = true

@@ -32,16 +32,36 @@ export class BaseSpec {
     skillMultiplier = 1
     
     status: CharacterStatus
+    lastUsedWeaponMode: 'melee' | 'ranged' = 'melee'
 
     // Getters
-    get AttackSpeed() { return this.stats.getStat("attackSpeed") }
-    get AttackRange() { return this.stats.getStat("attackRange") + 0.5 }
+    get AttackSpeedMelee() {
+        return this.stats.getStat("attackSpeedMelee");
+    }
+
+    get AttackSpeedRanged() {
+        return this.stats.getStat("attackSpeedRanged");
+    }
+
+    get AttackSpeed() {
+        return this.lastUsedWeaponMode === 'ranged' ? this.AttackSpeedRanged : this.AttackSpeedMelee;
+    }
+
+    get AttackRange() {
+        const item = this.lastUsedWeaponMode === 'ranged' ? this.GetRangedItem() : this.GetMeleeItem();
+        return (item?.Stats?.attackRange ?? this.stats.getStat("attackRange")) + 0.5;
+    }
     get Speed() { return this.stats.getStat("speed") }
-    get Damage() { return this.stats.getStat("attack") }
+    
+    get DamageMelee() { return this.stats.getStat("attackMelee") }
+    get DamageRanged() { return this.stats.getStat("attackRanged") }
+    get Damage() {
+        return this.lastUsedWeaponMode === 'ranged' ? this.DamageRanged : this.DamageMelee;
+    }
     
     // 레거시 Getter 호환성 유지
-    get AttackDamageMax() { return this.stats.getStat("attack") } 
-    get AttackDamageMin() { return this.stats.getStat("attack") * 0.9 } // 최소 데미지 예시 로직
+    get AttackDamageMax() { return this.Damage } 
+    get AttackDamageMin() { return this.Damage * 0.9 } // 최소 데미지 예시 로직
     
     get Status() { return this.status }
     get Health() { return this.status.health }
@@ -109,7 +129,7 @@ export class BaseSpec {
         this.reapplyItemModifiers();
 
         // 레거시 필드 동기화 (호환성 유지용)
-        this.attackDamageMax = this.stats.getStat("attack");
+        this.attackDamageMax = this.stats.getStat("attackMelee");
         this.defence = this.stats.getStat("defense");
     }
 
@@ -310,7 +330,17 @@ export class BaseSpec {
     private addItemModifiers(item: IItem) {
         if (item.Stats) {
             Object.entries(item.Stats).forEach(([k, v]) => {
-                const key = k as StatKey;
+                let key = k as StatKey;
+                
+                // [개선] 일반 attackSpeed 키를 무기 타입에 맞게 매핑
+                if (k === 'attackSpeed') {
+                    if (item.ItemType === 'meleeattack') key = 'attackSpeedMelee';
+                    else if (item.ItemType === 'rangeattack') key = 'attackSpeedRanged';
+                } else if (k === 'attack') {
+                    if (item.ItemType === 'meleeattack') key = 'attackMelee';
+                    else if (item.ItemType === 'rangeattack') key = 'attackRanged';
+                }
+
                 const apply = StatApplyMode[key] || 'add';
                 this.stats.addModifier(new Modifier(key, v!, apply, `item:${item.Id}`));
             });

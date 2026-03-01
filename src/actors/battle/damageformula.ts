@@ -15,7 +15,7 @@ export class DamageFormula {
      * 공식: (기본 공격력 + 무기 공격력) + (힘 * 보정계수)
      */
     static getPhysicalAttack(spec: BaseSpec): number {
-        const baseAtk = spec.stats.getStat('attack');
+        const baseAtk = spec.Damage;
         const strength = spec.stats.getStat('strength');
         
         // 예: 힘 1당 공격력 0.5 증가 (기획에 따라 계수 조정)
@@ -61,7 +61,7 @@ export class DamageFormula {
     static getDPS(spec: BaseSpec): { physical: number, magic: number } {
         const physAtk = this.getPhysicalAttack(spec);
         const magicAtk = this.getMagicAttack(spec);
-        const atkSpeed = Math.max(0.1, spec.stats.getStat('attackSpeed')); // 최소 공속 보정
+        const atkSpeed = Math.max(0.1, spec.AttackSpeed); // 최소 공속 보정
         const critMult = this.getCritMultiplier(spec);
 
         return {
