@@ -84,6 +84,7 @@ export class MaleFab extends AssetModel implements IAsset {
         switch(bind) {
             case Bind.Hands_R: return "mixamorigRightHand";
             case Bind.Hands_L: return "mixamorigLeftHand";
+            case Bind.Weapon_Ranged: return "mixamorigRightHand";
         }
     }
     GetBox(mesh: THREE.Group) {

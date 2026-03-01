@@ -49,6 +49,9 @@ export class PlayerCtrl implements ILoop, IActionUser {
     private hpRegenAccumulator = 0
     private mpRegenAccumulator = 0
 
+    lastUsedWeaponMode: 'melee' | 'ranged' = 'melee'
+    meleeSwitchDistance = 5
+
     contollerEnable = true
     inputMode = false
     moveDirection = new THREE.Vector3()
@@ -102,7 +105,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     get objs() { return this.player.Meshs }
 
     constructor(
-        private player: Player,
+        public player: Player,
         public inventory: IInventory,
         private gphysic: IGPhysic,
         public camera: THREE.Camera,
@@ -194,6 +197,14 @@ export class PlayerCtrl implements ILoop, IActionUser {
             this.baseSpec.Equip(slot.item);
             this.inventory.EquipItem(slot.item);
             (slot.item as Item).activate()
+
+            // Update mode based on equipped item
+            this.lastUsedWeaponMode = (slot.item.ItemType === 'rangeattack') ? 'ranged' : 'melee';
+
+            // Visual update
+            this.player.ReloadBindingItem(slot.item)
+            this.player.synchronizeWeaponVisibility(this.lastUsedWeaponMode)
+
             this.currentState.Init()
         })
         eventCtrl.RegisterEventListener(EventTypes.Unequipment, (bind: Bind) => {
@@ -202,6 +213,18 @@ export class PlayerCtrl implements ILoop, IActionUser {
             (prevItem as Item).deactivate()
             this.baseSpec.Unequip(bind);
             this.inventory.UnequipItem(bind);
+
+            // If we unequip the current mode weapon, try to switch to the other
+            if (bind === Bind.Weapon_Ranged && this.lastUsedWeaponMode === 'ranged') {
+                this.lastUsedWeaponMode = 'melee';
+            } else if (bind === Bind.Hands_R && this.lastUsedWeaponMode === 'melee') {
+                this.lastUsedWeaponMode = 'ranged';
+            }
+
+            // Visual update
+            this.player.UnequipItem(bind)
+            this.player.synchronizeWeaponVisibility(this.lastUsedWeaponMode)
+
             this.currentState.Init()
         })
         eventCtrl.RegisterEventListener(EventTypes.Pickup, (drop: MonDrop) => {
@@ -318,6 +341,14 @@ export class PlayerCtrl implements ILoop, IActionUser {
         const idx = this.targets.indexOf(obj)
         if (idx < 0) return
         this.targets.splice(idx, 1)
+    }
+    getClosestTargetDistance(): number {
+        let minDist = Infinity
+        for (const v of this.targets) {
+            const dis = this.player.CenterPos.distanceTo(v.position)
+            if (dis < minDist) minDist = dis
+        }
+        return minDist
     }
 
     private assignSkillToSlot(skill: LearnedSkillMessage) {

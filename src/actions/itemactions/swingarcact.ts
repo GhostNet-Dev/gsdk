@@ -8,6 +8,7 @@ export default class SwingArcEffectAction implements IActionComponent, ILoop {
     id = 'swingarc'
     trail?: ArcTrailEffect
     keytimeout?:NodeJS.Timeout
+    target?: IActionUser
     constructor(
         private eventCtrl: IEventController,
         private scene: THREE.Scene,
@@ -15,9 +16,11 @@ export default class SwingArcEffectAction implements IActionComponent, ILoop {
         private socketB: string = "localTipBOffset", // 기본값
     ) { }
 
-    apply(target: any) {
+    apply(target: IActionUser) {
+        this.target = target
     }
     trigger(target: IActionUser, triggerType: TriggerType, context?: ActionContext | undefined): void {
+        this.target = target
         if (!this.trail) this.activate(target, context)
         if (!this.trail) return
         if(triggerType === "onUse") {
@@ -52,6 +55,7 @@ export default class SwingArcEffectAction implements IActionComponent, ILoop {
     clock = new THREE.Clock()
     update(delta: number): void {
         if (!this.trail) return
+        if (this.target && this.target.objs!.visible == false) return
         this.trail.update(delta, this.clock.getElapsedTime())
     }
 }

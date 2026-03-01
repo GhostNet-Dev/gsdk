@@ -197,6 +197,7 @@ export const itemDefs = {
     type: "meleeattack",
     bind: Bind.Hands_R,
     assetKey: Char.ItemsHammer,
+    weapon: AttackItemType.OneHandBlunt,
     level: "common",
     stackable: false,
     binding: true,

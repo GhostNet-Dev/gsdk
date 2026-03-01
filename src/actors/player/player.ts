@@ -53,15 +53,6 @@ export class Player extends PhysicsObject {
             }
             this.meshs.visible = false
         })
-        this.eventCtrl.RegisterEventListener(EventTypes.Equipment, (id: ItemId) => {
-            const slot = this.inventory.GetItemSlot(id)
-            if(slot == undefined) throw new Error("item is undefined")
-            // right hand
-            this.ReloadBindingItem(slot.item)
-        })
-        this.eventCtrl.RegisterEventListener(EventTypes.Unequipment, (bind: Bind) => {
-            this.UnequipItem(bind)
-        })
     }
     GetItemPosition(target: THREE.Vector3) {
         const rightId = this.asset.GetBodyMeshId(Bind.Hands_R)
@@ -92,13 +83,21 @@ export class Player extends PhysicsObject {
         if (!mesh) return
         const prev = this.bindMesh[bind]
         if (prev) {
+            mesh.remove(prev) // Actually remove from the bone
             prev.visible = false
             delete this.bindMesh[bind]
         }
     }
     ReloadBindingItem(item: IItem) {
-        const bind = item.Bind
+        let bind = item.Bind
         if(bind == undefined) throw new Error("item bind is undefined")
+
+        // Logical override to match inventory slots
+        if (item.ItemType === "rangeattack") {
+            bind = Bind.Weapon_Ranged;
+        } else if (item.ItemType === "meleeattack") {
+            bind = Bind.Hands_R;
+        }
 
         const rightId = this.asset.GetBodyMeshId(bind)
         if (rightId == undefined) return
@@ -122,6 +121,14 @@ export class Player extends PhysicsObject {
             }
             this.bindMesh[bind] = item.Mesh
         }
+    }
+
+    synchronizeWeaponVisibility(mode: 'melee' | 'ranged') {
+        const meleeWeapon = this.bindMesh[Bind.Hands_R];
+        const rangedWeapon = this.bindMesh[Bind.Weapon_Ranged];
+
+        if (meleeWeapon) meleeWeapon.visible = (mode === 'melee');
+        if (rangedWeapon) rangedWeapon.visible = (mode === 'ranged');
     }
 
     Uninit() {

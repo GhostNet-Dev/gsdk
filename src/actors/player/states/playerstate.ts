@@ -56,10 +56,31 @@ export class State {
             if (this.playerCtrl.mode == AppMode.Play) {
                 const meleeItem = this.playerCtrl.baseSpec.GetMeleeItem()
                 const rangedItem = this.playerCtrl.baseSpec.GetRangedItem()
-                const useMeleeState = (!rangedItem && (meleeItem?.ItemType == "meleeattack" || !meleeItem))
-                const state = useMeleeState
-                    ? this.playerCtrl.ComboMeleeSt
-                    : (rangedItem?.AutoAttack ? this.playerCtrl.RangeAttackSt : this.playerCtrl.RangeAimSt)
+                const hasDedicatedRanged = !!this.playerCtrl.baseSpec.GetBindItem(Bind.Weapon_Ranged)
+                const hasMelee = !!meleeItem
+                let state: IPlayerAction
+
+                if (hasMelee && hasDedicatedRanged) {
+                    const closestDist = this.playerCtrl.getClosestTargetDistance()
+                    if (closestDist <= this.playerCtrl.meleeSwitchDistance) {
+                        this.playerCtrl.lastUsedWeaponMode = 'melee'
+                        state = this.playerCtrl.ComboMeleeSt
+                    } else {
+                        this.playerCtrl.lastUsedWeaponMode = 'ranged'
+                        state = rangedItem!.AutoAttack ? this.playerCtrl.RangeAttackSt : this.playerCtrl.RangeAimSt
+                    }
+                    this.playerCtrl.player.synchronizeWeaponVisibility(this.playerCtrl.lastUsedWeaponMode);
+                } else {
+                    const useMeleeState = (!rangedItem && (meleeItem?.ItemType == "meleeattack" || !meleeItem))
+                    if (useMeleeState) {
+                        this.playerCtrl.lastUsedWeaponMode = 'melee'
+                        state = this.playerCtrl.ComboMeleeSt
+                    } else {
+                        this.playerCtrl.lastUsedWeaponMode = rangedItem ? 'ranged' : 'melee'
+                        state = rangedItem?.AutoAttack ? this.playerCtrl.RangeAttackSt : this.playerCtrl.RangeAimSt
+                    }
+                    this.playerCtrl.player.synchronizeWeaponVisibility(this.playerCtrl.lastUsedWeaponMode);
+                }
                 state.Init()
                 return state
             } else if (this.playerCtrl.mode == AppMode.Weapon) {
@@ -116,6 +137,14 @@ export class State {
             this.player.Pos.y += -distance
         }
     }
+    protected getWeaponForAnimation(): IItem | undefined {
+        const rangedSlotItem = this.baseSpec.GetBindItem(Bind.Weapon_Ranged)
+        const meleeSlotItem = this.baseSpec.GetMeleeItem()
+        if (meleeSlotItem && rangedSlotItem) {
+            return this.playerCtrl.lastUsedWeaponMode === 'ranged' ? rangedSlotItem : meleeSlotItem
+        }
+        return meleeSlotItem ?? rangedSlotItem ?? undefined
+    }
     CheckEnermyInRange() {
         const attackRange = this.playerCtrl.baseSpec.stats.getStat("attackRange")
         for (const v of this.playerCtrl.targets) {
@@ -123,15 +152,38 @@ export class State {
             if (attackRange > dis) {
                 const meleeItem = this.playerCtrl.baseSpec.GetMeleeItem()
                 const rangedItem = this.playerCtrl.baseSpec.GetRangedItem()
-                const useMeleeState = (!rangedItem && (meleeItem?.ItemType == "meleeattack" || !meleeItem))
+                const hasDedicatedRanged = !!this.playerCtrl.baseSpec.GetBindItem(Bind.Weapon_Ranged)
+                const hasMelee = !!meleeItem
+
+                if (hasMelee && hasDedicatedRanged) {
+                    if (dis <= this.playerCtrl.meleeSwitchDistance) {
+                        this.playerCtrl.lastUsedWeaponMode = 'melee'
+                        this.playerCtrl.player.synchronizeWeaponVisibility('melee');
+                        this.playerCtrl.ComboMeleeSt.Init()
+                        return this.playerCtrl.ComboMeleeSt
+                    } else {
+                        if (!rangedItem?.AutoAttack) return
+                        this.playerCtrl.lastUsedWeaponMode = 'ranged'
+                        this.playerCtrl.player.synchronizeWeaponVisibility('ranged');
+                        this.playerCtrl.RangeAttackSt.Init()
+                        return this.playerCtrl.RangeAttackSt
+                    }
+                }
+
                 const isManualRanged = !!rangedItem && !rangedItem.AutoAttack
                 if (isManualRanged) return
-
-                const state = useMeleeState
-                    ? this.playerCtrl.ComboMeleeSt
-                    : this.playerCtrl.RangeAttackSt
-                state.Init()
-                return state
+                const useMeleeState = !rangedItem && (meleeItem?.ItemType == "meleeattack" || !meleeItem)
+                if (useMeleeState) {
+                    this.playerCtrl.lastUsedWeaponMode = 'melee'
+                    this.playerCtrl.player.synchronizeWeaponVisibility('melee');
+                    this.playerCtrl.ComboMeleeSt.Init()
+                    return this.playerCtrl.ComboMeleeSt
+                } else {
+                    this.playerCtrl.lastUsedWeaponMode = 'ranged'
+                    this.playerCtrl.player.synchronizeWeaponVisibility('ranged');
+                    this.playerCtrl.RangeAttackSt.Init()
+                    return this.playerCtrl.RangeAttackSt
+                }
             }
         }
     }
@@ -308,9 +360,10 @@ export class IdleState extends State implements IPlayerAction {
         this.Init()
     }
     Init(): void {
-        const handItem = this.baseSpec.GetBindItem(Bind.Hands_R)
-        const action = (!handItem) ? ActionType.Idle : this.getAnimationForItem(handItem)
+        const item = this.getWeaponForAnimation()
+        const action = item ? this.getAnimationForItem(item) : ActionType.Idle
         this.player.ChangeAction(action)
+        this.player.synchronizeWeaponVisibility(this.playerCtrl.lastUsedWeaponMode);
         console.log("Idle!!")
     }
     Uninit(): void {
@@ -359,9 +412,10 @@ export class RunState extends State implements IPlayerAction {
         super(playerPhy, player, gphysic, baseSpec)
     }
     Init(): void {
-        const handItem = this.baseSpec.GetBindItem(Bind.Hands_R)
-        const action = (!handItem) ? ActionType.Run : this.getAnimationForItem(handItem)
+        const item = this.getWeaponForAnimation()
+        const action = item ? this.getAnimationForItem(item) : ActionType.Run
         this.player.ChangeAction(action)
+        this.player.synchronizeWeaponVisibility(this.playerCtrl.lastUsedWeaponMode);
     }
     Uninit(): void { }
     CheckInteraction() {

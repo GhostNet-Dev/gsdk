@@ -237,7 +237,7 @@ export class BaseSpec {
     }
 
     GetMeleeItem() {
-        return this.equipment[Bind.Hands_R] ?? this.equipment[Bind.Hands_L]
+        return this.equipment[Bind.Hands_R] ?? this.equipment[Bind.Hands_R] ?? this.equipment[Bind.Hands_L]
     }
 
     Buff(buff: Buff, level: number) {
@@ -257,7 +257,13 @@ export class BaseSpec {
     }
 
     Equip(item: IItem) {
-        const targetSlot = item.ItemType === "rangeattack" ? Bind.Weapon_Ranged : item.Bind
+        let targetSlot: Bind | undefined = item.Bind;
+        if (item.ItemType === "rangeattack") {
+            targetSlot = Bind.Weapon_Ranged;
+        } else if (item.ItemType === "meleeattack") {
+            targetSlot = Bind.Hands_R;
+        }
+
         if (targetSlot == undefined) throw new Error("item bind is undefined");
 
         const prevItem = this.equipment[targetSlot];
@@ -276,11 +282,13 @@ export class BaseSpec {
         this.addItemModifiers(item);
     }
 
-    Unequip(slot: string) {
-        const item = this.equipment[slot];
+    Unequip(slot: Bind) {
+        let targetSlot = slot;
+        const item = this.equipment[targetSlot];
         if (item) {
             this.removeItemModifiers(item);
-            this.equipment[slot] = null;
+            this.equipment[targetSlot] = null;
+            this.owner?.removeAction?.({ deactivate: (user: any) => (user.objs as any)?.getObjectByName?.(this.owner?.objs?.name)?.remove?.(item.Mesh) } as any);
         }
     }
 
