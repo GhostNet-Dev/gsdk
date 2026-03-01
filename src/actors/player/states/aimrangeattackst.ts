@@ -12,6 +12,18 @@ import { IItem } from "@Glibs/interface/iinven";
 import { Item } from "@Glibs/inventory/items/item";
 import { AttackState } from "./attackstate";
 import { KeyType } from "@Glibs/types/eventtypes";
+import { ActionCostSpec, cost } from "@Glibs/actors/battle/resourcecosttypes";
+
+const DEFAULT_AIM_RANGE_ATTACK_COST: ActionCostSpec = {
+    id: "attack.range.aim",
+    cost: cost.all(
+        cost.any(
+            cost.atom("mp", 2),
+            cost.atom("stamina", 4)
+        ),
+        cost.optional(cost.atom("stamina", 1))
+    )
+}
 
 export class AimRangeAttackState extends AttackState implements IPlayerAction {
     constructor(playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic,
@@ -49,6 +61,11 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
         this.hasFired = true; 
         const handItem = this.playerCtrl.baseSpec.GetRangedItem()
         if (handItem == undefined) return;
+
+        if (!this.tryConsumeAttackCost(this.resolveAttackCostSpec(handItem, DEFAULT_AIM_RANGE_ATTACK_COST), "자원이 부족합니다.")) {
+            this.attackProcess = false
+            return
+        }
 
         this.eventCtrl.SendEventMessage(EventTypes.PlaySound, handItem.Mesh, handItem.Sound)
 

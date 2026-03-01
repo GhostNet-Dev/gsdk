@@ -239,6 +239,39 @@ export class BaseSpec {
         }
     }
 
+    ReceiveCalcStamina(stamina: number) {
+        const maxStamina = this.stats.getStat("stamina");
+        if (this.status.stamina + stamina >= maxStamina) {
+            this.status.stamina = maxStamina;
+        } else {
+            this.status.stamina += stamina;
+        }
+    }
+
+    TryConsumeHealth(amount: number) {
+        if (amount <= 0) return true;
+        if (this.status.health < amount) return false;
+        this.status.health -= amount;
+        this.status.health = Math.max(0, this.status.health);
+        return true;
+    }
+
+    TryConsumeMana(amount: number) {
+        if (amount <= 0) return true;
+        if (this.status.mana < amount) return false;
+        this.status.mana -= amount;
+        this.status.mana = Math.max(0, this.status.mana);
+        return true;
+    }
+
+    TryConsumeStamina(amount: number) {
+        if (amount <= 0) return true;
+        if (this.status.stamina < amount) return false;
+        this.status.stamina -= amount;
+        this.status.stamina = Math.max(0, this.status.stamina);
+        return true;
+    }
+
     CheckDie(): boolean {
         return (this.status.immortal === false && this.status.health <= 0);
     }

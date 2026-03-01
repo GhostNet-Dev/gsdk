@@ -12,6 +12,15 @@ import { IItem } from "@Glibs/interface/iinven";
 import { Item } from "@Glibs/inventory/items/item";
 import { AttackState } from "./attackstate";
 import { CameraMode } from "@Glibs/systems/camera/cameratypes";
+import { ActionCostSpec, cost } from "@Glibs/actors/battle/resourcecosttypes";
+
+const DEFAULT_RANGE_ATTACK_COST: ActionCostSpec = {
+    id: "attack.range.basic",
+    cost: cost.all(
+        cost.atom("stamina", 3),
+        cost.optional(cost.atom("mp", 1))
+    )
+}
 
 export class RangeAttackState extends AttackState implements IPlayerAction {
     constructor(playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic, 
@@ -108,6 +117,11 @@ export class RangeAttackState extends AttackState implements IPlayerAction {
         this.attackProcess = true
         const handItem = this.playerCtrl.baseSpec.GetRangedItem()
         if (handItem == undefined) return this;
+
+        if (!this.tryConsumeAttackCost(this.resolveAttackCostSpec(handItem, DEFAULT_RANGE_ATTACK_COST), "자원이 부족합니다.")) {
+            this.attackProcess = false
+            return this
+        }
 
         this.eventCtrl.SendEventMessage(EventTypes.PlaySound, handItem.Mesh, handItem.Sound)
 

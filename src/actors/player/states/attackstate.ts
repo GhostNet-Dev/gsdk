@@ -13,6 +13,9 @@ import { Bind } from "@Glibs/types/assettypes";
 import { ActionType } from "../playertypes";
 import { IItem } from "@Glibs/interface/iinven";
 import { Item } from "@Glibs/inventory/items/item";
+import { CombatResourcePool, CostEngine } from "@Glibs/actors/battle/resourcecost";
+import { ActionCostSpec } from "@Glibs/actors/battle/resourcecosttypes";
+import { ItemId } from "@Glibs/inventory/items/itemdefs";
 
 export abstract class AttackState extends State implements IPlayerAction {
     raycast = new THREE.Raycaster()
@@ -107,6 +110,37 @@ export abstract class AttackState extends State implements IPlayerAction {
         this.player.Meshs.lookAt(closestTarget.position.x, playerPos.y, closestTarget.position.z);
         return closestTarget
     }   
+
+
+    protected readonly costEngine = new CostEngine()
+
+
+    protected resolveAttackCostSpec(itemInfo: IItem | null | undefined, fallback: ActionCostSpec): ActionCostSpec {
+        return itemInfo?.ResourceCost ?? fallback
+    }
+
+    protected tryConsumeAttackCost(spec: ActionCostSpec, failMessage = "자원이 부족합니다.") {
+        const pool = new CombatResourcePool({
+            spec: this.baseSpec,
+            inventory: this.playerCtrl.inventory,
+            consumeInventoryItem: (id: ItemId, count: number) => {
+                this.eventCtrl.SendEventMessage(EventTypes.UseItem, id, count)
+            }
+        })
+
+        const resolved = this.costEngine.resolve(spec, pool)
+        if (!resolved.ok) {
+            this.eventCtrl.SendEventMessage(EventTypes.AlarmWarning, failMessage)
+            return false
+        }
+
+        if (!this.costEngine.commit(resolved, pool)) {
+            this.eventCtrl.SendEventMessage(EventTypes.AlarmWarning, failMessage)
+            return false
+        }
+
+        return true
+    }
 
     ChangeMode(state: IPlayerAction) {
         this.Uninit()
