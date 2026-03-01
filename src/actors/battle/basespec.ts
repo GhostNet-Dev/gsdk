@@ -277,13 +277,7 @@ export class BaseSpec {
     }
 
     Equip(item: IItem) {
-        let targetSlot: Bind | undefined = item.Bind;
-        if (item.ItemType === "rangeattack") {
-            targetSlot = Bind.Weapon_Ranged;
-        } else if (item.ItemType === "meleeattack") {
-            targetSlot = Bind.Hands_R;
-        }
-
+        const targetSlot = item.Bind;
         if (targetSlot == undefined) throw new Error("item bind is undefined");
 
         const prevItem = this.equipment[targetSlot];

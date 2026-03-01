@@ -89,15 +89,8 @@ export class Player extends PhysicsObject {
         }
     }
     ReloadBindingItem(item: IItem) {
-        let bind: Bind = item.Bind!
+        const bind = item.Bind
         if(bind == undefined) throw new Error("item bind is undefined")
-
-        // Logical override to match inventory slots
-        if (item.ItemType === "rangeattack") {
-            bind = Bind.Weapon_Ranged;
-        } else if (item.ItemType === "meleeattack") {
-            bind = Bind.Hands_R;
-        }
 
         const rightId = this.asset.GetBodyMeshId(bind)
         if (rightId == undefined) return

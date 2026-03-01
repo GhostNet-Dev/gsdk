@@ -34,6 +34,7 @@ export class FireAction implements IActionComponent, ILoop {
     this.flames.attachTo(obj);
 
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+    console.log("Fire Effect Activated")
   }
   deactivate(target: IActionUser, context?: ActionContext | undefined): void {
     const obj = target.objs
@@ -41,6 +42,7 @@ export class FireAction implements IActionComponent, ILoop {
     this.flames?.detach()
     this.point && obj.remove(this.point)
     this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
+    console.log("Fire Effect Deactivated")
   }
   time = 0
   update(delta: number): void {
