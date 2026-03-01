@@ -61,10 +61,10 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
         const gunPos = new THREE.Vector3()
         this.player.GetMuzzlePosition(gunPos)
 
-        // 화면 중앙 조준점이 가리키는 월드 좌표를 얻는다.
-        const targetPos = this.getReticleWorldTarget(this.attackDist)
-        // 실제 총구 기준 발사 벡터를 계산해 시차(parallax)를 제거한다.
-        const shootDir = this.computeShootDirectionFromGun(gunPos, targetPos)
+        // 가늠자 배치와 동일한 레이캐스트(총구 방향)를 사용 → 방향·거리 일치
+        // Update()의 getMuzzleWorldTarget(100)과 같은 기준점
+        const aimTarget = this.getMuzzleWorldTarget(Math.max(this.attackDist, 100))
+        const shootDir = this.computeShootDirectionFromGun(gunPos, aimTarget)
         this.attackDir.copy(shootDir)
 
         ;(itemInfo as Item).trigger("onFire", { direction: this.attackDir })
@@ -75,10 +75,9 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
             damage: this.baseSpec.Damage,
             src: gunPos,
             dir: this.attackDir,
-            range: this.attackDist,
+            range: gunPos.distanceTo(aimTarget), // 가늠자까지의 실제 거리
             hitscan: true,
-            tracerLife: 2.12, // Slightly longer life for better visibility
-            tracerRange: Math.max(this.attackDist, 100)
+            tracerLife: 2.12,
         })
         this.attackProcess = false
         return true
