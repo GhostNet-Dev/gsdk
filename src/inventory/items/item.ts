@@ -43,7 +43,7 @@ export class ItemAbstract implements IItem {
   get Stats() { return ("stats" in this.property) ? this.property.stats : undefined }
   get Enchantments() { return ("enchantments" in this.property) ? this.property.enchantments : undefined }
   get Description() { return this.property.description }
-  get ResourceCost(): ActionCostSpec | undefined { return this.property.resourceCost }
+  get ResourceCost(): ActionCostSpec | undefined { return ("resourceCost" in this.property) ? this.property.resourceCost : undefined }
   // get Effects() { return this.property.effects }
   get Weight() { return ("weight" in this.property) ? this.property.weight : 0 }
   get Level() { return ("level" in this.property) ? this.property.level : "" }

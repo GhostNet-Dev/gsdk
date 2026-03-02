@@ -19,7 +19,6 @@ const DEFAULT_AIM_RANGE_ATTACK_COST: ActionCostSpec = {
     cost: cost.all(
         cost.any(
             cost.atom("mp", 2),
-            cost.atom("stamina", 4)
         ),
         cost.optional(cost.atom("stamina", 1))
     )

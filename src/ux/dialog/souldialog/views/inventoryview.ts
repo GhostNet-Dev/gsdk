@@ -115,8 +115,16 @@ export class InventoryView implements IDialogView<Props> {
 
   private onGlobalDown = (e: Event) => {
     if (!this.tip.pinned) return;
-    // 툴팁 내부 클릭은 닫지 않음
-    if (this.tip.tip && this.tip.tip.contains(e.target as Node)) return;
+
+    // e.composedPath()를 통해 Shadow DOM 내부의 실제 클릭 경로를 확인합니다.
+    const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
+
+    // 이벤트 경로에 툴팁이 포함되어 있거나(Shadow DOM), 
+    // 타겟이 툴팁 내부에 있다면(Light DOM 폴백) 닫지 않고 반환합니다.
+    if (this.tip.tip && (path.includes(this.tip.tip) || this.tip.tip.contains(e.target as Node))) {
+      return;
+    }
+
     this.tip.hide();
   };
 

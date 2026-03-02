@@ -155,8 +155,7 @@ export const itemDefs = {
     resourceCost: {
       id: "item.M4A1.fire",
       cost: cost.all(
-        cost.atom("item:Ammo9mm", 1),
-        cost.atom("stamina", 2)
+        cost.atom("mp", 2)
       )
     },
   },
