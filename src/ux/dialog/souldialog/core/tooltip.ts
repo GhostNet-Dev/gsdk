@@ -88,7 +88,11 @@ export class TooltipComponent {
     }
 
     public hide() {
-        if (this.tip) this.tip.setAttribute('data-show', 'false');
+        if (this.tip) {
+            this.tip.setAttribute('data-show', 'false');
+            this.tip.setAttribute('data-pinned', 'false');
+            this.tip.style.pointerEvents = 'none';
+        }
         this.pinned = false;
         this.targetIndex = null;
         this.targetId = null;
