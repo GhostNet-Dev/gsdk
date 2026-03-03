@@ -84,6 +84,14 @@ export class Player extends PhysicsObject {
         }
         mesh.getWorldPosition(target)
     }
+    GetMuzzleDirection(target: THREE.Vector3) {
+        const mesh = this.meshs.getObjectByName("muzzlePoint")
+        if (!mesh) {
+            this.meshs.getWorldDirection(target)
+            return
+        }
+        mesh.getWorldDirection(target)
+    }
     UnequipItem(bind: Bind) {
         const rightId = this.asset.GetBodyMeshId(bind)
         if (rightId == undefined) return

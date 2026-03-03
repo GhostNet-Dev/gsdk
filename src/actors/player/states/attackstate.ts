@@ -205,7 +205,7 @@ export abstract class AttackState extends State implements IPlayerAction {
         this.player.GetMuzzlePosition(muzzlePos);
 
         const muzzleDir = new THREE.Vector3();
-        this.player.Meshs.getWorldDirection(muzzleDir);
+        this.player.GetMuzzleDirection(muzzleDir);
 
         this.raycast.set(muzzlePos, muzzleDir.normalize());
         this.raycast.far = maxDistance;
