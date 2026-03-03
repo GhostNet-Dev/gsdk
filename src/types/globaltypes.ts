@@ -74,6 +74,7 @@ export const EventTypes = {
     Death: "death",
     ActionAttach: "actionattach",
     ActionDettach: "actiondetach",
+    ResourceChanged: "resourcechanged",
     // player와 상호작용하는 객체 Attackable, Interatable
     AddInteractive: "addinter",
     DelInteractive: "delinter",
@@ -176,4 +177,14 @@ export class TargetBox extends THREE.Mesh {
         super(geo, mat)
         this.name = ObjName
     }
+}
+
+export type ResourceChangedPayload = {
+    actorId: string
+    key: "hp" | "mp" | "stamina" | "exp"
+    prev: number
+    next: number
+    max?: number
+    reason: "cost" | "regen" | "damage" | "item" | "levelup"
+    sourceId?: string
 }

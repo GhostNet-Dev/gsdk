@@ -2,6 +2,7 @@ import { BaseSpec } from "./basespec";
 import IInventory from "@Glibs/interface/iinven";
 import { ItemId } from "@Glibs/inventory/items/itemdefs";
 import { ActionCostSpec, CostAtom, CostNode, ResourceKey } from "./resourcecosttypes";
+import { ResourceChangedPayload } from "@Glibs/types/globaltypes";
 
 export type CostFailureReason = "NOT_ENOUGH_RESOURCE" | "INVALID_COST";
 
@@ -23,6 +24,9 @@ export type ResourceContext = {
   spec: BaseSpec;
   inventory?: IInventory;
   consumeInventoryItem?: (id: ItemId, count: number) => void;
+  onResourceChanged?: (payload: ResourceChangedPayload) => void;
+  actorId?: string;
+  sourceId?: string;
 };
 
 export interface ResourceAdapter {
@@ -32,24 +36,47 @@ export interface ResourceAdapter {
 }
 
 class StatusResourceAdapter implements ResourceAdapter {
-  constructor(private spec: BaseSpec) {}
+  constructor(private ctx: ResourceContext) {}
 
   supports(key: ResourceKey): boolean {
     return key === "hp" || key === "mp" || key === "stamina";
   }
 
   get(key: ResourceKey): number {
-    if (key === "hp") return this.spec.status.health;
-    if (key === "mp") return this.spec.status.mana;
-    if (key === "stamina") return this.spec.status.stamina;
+    if (key === "hp") return this.ctx.spec.status.health;
+    if (key === "mp") return this.ctx.spec.status.mana;
+    if (key === "stamina") return this.ctx.spec.status.stamina;
     return 0;
   }
 
   consume(atom: CostAtom): boolean {
-    if (atom.key === "hp") return this.spec.TryConsumeHealth(atom.amount);
-    if (atom.key === "mp") return this.spec.TryConsumeMana(atom.amount);
-    if (atom.key === "stamina") return this.spec.TryConsumeStamina(atom.amount);
-    return false;
+    const prev = this.get(atom.key);
+
+    let consumed = false;
+    if (atom.key === "hp") consumed = this.ctx.spec.TryConsumeHealth(atom.amount);
+    else if (atom.key === "mp") consumed = this.ctx.spec.TryConsumeMana(atom.amount);
+    else if (atom.key === "stamina") consumed = this.ctx.spec.TryConsumeStamina(atom.amount);
+    else return false;
+
+    if (!consumed) return false;
+
+    const maxByKey: Partial<Record<ResourceKey, number>> = {
+      hp: this.ctx.spec.stats.getStat("hp"),
+      mp: this.ctx.spec.stats.getStat("mp"),
+      stamina: this.ctx.spec.stats.getStat("stamina"),
+    };
+
+    this.ctx.onResourceChanged?.({
+      actorId: this.ctx.actorId ?? "unknown",
+      key: atom.key,
+      prev,
+      next: this.get(atom.key),
+      max: maxByKey[atom.key],
+      reason: "cost",
+      sourceId: this.ctx.sourceId,
+    });
+
+    return true;
   }
 }
 
@@ -80,7 +107,7 @@ export class CombatResourcePool {
 
   constructor(private ctx: ResourceContext, extraAdapters: ResourceAdapter[] = []) {
     this.adapters = [
-      new StatusResourceAdapter(ctx.spec),
+      new StatusResourceAdapter(ctx),
       new InventoryResourceAdapter(ctx.inventory, ctx.consumeInventoryItem),
       ...extraAdapters,
     ];
