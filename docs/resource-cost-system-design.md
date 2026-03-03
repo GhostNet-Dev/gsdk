@@ -278,6 +278,191 @@ MVP에서는 아래만 먼저 구현해도 충분합니다.
 
 `any` 노드가 여러 경로를 가질 때 "무엇을 선택할지"가 핵심입니다.
 
+---
+
+## 11) `CostEngine` ↔ `StatusCtrl`(HUD) 연동 설계
+
+현재 `StatusCtrl`은 이벤트(`Attack`, `Pickup`, `LevelUp`)를 받아 HP/EXP를 갱신합니다.
+`mp`, `sp(stamina)`까지 확장하면 **비용 계산/차감 시점과 UI 갱신 시점이 분리**되어
+누락이 발생하기 쉬우므로, 아래처럼 **자원 변경 이벤트를 표준화**하는 구조를 권장합니다.
+
+### 11.1 핵심 원칙
+
+1. `CostEngine`는 "소모 판정/커밋"만 담당하고 HUD를 직접 알지 않음.
+2. `ResourcePool`/`Adapter` 레이어가 **자원 변경 이벤트**를 발행.
+3. `StatusCtrl`은 전투 이벤트가 아니라 **자원 이벤트 단일 채널**을 구독.
+4. HP/MP/SP/EXP 모두 같은 Payload 구조를 사용.
+
+### 11.2 권장 이벤트 모델
+
+```ts
+type ResourceChangedEvent = {
+  actorId: string;
+  key: ResourceKey;      // "hp" | "mp" | "stamina" | ...
+  prev: number;
+  next: number;
+  max?: number;          // stat 기반 자원일 때 포함
+  reason: "cost" | "regen" | "damage" | "item" | "levelup";
+  sourceId?: string;     // action/skill/item id
+};
+```
+
+- `CostEngine.commit()`에서 실제 차감 성공 시 `reason: "cost"` 이벤트 발행
+- 자연회복/버프틱/피격 등은 각 시스템에서 동일 이벤트 발행
+- HUD는 `next/max`를 사용해 퍼센트만 계산
+
+### 11.3 최소 변경으로 붙이는 방법 (현 구조 유지)
+
+1. `StatusResourceAdapter.consume()` 내부에서 기존 `TryConsumeMana`, `TryConsumeStamina` 호출 후,
+   성공 시 `ResourceChangedEvent` 발행.
+2. `BaseSpec.Heal/ManaRecover/StaminaRecover/TakeDamage`에도 동일 이벤트 발행.
+3. `StatusCtrl`은 아래 이벤트만 구독:
+   - `ResourceChanged(player, hp|mp|stamina)`
+   - `ExpChanged(player)` 또는 동일 스키마의 `resourceKey=exp`
+4. 기존 `Attack + player` 기반 HP 갱신 로직은 점진적으로 제거.
+
+이 방식은 리팩터링 범위가 작고, "행동 결과"와 "UI 반영"의 타이밍이 일치합니다.
+
+### 11.4 중장기 대안: `StatusCtrl` 대신 `PlayerResourcePresenter`
+
+`StatusCtrl`이 이벤트 구독 + 계산 + HUD 위젯 접근을 모두 담당하면 책임이 커집니다.
+중장기적으로는 아래 구조를 추천합니다.
+
+```text
+[CostEngine/Combat/Recovery Systems]
+          |
+          v
+ [ResourceEventBus or ResourceStore]
+          |
+          v
+ [PlayerResourcePresenter]
+   - 도메인 이벤트 -> ViewModel 변환
+   - clamp/percent/지연보간(연출) 처리
+          |
+          v
+ [HUD Widgets]
+  - HeartBar / MpBar / SpBar / ExpBar
+```
+
+장점:
+- UI 교체(Canvas/DOM) 시 Presenter 재사용 가능
+- 네트워크 authoritative(서버 보정) 환경에서도 ViewModel 계층으로 흡수 용이
+- 테스트가 쉬움(이벤트 입력 → 퍼센트 출력 검증)
+
+### 11.4.1 왜 `StatusCtrl`과 `PlayerResourcePresenter`가 다른가?
+
+질문 포인트가 정확합니다. **Presenter도 이벤트를 받고 계산한 뒤 UI를 갱신**하므로,
+겉으로 보면 `StatusCtrl`과 비슷해 보일 수 있습니다.
+차이는 "한 클래스가 무엇을 아는가"와 "의존 방향"에 있습니다.
+
+| 관점 | 최소 변경안(`StatusCtrl`) | 중장기안(`PlayerResourcePresenter`) |
+|---|---|---|
+| 역할 위치 | 게임 오브젝트 계층 내부 | UI 어댑터 계층(도메인과 위젯 사이) |
+| 의존성 | 이벤트 + 도메인 객체(`PlayerCtrl/BaseSpec`) + HUD 위젯을 동시에 참조 | 이벤트/스토어 입력 + 순수 ViewModel 출력(위젯은 바깥에서 바인딩) |
+| 테스트 단위 | 통합 테스트 위주(환경 의존 큼) | 단위 테스트 가능(입력 이벤트→출력 상태) |
+| 재사용성 | 현재 HUD 구조에 종속 | HUD 교체/멀티플랫폼에서 재사용 쉬움 |
+| 관심사 분리 | 상대적으로 약함(오케스트레이션 + 표현 결합) | 강함(도메인 변환과 렌더링 분리) |
+
+핵심은 **Presenter가 모든 걸 직접 하는 객체가 아니라, "도메인 이벤트를 UI 독립적인 ViewModel로 변환하는 경계"**라는 점입니다.
+즉, Presenter가 위젯 인스턴스를 직접 `new`/관리하지 않고, 아래처럼 분리해야 의미가 있습니다.
+
+```text
+(도메인 이벤트) -> Presenter -> (ViewModel: hpPercent/mpPercent/spPercent/expPercent)
+                                     |
+                               HUD Binder/View
+```
+
+- Presenter 책임: 변환/보정(clamp, smoothing, throttle)
+- HUD 책임: 렌더링(DOM/Canvas/애니메이션 위젯 반영)
+- Binder 책임: Presenter 출력을 어떤 HUD 컴포넌트에 연결할지 결정
+
+> 정리: `StatusCtrl`을 그대로 이름만 바꿔 Presenter로 두면 동일 문제입니다.
+> 진짜 차이를 만들려면 "도메인 참조 제거 + ViewModel 출력 중심 + 렌더링 계층 분리"가 필요합니다.
+
+### 11.5 실무 체크리스트
+
+- 자원 키 표준화: `hp`, `mp`, `stamina`, `exp`
+- `max` 조회 기준 통일: `stats.getStat(...)`
+- 0~100 변환 로직 단일화(공용 유틸)
+- 이벤트 중복 발행 방지(한 차감에 1회)
+- 선택 소모(`optional`)는 실제 소모 성공 시에만 이벤트 발행
+
+### 11.6 권장 적용 순서
+
+1. `ResourceChangedEvent` 타입/이벤트명 추가
+2. `StatusResourceAdapter` + `BaseSpec` 변경지점에서 이벤트 발행
+3. `StatusCtrl`을 자원 이벤트 기반으로 전환(mp/sp 포함)
+4. 안정화 후 `PlayerResourcePresenter`로 분리 리팩터링
+
+이 순서면 현재 코드와 충돌을 최소화하면서, `CostEngine` 중심 자원 관리와 HUD 동기화를
+안정적으로 확장할 수 있습니다.
+
+### 11.7 최소 리팩터링 초안 (실제 파일 기준)
+
+아래는 **현재 코드 구조를 최대한 유지**하면서 적용 가능한 1차 리팩터링 초안입니다.
+핵심은 `StatusCtrl`을 "도메인 이벤트 구독자"로만 바꾸고, 기존 HUD 위젯(`heart/mp/exp`)은 그대로 재사용하는 것입니다.
+
+#### 11.7.1 변경 대상 파일
+
+- `src/types/globaltypes.ts`
+  - 이벤트 타입 추가: `ResourceChanged`
+- `src/actors/battle/resourcecost.ts`
+  - `StatusResourceAdapter.consume()` 성공 시 `ResourceChanged` 발행
+- `src/actors/battle/basespec.ts`
+  - `TakeDamage/Heal/ManaRecover/StaminaRecover` 성공 시 동일 이벤트 발행
+- `src/gameobjects/statusctrl.ts`
+  - `Attack + player` 기반 HP 갱신 제거
+  - `ResourceChanged` 이벤트 기반으로 HP/MP/SP/EXP 반영
+
+> 포인트: 이 단계에서는 새 클래스(`Presenter`)를 만들지 않습니다. 이벤트 경로만 먼저 정리합니다.
+
+#### 11.7.2 이벤트 Payload 초안
+
+```ts
+type ResourceChangedEvent = {
+  actorId: string;
+  key: "hp" | "mp" | "stamina" | "exp";
+  prev: number;
+  next: number;
+  max?: number;
+  reason: "cost" | "damage" | "regen" | "item" | "levelup";
+  sourceId?: string;
+};
+```
+
+#### 11.7.3 `StatusCtrl` 최소 변경 예시
+
+```ts
+this.eventCtrl.RegisterEventListener(EventTypes.ResourceChanged + "player", (e: ResourceChangedEvent) => {
+  const max = e.max && e.max > 0 ? e.max : 1;
+  const percent = Math.floor((e.next / max) * 100);
+
+  if (e.key === "hp") this.heart.UpdateStatus(percent);
+  else if (e.key === "mp") this.mp.UpdateStatus(percent);
+  else if (e.key === "stamina") this.sp?.UpdateStatus(percent); // sp bar가 있으면 반영
+  else if (e.key === "exp") this.exp.UpdateStatus(percent);
+});
+```
+
+- 기존 `Pickup`, `LevelUp` 처리 코드는 **초기에는 유지**하고,
+  `exp` 이벤트 발행이 안정화되면 제거하는 점진 전환을 권장합니다.
+
+#### 11.7.4 왜 이게 "최소" 리팩터링인가?
+
+- Cost/Combat 로직은 유지하고 "이벤트 발행"만 추가
+- HUD 컴포넌트는 교체하지 않고 구독 채널만 통일
+- 테스트 영향 범위를 자원 변경/바 갱신 시나리오로 한정 가능
+
+#### 11.7.5 검증 시나리오 (체크리스트)
+
+1. MP 코스트 스킬 사용 시 MP 바 즉시 감소
+2. SP 코스트 액션 사용 시 SP 바 즉시 감소
+3. 피격/회복 시 HP 바 동기화
+4. 레벨업/경험치 획득 시 EXP 바 동기화
+5. optional cost 실패 시(소모 없음) 이벤트 미발행
+
+위 5개가 통과하면, 그 다음 단계에서 `PlayerResourcePresenter` 분리를 진행해도 안전합니다.
+
 추천 정책(기본값):
 1. **가치 보존 우선**: 희소 자원(탄약, HP)보다 재생 자원(MP/SP) 우선 소모
 2. **비용 최소화**: 환산 점수(`weight`)가 가장 낮은 경로 선택

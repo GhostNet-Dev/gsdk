@@ -125,7 +125,12 @@ export abstract class AttackState extends State implements IPlayerAction {
             inventory: this.playerCtrl.inventory,
             consumeInventoryItem: (id: ItemId, count: number) => {
                 this.eventCtrl.SendEventMessage(EventTypes.UseItem, id, count)
-            }
+            },
+            actorId: "player",
+            sourceId: spec.id,
+            onResourceChanged: (payload) => {
+                this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", payload)
+            },
         })
 
         const resolved = this.costEngine.resolve(spec, pool)
