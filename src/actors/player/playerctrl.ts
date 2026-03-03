@@ -48,6 +48,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     private skillCastAnimTimeout?: NodeJS.Timeout
     private hpRegenAccumulator = 0
     private mpRegenAccumulator = 0
+    private spRegenAccumulator = 0
 
     set lastUsedWeaponMode(mode: 'melee' | 'ranged') {
         this._lastUsedWeaponMode = mode;
@@ -520,6 +521,55 @@ export class PlayerCtrl implements ILoop, IActionUser {
         action.apply?.(this, ctx)
         action.activate?.(this, ctx)
     }
+
+    consumeStamina(amount: number): boolean {
+        const prev = this.baseSpec.status.stamina
+        const success = this.baseSpec.TryConsumeStamina(amount)
+        if (success) {
+            this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", {
+                actorId: "player",
+                key: "stamina",
+                prev,
+                next: this.baseSpec.status.stamina,
+                max: this.baseSpec.stats.getStat("stamina"),
+                reason: "consume"
+            })
+        }
+        return success
+    }
+
+    consumeMana(amount: number): boolean {
+        const prev = this.baseSpec.status.mana
+        const success = this.baseSpec.TryConsumeMana(amount)
+        if (success) {
+            this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", {
+                actorId: "player",
+                key: "mp",
+                prev,
+                next: this.baseSpec.status.mana,
+                max: this.baseSpec.stats.getStat("mp"),
+                reason: "consume"
+            })
+        }
+        return success
+    }
+
+    consumeHealth(amount: number): boolean {
+        const prev = this.baseSpec.status.health
+        const success = this.baseSpec.TryConsumeHealth(amount)
+        if (success) {
+            this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", {
+                actorId: "player",
+                key: "hp",
+                prev,
+                next: this.baseSpec.status.health,
+                max: this.baseSpec.stats.getStat("hp"),
+                reason: "consume"
+            })
+        }
+        return success
+    }
+
     removeAction(action: IActionComponent, context?: ActionContext | undefined): void {
         action.deactivate?.(this, context)
         action.remove?.(this)
@@ -557,7 +607,16 @@ export class PlayerCtrl implements ILoop, IActionUser {
         if (healAmount <= 0) return
 
         this.hpRegenAccumulator -= healAmount
+        const prev = currentHp
         this.baseSpec.ReceiveCalcHeal(healAmount)
+        this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", {
+            actorId: "player",
+            key: "hp",
+            prev,
+            next: this.baseSpec.status.health,
+            max: maxHp,
+            reason: "regen"
+        })
     }
 
     private applyMpRegen(delta: number) {
@@ -576,7 +635,44 @@ export class PlayerCtrl implements ILoop, IActionUser {
         if (manaAmount <= 0) return
 
         this.mpRegenAccumulator -= manaAmount
+        const prev = currentMp
         this.baseSpec.ReceiveCalcMana(manaAmount)
+        this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", {
+            actorId: "player",
+            key: "mp",
+            prev,
+            next: this.baseSpec.status.mana,
+            max: maxMp,
+            reason: "regen"
+        })
+    }
+
+    private applySpRegen(delta: number) {
+        const maxSp = this.baseSpec.stats.getStat("stamina")
+        const currentSp = this.baseSpec.status.stamina
+        if (currentSp >= maxSp) {
+            this.spRegenAccumulator = 0
+            return
+        }
+
+        const spRegenPerSec = Math.max(0, this.baseSpec.stats.getStat("staminaRegen"))
+        if (spRegenPerSec <= 0) return
+
+        this.spRegenAccumulator += spRegenPerSec * Math.max(0, delta)
+        const staminaAmount = Math.floor(this.spRegenAccumulator)
+        if (staminaAmount <= 0) return
+
+        this.spRegenAccumulator -= staminaAmount
+        const prev = currentSp
+        this.baseSpec.ReceiveCalcStamina(staminaAmount)
+        this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", {
+            actorId: "player",
+            key: "stamina",
+            prev,
+            next: this.baseSpec.status.stamina,
+            max: maxSp,
+            reason: "regen"
+        })
     }
 
     update(delta: number) {
@@ -588,6 +684,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
 
         this.applyHpRegen(delta)
         this.applyMpRegen(delta)
+        this.applySpRegen(delta)
         this.currentState = this.currentState.Update(delta, this.moveDirection)
         this.player.Update(delta)
     }

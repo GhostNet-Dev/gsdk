@@ -90,8 +90,10 @@ export class State {
     }
     CheckRoll() {
         if (this.playerCtrl.KeyState[KeyType.Action2]) {
-            this.playerCtrl.RollSt.Init()
-            return this.playerCtrl.RollSt
+            if (this.playerCtrl.consumeStamina(15)) {
+                this.playerCtrl.RollSt.Init()
+                return this.playerCtrl.RollSt
+            }
         }
     }
     CheckMagic() {

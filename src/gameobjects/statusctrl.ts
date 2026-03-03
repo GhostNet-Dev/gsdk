@@ -14,6 +14,7 @@ export default class StatusCtrl {
         private playerCtrl: PlayerCtrl,
         private heart: DefaultStatusBar,
         private mp: DefaultStatusBar,
+        private sp: DefaultStatusBar,
         private exp: WideStatusBar,
         private buff: BuffStatus,
     ) {
@@ -24,9 +25,11 @@ export default class StatusCtrl {
 
         const hpMax = this.playerCtrl.baseSpec.stats.getStat("hp")
         const mpMax = this.playerCtrl.baseSpec.stats.getStat("mp")
+        const spMax = this.playerCtrl.baseSpec.stats.getStat("stamina")
         const expMax = this.playerCtrl.baseSpec.status.maxExp
         this.heart.UpdateStatus(toPercent(this.playerCtrl.baseSpec.status.health, hpMax))
         this.mp.UpdateStatus(toPercent(this.playerCtrl.baseSpec.status.mana, mpMax))
+        this.sp.UpdateStatus(toPercent(this.playerCtrl.baseSpec.status.stamina, spMax))
         this.exp.UpdateStatus(toPercent(this.playerCtrl.baseSpec.status.exp, expMax))
 
         this.eventCtrl.RegisterEventListener(EventTypes.ResourceChanged + "player", (e: ResourceChangedPayload) => {
@@ -36,6 +39,8 @@ export default class StatusCtrl {
                 this.heart.UpdateStatus(percent)
             } else if (e.key == "mp") {
                 this.mp.UpdateStatus(percent)
+            } else if (e.key == "stamina") {
+                this.sp.UpdateStatus(percent)
             } else if (e.key == "exp") {
                 this.exp.UpdateStatus(percent)
             }
