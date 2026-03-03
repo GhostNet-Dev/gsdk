@@ -40,6 +40,7 @@ export class RangeAimState extends AttackState implements IPlayerAction {
 
         this.keepAimCameraOnExit = false
         this.player.ChangeAction(this.getAnimationForItem(handItem))
+        this.player.EnableAimPitch(true)
         this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.AimThirdPerson)
         this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, true)
         this.player.createDashedCircle(this.baseSpec.AttackRange)
@@ -50,6 +51,7 @@ export class RangeAimState extends AttackState implements IPlayerAction {
     }
 
     override Uninit(): void {
+        this.player.EnableAimPitch(false)
         if (!this.keepAimCameraOnExit) {
             this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, false)
             this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.ThirdFollowPerson)
@@ -67,6 +69,7 @@ export class RangeAimState extends AttackState implements IPlayerAction {
         // 🎯 핵심 개선: 조준 시차(Parallax) 수정
         // 1. 화면 중앙 조준점이 가리키는 월드 상의 실제 지점을 찾습니다.
         const targetPos = this.getReticleWorldTarget(100); 
+        this.player.SetAimTarget(targetPos)
 
         // 2. 캐릭터가 그 지점을 바라보게 합니다.
         // Y축은 캐릭터의 높이를 유지하여 캐릭터가 앞으로 고꾸라지거나 뒤로 젖혀지지 않게 합니다.

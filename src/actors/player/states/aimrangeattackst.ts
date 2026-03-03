@@ -52,6 +52,7 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
         this.attackTime = this.attackSpeed
         this.clock = new THREE.Clock()
         this.player.createDashedCircle(this.attackDist)
+        this.player.EnableAimPitch(true)
     }
 
     private startFiring() {
@@ -101,6 +102,7 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
     }
 
     override Uninit(): void {
+        this.player.EnableAimPitch(false)
         super.Uninit()
     }
 
@@ -118,6 +120,7 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
         // 🎯 핵심 개선: 조준 시차(Parallax) 수정
         // 화면 중앙 조준점이 가리키는 월드 상의 실제 지점을 찾고 캐릭터가 그곳을 바라보게 합니다.
         const targetPos = this.getReticleWorldTarget(100); 
+        this.player.SetAimTarget(targetPos)
         this.player.Meshs.lookAt(
             targetPos.x,
             this.player.Pos.y,

@@ -24,6 +24,15 @@ export class Player extends PhysicsObject {
     private playerModel: Char = Char.CharHumanMale
     bindMesh: Record<string, THREE.Group> = {}
 
+    private aimPitchEnabled = false
+    private aimPitchTarget?: THREE.Vector3
+    private currentAimPitch = 0
+    private spineAimBones: THREE.Bone[] = []
+    private spineAimPrevOffset = new Map<THREE.Bone, THREE.Quaternion>()
+    private readonly spineAimPitchMaxUp = THREE.MathUtils.degToRad(45)
+    private readonly spineAimPitchMaxDown = THREE.MathUtils.degToRad(35)
+    private readonly spineAimLerpSpeed = 12
+
     clipMap = new Map<ActionType, THREE.AnimationClip | undefined>()
     meshs: THREE.Group
     constructor(
@@ -160,6 +169,7 @@ export class Player extends PhysicsObject {
         this.audioListener && this.meshs.add(this.audioListener)
 
         this.mixer = asset.GetMixer(name)
+        this.initializeAimPitchBones()
 
         this.clipMap.set(ActionType.Idle, asset.GetAnimationClip(Ani.Idle))
         this.clipMap.set(ActionType.TreeIdle, asset.GetAnimationClip(Ani.FightIdle))
@@ -212,6 +222,73 @@ export class Player extends PhysicsObject {
 
 
         this.meshs.visible = false
+    }
+
+    private initializeAimPitchBones() {
+        this.spineAimBones = []
+        this.spineAimPrevOffset.clear()
+        this.currentAimPitch = 0
+
+        const candidates = ["mixamorigSpine", "mixamorigSpine1", "mixamorigSpine2", "mixamorigNeck"]
+        for (const name of candidates) {
+            const bone = this.meshs.getObjectByName(name)
+            if (!(bone instanceof THREE.Bone)) continue
+            this.spineAimBones.push(bone)
+            this.spineAimPrevOffset.set(bone, new THREE.Quaternion())
+        }
+    }
+
+    EnableAimPitch(enable: boolean) {
+        this.aimPitchEnabled = enable
+        if (!enable) this.resetAimPitch()
+    }
+
+    SetAimTarget(target: THREE.Vector3) {
+        if (!this.aimPitchTarget) this.aimPitchTarget = new THREE.Vector3()
+        this.aimPitchTarget.copy(target)
+    }
+
+    private resetAimPitch() {
+        this.currentAimPitch = 0
+        for (const bone of this.spineAimBones) {
+            const prevOffset = this.spineAimPrevOffset.get(bone)
+            if (!prevOffset) continue
+            bone.quaternion.multiply(prevOffset.clone().invert())
+            prevOffset.identity()
+        }
+    }
+
+    private updateAimPitch(delta: number) {
+        if (!this.aimPitchEnabled || !this.aimPitchTarget || this.spineAimBones.length == 0) {
+            return
+        }
+
+        const chestLikeBone = this.spineAimBones[this.spineAimBones.length - 1]
+        const from = new THREE.Vector3()
+        chestLikeBone.getWorldPosition(from)
+
+        const localDir = this.meshs.worldToLocal(this.aimPitchTarget.clone()).sub(this.meshs.worldToLocal(from.clone())).normalize()
+        let targetPitch = Math.atan2(localDir.y, localDir.z)
+        targetPitch = THREE.MathUtils.clamp(targetPitch, -this.spineAimPitchMaxDown, this.spineAimPitchMaxUp)
+
+        this.currentAimPitch = THREE.MathUtils.lerp(
+            this.currentAimPitch,
+            targetPitch,
+            Math.min(1, delta * this.spineAimLerpSpeed)
+        )
+
+        const count = this.spineAimBones.length
+        for (let i = 0; i < count; i++) {
+            const bone = this.spineAimBones[i]
+            const prevOffset = this.spineAimPrevOffset.get(bone)
+            if (!prevOffset) continue
+
+            const weight = (i + 1) / count
+            const nextOffset = new THREE.Quaternion().setFromEuler(new THREE.Euler(this.currentAimPitch * weight * 0.6, 0, 0))
+            bone.quaternion.multiply(prevOffset.clone().invert())
+            bone.quaternion.multiply(nextOffset)
+            prevOffset.copy(nextOffset)
+        }
     }
     changeAnimate(animate: THREE.AnimationClip | undefined, speed?: number) {
         if (animate == undefined || this.currentClip == animate) return
@@ -304,6 +381,7 @@ export class Player extends PhysicsObject {
     Update(delta: number) {
         this.effector.Update(delta)
         this.mixer?.update(delta)
+        this.updateAimPitch(delta)
         this.CBoxUpdate()
         if (this.line) this.line.position.copy(this.Pos)
     }
