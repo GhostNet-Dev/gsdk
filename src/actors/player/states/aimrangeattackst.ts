@@ -119,8 +119,9 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
 
         // 🎯 핵심 개선: 조준 시차(Parallax) 수정
         // 화면 중앙 조준점이 가리키는 월드 상의 실제 지점을 찾고 캐릭터가 그곳을 바라보게 합니다.
-        const targetPos = this.getReticleWorldTarget(100); 
-        this.player.SetAimTarget(targetPos)
+        const targetPos = this.getReticleWorldTarget(100);
+        const bodyAimTarget = this.getCameraForwardWorldTarget(1000)
+        this.player.SetAimTarget(bodyAimTarget)
         this.player.Meshs.lookAt(
             targetPos.x,
             this.player.Pos.y,
