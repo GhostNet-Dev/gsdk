@@ -79,9 +79,9 @@ export class RangeAimState extends AttackState implements IPlayerAction {
             targetPos.z
         );
 
-        // 🎯 추가: 총구 방향 충돌 지점에 가늠자 배치
-        const muzzleHitPoint = this.getMuzzleWorldTarget(100);
-        (this.playerCtrl.camera as any).setCrosshairWorldPosition(muzzleHitPoint);
+        // 🎯 가늠자는 카메라 중앙 레티클이 가리키는 실제 월드 지점을 따라가야
+        // orbit 상/하 회전 시에도 함께 위아래로 이동한다.
+        (this.playerCtrl.camera as any).setCrosshairWorldPosition(targetPos);
 
         const firePressed = this.playerCtrl.KeyState[KeyType.Action1] === true
         if (this.waitReleaseBeforeFire) {
