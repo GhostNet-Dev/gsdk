@@ -179,6 +179,15 @@ export abstract class AttackState extends State implements IPlayerAction {
     }
 
 
+
+    protected getCameraForwardWorldTarget(distance = AttackState.FAR_AIM_DISTANCE): THREE.Vector3 {
+        const forward = new THREE.Vector3()
+        this.playerCtrl.camera.getWorldDirection(forward)
+        return new THREE.Vector3()
+            .copy(this.playerCtrl.camera.position)
+            .add(forward.multiplyScalar(distance))
+    }
+
     private isPlayerOwnedObject(obj: THREE.Object3D): boolean {
         let current: THREE.Object3D | null = obj
         while (current) {

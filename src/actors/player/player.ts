@@ -229,12 +229,39 @@ export class Player extends PhysicsObject {
         this.spineAimPrevOffset.clear()
         this.currentAimPitch = 0
 
-        const candidates = ["mixamorigSpine", "mixamorigSpine1", "mixamorigSpine2", "mixamorigNeck"]
+        const candidates = [
+            // Mixamo
+            "mixamorigSpine", "mixamorigSpine1", "mixamorigSpine2", "mixamorigNeck",
+            // Blender/일반 FBX 네이밍
+            "Spine", "Spine1", "Spine2", "Neck",
+            // UE 계열 네이밍
+            "spine_01", "spine_02", "spine_03", "neck_01",
+        ]
+
         for (const name of candidates) {
             const bone = this.meshs.getObjectByName(name)
             if (!(bone instanceof THREE.Bone)) continue
+            if (this.spineAimBones.includes(bone)) continue
             this.spineAimBones.push(bone)
             this.spineAimPrevOffset.set(bone, new THREE.Quaternion())
+        }
+
+        // 명시적 이름 매칭 실패 시, 스켈레톤에서 spine/neck/chest 계열 본을 자동 탐색
+        if (this.spineAimBones.length == 0) {
+            const discovered: THREE.Bone[] = []
+            this.meshs.traverse(obj => {
+                if (!(obj instanceof THREE.Bone)) return
+                const lowerName = obj.name.toLowerCase()
+                if (lowerName.includes("spine") || lowerName.includes("neck") || lowerName.includes("chest")) {
+                    discovered.push(obj)
+                }
+            })
+
+            discovered.sort((a, b) => a.name.localeCompare(b.name))
+            for (const bone of discovered) {
+                this.spineAimBones.push(bone)
+                this.spineAimPrevOffset.set(bone, new THREE.Quaternion())
+            }
         }
     }
 
@@ -267,8 +294,9 @@ export class Player extends PhysicsObject {
         const from = new THREE.Vector3()
         chestLikeBone.getWorldPosition(from)
 
-        const localDir = this.meshs.worldToLocal(this.aimPitchTarget.clone()).sub(this.meshs.worldToLocal(from.clone())).normalize()
-        let targetPitch = Math.atan2(localDir.y, localDir.z)
+        const toTarget = new THREE.Vector3().subVectors(this.aimPitchTarget, from)
+        const horizontalDist = Math.sqrt(toTarget.x * toTarget.x + toTarget.z * toTarget.z)
+        let targetPitch = Math.atan2(toTarget.y, Math.max(0.0001, horizontalDist))
         targetPitch = THREE.MathUtils.clamp(targetPitch, -this.spineAimPitchMaxDown, this.spineAimPitchMaxUp)
 
         this.currentAimPitch = THREE.MathUtils.lerp(

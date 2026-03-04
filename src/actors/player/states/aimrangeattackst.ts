@@ -119,17 +119,18 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
 
         // 🎯 핵심 개선: 조준 시차(Parallax) 수정
         // 화면 중앙 조준점이 가리키는 월드 상의 실제 지점을 찾고 캐릭터가 그곳을 바라보게 합니다.
-        const targetPos = this.getReticleWorldTarget(100); 
-        this.player.SetAimTarget(targetPos)
+        const targetPos = this.getReticleWorldTarget(100);
+        const bodyAimTarget = this.getCameraForwardWorldTarget(1000)
+        this.player.SetAimTarget(bodyAimTarget)
         this.player.Meshs.lookAt(
             targetPos.x,
             this.player.Pos.y,
             targetPos.z
         );
 
-        // 🎯 추가: 총구 방향 충돌 지점에 가늠자 배치
-        const muzzleHitPoint = this.getMuzzleWorldTarget(100);
-        (this.playerCtrl.camera as any).setCrosshairWorldPosition(muzzleHitPoint);
+        // 🎯 가늠자는 카메라 중앙 레티클이 가리키는 실제 월드 지점을 따라가야
+        // orbit 상/하 회전 시에도 함께 위아래로 이동한다.
+        (this.playerCtrl.camera as any).setCrosshairWorldPosition(targetPos);
 
         if (this.attackProcess) return this
 
