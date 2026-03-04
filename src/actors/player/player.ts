@@ -226,48 +226,52 @@ export class Player extends PhysicsObject {
 
     private initializeAimPitchBones() {
         this.spineAimBones = []
-        this.spineAimPrevOffset.clear()
         this.currentAimPitch = 0
 
-        const candidates = [
-            // Mixamo
-            "mixamorigSpine", "mixamorigSpine1", "mixamorigSpine2", "mixamorigNeck",
-            // Blender/일반 FBX 네이밍
-            "Spine", "Spine1", "Spine2", "Neck",
-            // UE 계열 네이밍
-            "spine_01", "spine_02", "spine_03", "neck_01",
+        // 1. 실제 추출된 Mixamo 본 이름 중 상체 굽힘에 가장 적합한 본들 선택
+        // Spine (하단) -> Spine1 (중간) -> Spine2 (상단/가슴)
+        // 하단 Spine은 골반과 붙어있어 움직이면 하체가 어색해지므로 Spine1, Spine2를 주로 사용합니다.
+        const targetNames = [
+            "mixamorigSpine1", 
+            "mixamorigSpine2",
+            "mixamorig:Spine1",
+            "mixamorig:Spine2"
         ]
 
-        for (const name of candidates) {
+        for (const name of targetNames) {
             const bone = this.meshs.getObjectByName(name)
-            if (!(bone instanceof THREE.Bone)) continue
-            if (this.spineAimBones.includes(bone)) continue
-            this.spineAimBones.push(bone)
-            this.spineAimPrevOffset.set(bone, new THREE.Quaternion())
-        }
-
-        // 명시적 이름 매칭 실패 시, 스켈레톤에서 spine/neck/chest 계열 본을 자동 탐색
-        if (this.spineAimBones.length == 0) {
-            const discovered: THREE.Bone[] = []
-            this.meshs.traverse(obj => {
-                if (!(obj instanceof THREE.Bone)) return
-                const lowerName = obj.name.toLowerCase()
-                if (lowerName.includes("spine") || lowerName.includes("neck") || lowerName.includes("chest")) {
-                    discovered.push(obj)
-                }
-            })
-
-            discovered.sort((a, b) => a.name.localeCompare(b.name))
-            for (const bone of discovered) {
+            if (bone instanceof THREE.Bone) {
                 this.spineAimBones.push(bone)
-                this.spineAimPrevOffset.set(bone, new THREE.Quaternion())
             }
         }
+
+        // 2. 만약 찾지 못했다면 범용 키워드로 탐색 (Fallback)
+        if (this.spineAimBones.length == 0) {
+            this.meshs.traverse(obj => {
+                if (obj instanceof THREE.Bone) {
+                    const lowerName = obj.name.toLowerCase()
+                    if (lowerName.includes("spine") && !lowerName.includes("hair") && !lowerName.includes("head")) {
+                        this.spineAimBones.push(obj)
+                    }
+                }
+            })
+            // 정렬 및 핵심 본(상단 2개) 선택
+            this.spineAimBones.sort((a, b) => {
+                let depthA = 0, depthB = 0
+                a.traverseAncestors(() => depthA++)
+                b.traverseAncestors(() => depthB++)
+                return depthA - depthB
+            })
+            if (this.spineAimBones.length > 2) {
+                this.spineAimBones = this.spineAimBones.slice(-2)
+            }
+        }
+
+        console.log(`[Player] Corrected Aim Bones:`, this.spineAimBones.map(b => b.name))
     }
 
     EnableAimPitch(enable: boolean) {
         this.aimPitchEnabled = enable
-        if (!enable) this.resetAimPitch()
     }
 
     SetAimTarget(target: THREE.Vector3) {
@@ -277,12 +281,6 @@ export class Player extends PhysicsObject {
 
     private resetAimPitch() {
         this.currentAimPitch = 0
-        for (const bone of this.spineAimBones) {
-            const prevOffset = this.spineAimPrevOffset.get(bone)
-            if (!prevOffset) continue
-            bone.quaternion.multiply(prevOffset.clone().invert())
-            prevOffset.identity()
-        }
     }
 
     private updateAimPitch(delta: number) {
@@ -290,32 +288,46 @@ export class Player extends PhysicsObject {
             return
         }
 
-        const chestLikeBone = this.spineAimBones[this.spineAimBones.length - 1]
-        const from = new THREE.Vector3()
-        chestLikeBone.getWorldPosition(from)
+        // 1. 타겟으로의 방향 벡터 계산
+        const referenceBone = this.spineAimBones[Math.min(this.spineAimBones.length - 1, 1)]
+        const fromPos = new THREE.Vector3()
+        referenceBone.getWorldPosition(fromPos)
 
-        const toTarget = new THREE.Vector3().subVectors(this.aimPitchTarget, from)
+        const toTarget = new THREE.Vector3().subVectors(this.aimPitchTarget, fromPos).normalize()
+        
+        // 2. 상하 각도(Pitch) 계산
+        // 수평 거리 대비 높이 차이를 이용
         const horizontalDist = Math.sqrt(toTarget.x * toTarget.x + toTarget.z * toTarget.z)
-        let targetPitch = Math.atan2(toTarget.y, Math.max(0.0001, horizontalDist))
+        let targetPitch = Math.atan2(toTarget.y, horizontalDist)
+        
+        // 각도 제한 (라디안)
         targetPitch = THREE.MathUtils.clamp(targetPitch, -this.spineAimPitchMaxDown, this.spineAimPitchMaxUp)
 
+        // 3. 부드러운 보간
         this.currentAimPitch = THREE.MathUtils.lerp(
             this.currentAimPitch,
             targetPitch,
             Math.min(1, delta * this.spineAimLerpSpeed)
         )
 
+        // 4. 각 본에 회전 적용
         const count = this.spineAimBones.length
-        for (let i = 0; i < count; i++) {
-            const bone = this.spineAimBones[i]
-            const prevOffset = this.spineAimPrevOffset.get(bone)
-            if (!prevOffset) continue
+        const pitchPerBone = this.currentAimPitch / count
 
-            const weight = (i + 1) / count
-            const nextOffset = new THREE.Quaternion().setFromEuler(new THREE.Euler(this.currentAimPitch * weight * 0.6, 0, 0))
-            bone.quaternion.multiply(prevOffset.clone().invert())
-            bone.quaternion.multiply(nextOffset)
-            prevOffset.copy(nextOffset)
+        const _boneWorldQuat = new THREE.Quaternion()
+        for (const bone of this.spineAimBones) {
+            // 월드 X축(pitch 회전축)을 본의 로컬 공간으로 변환한다.
+            // 본의 로컬 좌표계는 바인드 포즈에 따라 월드와 다를 수 있으므로
+            // 고정된 (1,0,0)을 쓰면 엉뚱한 방향으로 회전한다.
+            bone.getWorldQuaternion(_boneWorldQuat)
+            const localAxis = new THREE.Vector3(1, 0, 0)
+                .applyQuaternion(_boneWorldQuat.invert())
+                .normalize()
+
+            // Mixamo FBX: 로컬 X 양방향 = 앞으로 꺾임(pitch down)
+            // 위를 조준(양수 pitch)할 때는 반대 부호를 적용해야 뒤로 젖혀진다.
+            const q = new THREE.Quaternion().setFromAxisAngle(localAxis, -pitchPerBone)
+            bone.quaternion.multiply(q)
         }
     }
     changeAnimate(animate: THREE.AnimationClip | undefined, speed?: number) {
