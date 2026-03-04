@@ -78,9 +78,8 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
         const gunPos = new THREE.Vector3()
         this.player.GetMuzzlePosition(gunPos)
 
-        // 가늠자 배치와 동일한 레이캐스트(총구 방향)를 사용 → 방향·거리 일치
-        // Update()의 getMuzzleWorldTarget(100)과 같은 기준점
-        const aimTarget = this.getMuzzleWorldTarget(Math.max(this.attackDist, 100))
+        // 가늠자(크로스헤어)와 동일한 기준: 카메라 중앙 레이캐스트로 타겟 지점 계산
+        const aimTarget = this.getReticleWorldTarget(Math.max(this.attackDist, 100))
         const shootDir = this.computeShootDirectionFromGun(gunPos, aimTarget)
         this.attackDir.copy(shootDir)
 
