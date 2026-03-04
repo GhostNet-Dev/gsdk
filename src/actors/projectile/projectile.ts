@@ -26,6 +26,7 @@ export interface IProjectileModel {
   create(position: THREE.Vector3, direction?: THREE.Vector3): void;
   update(position: THREE.Vector3): void;
   release(): void;
+  hit?(position: THREE.Vector3, normal?: THREE.Vector3): void;
   init?(): Promise<void>;
 }
 
@@ -68,6 +69,7 @@ export type ProjectileSet = {
 export class Projectile implements ILoop {
   LoopId = 0;
   projectiles = new Map<MonsterId, ProjectileSet[]>();
+  private physicList: THREE.Object3D[] = [];
 
   constructor(
     private eventCtrl: IEventController,
@@ -81,6 +83,13 @@ export class Projectile implements ILoop {
     eventCtrl.RegisterEventListener(EventTypes.Projectile, (opt: ProjectileMsg) => {
       this.AllocateProjPool(opt);
     });
+
+    eventCtrl.RegisterEventListener(EventTypes.RegisterLandPhysic, (obj: THREE.Object3D) => {
+      if (!this.physicList.includes(obj)) this.physicList.push(obj);
+    });
+    eventCtrl.RegisterEventListener(EventTypes.RegisterPhysic, (obj: THREE.Object3D) => {
+      if (!this.physicList.includes(obj)) this.physicList.push(obj);
+    });
   }
 
   GetModel(id: MonsterId): IProjectileModel {
@@ -92,7 +101,7 @@ export class Projectile implements ILoop {
       case MonsterId.Fireball:
         return new FireballModel();
       case MonsterId.WarhamerTracer:
-        return new StreakTracerModel({ camera: this.camera });
+        return new StreakTracerModel({ camera: this.camera, eventCtrl: this.eventCtrl });
       case MonsterId.Knife:
         return new KnifeModel(this.loader?.GetAssets(Char.KayKitAdvDagger));
       case MonsterId.DefaultBall:
@@ -223,7 +232,7 @@ export class Projectile implements ILoop {
     if (!set) {
       const model = this.GetModel(id);
       const stat = StatFactory.getDefaultStats(id as string);
-      const ctrl = new ProjectileCtrl(model, this.targetList, this.eventCtrl, msg.range, stat);
+      const ctrl = new ProjectileCtrl(model, this.targetList, this.physicList, this.eventCtrl, msg.range, stat);
 
       set = { model, ctrl, releasing: false, initializing: false };
       pool.push(set);

@@ -38,6 +38,7 @@ export class ProjectileCtrl implements IActionUser {
   constructor(
     private projectile: IProjectileModel,
     private targetList: THREE.Object3D[],
+    private physicList: THREE.Object3D[],
     private eventCtrl: IEventController,
     private range: number,
     private stats: Partial<Record<StatKey, number>>,
@@ -184,7 +185,13 @@ export class ProjectileCtrl implements IActionUser {
         damage: this.damage,
         obj: obj.target,
       };
-      this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [v]);
+
+      const normal = (obj as any).normal ?? new THREE.Vector3().subVectors(obj.hitPoint, obj.target.position).normalize();
+      this.projectile.hit?.(obj.hitPoint, normal);
+
+      if (this.targetList.includes(obj.target)) {
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [v]);
+      }
       return true;
     }
 
@@ -215,18 +222,25 @@ export class ProjectileCtrl implements IActionUser {
       obj: hit.target,
     };
 
-    this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [v]);
+    const normal = (hit as any).normal ?? new THREE.Vector3().subVectors(hit.hitPoint, hit.target.position).normalize();
+    this.projectile.hit?.(hit.hitPoint, normal);
+
+    if (this.targetList.includes(hit.target)) {
+      this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [v]);
+    }
   }
 
   // Ray + Box3 정밀 판정 (invisible 메시에서도 동작)
-  private getRaycastHit(): { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number } | null {
+  private getRaycastHit(): { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number; normal?: THREE.Vector3 } | null {
     const origin = this.prevPosition.clone();
     const direction = this.moveDirection.clone().normalize();
     const ray = new THREE.Ray(origin, direction);
 
-    let closest: { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number } | null = null;
+    let closest: { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number; normal?: THREE.Vector3 } | null = null;
 
-    for (const target of this.targetList) {
+    const checkList = [...this.targetList, ...this.physicList];
+
+    for (const target of checkList) {
       if (this.isOwnerOrSelfTarget(target)) continue;
 
       const box = new THREE.Box3().setFromObject(target);
@@ -239,7 +253,23 @@ export class ProjectileCtrl implements IActionUser {
       if (distance > this.range) continue;
 
       if (!closest || distance < closest.distance) {
-        closest = { target, hitPoint, distance };
+        // 박스 표면 법선 근사값 (가장 가까운 축)
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        const localHit = new THREE.Vector3().subVectors(hitPoint, center);
+        const size = new THREE.Vector3();
+        box.getSize(size).multiplyScalar(0.5);
+        
+        const normal = new THREE.Vector3();
+        const dx = Math.abs(localHit.x / size.x);
+        const dy = Math.abs(localHit.y / size.y);
+        const dz = Math.abs(localHit.z / size.z);
+
+        if (dx > dy && dx > dz) normal.set(localHit.x > 0 ? 1 : -1, 0, 0);
+        else if (dy > dz) normal.set(0, localHit.y > 0 ? 1 : -1, 0);
+        else normal.set(0, 0, localHit.z > 0 ? 1 : -1);
+
+        closest = { target, hitPoint, distance, normal };
       }
     }
 
@@ -339,10 +369,12 @@ export class ProjectileCtrl implements IActionUser {
     p2: THREE.Vector3,
     targets: THREE.Object3D[],
     radius = 1
-  ): { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number } | null {
-    let closest: { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number } | null = null;
+  ): { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number; normal?: THREE.Vector3 } | null {
+    let closest: { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number; normal?: THREE.Vector3 } | null = null;
 
-    for (const target of targets) {
+    const checkList = (this.isHitscan || this.useRaycast) ? [...targets, ...this.physicList] : targets;
+
+    for (const target of checkList) {
       const dis = p1.distanceTo(target.position);
       if (dis > this.range) continue;
 
