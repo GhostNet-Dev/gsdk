@@ -126,11 +126,6 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
         const handItem = this.playerCtrl.baseSpec.GetMeleeItem()
         if (handItem == undefined) return this;
 
-        if (!this.tryConsumeAttackCost(this.resolveAttackCostSpec(handItem, DEFAULT_MELEE_ATTACK_COST), "자원이 부족합니다.")) {
-            this.attackProcess = false
-            return this
-        }
-
         if(handItem.Sound) this.eventCtrl.SendEventMessage(EventTypes.PlaySound, handItem.Mesh, handItem.Sound)
 
         this.keytimeout.push(setTimeout(() => {

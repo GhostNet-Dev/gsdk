@@ -219,9 +219,11 @@ export class JumpZState extends MonState implements IMonsterAction {
         if (movX || movZ) {
             this.dirV.copy(v)
             this.dirV.y = 0
-            const mx = this.MX.lookAt(this.dirV, this.ZeroV, this.YV)
-            const qt = this.QT.setFromRotationMatrix(mx)
-            this.zombie.Meshs.quaternion.copy(qt)
+            if (this.dirV.lengthSq() > 0) {
+                const mx = this.MX.lookAt(this.dirV, this.ZeroV, this.YV)
+                const qt = this.QT.setFromRotationMatrix(mx)
+                this.zombie.Meshs.quaternion.copy(qt)
+            }
         }
 
         if (this.gphysic.Check(this.zombie)) {
@@ -283,9 +285,13 @@ export class AttackZState extends MonState implements IMonsterAction {
             if (checkRun != undefined) return checkRun
         }
 
-        const mx = this.MX.lookAt(v, this.ZeroV, this.YV)
-        const qt = this.QT.setFromRotationMatrix(mx)
-        this.zombie.Meshs.quaternion.copy(qt)
+        const lookDir = v.clone();
+        lookDir.y = 0;
+        if (lookDir.lengthSq() > 0) {
+            const mx = this.MX.lookAt(lookDir, this.ZeroV, this.YV)
+            const qt = this.QT.setFromRotationMatrix(mx)
+            this.zombie.Meshs.quaternion.copy(qt)
+        }
 
 
         if(this.attackProcess) return this
@@ -398,9 +404,13 @@ export class RunZState extends MonState implements IMonsterAction {
         // this.zombie.Meshs.position.x += movX
         // this.zombie.Meshs.position.z += movZ
 
-        const mx = this.MX.lookAt(v, this.ZeroV, this.YV)
-        const qt = this.QT.setFromRotationMatrix(mx)
-        this.zombie.Meshs.quaternion.copy(qt)
+        const lookDir = v.clone();
+        lookDir.y = 0;
+        if (lookDir.lengthSq() > 0) {
+            const mx = this.MX.lookAt(lookDir, this.ZeroV, this.YV)
+            const qt = this.QT.setFromRotationMatrix(mx)
+            this.zombie.Meshs.quaternion.copy(qt)
+        }
 
         // ✅ 이동 처리
         const dis = this.gphysic.CheckDirection(this.zombie, this.dir.copy(v), this.speed);

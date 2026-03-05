@@ -133,9 +133,13 @@ export class DashRunState extends MonState implements IMonsterAction {
         }
         v.y = 0
 
-        const mx = this.MX.lookAt(v, this.ZeroV, this.YV)
-        const qt = this.QT.setFromRotationMatrix(mx)
-        this.zombie.Meshs.quaternion.copy(qt)
+        const lookDir = v.clone();
+        lookDir.y = 0;
+        if (lookDir.lengthSq() > 0) {
+            const mx = this.MX.lookAt(lookDir, this.ZeroV, this.YV)
+            const qt = this.QT.setFromRotationMatrix(mx)
+            this.zombie.Meshs.quaternion.copy(qt)
+        }
 
         const dist = this.zombie.Pos.distanceTo(target.Pos)
         if(dist < 15) {

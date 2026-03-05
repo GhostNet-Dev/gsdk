@@ -546,14 +546,20 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
 
         // 무기 세팅/오토에임
         const handItem = this.playerCtrl.baseSpec.GetMeleeItem();
-        const costSpec = this.resolveAttackCostSpec(handItem, DEFAULT_COMBO_MELEE_ATTACK_COST)
-        if (!this.tryConsumeAttackCost(costSpec, "자원이 부족합니다.")) {
-            this.clearStepTimers();
-            this.ChangeMode(this.playerCtrl.currentIdleState)
-            return;
+        const costSpec = this.resolveAttackCostSpec(handItem, DEFAULT_COMBO_MELEE_ATTACK_COST);
+
+        // [개선] 첫 타격(stepIndex 0)은 스태미나를 소모하지 않음.
+        // 두 번째 타격부터는 자원이 부족하면 공격을 시작하지 않고 Idle 상태로 복귀.
+        if (this.stepIndex > 0) {
+            if (!this.tryConsumeAttackCost(costSpec, "자원이 부족합니다.")) {
+                this.clearStepTimers();
+                this.ChangeMode(this.playerCtrl.currentIdleState);
+                return;
+            }
         }
 
         if (handItem) {
+
             // 아이템 Action.activate는 장착 시점(PlayerCtrl.Equipment)에서 1회 호출됨
             // 공격 시작/콤보 스텝에서는 onUse 트리거만 발행
             (handItem as Item).trigger?.("onUse");
