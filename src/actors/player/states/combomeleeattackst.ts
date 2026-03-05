@@ -196,7 +196,6 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         protected eventCtrl: IEventController, spec: BaseSpec
     ) {
         super(playerCtrl, player, gphysic, eventCtrl, spec);
-        this.raycast.params.Points.threshold = 20;
     }
 
     /* ------------------------------ Helpers --------------------------------- */
@@ -269,40 +268,32 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         const baseDamage = this.baseSpec.Damage * dmgMul;
         const baseRange = this.attackDist * rangeMul;
 
-        this.player.Meshs.getWorldDirection(this.attackDir);
-        this.raycast.set(this.player.CenterPos, this.attackDir.normalize());
-
-        const hits = this.raycast.intersectObjects(this.playerCtrl.targets);
+        const targets = this.getTargetsInCone(baseRange);
         let anyHit = false;
 
-        // 히트 이펙트 위치 저장용
-        let hitPoint: THREE.Vector3 | null = null;
-        let hitNormal = new THREE.Vector3(0, 1, 0);
-
-        if (hits.length > 0 && hits[0].distance < baseRange) {
-            const hit = hits[0];
-            hitPoint = hit.point;
-            if (hit.face) hitNormal = hit.face.normal;
-
+        if (targets.length > 0) {
             const buckets = new Map<string, any[]>();
-            for (const h of hits) {
-                if (h.distance > baseRange) continue;
-                const arr = buckets.get(h.object.name) ?? [];
+            for (const obj of targets) {
+                const arr = buckets.get(obj.name) ?? [];
                 arr.push({
                     type: AttackType.NormalSwing,
                     damage: baseDamage,
                     spec: this.baseSpec,
-                    obj: h.object,
+                    obj: obj,
                     distance: baseRange // [New] 현재 공격의 유효 사거리 전달
                 });
-                buckets.set(h.object.name, arr);
+                buckets.set(obj.name, arr);
             }
             buckets.forEach((v, k) => {
                 this.keytimeout.push(setTimeout(() => {
                     const particleCount = (this.stepIndex == this.chain.steps.length - 1) ? 40 : 20;
-                    if (hitPoint) {
-                        this.eventCtrl.SendEventMessage(EventTypes.GlobalEffect, GlobalEffectType.SparkEshSystem, hitPoint, hitNormal, { count: particleCount })
-                    }
+                    // Note: hitPoint and hitNormal are no longer easily available without raycast.
+                    // We can either raycast again for visual effects or just use target center.
+                    const targetObj = v[0].obj as THREE.Object3D;
+                    const hitPoint = targetObj.position.clone();
+                    const hitNormal = new THREE.Vector3(0, 1, 0);
+
+                    this.eventCtrl.SendEventMessage(EventTypes.GlobalEffect, GlobalEffectType.SparkEshSystem, hitPoint, hitNormal, { count: particleCount })
                     this.eventCtrl.SendEventMessage(EventTypes.Attack + k, v);
                 }, this.attackSpeed * 1000 * 0.4))
             });

@@ -23,7 +23,6 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
         protected eventCtrl: IEventController, spec: BaseSpec
     ) {
         super(playerCtrl, player, gphysic, eventCtrl, spec)
-        this.raycast.params.Points.threshold = 20
     }
 
     Init(): void {
@@ -56,38 +55,47 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
     meleeAutoAttack() {
         const closestTarget = this.autoDirection()
         if (closestTarget == null) return
-        // 💥 4. 공격 메시지 전송
-        const msg: AttackOption = {
-            type: AttackType.NormalSwing,
-            damage: this.baseSpec.Damage,
-            spec: this.baseSpec,
-            obj: closestTarget
-        };
 
-        this.eventCtrl.SendEventMessage(EventTypes.Attack + closestTarget.name, [msg]);
-        this.attackProcess = false;
-    }
-    
-    meleeAttack(itemInfo: IItem) {
-        this.player.Meshs.getWorldDirection(this.attackDir)
-        this.raycast.set(this.player.CenterPos, this.attackDir.normalize());
-    
-        (itemInfo as Item).trigger("onAttack", { direction: this.attackDir })
-
-        const intersects = this.raycast.intersectObjects(this.playerCtrl.targets)
-        if (intersects.length > 0 && intersects[0].distance < this.attackDist) {
+        const targets = this.getTargetsInCone(this.attackDist)
+        if (targets.length > 0) {
             const msgs = new Map()
-            intersects.forEach((obj) => {
-                if (obj.distance> this.attackDist) return false
-                const mons = msgs.get(obj.object.name)
+            targets.forEach((obj) => {
+                const mons = msgs.get(obj.name)
                 const msg: AttackOption = {
                     type: AttackType.NormalSwing,
                     damage: this.baseSpec.Damage,
                     spec: this.baseSpec,
-                    obj: obj.object
+                    obj: obj
                 } 
                 if (mons == undefined) {
-                    msgs.set(obj.object.name, [msg])
+                    msgs.set(obj.name, [msg])
+                } else {
+                    mons.push(msg)
+                }
+            })
+            msgs.forEach((v, k) => {
+                this.eventCtrl.SendEventMessage(EventTypes.Attack + k, v)
+            })
+        }
+        this.attackProcess = false;
+    }
+    
+    meleeAttack(itemInfo: IItem) {
+        (itemInfo as Item).trigger("onAttack", { direction: this.attackDir })
+
+        const targets = this.getTargetsInCone(this.attackDist)
+        if (targets.length > 0) {
+            const msgs = new Map()
+            targets.forEach((obj) => {
+                const mons = msgs.get(obj.name)
+                const msg: AttackOption = {
+                    type: AttackType.NormalSwing,
+                    damage: this.baseSpec.Damage,
+                    spec: this.baseSpec,
+                    obj: obj
+                } 
+                if (mons == undefined) {
+                    msgs.set(obj.name, [msg])
                 } else {
                     mons.push(msg)
                 }

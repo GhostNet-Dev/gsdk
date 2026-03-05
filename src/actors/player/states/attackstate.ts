@@ -111,6 +111,34 @@ export abstract class AttackState extends State implements IPlayerAction {
         return closestTarget
     }   
 
+    getTargetsInCone(range: number, angleDegrees: number = 120): THREE.Object3D[] {
+        const forward = new THREE.Vector3();
+        this.player.Meshs.getWorldDirection(forward);
+        forward.y = 0;
+        forward.normalize();
+
+        const cosHalfAngle = Math.cos(THREE.MathUtils.degToRad(angleDegrees / 2));
+        const result: THREE.Object3D[] = [];
+
+        for (const target of this.playerCtrl.targets) {
+            const toTarget = new THREE.Vector3().subVectors(target.position, this.player.CenterPos);
+            // We ignore Y difference for horizontal cone check, or keep it if needed.
+            // For now, let's stick to 3D distance but horizontal angle.
+            const dist = toTarget.length();
+            
+            if (dist > range) continue;
+
+            toTarget.y = 0;
+            toTarget.normalize();
+            const dot = forward.dot(toTarget);
+
+            if (dot > cosHalfAngle) {
+                result.push(target);
+            }
+        }
+        return result;
+    }
+
 
     protected readonly costEngine = new CostEngine()
 
