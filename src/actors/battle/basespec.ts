@@ -9,8 +9,6 @@ import { Buff } from "@Glibs/magical/buff/buff"
 import { CharacterStatus } from "./charstatus"
 import { StatFactory } from "./statfactory"
 import { calculateCompositeDamage, DamageContext, DamageResult } from "./damagecalc"
-import IEventController from "@Glibs/interface/ievent"
-import { EventTypes } from "@Glibs/types/globaltypes"
 import { DamageFormula } from "./damageformula"
 
 export class BaseSpec {

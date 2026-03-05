@@ -25,6 +25,8 @@ import { ComboMeleeState } from "./states/combomeleeattackst";
 import { EventActionState, EventIdleState } from "./states/eventstate";
 import { Bind } from "@Glibs/types/assettypes";
 import { MonDrop } from "../monsters/monstertypes";
+import { ActionCostSpec } from "@Glibs/actors/battle/resourcecosttypes";
+import { actionCostService } from "@Glibs/actors/battle/actioncostservice";
 
 type LearnedSkillMessage = {
     nodeId: string
@@ -426,6 +428,10 @@ export class PlayerCtrl implements ILoop, IActionUser {
 
         if (!action) return false
 
+        if (!this.tryConsumeSkillCost(this.resolveSkillCostSpec(skill, action), "스킬을 시전할 자원이 부족합니다.")) {
+            return false
+        }
+
         const targetAction = action
         const context: ActionContext = {
             source: this,
@@ -448,6 +454,37 @@ export class PlayerCtrl implements ILoop, IActionUser {
         }
 
         runCast()
+        return true
+    }
+
+    private resolveSkillCostSpec(skill: LearnedSkillMessage, action: IActionComponent): ActionCostSpec | undefined {
+        const skillCost = (skill.tech as { resourceCost?: ActionCostSpec } | undefined)?.resourceCost
+        if (skillCost) return skillCost
+
+        const actionCost = (action as { resourceCost?: ActionCostSpec } | undefined)?.resourceCost
+        return actionCost
+    }
+
+    private tryConsumeSkillCost(spec: ActionCostSpec | undefined, failMessage: string) {
+        if (!spec) return true
+
+        const ok = actionCostService.tryConsume(spec, this.baseSpec, {
+            inventory: this.inventory,
+            consumeInventoryItem: (id: ItemId, count: number) => {
+                this.eventCtrl.SendEventMessage(EventTypes.UseItem, id, count)
+            },
+            actorId: "player",
+            sourceId: spec.id,
+            onResourceChanged: (payload) => {
+                this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", payload)
+            },
+        })
+
+        if (!ok) {
+            this.eventCtrl.SendEventMessage(EventTypes.AlarmWarning, failMessage)
+            return false
+        }
+
         return true
     }
 

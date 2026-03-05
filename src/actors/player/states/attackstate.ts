@@ -13,8 +13,8 @@ import { Bind } from "@Glibs/types/assettypes";
 import { ActionType } from "../playertypes";
 import { IItem } from "@Glibs/interface/iinven";
 import { Item } from "@Glibs/inventory/items/item";
-import { CombatResourcePool, CostEngine } from "@Glibs/actors/battle/resourcecost";
 import { ActionCostSpec } from "@Glibs/actors/battle/resourcecosttypes";
+import { actionCostService } from "@Glibs/actors/battle/actioncostservice";
 import { ItemId } from "@Glibs/inventory/items/itemdefs";
 
 export abstract class AttackState extends State implements IPlayerAction {
@@ -140,16 +140,12 @@ export abstract class AttackState extends State implements IPlayerAction {
     }
 
 
-    protected readonly costEngine = new CostEngine()
-
-
     protected resolveAttackCostSpec(itemInfo: IItem | null | undefined, fallback: ActionCostSpec): ActionCostSpec {
         return itemInfo?.ResourceCost ?? fallback
     }
 
     protected tryConsumeAttackCost(spec: ActionCostSpec, failMessage = "자원이 부족합니다.") {
-        const pool = new CombatResourcePool({
-            spec: this.baseSpec,
+        const ok = actionCostService.tryConsume(spec, this.baseSpec, {
             inventory: this.playerCtrl.inventory,
             consumeInventoryItem: (id: ItemId, count: number) => {
                 this.eventCtrl.SendEventMessage(EventTypes.UseItem, id, count)
@@ -161,13 +157,7 @@ export abstract class AttackState extends State implements IPlayerAction {
             },
         })
 
-        const resolved = this.costEngine.resolve(spec, pool)
-        if (!resolved.ok) {
-            this.eventCtrl.SendEventMessage(EventTypes.AlarmWarning, failMessage)
-            return false
-        }
-
-        if (!this.costEngine.commit(resolved, pool)) {
+        if (!ok) {
             this.eventCtrl.SendEventMessage(EventTypes.AlarmWarning, failMessage)
             return false
         }
