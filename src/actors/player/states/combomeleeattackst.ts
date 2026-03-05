@@ -188,15 +188,14 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
     private autoAttack = false;
 
     // [New] 타격감 개선용 변수
-    private readonly STEP_IN_SPEED = 6.0; // 전진 속도
-    private readonly STEP_IN_DURATION_RATIO = 0.4; // Windup 초반 몇% 동안 전진할지
+    private readonly STEP_IN_SPEED = 8.5; // 전진 속도
+    private readonly STEP_IN_DURATION_RATIO = 0.8; // Windup 초반 몇% 동안 전진할지
 
     constructor(
         playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic,
         protected eventCtrl: IEventController, spec: BaseSpec
     ) {
         super(playerCtrl, player, gphysic, eventCtrl, spec);
-        this.raycast.params.Points.threshold = 20;
     }
 
     /* ------------------------------ Helpers --------------------------------- */
@@ -269,39 +268,32 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         const baseDamage = this.baseSpec.Damage * dmgMul;
         const baseRange = this.attackDist * rangeMul;
 
-        this.player.Meshs.getWorldDirection(this.attackDir);
-        this.raycast.set(this.player.CenterPos, this.attackDir.normalize());
-
-        const hits = this.raycast.intersectObjects(this.playerCtrl.targets);
+        const targets = this.getTargetsInCone(baseRange);
         let anyHit = false;
 
-        // 히트 이펙트 위치 저장용
-        let hitPoint: THREE.Vector3 | null = null;
-        let hitNormal = new THREE.Vector3(0, 1, 0);
-
-        if (hits.length > 0 && hits[0].distance < baseRange) {
-            const hit = hits[0];
-            hitPoint = hit.point;
-            if (hit.face) hitNormal = hit.face.normal;
-
+        if (targets.length > 0) {
             const buckets = new Map<string, any[]>();
-            for (const h of hits) {
-                if (h.distance > baseRange) continue;
-                const arr = buckets.get(h.object.name) ?? [];
+            for (const obj of targets) {
+                const arr = buckets.get(obj.name) ?? [];
                 arr.push({
                     type: AttackType.NormalSwing,
                     damage: baseDamage,
                     spec: this.baseSpec,
-                    obj: h.object
+                    obj: obj,
+                    distance: baseRange // [New] 현재 공격의 유효 사거리 전달
                 });
-                buckets.set(h.object.name, arr);
+                buckets.set(obj.name, arr);
             }
             buckets.forEach((v, k) => {
                 this.keytimeout.push(setTimeout(() => {
                     const particleCount = (this.stepIndex == this.chain.steps.length - 1) ? 40 : 20;
-                    if (hitPoint) {
-                        this.eventCtrl.SendEventMessage(EventTypes.GlobalEffect, GlobalEffectType.SparkEshSystem, hitPoint, hitNormal, { count: particleCount })
-                    }
+                    // Note: hitPoint and hitNormal are no longer easily available without raycast.
+                    // We can either raycast again for visual effects or just use target center.
+                    const targetObj = v[0].obj as THREE.Object3D;
+                    const hitPoint = targetObj.position.clone();
+                    const hitNormal = new THREE.Vector3(0, 1, 0);
+
+                    this.eventCtrl.SendEventMessage(EventTypes.GlobalEffect, GlobalEffectType.SparkEshSystem, hitPoint, hitNormal, { count: particleCount })
                     this.eventCtrl.SendEventMessage(EventTypes.Attack + k, v);
                 }, this.attackSpeed * 1000 * 0.4))
             });
@@ -545,14 +537,20 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
 
         // 무기 세팅/오토에임
         const handItem = this.playerCtrl.baseSpec.GetMeleeItem();
-        const costSpec = this.resolveAttackCostSpec(handItem, DEFAULT_COMBO_MELEE_ATTACK_COST)
-        if (!this.tryConsumeAttackCost(costSpec, "자원이 부족합니다.")) {
-            this.clearStepTimers();
-            this.ChangeMode(this.playerCtrl.currentIdleState)
-            return;
+        const costSpec = this.resolveAttackCostSpec(handItem, DEFAULT_COMBO_MELEE_ATTACK_COST);
+
+        // [개선] 첫 타격(stepIndex 0)은 스태미나를 소모하지 않음.
+        // 두 번째 타격부터는 자원이 부족하면 공격을 시작하지 않고 Idle 상태로 복귀.
+        if (this.stepIndex > 0) {
+            if (!this.tryConsumeAttackCost(costSpec, "자원이 부족합니다.")) {
+                this.clearStepTimers();
+                this.ChangeMode(this.playerCtrl.currentIdleState);
+                return;
+            }
         }
 
         if (handItem) {
+
             // 아이템 Action.activate는 장착 시점(PlayerCtrl.Equipment)에서 1회 호출됨
             // 공격 시작/콤보 스텝에서는 onUse 트리거만 발행
             (handItem as Item).trigger?.("onUse");
@@ -619,8 +617,16 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
                     this.player.Meshs.getWorldDirection(forward);
                     forward.y = 0;
                     forward.normalize();
-                    // gphysic이 있다면 충돌체크 권장, 여기선 단순 이동
-                    this.player.Pos.add(forward.multiplyScalar(this.STEP_IN_SPEED * dt));
+                    
+                    // [개선] gphysic을 이용한 충돌 체크 전진
+                    const check = this.gphysic.CheckDirection(this.player, forward.clone(), this.STEP_IN_SPEED);
+                    if (check.move) {
+                        this.player.Pos.add(check.move.normalize().multiplyScalar(this.STEP_IN_SPEED * dt));
+                    } else {
+                        // move가 null이면 장애물이 없거나 체크 방식에 따라 다를 수 있음. 
+                        // 보통은 장애물이 없으면 원래 방향으로 이동.
+                        this.player.Pos.add(forward.multiplyScalar(this.STEP_IN_SPEED * dt));
+                    }
                 }
 
                 // 2. 가변 속도: 느리게 시작 -> 타격 직전 가속

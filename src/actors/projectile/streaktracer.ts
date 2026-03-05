@@ -1,6 +1,9 @@
 // streaktracer.ts
 import * as THREE from "three";
 import { IProjectileModel } from "./projectile";
+import IEventController from "@Glibs/interface/ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
+import { GlobalEffectType } from "@Glibs/types/effecttypes";
 
 export type StreakTracerOptions = {
   coreColor?: number;
@@ -19,6 +22,7 @@ export type StreakTracerOptions = {
   renderOrder?: number;
 
   camera?: THREE.Camera;  // 실린더형 빌보드용 카메라 참조
+  eventCtrl?: IEventController;
 };
 
 type ReleaseAnimatedProjectile = IProjectileModel & {
@@ -41,7 +45,8 @@ export class StreakTracerModel implements ReleaseAnimatedProjectile {
   private fadeElapsed = 0;
 
   private camera?: THREE.Camera;
-  private readonly opt: Required<Omit<StreakTracerOptions, 'camera'>>;
+  private eventCtrl?: IEventController;
+  private readonly opt: Required<Omit<StreakTracerOptions, "camera" | "eventCtrl">>;
   private readonly matCore: THREE.MeshBasicMaterial;
   private readonly matGlow: THREE.MeshBasicMaterial;
 
@@ -52,6 +57,7 @@ export class StreakTracerModel implements ReleaseAnimatedProjectile {
 
   constructor(options: StreakTracerOptions = {}) {
     this.camera = options.camera;
+    this.eventCtrl = options.eventCtrl;
     this.opt = {
       coreColor: options.coreColor ?? 0xffcc55,
       glowColor: options.glowColor ?? 0xffaa33,
@@ -160,6 +166,19 @@ export class StreakTracerModel implements ReleaseAnimatedProjectile {
 
   isReleaseFinished(): boolean {
     return !this.fading;
+  }
+
+  hit(position: THREE.Vector3, normal?: THREE.Vector3): void {
+    if (!this.eventCtrl) return;
+
+    // Warhammer-style hit spark effect
+    // SparkVfx expects (position, surfaceNormal, options)
+    const n = normal ?? new THREE.Vector3(0, 1, 0);
+    this.eventCtrl.SendEventMessage(EventTypes.GlobalEffect, GlobalEffectType.SparkEshSystem, position, n, {
+      count: 20,
+      power: 12,
+      chunkRatio: 0.1,
+    });
   }
 
   private updateTransform() {

@@ -24,6 +24,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     raycast = new THREE.Raycaster()
     dir = new THREE.Vector3(0, 0, 0)
     moveDirection = new THREE.Vector3()
+    public pendingAttackRange = 0; // [New] 타격 시 발생한 공격 사거리 임시 보관
     private phybox: MonsterBox
     get Drop() { return this.property.drop }
     get MonsterBox() { return this.phybox }
@@ -118,10 +119,15 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         this.phybox.position.y += this.zombie.Size.y / 2
     }
     
-    ReceiveDemage(damage: number, effect?: EffectType): boolean {
+    ReceiveDemage(damage: number, effect?: EffectType, attackRange?: number): boolean {
         if (this.Spec.Health <= 0) return false
         this.zombie.DamageEffect(damage, effect)
+        
+        // [New] 타격 시의 사거리 정보 임시 보관
+        this.pendingAttackRange = attackRange ?? 0;
+
         this.Spec.ReceiveCalcDamage(damage)
+
         if (this.Spec.Health <= 0) {
             return false
         }

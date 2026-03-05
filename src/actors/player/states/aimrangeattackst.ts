@@ -106,7 +106,7 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
     }
 
     Update(delta: number): IPlayerAction {
-        const d = this.DefaultCheck({ attack: false })
+        const d = this.DefaultCheck({ attack: false, run: false })
         if (d != undefined) {
             this.Uninit()
             return d
