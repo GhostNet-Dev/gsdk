@@ -3,8 +3,9 @@ import { CharacterStatus } from "@Glibs/actors/battle/charstatus"
 import { EffectType } from "@Glibs/types/effecttypes"
 
 export enum AttackType {
-    NormalSwing,
-    Magic0,
+    NormalSwing, // 근접 공격
+    RangedShot,  // 원거리 공격 (추가)
+    Magic0,      // 마법 공격
     Exp,
     Heal,
     AOE, // Area of effect

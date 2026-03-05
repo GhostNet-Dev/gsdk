@@ -188,8 +188,8 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
     private autoAttack = false;
 
     // [New] 타격감 개선용 변수
-    private readonly STEP_IN_SPEED = 6.0; // 전진 속도
-    private readonly STEP_IN_DURATION_RATIO = 0.4; // Windup 초반 몇% 동안 전진할지
+    private readonly STEP_IN_SPEED = 8.5; // 전진 속도
+    private readonly STEP_IN_DURATION_RATIO = 0.8; // Windup 초반 몇% 동안 전진할지
 
     constructor(
         playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic,
@@ -292,7 +292,8 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
                     type: AttackType.NormalSwing,
                     damage: baseDamage,
                     spec: this.baseSpec,
-                    obj: h.object
+                    obj: h.object,
+                    distance: baseRange // [New] 현재 공격의 유효 사거리 전달
                 });
                 buckets.set(h.object.name, arr);
             }
@@ -619,8 +620,16 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
                     this.player.Meshs.getWorldDirection(forward);
                     forward.y = 0;
                     forward.normalize();
-                    // gphysic이 있다면 충돌체크 권장, 여기선 단순 이동
-                    this.player.Pos.add(forward.multiplyScalar(this.STEP_IN_SPEED * dt));
+                    
+                    // [개선] gphysic을 이용한 충돌 체크 전진
+                    const check = this.gphysic.CheckDirection(this.player, forward.clone(), this.STEP_IN_SPEED);
+                    if (check.move) {
+                        this.player.Pos.add(check.move.normalize().multiplyScalar(this.STEP_IN_SPEED * dt));
+                    } else {
+                        // move가 null이면 장애물이 없거나 체크 방식에 따라 다를 수 있음. 
+                        // 보통은 장애물이 없으면 원래 방향으로 이동.
+                        this.player.Pos.add(forward.multiplyScalar(this.STEP_IN_SPEED * dt));
+                    }
                 }
 
                 // 2. 가변 속도: 느리게 시작 -> 타격 직전 가속

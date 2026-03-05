@@ -7,7 +7,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { IMonsterAction, MonsterProperty } from "../monstertypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
-import { DyingZState, IdleZState, JumpZState, MonState } from "./monstate";
+import { DyingZState, HurtZState, IdleZState, JumpZState, MonState } from "./monstate";
 import { Buff } from "@Glibs/magical/buff/buff";
 import { buffDefs } from "@Glibs/magical/buff/buffdefs";
 
@@ -24,11 +24,12 @@ export function NewDashMonsterState(
     const defSt: States = {}
     defSt["IdleSt"] = new IdleZState(defSt, zombie, gphysic, spec)
     defSt["AttackSt"] = new DashAttackState(defSt, zombie, gphysic, eventCtrl, spec)
-    defSt["JumpSt"] = new JumpZState(defSt, zombie, gphysic)
+    defSt["JumpSt"] = new JumpZState(defSt, zombie, gphysic, spec)
     defSt["RunSt"] =  new DashRunState(defSt, zombie, gphysic, spec)
     defSt["DashRunSt"] = new FastDashRunState(defSt, zombie, gphysic, spec)
     defSt["AgonizingSt"] = new DashAgonizingState(id, defSt, zombie, gphysic, eventCtrl, spec)
     defSt["DyingSt"] = new DyingZState(defSt, zombie, prop, gphysic, eventCtrl, spec)
+    defSt["HurtSt"] = new HurtZState(defSt, zombie, gphysic, spec)
 
     return defSt.IdleSt
 }
@@ -59,6 +60,8 @@ export class DashAttackState extends MonState implements IMonsterAction {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
     }
     Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+        const checkHit = this.CheckHit(target)
+        if (checkHit != undefined) return checkHit
         const dist = this.zombie.Pos.distanceTo(target.CenterPos)
         const checkDying = this.CheckDying()
         if (checkDying != undefined) return checkDying
@@ -117,6 +120,8 @@ export class DashRunState extends MonState implements IMonsterAction {
     dir = new THREE.Vector3()
 
     Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+        const checkHit = this.CheckHit(target)
+        if (checkHit != undefined) return checkHit
         const checkGravity = this.CheckGravity()
         if (checkGravity != undefined) return checkGravity
         const checkDying = this.CheckDying()
@@ -170,7 +175,9 @@ export class DashAgonizingState extends MonState implements IMonsterAction {
     Uninit(): void {
         this.eventCtrl.SendEventMessage(EventTypes.RemoveBuff + "mon" + this.id, this.buf)
     }
-    Update(delta: number, v: THREE.Vector3): IMonsterAction {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+        const checkHit = this.CheckHit(target)
+        if (checkHit != undefined) return checkHit
         this.elapsedTime += delta
         if(this.elapsedTime > this.runningTime) {
             this.Uninit()
@@ -207,6 +214,8 @@ export class FastDashRunState extends MonState implements IMonsterAction {
     dir = new THREE.Vector3()
 
     Update(delta: number, _: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+        const checkHit = this.CheckHit(target)
+        if (checkHit != undefined) return checkHit
         const dist = this.zombie.Pos.distanceTo(target.CenterPos)
         const checkAttack = this.CheckAttack(dist)
         if(checkAttack != undefined) return checkAttack

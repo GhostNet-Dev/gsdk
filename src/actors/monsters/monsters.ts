@@ -3,7 +3,7 @@ import { CreateMon } from "./createmon";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { MonDrop, MonsterId } from "@Glibs/types/monstertypes";
 import { EffectType } from "@Glibs/types/effecttypes";
-import { AttackOption } from "@Glibs/types/playertypes";
+import { AttackOption, AttackType } from "@Glibs/types/playertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { DeckType } from "@Glibs/types/inventypes";
 import IEventController from "@Glibs/interface/ievent";
@@ -29,7 +29,7 @@ export interface IMonsterCtrl {
     get MonsterBox(): MonsterBox
     get Drop(): MonDrop[] | undefined
     Respawning(): void
-    ReceiveDemage(demage: number, effect?: EffectType): boolean 
+    ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number): boolean 
 }
 
 export class MonsterBox extends THREE.Mesh {
@@ -87,27 +87,12 @@ export class Monsters {
                 })
                 console.log(`calc damage: ${damage}, original damage: ${opt.damage}`)
 
-                this.ReceiveDemage(z, damage.finalDamage, opt.effect)
+                // [New] 넉백 정보 전달 (사거리 정보만 전달, 계산은 상태에서 수행)
+                const attackRange = (opt.type === AttackType.NormalSwing) ? (opt.distance ?? 3.5) : undefined;
+
+                this.ReceiveDemage(z, damage.finalDamage, opt.effect, attackRange)
             })
         })
-        // eventCtrl.RegisterEventListener(EventTypes.Attack + "monster", (opts: AttackOption[]) => {
-        //     if (!this.mode) return
-        //     const pos = this.player.Meshs.position
-        //     const dist = opts[0].distance
-        //     const damage = opts[0].damage
-        //     const effect = opts[0].effect
-        //     if(dist == undefined) return
-        //     this.monsters.forEach((mon) => {
-        //         for (let i = 0; i < mon.length; i++) {
-        //             const z = mon[i]
-        //             if (!z.live) continue
-        //             const betw = z.monModel.Meshs.position.distanceTo(pos)
-        //             if (betw < dist) {
-        //                 this.ReceiveDemage(z, damage, effect)
-        //             }
-        //         }
-        //     })
-        // })
     }
 
     private hasExpDrop(drop?: MonDrop[]) {
@@ -122,8 +107,8 @@ export class Monsters {
         return { drop: baseDrop, directExp: baseExp }
     }
 
-    ReceiveDemage(z: MonsterSet, damage: number, effect?: EffectType) {
-        if (z && !z.monCtrl.ReceiveDemage(damage, effect)) {
+    ReceiveDemage(z: MonsterSet, damage: number, effect?: EffectType, attackRange?: number) {
+        if (z && !z.monCtrl.ReceiveDemage(damage, effect, attackRange)) {
             z.live = false
             z.deadtime = new Date().getTime()
             this.mobCount--
