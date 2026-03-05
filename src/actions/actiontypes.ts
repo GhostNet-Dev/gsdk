@@ -1,5 +1,6 @@
 import { CharacterStatus } from "@Glibs/actors/battle/charstatus"
 import { StatSystem } from "@Glibs/inventory/stat/statsystem"
+import { cost } from "@Glibs/actors/battle/resourcecosttypes"
 
 export interface IActionUser {
   name?: string
@@ -362,6 +363,10 @@ export const actionDefs = {
     type: "projectileFire",
     castAction: "MagicH1",
     cooldown: 3,
+    resourceCost: {
+      id: "skill_fireball_cast",
+      cost: cost.any(cost.atom("mp", 8), cost.atom("stamina", 12))
+    },
     levels: [
       { damage: 10, radius: 1.0, speed: 10 },
       { damage: 15, radius: 1.2, speed: 10 },
@@ -375,6 +380,10 @@ export const actionDefs = {
     type: "meteor",
     castAction: "MagicH2",
     cooldown: 7,
+    resourceCost: {
+      id: "skill_meteor_cast",
+      cost: cost.any(cost.atom("mp", 20), cost.atom("stamina", 30))
+    },
     distance: 8,
     fallDuration: 0.65,
     ringRadius: 1.9,
