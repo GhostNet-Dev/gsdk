@@ -164,7 +164,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "common",
         tags: ["stat", "attack"],
         requires: [{ type: "has", id: "root_license" }],
-        cost: COST_5,
+        cost: COST_0,
         tech: actionDefs.AttackStatBoost
     },
     {
@@ -176,7 +176,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "common",
         tags: ["stat", "attack"],
         requires: [{ type: "has", id: "stat_might", minLv: 1 }],
-        cost: COST_3,
+        cost: COST_0,
         tech: actionDefs.ProjectileSpeedStatBoost
     },
     {
@@ -188,7 +188,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "uncommon",
         tags: ["stat", "aoe"],
         requires: [{ type: "has", id: "stat_might", minLv: 2 }],
-        cost: COST_5,
+        cost: COST_0,
         tech: actionDefs.AreaStatBoost
     },
     {
@@ -200,7 +200,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "uncommon",
         tags: ["stat", "magic"],
         requires: [{ type: "has", id: "stat_might", minLv: 3 }],
-        cost: COST_5,
+        cost: COST_0,
         tech: actionDefs.CooldownStatBoost
     },
     {
@@ -212,7 +212,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "rare",
         tags: ["stat", "crit"],
         requires: [{ type: "has", id: "stat_might", minLv: 5 }],
-        cost: COST_5,
+        cost: COST_0,
         tech: actionDefs.CritRateStatBoost
     },
 
@@ -228,7 +228,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "common",
         tags: ["stat", "defense"],
         requires: [{ type: "has", id: "root_license" }],
-        cost: COST_5,
+        cost: COST_0,
         tech: actionDefs.MaxHpStatBoost
     },
     {
@@ -240,7 +240,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "common",
         tags: ["stat", "defense"],
         requires: [{ type: "has", id: "stat_maxhp", minLv: 2 }],
-        cost: COST_5,
+        cost: COST_0,
         tech: actionDefs.RecoveryStatBoost
     },
     {
@@ -252,7 +252,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "uncommon",
         tags: ["stat", "defense"],
         requires: [{ type: "has", id: "stat_maxhp", minLv: 3 }],
-        cost: COST_3,
+        cost: COST_0,
         tech: actionDefs.ArmorStatBoost
     },
 
@@ -268,7 +268,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "common",
         tags: ["stat", "utility"],
         requires: [{ type: "has", id: "root_license" }],
-        cost: COST_3,
+        cost: COST_0,
         tech: actionDefs.SpeedStatBoost
     },
     {
@@ -280,7 +280,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "common",
         tags: ["stat", "economy"],
         requires: [{ type: "has", id: "root_license" }],
-        cost: COST_5,
+        cost: COST_0,
         tech: actionDefs.GreedStatBoost
     },
     {
@@ -292,7 +292,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "uncommon",
         tags: ["stat", "utility"],
         requires: [{ type: "has", id: "stat_greed", minLv: 2 }],
-        cost: COST_3,
+        cost: COST_0,
         tech: actionDefs.LuckStatBoost
     },
     {
@@ -304,7 +304,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "uncommon",
         tags: ["stat", "utility"],
         requires: [{ type: "has", id: "stat_speed", minLv: 2 }],
-        cost: COST_3,
+        cost: COST_0,
         tech: actionDefs.MagnetStatBoost
     },
 
@@ -323,7 +323,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
             { type: "has", id: "stat_might", minLv: 3 },
             { type: "has", id: "stat_armor", minLv: 1 }
         ],
-        cost: COST_3,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -335,7 +335,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "rare",
         tags: ["melee", "aoe"],
         requires: [{ type: "has", id: "class_warrior", minLv: 1 }],
-        cost: COST_1,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -347,7 +347,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "rare",
         tags: ["class", "holy"],
         requires: [{ type: "has", id: "stat_armor", minLv: 3 }],
-        cost: COST_3,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -359,7 +359,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "uncommon",
         tags: ["holy", "projectile"],
         requires: [{ type: "has", id: "class_paladin", minLv: 1 }],
-        cost: COST_1,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -371,7 +371,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "epic",
         tags: ["defense", "holy"],
         requires: [{ type: "has", id: "class_paladin", minLv: 2 }],
-        cost: COST_3,
+        cost: COST_0,
         tech: MOCK_TECH
     },
 
@@ -390,7 +390,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
             { type: "has", id: "stat_speed", minLv: 3 },
             { type: "has", id: "stat_crit_rate", minLv: 1 }
         ],
-        cost: COST_3,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -432,7 +432,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "uncommon",
         tags: ["element", "fire"],
         requires: [{ type: "has", id: "stat_area", minLv: 1 }],
-        cost: COST_3,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -444,7 +444,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "common",
         tags: ["fire", "projectile"],
         requires: [{ type: "has", id: "elem_fire", minLv: 1 }],
-        cost: COST_1,
+        cost: COST_0,
         tech: actionDefs.FireBall
     },
     {
@@ -456,7 +456,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "epic",
         tags: ["fire", "aoe"],
         requires: [{ type: "has", id: "skill_fireball", minLv: 1 }],
-        cost: COST_1,
+        cost: COST_0,
         tech: actionDefs.Meteor
     },
 
@@ -470,7 +470,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "uncommon",
         tags: ["element", "ice"],
         requires: [{ type: "has", id: "stat_cooldown", minLv: 1 }],
-        cost: COST_3,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -482,7 +482,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "uncommon",
         tags: ["ice", "aoe"],
         requires: [{ type: "has", id: "elem_ice", minLv: 1 }],
-        cost: COST_1,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -494,7 +494,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "epic",
         tags: ["ice", "aoe"],
         requires: [{ type: "has", id: "skill_frost_nova", minLv: 1 }],
-        cost: COST_1,
+        cost: COST_0,
         tech: MOCK_TECH
     },
 
@@ -511,7 +511,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
             { type: "has", id: "stat_cooldown", minLv: 2 },
             { type: "has", id: "stat_proj_speed", minLv: 2 }
         ],
-        cost: COST_3,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -523,7 +523,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "common",
         tags: ["lightning", "single"],
         requires: [{ type: "has", id: "elem_lightning", minLv: 1 }],
-        cost: COST_1,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -535,7 +535,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "rare",
         tags: ["lightning", "multi"],
         requires: [{ type: "has", id: "skill_lightning_bolt", minLv: 1 }],
-        cost: COST_1,
+        cost: COST_0,
         tech: MOCK_TECH
     },
 
@@ -549,7 +549,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "uncommon",
         tags: ["element", "earth"],
         requires: [{ type: "has", id: "stat_maxhp", minLv: 3 }],
-        cost: COST_3,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -561,7 +561,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "common",
         tags: ["earth", "aoe"],
         requires: [{ type: "has", id: "elem_earth", minLv: 1 }],
-        cost: COST_1,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -573,7 +573,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "epic",
         tags: ["earth", "aoe"],
         requires: [{ type: "has", id: "skill_garlic", minLv: 1 }],
-        cost: COST_1,
+        cost: COST_0,
         tech: MOCK_TECH
     },
 
@@ -592,7 +592,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
             { type: "has", id: "stat_maxhp", minLv: 5 }, // 피통이 커야함
             { type: "has", id: "stat_cooldown", minLv: 3 }
         ],
-        cost: COST_3,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -604,7 +604,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "uncommon",
         tags: ["dark", "summon"],
         requires: [{ type: "has", id: "class_necro", minLv: 1 }],
-        cost: COST_1,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -621,7 +621,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
             { type: "has", id: "elem_ice", minLv: 1 },
             { type: "has", id: "stat_cooldown", minLv: 5 }
         ],
-        cost: COST_3,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -633,7 +633,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "common",
         tags: ["arcane", "projectile"],
         requires: [{ type: "has", id: "class_arcane", minLv: 1 }],
-        cost: COST_1,
+        cost: COST_0,
         tech: MOCK_TECH
     },
 
@@ -649,7 +649,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "rare",
         tags: ["meta"],
         requires: [{ type: "has", id: "stat_luck", minLv: 2 }],
-        cost: COST_5,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -661,7 +661,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "rare",
         tags: ["meta"],
         requires: [{ type: "has", id: "meta_reroll", minLv: 1 }],
-        cost: COST_3,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -673,7 +673,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "epic",
         tags: ["meta"],
         requires: [{ type: "has", id: "meta_reroll", minLv: 2 }],
-        cost: COST_3,
+        cost: COST_0,
         tech: MOCK_TECH
     },
 
@@ -693,7 +693,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
             { type: "has", id: "stat_proj_speed", minLv: 3 },
             { type: "has", id: "stat_cooldown", minLv: 5 }
         ],
-        cost: COST_3, // 3단계까지
+        cost: COST_0, // 3단계까지
         tech: MOCK_TECH
     },
     {
@@ -708,7 +708,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
             { type: "has", id: "stat_maxhp", minLv: 5 },
             { type: "has", id: "stat_recovery", minLv: 5 }
         ],
-        cost: COST_1,
+        cost: COST_0,
         tech: MOCK_TECH
     },
     {
@@ -720,7 +720,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "epic",
         tags: ["curse"],
         requires: [{ type: "has", id: "stat_greed", minLv: 5 }],
-        cost: COST_5,
+        cost: COST_0,
         tech: buffDefs.CurseTorment
     },
     {
@@ -732,7 +732,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         rarity: "legendary",
         tags: ["weapon", "curse"],
         requires: [{ type: "has", id: "curse_torment", minLv: 1 }],
-        cost: COST_1,
+        cost: COST_0,
         tech: MOCK_TECH
     }
 ]
