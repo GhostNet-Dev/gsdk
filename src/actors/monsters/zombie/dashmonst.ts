@@ -49,6 +49,7 @@ export class DashAttackState extends MonState implements IMonsterAction {
         super(states, zombie, gphysic, spec)
     }
     Init(): void {
+        this.attackTime = this.spec.AttackSpeed
         this.attackSpeed = this.spec.AttackSpeed
         this.attackDamageMax = this.spec.AttackDamageMax
         this.attackDamageMin = this.spec.AttackDamageMin

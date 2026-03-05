@@ -260,6 +260,7 @@ export class AttackZState extends MonState implements IMonsterAction {
     }
     Init(): void {
         this.attackSpeed = this.spec.AttackSpeed
+        this.attackTime = this.spec.AttackSpeed
         this.attackDamageMax = this.spec.AttackDamageMax
         this.attackDamageMin = this.spec.AttackDamageMin
         const duration = this.zombie.ChangeAction(ActionType.Punch)
