@@ -18,6 +18,11 @@ type ActiveRingCore = {
   core: FireballCore
   ttl: number
   age: number
+  startScale: number
+  peakScale: number
+  endScale: number
+  peakRatio: number
+  velocity?: THREE.Vector3
 }
 
 export class MeteorAction implements IActionComponent, ILoop {
@@ -101,17 +106,33 @@ export class MeteorAction implements IActionComponent, ILoop {
 
       this.scene.remove(m.core.root)
       m.core.dispose()
-      this.spawnFireballRing(m.end)
+      this.spawnImpactEffect(m.end)
       return false
     })
 
     this.ringCores = this.ringCores.filter((entry) => {
       entry.age += delta
-      entry.core.update(entry.age, delta)
-      const alpha = Math.max(0, 1 - (entry.age / entry.ttl))
-      entry.core.root.scale.setScalar(0.65 + alpha * 0.45)
+      const t = Math.min(1, entry.age / entry.ttl)
 
-      if (entry.age < entry.ttl) return true
+      const scale =
+        t < entry.peakRatio
+          ? THREE.MathUtils.lerp(entry.startScale, entry.peakScale, t / entry.peakRatio)
+          : THREE.MathUtils.lerp(
+              entry.peakScale,
+              entry.endScale,
+              (t - entry.peakRatio) / (1 - entry.peakRatio),
+            )
+      entry.core.root.scale.setScalar(scale)
+      entry.core.setFade(Math.max(0, 1 - Math.pow(t, 1.5)))
+
+      if (entry.velocity) {
+        entry.core.root.position.addScaledVector(entry.velocity, delta)
+        entry.velocity.y -= 5 * delta
+      }
+
+      entry.core.update(entry.age, delta)
+
+      if (t < 1) return true
 
       this.scene.remove(entry.core.root)
       entry.core.dispose()
@@ -123,19 +144,110 @@ export class MeteorAction implements IActionComponent, ILoop {
     return performance.now() - this.lastUsed >= this.cooldown
   }
 
-  private spawnFireballRing(center: THREE.Vector3) {
+  private spawnImpactEffect(center: THREE.Vector3) {
+    // 1. 중앙 폭발 코어 — 크게 팽창 후 소멸
+    this.addRingCore(center.clone(), 2.2, {
+      ttl: 0.9,
+      startScale: 0.4,
+      peakScale: 1.9,
+      endScale: 0.05,
+      peakRatio: 0.25,
+      particleCount: 120,
+    })
+
+    // 2. 내부 링
     for (let i = 0; i < this.ringCount; i++) {
       const a = (i / this.ringCount) * Math.PI * 2
       const p = new THREE.Vector3(
         center.x + Math.cos(a) * this.ringRadius,
-        center.y + 0.2,
+        center.y + 0.15,
         center.z + Math.sin(a) * this.ringRadius,
       )
-      const core = createFireballCore({ scale: 0.6 })
-      core.reset(p)
-      this.scene.add(core.root)
-      this.ringCores.push({ core, ttl: 0.55, age: 0 })
+      this.addRingCore(p, 0.75, {
+        ttl: 0.8 + Math.random() * 0.2,
+        startScale: 0.25,
+        peakScale: 1.2,
+        endScale: 0.05,
+        peakRatio: 0.2,
+        particleCount: 70,
+      })
     }
+
+    // 3. 외부 링 — 더 넓고 느리게 소멸
+    const outerCount = Math.round(this.ringCount * 1.8)
+    const outerRadius = this.ringRadius * 1.75
+    for (let i = 0; i < outerCount; i++) {
+      const a = (i / outerCount) * Math.PI * 2 + Math.PI / outerCount
+      const p = new THREE.Vector3(
+        center.x + Math.cos(a) * outerRadius,
+        center.y + 0.1,
+        center.z + Math.sin(a) * outerRadius,
+      )
+      this.addRingCore(p, 0.55, {
+        ttl: 1.1 + Math.random() * 0.3,
+        startScale: 0.15,
+        peakScale: 1.0,
+        endScale: 0.05,
+        peakRatio: 0.18,
+        particleCount: 55,
+      })
+    }
+
+    // 4. 위로 솟구치는 파편 fireballs
+    const debrisCount = 7
+    for (let i = 0; i < debrisCount; i++) {
+      const hAngle = Math.random() * Math.PI * 2
+      const dist = Math.random() * this.ringRadius * 0.5
+      const p = new THREE.Vector3(
+        center.x + Math.cos(hAngle) * dist,
+        center.y + 0.3,
+        center.z + Math.sin(hAngle) * dist,
+      )
+      const speed = 4 + Math.random() * 5
+      const vAngle = Math.PI / 5 + Math.random() * (Math.PI / 4)
+      const vel = new THREE.Vector3(
+        Math.cos(hAngle) * Math.sin(vAngle) * speed,
+        Math.cos(vAngle) * speed,
+        Math.sin(hAngle) * Math.sin(vAngle) * speed,
+      )
+      this.addRingCore(p, 0.5, {
+        ttl: 0.7 + Math.random() * 0.35,
+        startScale: 0.35,
+        peakScale: 0.95,
+        endScale: 0.05,
+        peakRatio: 0.2,
+        velocity: vel,
+        particleCount: 40,
+      })
+    }
+  }
+
+  private addRingCore(
+    position: THREE.Vector3,
+    scale: number,
+    opts: {
+      ttl: number
+      startScale: number
+      peakScale: number
+      endScale: number
+      peakRatio: number
+      velocity?: THREE.Vector3
+      particleCount?: number
+    },
+  ) {
+    const core = createFireballCore({ scale, particleCount: opts.particleCount })
+    core.reset(position)
+    this.scene.add(core.root)
+    this.ringCores.push({
+      core,
+      ttl: opts.ttl,
+      age: 0,
+      startScale: opts.startScale,
+      peakScale: opts.peakScale,
+      endScale: opts.endScale,
+      peakRatio: opts.peakRatio,
+      velocity: opts.velocity,
+    })
   }
 
   private getCasterObject(target: IActionUser): THREE.Object3D | undefined {

@@ -32,6 +32,8 @@ type FireballParticle = THREE.Sprite & {
 export class FireballCore {
   readonly root: THREE.Group
 
+  private static sharedTexture: THREE.CanvasTexture | null = null
+
   private emitter: THREE.Mesh
   private coreLight: THREE.PointLight
   private particles: FireballParticle[] = []
@@ -70,6 +72,11 @@ export class FireballCore {
     this.colorAura = new THREE.Color(options.colorAura ?? "#ff9900")
     this.colorRing = new THREE.Color(options.colorRing ?? "#ff2200")
 
+    if (!FireballCore.sharedTexture) {
+      FireballCore.sharedTexture = this.createHexagonTexture()
+    }
+    this.particleTexture = FireballCore.sharedTexture!
+
     this.root = new THREE.Group()
 
     this.emitter = new THREE.Mesh(
@@ -86,7 +93,6 @@ export class FireballCore {
     this.emitter.add(this.coreLight)
     this.root.add(this.emitter)
 
-    this.particleTexture = this.createHexagonTexture()
     this.initParticles()
   }
 
@@ -161,8 +167,7 @@ export class FireballCore {
       if (Array.isArray(material)) material.forEach((m) => m.dispose())
       else material?.dispose?.()
     })
-
-    this.particleTexture.dispose()
+    // sharedTexture은 인스턴스별로 해제하지 않음
   }
 
   private createHexagonTexture() {
