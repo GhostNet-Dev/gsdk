@@ -6,7 +6,7 @@ import { GUX } from "@Glibs/ux/gux"
 
 export type SkillSlotLayout = "left" | "right" | "bottom"
 
-type LearnedSkillMessage = {
+export type LearnedSkillMessage = {
   nodeId: string
   techId: string
   level: number
@@ -22,6 +22,7 @@ type SkillSlotData = {
   keyEl: HTMLElement
   iconEl: HTMLElement
   nameEl: HTMLElement
+  timerEl: HTMLElement
   castUntil: number
   cooldownMs: number
 }
@@ -190,10 +191,10 @@ export class SkillSlotsUX extends GUX {
     el.dataset.index = String(index)
     el.onclick = () => {
       const slotIndex = Number(el.dataset.index ?? 0)
-      this.eventCtrl.SendEventMessage(
-        EventTypes.SkillSlotCast + "player",
-        Number.isFinite(slotIndex) ? slotIndex : 0,
-      )
+      if (!Number.isFinite(slotIndex)) return
+      const slot = this.slots[slotIndex]
+      if (!slot || performance.now() < slot.castUntil) return
+      this.eventCtrl.SendEventMessage(EventTypes.SkillSlotCast + "player", slotIndex)
     }
 
     const fill = document.createElement("i")
@@ -211,7 +212,10 @@ export class SkillSlotsUX extends GUX {
     const name = document.createElement("span")
     name.className = "gux-skill-name"
 
-    el.append(fill, icon, key, level, name)
+    const timer = document.createElement("span")
+    timer.className = "gux-skill-timer"
+
+    el.append(fill, icon, key, level, name, timer)
     this.Dom.appendChild(el)
 
     const slotData: SkillSlotData = {
@@ -222,6 +226,7 @@ export class SkillSlotsUX extends GUX {
       keyEl: key,
       iconEl: icon,
       nameEl: name,
+      timerEl: timer,
       castUntil: 0,
       cooldownMs: this.resolveCooldownMs(skill.tech),
     }
@@ -282,10 +287,29 @@ export class SkillSlotsUX extends GUX {
       if (!slot) return
       const remain = Math.max(0, slot.castUntil - now)
       const ratio = slot.cooldownMs > 0 ? remain / slot.cooldownMs : 0
-      slot.fill.style.transform = `scaleY(${Math.min(1, ratio)})`
+
+      slot.el.style.setProperty("--cd-ratio", String(Math.min(1, ratio)))
+
+      const wasOnCooldown = slot.el.classList.contains("is-cooldown")
       slot.el.classList.toggle("is-cooldown", remain > 0)
+
+      if (remain > 0) {
+        const secs = remain / 1000
+        slot.timerEl.textContent = secs >= 1 ? String(Math.ceil(secs)) : secs.toFixed(1)
+      } else {
+        slot.timerEl.textContent = ""
+        if (wasOnCooldown) {
+          slot.el.classList.remove("is-ready")
+          void slot.el.offsetWidth
+          slot.el.classList.add("is-ready")
+        }
+      }
     })
     this.rafId = requestAnimationFrame(this.loop)
+  }
+
+  getAssignments(): Array<LearnedSkillMessage | null> {
+    return Array.from({ length: this.opts.maxSlots }, (_, i) => this.slots[i]?.skill ?? null)
   }
 
   dispose() {
@@ -335,13 +359,36 @@ const SKILL_SLOTS_CSS = `
 .gux-skill-cd {
   position: absolute;
   inset: 0;
-  transform-origin: bottom center;
-  transform: scaleY(0);
-  background: rgba(8, 10, 14, 0.68);
-  transition: transform 40ms linear;
+  border-radius: 14px;
+  background: conic-gradient(
+    from -90deg,
+    rgba(0, 0, 0, 0.80) calc(var(--cd-ratio, 0) * 1turn),
+    transparent calc(var(--cd-ratio, 0) * 1turn)
+  );
   z-index: 1;
 }
-.gux-skill-slot.is-cooldown { filter: saturate(0.55); }
+.gux-skill-slot.is-cooldown { filter: saturate(0.35) brightness(0.75); }
+.gux-skill-timer {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(0,0,0,1), 0 1px 3px rgba(0,0,0,1);
+  z-index: 4;
+  pointer-events: none;
+  letter-spacing: -0.5px;
+}
+@keyframes gux-skill-ready {
+  0%   { box-shadow: 0 0 0 0px rgba(255, 215, 60, 0.95); }
+  40%  { box-shadow: 0 0 0 7px rgba(255, 215, 60, 0.55); }
+  100% { box-shadow: 0 0 0 0px rgba(255, 215, 60, 0); }
+}
+.gux-skill-slot.is-ready {
+  animation: gux-skill-ready 0.45s ease-out forwards;
+}
 .gux-skill-icon {
   position: absolute;
   inset: 0;
