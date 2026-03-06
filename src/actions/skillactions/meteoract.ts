@@ -74,7 +74,7 @@ export class MeteorAction implements IActionComponent, ILoop {
     start.y += 14
 
     const core = createFireballCore({ scale: 1.45 })
-    core.setPosition(start)
+    core.reset(start)
     this.scene.add(core.root)
 
     this.activeMeteors.push({
@@ -85,7 +85,6 @@ export class MeteorAction implements IActionComponent, ILoop {
       duration: this.fallDuration,
     })
 
-    this.spawnFireballRing(impact)
     this.lastUsed = now
   }
 
@@ -102,6 +101,7 @@ export class MeteorAction implements IActionComponent, ILoop {
 
       this.scene.remove(m.core.root)
       m.core.dispose()
+      this.spawnFireballRing(m.end)
       return false
     })
 
@@ -132,7 +132,7 @@ export class MeteorAction implements IActionComponent, ILoop {
         center.z + Math.sin(a) * this.ringRadius,
       )
       const core = createFireballCore({ scale: 0.6 })
-      core.setPosition(p)
+      core.reset(p)
       this.scene.add(core.root)
       this.ringCores.push({ core, ttl: 0.55, age: 0 })
     }

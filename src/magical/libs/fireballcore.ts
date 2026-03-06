@@ -91,7 +91,8 @@ export class FireballCore {
   }
 
   setPosition(position: THREE.Vector3) {
-    this.emitter.position.copy(position)
+    this.root.position.copy(position)
+    this.emitter.position.set(0, 0, 0)
   }
 
   setFade(multiplier: number) {

@@ -96,6 +96,15 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tech: actionDefs.FireBall,
     },
     {
+        id: "testMeteor",
+        kind: "skill",
+        name: "Meteor",
+        desc: "화염구를 발사합니다.",
+        icon: "🔥",
+        cost: [1, 2, 3, 4, 5].map(lv => ({ lv, cost: { points: lv } })),
+        tech: actionDefs.Meteor,
+    },
+    {
         id: "fireDefence",
         kind: "trait",
         name: "Fire Defence",
