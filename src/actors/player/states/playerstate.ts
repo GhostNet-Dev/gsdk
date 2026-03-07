@@ -447,7 +447,8 @@ export class RunState extends State implements IPlayerAction {
             return this.playerCtrl.currentIdleState;
         }
 
-        // ✅ 카메라 기준 방향으로 변환
+        // Camera-relative movement:
+        // Use camera's horizontal facing to define forward/right directions
         const camForward = new THREE.Vector3();
         this.camera.getWorldDirection(camForward);
         camForward.y = 0;
@@ -456,18 +457,21 @@ export class RunState extends State implements IPlayerAction {
         const camRight = new THREE.Vector3();
         camRight.crossVectors(camForward, new THREE.Vector3(0, 1, 0)).normalize();
 
-        // 입력 벡터를 카메라 기준 방향으로 변환
+        // Calculate world direction based on camera view
         const worldDir = new THREE.Vector3()
-            .addScaledVector(camForward, -v.z)
-            .addScaledVector(camRight, v.x)
+            .addScaledVector(camForward, -v.z) // W/S
+            .addScaledVector(camRight, v.x)   // Q/E (Strafe)
             .normalize();
 
         worldDir.y = 0;
 
-        // ✅ 회전 처리 (lookAt → Quaternion)
-        const mx = this.MX.lookAt(worldDir, this.ZeroV, this.YV);
-        const qt = this.QT.setFromRotationMatrix(mx);
-        this.player.Meshs.quaternion.copy(qt);
+        // ✅ Character rotation: During movement, rotate player mesh to face movement direction
+        // In WoW, A/D turns the camera AND character, but while moving W, the character looks forward.
+        if (worldDir.lengthSq() > 0) {
+            const mx = this.MX.lookAt(worldDir, this.ZeroV, this.YV);
+            const qt = this.QT.setFromRotationMatrix(mx);
+            this.player.Meshs.quaternion.copy(qt);
+        }
 
         // ✅ 이동 처리 부분 수정
         const stepCount = 2;
@@ -564,7 +568,8 @@ export class JumpState implements IPlayerAction {
     Update(delta: number, v: THREE.Vector3): IPlayerAction {
         const movY = this.velocity_y * delta
 
-        // ✅ 카메라 기준 방향으로 변환
+        // Camera-relative movement:
+        // Use camera's horizontal facing to define forward/right directions
         const camForward = new THREE.Vector3();
         this.camera.getWorldDirection(camForward);
         camForward.y = 0;
@@ -573,15 +578,16 @@ export class JumpState implements IPlayerAction {
         const camRight = new THREE.Vector3();
         camRight.crossVectors(camForward, new THREE.Vector3(0, 1, 0)).normalize();
 
+        // Calculate world direction based on camera view
         const worldDir = new THREE.Vector3()
-            .addScaledVector(camForward, -v.z)
-            .addScaledVector(camRight, v.x)
+            .addScaledVector(camForward, -v.z) // W/S
+            .addScaledVector(camRight, v.x)   // Q/E (Strafe)
             .normalize();
 
         worldDir.y = 0;
 
-        // ✅ 방향 회전 처리
-        if (v.x || v.z) {
+        // ✅ 캐릭터 방향 업데이트: 점프 중 이동 입력이 있으면 해당 방향으로 회전
+        if (worldDir.lengthSq() > 0) {
             const mx = this.MX.lookAt(worldDir, this.ZeroV, this.YV);
             const qt = this.QT.setFromRotationMatrix(mx);
             this.player.Meshs.quaternion.copy(qt);

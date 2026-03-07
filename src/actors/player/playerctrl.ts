@@ -65,6 +65,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     contollerEnable = true
     inputMode = false
     moveDirection = new THREE.Vector3()
+    private joystickDirection = new THREE.Vector3()
     playEnable = false
     playMode: PlayMode = "default"
 
@@ -717,13 +718,26 @@ export class PlayerCtrl implements ILoop, IActionUser {
             reason: "regen"
         })
     }
-
     update(delta: number) {
-        this.updateInputVector()
-        this.updateDownKey()
-        this.updateUpKey()
+        this.updateKeyStates()
 
         if (!this.player.meshs.visible) return
+
+        // WoW-style Rotation
+        const turnSpeed = 3.5; // radians per second
+        let rotationAngle = 0;
+        if (this.KeyState[KeyType.TurnLeft]) rotationAngle += turnSpeed * delta;
+        if (this.KeyState[KeyType.TurnRight]) rotationAngle -= turnSpeed * delta;
+
+        if (rotationAngle !== 0) {
+            this.player.Meshs.rotateY(rotationAngle);
+            if ((this.camera as any).controls) {
+                const controls = (this.camera as any).controls;
+                const currentAzimuth = controls.getAzimuthalAngle();
+                controls.minAzimuthAngle = currentAzimuth + rotationAngle;
+                controls.maxAzimuthAngle = currentAzimuth + rotationAngle;
+            }
+        }
 
         this.applyHpRegen(delta)
         this.applyMpRegen(delta)
@@ -731,6 +745,53 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.currentState = this.currentState.Update(delta, this.moveDirection)
         this.player.Update(delta)
     }
+
+    updateKeyStates() {
+        // Process all key down events in the queue
+        while (this.keyDownQueue.length > 0) {
+            const cmd = this.keyDownQueue.shift()!;
+            this.KeyState[cmd.Type] = true;
+            this.keyType = cmd.Type;
+            if (cmd.Type >= KeyType.Action5 && cmd.Type <= KeyType.Action8) {
+                this.castLearnedSkill(cmd.Type - KeyType.Action5);
+            }
+            const pos = cmd.ExecuteKeyDown();
+            if (pos.y !== 0) this.moveDirection.y = pos.y;
+        }
+
+        // Process all key up events in the queue
+        while (this.keyUpQueue.length > 0) {
+            const cmd = this.keyUpQueue.shift()!;
+            this.KeyState[cmd.Type] = false;
+            const pos = cmd.ExecuteKeyUp();
+            if (pos.y !== 0 && this.moveDirection.y === pos.y) this.moveDirection.y = 0;
+        }
+
+        // Joystick/Joypad input handling: Only update if new data is in queue
+        if (this.inputVQueue.length > 0) {
+            const lastJoy = this.inputVQueue[this.inputVQueue.length - 1];
+            this.joystickDirection.copy(lastJoy);
+            this.inputVQueue.length = 0;
+        }
+
+        // Derive moveDirection from KeyState (for Keyboard)
+        let kbX = 0;
+        let kbZ = 0;
+        if (this.KeyState[KeyType.Up]) kbZ -= 1;
+        if (this.KeyState[KeyType.Down]) kbZ += 1;
+        if (this.KeyState[KeyType.Left]) kbX -= 1;
+        if (this.KeyState[KeyType.Right]) kbX += 1;
+
+        // Combine inputs: Joystick takes precedence if active, otherwise Keyboard
+        if (this.inputMode) {
+            this.moveDirection.x = this.joystickDirection.x;
+            this.moveDirection.z = this.joystickDirection.z;
+        } else {
+            this.moveDirection.x = kbX;
+            this.moveDirection.z = kbZ;
+        }
+    }
+
     changeState(state: IPlayerAction) {
         this.currentState.Uninit()
         this.currentState = state
@@ -740,38 +801,6 @@ export class PlayerCtrl implements ILoop, IActionUser {
     KeyState = new Array<boolean>(KeyType.Count)
     keytimeout?: NodeJS.Timeout
 
-    updateDownKey() {
-        let cmd = this.keyDownQueue.shift()
-        if (cmd == undefined) {
-            this.keyType = KeyType.None
-            return
-        }
-        this.KeyState[cmd.Type] = true
-
-        this.keyType = cmd.Type
-        if (cmd.Type >= KeyType.Action5 && cmd.Type <= KeyType.Action8) {
-            this.castLearnedSkill(cmd.Type - KeyType.Action5)
-        }
-        const position = cmd.ExecuteKeyDown()
-        if (position.x != 0) { this.moveDirection.x = position.x }
-        if (position.y != 0) { this.moveDirection.y = position.y }
-        if (position.z != 0) { this.moveDirection.z = position.z }
-    }
-
-    updateUpKey() {
-        let cmd = this.keyUpQueue.shift()
-        if (cmd == undefined) {
-            this.keyType = KeyType.None
-            return
-        }
-
-        this.KeyState[cmd.Type] = false
-        this.keyType = cmd.Type
-        const position = cmd.ExecuteKeyUp()
-        if (position.x == this.moveDirection.x) { this.moveDirection.x = 0 }
-        if (position.y == this.moveDirection.y) { this.moveDirection.y = 0 }
-        if (position.z == this.moveDirection.z) { this.moveDirection.z = 0 }
-    }
     isObjectLookingAt(object: THREE.Object3D, targetPosition: THREE.Vector3, fov: number): boolean {
         // 1. 객체의 정면 방향 벡터를 구합니다.
         const objectDirection = new THREE.Vector3();

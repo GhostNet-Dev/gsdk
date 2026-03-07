@@ -300,7 +300,11 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
                     const hitPoint = targetObj.position.clone();
                     const hitNormal = new THREE.Vector3(0, 1, 0);
 
-                    this.eventCtrl.SendEventMessage(EventTypes.GlobalEffect, GlobalEffectType.SparkEshSystem, hitPoint, hitNormal, { count: particleCount })
+                    this.eventCtrl.SendEventMessage(EventTypes.GlobalEffect, GlobalEffectType.SparkEshSystem, hitPoint, hitNormal, {
+                        count: particleCount,
+                        power: 12,
+                        chunkRatio: 0.1,
+                    })
                     this.eventCtrl.SendEventMessage(EventTypes.Attack + k, v);
                 }, this.attackSpeed * 1000 * 0.4))
             });

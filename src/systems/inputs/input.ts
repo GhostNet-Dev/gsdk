@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Joystick } from "./joystic";
-import { KeyAction1, KeyAction2, KeyAction3, KeyAction4, KeyAction5, KeyDown, KeyLeft, KeyRight, KeySpace, KeySystem0, KeyUp } from "../event/keycommand";
+import { KeyAction1, KeyAction2, KeyAction3, KeyAction4, KeyAction5, KeyDown, KeyLeft, KeyRight, KeySpace, KeySystem0, KeyTurnLeft, KeyTurnRight, KeyUp } from "../event/keycommand";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import IEventController from "@Glibs/interface/ievent";
 import { KeyType } from "@Glibs/types/eventtypes";
@@ -12,7 +12,7 @@ export enum InputMode {
 }
 
 // KeyAction에 대한 타입을 정의하여 유지보수를 용이하게 합니다.
-type ActionType = 'Up' | 'Down' | 'Left' | 'Right' | 'Space' | 'Action1' | 'Action2' | 'Action3' | 'Action4' | 'Action5';
+type ActionType = 'Up' | 'Down' | 'Left' | 'Right' | 'TurnLeft' | 'TurnRight' | 'Space' | 'Action1' | 'Action2' | 'Action3' | 'Action4' | 'Action5';
 
 // 이벤트 페이로드 타입을 명확히 정의합니다.
 export interface IButtonEnablePayload {
@@ -94,6 +94,7 @@ export default class Input {
     private _createActionHandlers(): void {
         const keyActionMap: { [key in ActionType]: any } = {
             Up: KeyUp, Down: KeyDown, Left: KeyLeft, Right: KeyRight,
+            TurnLeft: KeyTurnLeft, TurnRight: KeyTurnRight,
             Space: KeySpace, Action1: KeyAction1, Action2: KeyAction2,
             Action3: KeyAction3, Action4: KeyAction4, Action5: KeyAction5,
         };
@@ -156,8 +157,9 @@ export default class Input {
         const keyMap: { [key: string]: ActionType } = {
             "ArrowUp": 'Up', "KeyW": 'Up',
             "ArrowDown": 'Down', "KeyS": 'Down',
-            "ArrowLeft": 'Left', "KeyA": 'Left',
-            "ArrowRight": 'Right', "KeyD": 'Right',
+            "ArrowLeft": 'TurnLeft', "KeyA": 'TurnLeft',
+            "ArrowRight": 'TurnRight', "KeyD": 'TurnRight',
+            "KeyQ": 'Left', "KeyE": 'Right',
             "Space": 'Space',
             "Digit1": 'Action1',
             "Digit2": 'Action2',

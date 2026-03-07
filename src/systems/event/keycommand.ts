@@ -113,6 +113,26 @@ export class KeyRight implements IKeyCommand{
         return new THREE.Vector3(1, 0, 0)
     }
 }
+export class KeyTurnLeft implements IKeyCommand{
+    get Type() { return KeyType.TurnLeft }
+    ExecuteKeyUp(): THREE.Vector3 {
+        return new THREE.Vector3()
+    }
+
+    ExecuteKeyDown(): THREE.Vector3 {
+        return new THREE.Vector3()
+    }
+}
+export class KeyTurnRight implements IKeyCommand{
+    get Type() { return KeyType.TurnRight }
+    ExecuteKeyUp(): THREE.Vector3 {
+        return new THREE.Vector3()
+    }
+
+    ExecuteKeyDown(): THREE.Vector3 {
+        return new THREE.Vector3()
+    }
+}
 export class KeySystem0 implements IKeyCommand{
     get Type() { return KeyType.System0 }
     ExecuteKeyUp(): THREE.Vector3 {
