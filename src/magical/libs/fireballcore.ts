@@ -51,6 +51,8 @@ export class FireballCore {
   private emissionEnabled = true
   private fadeMultiplier = 1
   private baseLightIntensity: number
+  private lastRootPosition = new THREE.Vector3()
+  private rootMovement = new THREE.Vector3()
 
   private colorCore: THREE.Color
   private colorAura: THREE.Color
@@ -61,11 +63,11 @@ export class FireballCore {
 
     this.particleCount = options.particleCount ?? 200
     this.radius = (options.radius ?? 0.8) * scale
-    this.riseSpeed = (options.riseSpeed ?? 1.5) * scale
+    this.riseSpeed = (options.riseSpeed ?? 0.8) * scale
     this.expansionSpeed = (options.expansionSpeed ?? 0.5) * scale
     this.turbulence = (options.turbulence ?? 1.5) * scale
     this.baseScale = (options.baseScale ?? 1) * scale
-    this.lifeTime = options.lifeTime ?? 0.6
+    this.lifeTime = options.lifeTime ?? 1.3
     this.opacity = options.opacity ?? 0.7
 
     this.colorCore = new THREE.Color(options.colorCore ?? "#ffffcc")
@@ -116,13 +118,19 @@ export class FireballCore {
 
   reset(position: THREE.Vector3) {
     this.setPosition(position)
+    this.lastRootPosition.copy(this.root.position)
     this.setFade(1)
     this.startEmission()
     this.particles.forEach((sprite) => this.spawnParticle(sprite))
   }
 
   update(elapsedSec: number, deltaSec: number) {
+    this.rootMovement.copy(this.root.position).sub(this.lastRootPosition)
+    this.lastRootPosition.copy(this.root.position)
+
     this.particles.forEach((sprite) => {
+      sprite.position.sub(this.rootMovement)
+
       const u = sprite.userData
       u.age += deltaSec
 

@@ -146,6 +146,9 @@ export class ComboSkillAction implements IActionComponent {
         const ctrl = target as any
         if (!ctrl.ComboMeleeSt || typeof ctrl.changeState !== "function") return
 
+        // 근거리 무기가 없으면 실행하지 않음
+        if (!ctrl.baseSpec?.GetMeleeItem?.()) return
+
         this.lastUsed = now
         ctrl.ComboMeleeSt.withChain(this.chain)
         ctrl.changeState(ctrl.ComboMeleeSt)
@@ -158,6 +161,8 @@ export class ComboSkillAction implements IActionComponent {
      */
     onSlotCast(ctrl: any): boolean {
         if (ctrl.currentState === ctrl.ComboMeleeSt) {
+            // 콤보 진행 중 무기가 해제된 경우 연타 차단
+            if (!ctrl.baseSpec?.GetMeleeItem?.()) return false
             ctrl.ComboMeleeSt.onAttackButtonPressed()
             return true
         }
