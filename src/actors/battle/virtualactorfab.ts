@@ -76,6 +76,7 @@ export class VirtualActorFactory {
         
         // *중요*: 리더의 스킬 계수 등 일시적 속성 복사
         virtualActor.skillMultiplier = leader.skillMultiplier;
+        virtualActor.lastUsedWeaponMode = leader.lastUsedWeaponMode;
 
         return virtualActor;
     }
