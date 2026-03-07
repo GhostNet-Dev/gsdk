@@ -21,9 +21,9 @@ import { ActionCostSpec, cost } from "@Glibs/actors/battle/resourcecosttypes";
 /* -------------------------------------------------------------------------- */
 
 type ComboPhase = "idle" | "windup" | "hit" | "recovery";
-type SecOrFrac = { sec?: number; frac?: number };
+export type SecOrFrac = { sec?: number; frac?: number };
 
-interface ComboStep {
+export interface ComboStep {
     anim: ActionType;
 
     // (레거시) 절대초
@@ -54,7 +54,7 @@ interface ComboStep {
     sfx?: string; // (레거시) impactSfx 간주
 }
 
-interface ComboChain {
+export interface ComboChain {
     name: string;
     steps: ComboStep[];
     inputBufferSec?: number;
@@ -153,6 +153,7 @@ const DEFAULT_COMBO_MELEE_ATTACK_COST: ActionCostSpec = {
 
 export class ComboMeleeState extends AttackState implements IPlayerAction {
     private chain!: ComboChain;
+    private _injectedChain?: ComboChain;
     private stepIndex = 0;
     private currentStep!: ComboStep;
 
@@ -199,6 +200,12 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
     }
 
     /* ------------------------------ Helpers --------------------------------- */
+
+    /** 외부에서 커스텀 체인을 주입합니다. Init() 호출 전에 사용하세요. */
+    public withChain(chain?: ComboChain): this {
+        this._injectedChain = chain;
+        return this;
+    }
 
     private get totalDurSec(): number { return this.attackSpeed || 1; }
 
@@ -469,7 +476,8 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
     /* ------------------------------ Lifecycle -------------------------------- */
 
     Init(): void {
-        this.chain = this.pickChain();
+        this.chain = this._injectedChain ?? this.pickChain();
+        this._injectedChain = undefined;
         this.inputBufferSec = this.chain.inputBufferSec ?? 0.25;
         this.hitstopSec = this.chain.hitstopSec ?? 0.04;
 

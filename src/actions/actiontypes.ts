@@ -406,6 +406,35 @@ export const actionDefs = {
       { amount: 35 },
       { amount: 50 }
     ]
+  },
+  // =================================================================
+  // Combo Melee Skills
+  // =================================================================
+  BladeStorm: {
+    id: "skill_blade_storm",
+    name: "Blade Storm",
+    trigger: "onCast" as TriggerType,
+    type: "comboMelee",
+    castAction: "none",
+    cooldown: 0,
+    chainName: "BladeStorm5",
+    resourceCost: {
+      id: "skill_blade_storm_cast",
+      cost: cost.optional(cost.atom("stamina", 20))
+    }
+  },
+  DoubleSlash: {
+    id: "skill_double_slash",
+    name: "Double Slash",
+    trigger: "onCast" as TriggerType,
+    type: "comboMelee",
+    castAction: "none",
+    cooldown: 0,
+    chainName: "DoubleSlash",
+    resourceCost: {
+      id: "skill_double_slash_cast",
+      cost: cost.optional(cost.atom("stamina", 12))
+    }
   }
 }
 

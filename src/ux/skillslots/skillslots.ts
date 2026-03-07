@@ -4,7 +4,21 @@ import { KeyType } from "@Glibs/types/eventtypes"
 import { EventTypes } from "@Glibs/types/globaltypes"
 import { GUX } from "@Glibs/ux/gux"
 
-export type SkillSlotLayout = "left" | "right" | "bottom"
+/* -------------------------------------------------------------------------- */
+/* Types                                                                       */
+/* -------------------------------------------------------------------------- */
+
+/** 슬롯 컨테이너 기본 위치 프리셋 */
+export type SkillSlotLayout = "left" | "right" | "bottom" | "top" | "custom"
+
+/** 슬롯 모양 */
+export type SkillSlotShape = "rounded" | "circle" | "square" | "squircle"
+
+/** 슬롯 비주얼 테마 */
+export type SkillSlotTheme = "dark" | "glass" | "light" | "minimal"
+
+/** flex 방향 (custom 포지션에서 직접 지정) */
+export type SkillSlotOrientation = "horizontal" | "vertical"
 
 export type LearnedSkillMessage = {
   nodeId: string
@@ -28,20 +42,43 @@ type SkillSlotData = {
 }
 
 export type SkillSlotsOptions = {
+  /** 사전 정의 위치 프리셋. "custom" 시 customX/Y 로 좌표를 직접 지정합니다. */
   position: SkillSlotLayout
+  /** position="custom" 일 때 left 값 (e.g. "20px", "50%") */
+  customX?: string
+  /** position="custom" 일 때 top 값 (e.g. "80px", "50%") */
+  customY?: string
+  /** position="custom" 또는 강제 방향 변경 시 사용 */
+  orientation?: SkillSlotOrientation
+  /** 위치 미세 조정 오프셋 (px). 프리셋 위치에서 추가로 이동합니다. */
+  offsetX: number
+  offsetY: number
+
   slotSize: number
   gap: number
   maxSlots: number
   iconFallback: string
   keyLabels: string[]
+
   showTooltip: boolean
   showLevel: boolean
   showKeyHint: boolean
+  showName: boolean
+
   zIndex: number
+
+  /** 슬롯 모양 */
+  shape: SkillSlotShape
+  /** 비주얼 테마 */
+  theme: SkillSlotTheme
+  /** 컨테이너 투명도 0–1 */
+  opacity: number
 }
 
 const DEFAULT_OPTIONS: SkillSlotsOptions = {
   position: "right",
+  offsetX: 0,
+  offsetY: 0,
   slotSize: 58,
   gap: 8,
   maxSlots: 4,
@@ -50,8 +87,16 @@ const DEFAULT_OPTIONS: SkillSlotsOptions = {
   showTooltip: true,
   showLevel: true,
   showKeyHint: true,
+  showName: true,
   zIndex: 45,
+  shape: "rounded",
+  theme: "dark",
+  opacity: 1,
 }
+
+/* -------------------------------------------------------------------------- */
+/* SkillSlotsUX                                                                */
+/* -------------------------------------------------------------------------- */
 
 export class SkillSlotsUX extends GUX {
   Dom: HTMLElement
@@ -72,11 +117,7 @@ export class SkillSlotsUX extends GUX {
     this.Dom.className = "gux-skill-slots"
     document.body.appendChild(this.Dom)
 
-    this.setPosition(this.opts.position)
-    this.setSlotSize(this.opts.slotSize)
-    this.setGap(this.opts.gap)
-    this.setMaxSlots(this.opts.maxSlots)
-    this.setZIndex(this.opts.zIndex)
+    this.applyAllOptions()
 
     this.eventCtrl.RegisterEventListener(EventTypes.UpdateSkill + "player", (skill: LearnedSkillMessage) => {
       this.bindSkill(skill)
@@ -102,6 +143,8 @@ export class SkillSlotsUX extends GUX {
     this.loop()
   }
 
+  /* ── Show / Hide ──────────────────────────────────────────────────────── */
+
   Show(): void {
     this.visible = true
     this.Dom.style.display = "flex"
@@ -112,18 +155,38 @@ export class SkillSlotsUX extends GUX {
     this.Dom.style.display = "none"
   }
 
+  /* ── Setters ──────────────────────────────────────────────────────────── */
+
   setPosition(position: SkillSlotLayout) {
     this.opts.position = position
     this.Dom.dataset.position = position
+    this.applyPositionStyle()
+  }
+
+  /** position="custom" 일 때 컨테이너 좌표와 방향을 설정합니다. */
+  setCustomPosition(x: string, y: string, orientation: SkillSlotOrientation = "vertical") {
+    this.opts.position = "custom"
+    this.opts.customX = x
+    this.opts.customY = y
+    this.opts.orientation = orientation
+    this.Dom.dataset.position = "custom"
+    this.applyPositionStyle()
+  }
+
+  /** 프리셋 위치에서 추가 오프셋(px)을 적용합니다. */
+  setOffset(x: number, y: number) {
+    this.opts.offsetX = x
+    this.opts.offsetY = y
+    this.applyPositionStyle()
   }
 
   setSlotSize(px: number) {
-    this.opts.slotSize = Math.max(36, px)
+    this.opts.slotSize = Math.max(24, px)
     this.Dom.style.setProperty("--gux-skill-slot-size", `${this.opts.slotSize}px`)
   }
 
   setGap(px: number) {
-    this.opts.gap = Math.max(2, px)
+    this.opts.gap = Math.max(0, px)
     this.Dom.style.setProperty("--gux-skill-slot-gap", `${this.opts.gap}px`)
   }
 
@@ -146,6 +209,93 @@ export class SkillSlotsUX extends GUX {
       if (!slot) return
       slot.keyEl.textContent = this.opts.showKeyHint ? (labels[i] ?? "") : ""
     })
+  }
+
+  /** 슬롯 모양을 변경합니다. */
+  setShape(shape: SkillSlotShape) {
+    this.opts.shape = shape
+    this.Dom.dataset.shape = shape
+  }
+
+  /** 비주얼 테마를 변경합니다. */
+  setTheme(theme: SkillSlotTheme) {
+    this.opts.theme = theme
+    this.Dom.dataset.theme = theme
+  }
+
+  /** 컨테이너 전체 투명도를 설정합니다 (0–1). */
+  setOpacity(opacity: number) {
+    this.opts.opacity = Math.max(0, Math.min(1, opacity))
+    this.Dom.style.opacity = String(this.opts.opacity)
+  }
+
+  setShowName(show: boolean) {
+    this.opts.showName = show
+    this.slots.forEach((slot) => {
+      if (!slot) return
+      slot.nameEl.style.display = show ? "" : "none"
+    })
+  }
+
+  setShowLevel(show: boolean) {
+    this.opts.showLevel = show
+    this.slots.forEach((slot) => {
+      if (!slot) return
+      slot.levelEl.textContent = show ? `Lv.${slot.skill.level}` : ""
+    })
+  }
+
+  setShowKeyHint(show: boolean) {
+    this.opts.showKeyHint = show
+    this.slots.forEach((slot, i) => {
+      if (!slot) return
+      slot.keyEl.textContent = show ? (this.opts.keyLabels[i] ?? "") : ""
+    })
+  }
+
+  /* ── Private helpers ──────────────────────────────────────────────────── */
+
+  private applyAllOptions() {
+    this.Dom.style.setProperty("--gux-skill-slot-size", `${this.opts.slotSize}px`)
+    this.Dom.style.setProperty("--gux-skill-slot-gap", `${this.opts.gap}px`)
+    this.Dom.style.zIndex = String(this.opts.zIndex)
+    this.Dom.style.opacity = String(this.opts.opacity)
+    this.Dom.dataset.position = this.opts.position
+    this.Dom.dataset.shape = this.opts.shape
+    this.Dom.dataset.theme = this.opts.theme
+    this.applyPositionStyle()
+  }
+
+  private applyPositionStyle() {
+    const { position, customX, customY, orientation, offsetX, offsetY } = this.opts
+
+    // 인라인 위치 초기화
+    this.Dom.style.removeProperty("left")
+    this.Dom.style.removeProperty("right")
+    this.Dom.style.removeProperty("top")
+    this.Dom.style.removeProperty("bottom")
+    this.Dom.style.removeProperty("transform")
+    this.Dom.style.removeProperty("flex-direction")
+
+    if (position === "custom") {
+      this.Dom.style.left = customX ?? "0px"
+      this.Dom.style.top = customY ?? "0px"
+      this.Dom.style.flexDirection = orientation === "horizontal" ? "row" : "column"
+      if (offsetX) this.Dom.style.left = `calc(${customX ?? "0px"} + ${offsetX}px)`
+      if (offsetY) this.Dom.style.top = `calc(${customY ?? "0px"} + ${offsetY}px)`
+      return
+    }
+
+    // orientation 강제 지정 시 CSS 프리셋을 override
+    if (orientation) {
+      this.Dom.style.flexDirection = orientation === "horizontal" ? "row" : "column"
+    }
+
+    // 오프셋 적용 (CSS 변수로 전달)
+    if (offsetX !== 0) this.Dom.style.setProperty("--gux-offset-x", `${offsetX}px`)
+    else this.Dom.style.removeProperty("--gux-offset-x")
+    if (offsetY !== 0) this.Dom.style.setProperty("--gux-offset-y", `${offsetY}px`)
+    else this.Dom.style.removeProperty("--gux-offset-y")
   }
 
   private bindSkill(skill: LearnedSkillMessage) {
@@ -211,6 +361,7 @@ export class SkillSlotsUX extends GUX {
 
     const name = document.createElement("span")
     name.className = "gux-skill-name"
+    if (!this.opts.showName) name.style.display = "none"
 
     const timer = document.createElement("span")
     timer.className = "gux-skill-timer"
@@ -241,23 +392,22 @@ export class SkillSlotsUX extends GUX {
     const techName = this.asString(tech?.name) ?? slot.skill.techId
 
     const icon = slot.skill.icon || this.opts.iconFallback
-    
-    // 이모지 또는 텍스트인 경우 처리
+
     if (icon.length < 10) {
-        slot.iconEl.textContent = icon
-        slot.iconEl.style.backgroundImage = 'none'
+      slot.iconEl.textContent = icon
+      slot.iconEl.style.backgroundImage = "none"
     } else {
-        // URL인 경우 배경 이미지로 처리
-        slot.iconEl.textContent = ""
-        slot.iconEl.style.backgroundImage = `url(${icon})`
-        slot.iconEl.style.backgroundSize = 'contain'
-        slot.iconEl.style.backgroundRepeat = 'no-repeat'
-        slot.iconEl.style.backgroundPosition = 'center'
+      slot.iconEl.textContent = ""
+      slot.iconEl.style.backgroundImage = `url(${icon})`
+      slot.iconEl.style.backgroundSize = "contain"
+      slot.iconEl.style.backgroundRepeat = "no-repeat"
+      slot.iconEl.style.backgroundPosition = "center"
     }
 
     slot.keyEl.textContent = this.opts.showKeyHint ? (this.opts.keyLabels[Number(slot.el.dataset.index)] ?? "") : ""
     slot.levelEl.textContent = this.opts.showLevel ? levelText : ""
     slot.nameEl.textContent = techName
+    slot.nameEl.style.display = this.opts.showName ? "" : "none"
 
     if (this.opts.showTooltip) {
       slot.el.title = `${techName} (${levelText})`
@@ -319,76 +469,144 @@ export class SkillSlotsUX extends GUX {
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/* CSS                                                                         */
+/* -------------------------------------------------------------------------- */
+
 const SKILL_SLOTS_CSS = `
+/* ── Layout ─────────────────────────────────────────────────────────────── */
 .gux-skill-slots {
   --gux-skill-slot-size: 58px;
   --gux-skill-slot-gap: 8px;
+  --gux-offset-x: 0px;
+  --gux-offset-y: 0px;
   position: fixed;
   display: flex;
   gap: var(--gux-skill-slot-gap);
   pointer-events: auto;
 }
+
 .gux-skill-slots[data-position="right"] {
-  right: 14px;
+  right: calc(14px + var(--gux-offset-x));
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(calc(-50% + var(--gux-offset-y)));
   flex-direction: column;
 }
 .gux-skill-slots[data-position="left"] {
-  left: 14px;
+  left: calc(14px + var(--gux-offset-x));
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(calc(-50% + var(--gux-offset-y)));
   flex-direction: column;
 }
 .gux-skill-slots[data-position="bottom"] {
-  bottom: 14px;
+  bottom: calc(14px - var(--gux-offset-y));
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(calc(-50% + var(--gux-offset-x)));
   flex-direction: row;
 }
+.gux-skill-slots[data-position="top"] {
+  top: calc(14px + var(--gux-offset-y));
+  left: 50%;
+  transform: translateX(calc(-50% + var(--gux-offset-x)));
+  flex-direction: row;
+}
+.gux-skill-slots[data-position="custom"] {
+  position: fixed;
+}
+
+/* ── Slot base ───────────────────────────────────────────────────────────── */
 .gux-skill-slot {
   width: var(--gux-skill-slot-size);
   height: var(--gux-skill-slot-size);
   position: relative;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.3);
-  background: linear-gradient(180deg, rgba(26,28,35,0.88), rgba(8,10,14,0.88));
-  box-shadow: 0 10px 18px rgba(0,0,0,0.35);
   overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.08s ease, opacity 0.15s;
+  flex-shrink: 0;
 }
+.gux-skill-slot:active { transform: scale(0.93); }
+
+/* ── Shape variants ──────────────────────────────────────────────────────── */
+.gux-skill-slots[data-shape="rounded"] .gux-skill-slot,
+.gux-skill-slots[data-shape="rounded"] .gux-skill-cd  { border-radius: 14px; }
+
+.gux-skill-slots[data-shape="circle"]  .gux-skill-slot,
+.gux-skill-slots[data-shape="circle"]  .gux-skill-cd  { border-radius: 50%; }
+
+.gux-skill-slots[data-shape="square"]  .gux-skill-slot,
+.gux-skill-slots[data-shape="square"]  .gux-skill-cd  { border-radius: 4px; }
+
+.gux-skill-slots[data-shape="squircle"] .gux-skill-slot,
+.gux-skill-slots[data-shape="squircle"] .gux-skill-cd { border-radius: 28%; }
+
+/* ── Theme: dark (default) ───────────────────────────────────────────────── */
+.gux-skill-slots[data-theme="dark"] .gux-skill-slot {
+  border: 1px solid rgba(255,255,255,0.28);
+  background: linear-gradient(180deg, rgba(26,28,35,0.90), rgba(8,10,14,0.90));
+  box-shadow: 0 10px 18px rgba(0,0,0,0.35);
+}
+
+/* ── Theme: glass ────────────────────────────────────────────────────────── */
+.gux-skill-slots[data-theme="glass"] .gux-skill-slot {
+  border: 1px solid rgba(255,255,255,0.20);
+  background: rgba(255,255,255,0.10);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+/* ── Theme: light ────────────────────────────────────────────────────────── */
+.gux-skill-slots[data-theme="light"] .gux-skill-slot {
+  border: 1px solid rgba(0,0,0,0.14);
+  background: linear-gradient(180deg, #f0f2f8, #d8dce8);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.14);
+}
+.gux-skill-slots[data-theme="light"] .gux-skill-icon  { color: #1a1c23; }
+.gux-skill-slots[data-theme="light"] .gux-skill-key   { color: #4a4e5c; }
+.gux-skill-slots[data-theme="light"] .gux-skill-level { color: #c07800; }
+.gux-skill-slots[data-theme="light"] .gux-skill-name  {
+  color: #2a2d3a;
+  background: rgba(200,206,220,0.92);
+}
+.gux-skill-slots[data-theme="light"] .gux-skill-timer { color: #1a1c23; }
+.gux-skill-slots[data-theme="light"] .gux-skill-cd {
+  background: conic-gradient(
+    from -90deg,
+    rgba(0,0,0,0.30) calc(var(--cd-ratio,0) * 1turn),
+    transparent      calc(var(--cd-ratio,0) * 1turn)
+  );
+}
+
+/* ── Theme: minimal ──────────────────────────────────────────────────────── */
+.gux-skill-slots[data-theme="minimal"] .gux-skill-slot {
+  border: 1.5px solid rgba(255,255,255,0.30);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ── Cooldown overlay (dark/glass/minimal share same style) ─────────────── */
 .gux-skill-cd {
   position: absolute;
   inset: 0;
-  border-radius: 14px;
   background: conic-gradient(
     from -90deg,
-    rgba(0, 0, 0, 0.80) calc(var(--cd-ratio, 0) * 1turn),
-    transparent calc(var(--cd-ratio, 0) * 1turn)
+    rgba(0,0,0,0.78) calc(var(--cd-ratio,0) * 1turn),
+    transparent      calc(var(--cd-ratio,0) * 1turn)
   );
   z-index: 1;
-}
-.gux-skill-slot.is-cooldown { filter: saturate(0.35) brightness(0.75); }
-.gux-skill-timer {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: 17px;
-  font-weight: 800;
-  color: #fff;
-  text-shadow: 0 0 8px rgba(0,0,0,1), 0 1px 3px rgba(0,0,0,1);
-  z-index: 4;
   pointer-events: none;
-  letter-spacing: -0.5px;
 }
+.gux-skill-slot.is-cooldown { filter: saturate(0.3) brightness(0.72); }
+
+/* ── Ready flash ─────────────────────────────────────────────────────────── */
 @keyframes gux-skill-ready {
-  0%   { box-shadow: 0 0 0 0px rgba(255, 215, 60, 0.95); }
-  40%  { box-shadow: 0 0 0 7px rgba(255, 215, 60, 0.55); }
-  100% { box-shadow: 0 0 0 0px rgba(255, 215, 60, 0); }
+  0%   { box-shadow: 0 0 0 0px  rgba(255,215,60,0.95); }
+  40%  { box-shadow: 0 0 0 7px  rgba(255,215,60,0.55); }
+  100% { box-shadow: 0 0 0 0px  rgba(255,215,60,0.00); }
 }
-.gux-skill-slot.is-ready {
-  animation: gux-skill-ready 0.45s ease-out forwards;
-}
+.gux-skill-slot.is-ready { animation: gux-skill-ready 0.45s ease-out forwards; }
+
+/* ── Inner elements ──────────────────────────────────────────────────────── */
 .gux-skill-icon {
   position: absolute;
   inset: 0;
@@ -396,40 +614,57 @@ const SKILL_SLOTS_CSS = `
   place-items: center;
   font-size: calc(var(--gux-skill-slot-size) * 0.48);
   z-index: 2;
+  pointer-events: none;
+}
+.gux-skill-timer {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--gux-skill-slot-size) * 0.28);
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 8px rgba(0,0,0,1), 0 1px 3px rgba(0,0,0,1);
+  z-index: 4;
+  pointer-events: none;
+  letter-spacing: -0.5px;
 }
 .gux-skill-key {
   position: absolute;
   left: 5px;
   top: 4px;
-  font-size: 10px;
+  font-size: calc(var(--gux-skill-slot-size) * 0.165);
   color: #f8fafc;
   text-shadow: 0 1px 1px rgba(0,0,0,0.8);
   z-index: 3;
+  pointer-events: none;
+  line-height: 1;
 }
 .gux-skill-level {
   position: absolute;
   right: 5px;
   bottom: 4px;
-  font-size: 10px;
+  font-size: calc(var(--gux-skill-slot-size) * 0.165);
   color: #fde68a;
   text-shadow: 0 1px 1px rgba(0,0,0,0.8);
   z-index: 3;
+  pointer-events: none;
+  line-height: 1;
 }
 .gux-skill-name {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -1px;
-  height: 14px;
-  font-size: 9px;
-  line-height: 14px;
+  left: 0; right: 0; bottom: 0;
+  height: calc(var(--gux-skill-slot-size) * 0.22);
+  font-size: calc(var(--gux-skill-slot-size) * 0.145);
+  line-height: calc(var(--gux-skill-slot-size) * 0.22);
   text-align: center;
   color: #e2e8f0;
-  background: rgba(15, 17, 22, 0.9);
+  background: rgba(15,17,22,0.88);
   z-index: 2;
   padding: 0 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  pointer-events: none;
 }
 `

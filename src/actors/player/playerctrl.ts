@@ -428,6 +428,11 @@ export class PlayerCtrl implements ILoop, IActionUser {
 
         if (!action) return false
 
+        // 콤보 연속 진행 등 액션이 슬롯 입력을 직접 처리하는 경우 → 비용/모션 건너뜀
+        if (typeof (action as any).onSlotCast === "function") {
+            if ((action as any).onSlotCast(this)) return true
+        }
+
         if (!this.tryConsumeSkillCost(this.resolveSkillCostSpec(skill, action), "스킬을 시전할 자원이 부족합니다.")) {
             return false
         }
@@ -490,6 +495,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
 
     private playSkillCastMotion(tech: ActionDef): number {
         if (this.currentState === this.RollSt || this.currentState === this.DyingSt) return 0
+        if (tech.castAction === "none") return 0
 
         const castAction = this.resolveCastActionType(tech)
         const duration = this.player.ChangeAction(castAction)
