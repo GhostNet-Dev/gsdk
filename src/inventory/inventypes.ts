@@ -7,7 +7,16 @@ import { MonsterId } from "@Glibs/types/monstertypes"
 import { ActionCostSpec } from "@Glibs/actors/battle/resourcecosttypes"
 
 
-export type ItemType = "meleeattack" | "rangeattack" | "shield" | "armor" | "potion" | "material" | "farm" | "deck"
+export enum ItemType {
+    MeleeAttack = "meleeattack",
+    RangeAttack = "rangeattack",
+    Shield = "shield",
+    Armor = "armor",
+    Potion = "potion",
+    Material = "material",
+    Farm = "farm",
+    Deck = "deck"
+}
 
 export enum AttackItemType {
     OneHandBlunt, //둔기 

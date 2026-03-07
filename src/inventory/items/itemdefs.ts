@@ -1,6 +1,7 @@
 import { Char } from "@Glibs/loader/assettypes";
 import { actionDefs } from "@Glibs/types/actiontypes";
 import { Bind } from "@Glibs/types/assettypes";
+import { ItemType } from "@Glibs/inventory/inventypes";
 import { AttackItemType } from "@Glibs/types/inventypes";
 import { SoundType } from "@Glibs/types/soundtypes";
 import { itemIcons } from "@Glibs/ux/icons/itemicons";
@@ -11,7 +12,7 @@ export const itemDefs = {
     id: "Exp",
     name: "Exp",
     icon: itemIcons.Topazstaff,
-    type: "meleeattack",
+    type: ItemType.MeleeAttack,
     binding: false,
     stackable: true,
     description : "exp", 
@@ -20,7 +21,7 @@ export const itemDefs = {
     id: "Gold",
     name: "Gold",
     icon: itemIcons.Topazstaff,
-    type: "meleeattack",
+    type: ItemType.MeleeAttack,
     binding: false,
     stackable: true,
     description : "Gold", 
@@ -31,7 +32,7 @@ export const itemDefs = {
     descriptionKr: "권총/소총에서 사용하는 9mm 탄약입니다.",
     description: "9mm ammunition used by firearms.",
     icon: itemIcons.Bow,
-    type: "material",
+    type: ItemType.Material,
     levelRequirement: 0,
     stackable: true,
     binding: false,
@@ -43,7 +44,7 @@ export const itemDefs = {
     descriptionKr: "오랜 세월 사용되어 낡은 흔적이 역력한 나무 배트입니다. 예상외로 무게 균형이 잘 잡혀 있어 자기 방어는 물론, 뭔가를 멀리 날려버리는 데에도 효과적입니다. 그 유래는 미스터리에 싸여 있지만, 풍부한 역사를 지녔다고 전해집니다.",
     description: "A simple, wooden bat, worn from years of use. It has a surprisingly balanced feel, making it a reliable tool for both self-defense and knocking something out of the park. It's said to have a rich history, though its origins are shrouded in mystery.",
     icon: itemIcons.Topazstaff,
-    type: "meleeattack",
+    type: ItemType.MeleeAttack,
     levelRequirement: 0,
     weapon: AttackItemType.TwoHandSword,
     bind: Bind.Hands_R,
@@ -63,7 +64,7 @@ export const itemDefs = {
     descriptionKr: "모험을 막 시작한 이들을 위한 기본 지급 검입니다. 화려하진 않지만, 튼튼하고 단순한 디자인으로 임무를 완수하기에 충분합니다. 균형이 잘 잡혀 있어 초반 전투에서 믿음직한 동반자가 될 것입니다.",
     description: "A standard-issue sword, perfect for a fledgling adventurer. It's nothing fancy—just a simple, sturdy blade designed to get the job done. It's well-balanced and a reliable companion for your first few skirmishes.",
     icon: itemIcons.Topazstaff,
-    type: "meleeattack",
+    type: ItemType.MeleeAttack,
     levelRequirement: 0,
     weapon: AttackItemType.TwoHandSword,
     bind: Bind.Hands_R,
@@ -81,7 +82,7 @@ export const itemDefs = {
     descriptionKr: "오래된 시대의 유물처럼 보이는 구식 총기입니다. 투박하지만 단순한 디자인이 오히려 내구성을 증명합니다. 최신 무기들의 화려함은 없지만, 의외로 강력한 한 방을 선사합니다.",
     description: "An old-school firearm, clearly a relic from a bygone era. It's a bit clunky, but its simple design is a testament to its durability. While it may lack the bells and whistles of modern weaponry, it packs a surprisingly powerful punch.",
     icon: itemIcons.Bow,
-    type: "rangeattack",
+    type: ItemType.RangeAttack,
     levelRequirement: 0,
     weapon: AttackItemType.OneHandGun,
     bind: Bind.Weapon_Ranged,
@@ -108,7 +109,7 @@ export const itemDefs = {
   },
   Pistol: {
     id: "Pistol",
-    type: "rangeattack",
+    type: ItemType.RangeAttack,
     levelRequirement: 0,
     weapon: AttackItemType.OneHandGun,
     bind: Bind.Weapon_Ranged,
@@ -136,7 +137,7 @@ export const itemDefs = {
   },
   M4A1: {
     id: "M4A1",
-    type: "rangeattack",
+    type: ItemType.RangeAttack,
     levelRequirement: 0,
     weapon: AttackItemType.TwoHandGun,
     bind: Bind.Weapon_Ranged,
@@ -161,7 +162,7 @@ export const itemDefs = {
   },
   M16: {
     id: "M16",
-    type: "rangeattack",
+    type: ItemType.RangeAttack,
     levelRequirement: 0,
     weapon: AttackItemType.TwoHandGun,
     bind: Bind.Weapon_Ranged,
@@ -187,7 +188,7 @@ export const itemDefs = {
   },
   SCAR: {
     id: "SCAR",
-    type: "rangeattack",
+    type: ItemType.RangeAttack,
     levelRequirement: 0,
     weapon: AttackItemType.TwoHandGun,
     bind: Bind.Weapon_Ranged,
@@ -210,7 +211,7 @@ export const itemDefs = {
     descriptionKr: "단순히 식물에 물을 주는 용도가 아닙니다. 모든 농부에게 꼭 필요한 튼튼한 도구입니다. 작물을 건강하게 키울 만큼 충분한 양의 물을 담을 수 있습니다. 평화로운 삶을 위한 필수품입니다.",
     description: "This isn't just for watering plants; it's a trusty tool for any aspiring farmer. It’s durable and holds just enough water to keep your crops happy and healthy. While not a conventional weapon, it’s a staple for a peaceful life.",
     icon: itemIcons.Lantern,
-    type: "farm",
+    type: ItemType.Farm,
     bind: Bind.Hands_R,
     assetKey: Char.ItemsWateringCan,
     level: "common",
@@ -233,7 +234,7 @@ export const itemDefs = {
     descriptionKr: "파괴와 건설을 위해 만들어진 튼튼한 해머입니다. 단단한 머리와 견고한 손잡이는 벽을 부수거나 새로운 구조물을 만들 때 효과적이며, 필요하다면 강력한 일격을 가하는 데에도 사용됩니다.",
     description: "A heavy-duty hammer built for demolition and construction. Its solid head and sturdy handle make it effective for breaking down walls, crafting new structures, or—if the need arises—delivering a forceful blow in combat.",
     icon: itemIcons.Hammer,
-    type: "meleeattack",
+    type: ItemType.MeleeAttack,
     bind: Bind.Hands_R,
     assetKey: Char.ItemsHammer,
     weapon: AttackItemType.OneHandBlunt,
@@ -256,7 +257,7 @@ export const itemDefs = {
     descriptionKr: "단순하지만 꼭 필요한 제작 재료입니다. 이 고품질의 가죽은 갑옷, 도구는 물론 장식품까지 다양한 물건을 만드는 데 사용됩니다. 제작 기술이 있는 사람에게는 다재다능한 자원입니다.",
     description: "A simple but essential crafting material. This high-quality leather can be used to craft everything from armor and tools to decorative items. It’s a versatile resource for those with a knack for crafting.",
     icon: itemIcons.Leather,
-    type: "material",
+    type: ItemType.Material,
     stackable: true,
     binding: false,
     actions: [
@@ -274,7 +275,7 @@ export const itemDefs = {
     descriptionKr: "수많은 프로젝트의 기본 건축 자재입니다. 숲에서 바로 가져온 원시적인 자원으로, 판자로 가공하거나 연료로 사용하거나 새로운 물건을 만드는 데 쓰입니다. 생존과 건설에 필수적인 자원입니다.",
     description: "The basic building block of countless projects. This log is a raw resource straight from the forest, ready to be processed into planks, used as fuel, or crafted into something new. A vital resource for survival and construction.",
     icon: itemIcons.Woodlog,
-    type: "material",
+    type: ItemType.Material,
     stackable: true,
     binding: false,
     assetDrop: Char.KayKitResourceWoodLogA,
@@ -293,7 +294,7 @@ export const itemDefs = {
     descriptionKr: "건축과 제작을 위한 기초 재료입니다. 이 바위들은 견고하고 내구성이 뛰어나, 기반, 벽, 또는 단단한 도구를 만드는 데 완벽합니다. 오래가는 무언가를 만들고자 하는 사람에게는 시대를 초월한 자원입니다.",
     description: "A foundational material for building and crafting. These rocks are sturdy and durable, perfect for creating foundations, walls, or solid tools. They are a timeless resource for anyone looking to build something that lasts.",
     icon: itemIcons.Silvernugget,
-    type: "material",
+    type: ItemType.Material,
     stackable: true,
     binding: false,
     actions: [
@@ -311,7 +312,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -329,7 +330,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -347,7 +348,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -365,7 +366,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -383,7 +384,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -401,7 +402,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -419,7 +420,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -437,7 +438,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -455,7 +456,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -473,7 +474,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -491,7 +492,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -509,7 +510,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -527,7 +528,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -545,7 +546,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -563,7 +564,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Book,
-    type: "deck",
+    type: ItemType.Deck,
     stackable: false,
     binding: false,
     actions: [
@@ -581,7 +582,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Apple,
-    type: "farm",
+    type: ItemType.Farm,
     stackable: true,
     binding: false,
     actions: [
@@ -599,7 +600,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Greenapple,
-    type: "farm",
+    type: ItemType.Farm,
     stackable: true,
     binding: false,
     actions: [
@@ -617,7 +618,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Wine2,
-    type: "farm",
+    type: ItemType.Farm,
     stackable: true,
     binding: false,
     actions: [
@@ -635,7 +636,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Greenapple,
-    type: "farm",
+    type: ItemType.Farm,
     stackable: true,
     binding: false,
     actions: [
@@ -653,7 +654,7 @@ export const itemDefs = {
     descriptionKr: "",
     description: "",
     icon: itemIcons.Greenapple,
-    type: "farm",
+    type: ItemType.Farm,
     stackable: true,
     binding: false,
     actions: [
