@@ -32,7 +32,7 @@ export class MeteorAction implements IActionComponent, ILoop {
   private cooldown = 7000
   private lastUsed = 0
   private impactDistance = 8
-  private fallDuration = 0.65
+  private fallDuration = 0.8
   private ringRadius = 1.9
   private ringCount = 6
 
@@ -74,9 +74,9 @@ export class MeteorAction implements IActionComponent, ILoop {
 
     const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize()
     start.copy(impact)
-      .addScaledVector(forward, -5.5)
-      .addScaledVector(right, -2.2)
-    start.y += 14
+      .addScaledVector(forward, -8)
+      .addScaledVector(right, -3)
+    start.y += 25
 
     const core = createFireballCore({ scale: 1.45 })
     core.reset(start)
