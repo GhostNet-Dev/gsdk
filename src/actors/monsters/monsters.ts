@@ -29,7 +29,7 @@ export interface IMonsterCtrl {
     get MonsterBox(): MonsterBox
     get Drop(): MonDrop[] | undefined
     Respawning(): void
-    ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number): boolean 
+    ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number): boolean 
 }
 
 export class MonsterBox extends THREE.Mesh {
@@ -87,10 +87,12 @@ export class Monsters {
                 })
                 console.log(`calc damage: ${damage}, original damage: ${opt.damage}`)
 
-                // [New] 넉백 정보 전달 (사거리 정보만 전달, 계산은 상태에서 수행)
-                const attackRange = (opt.type === AttackType.NormalSwing) ? (opt.distance ?? 3.5) : undefined;
+                // [New] 넉백 정보 전달
+                const isMelee = (opt.type === AttackType.NormalSwing || opt.type === AttackType.FullSwing);
+                const attackRange = isMelee ? (opt.distance ?? 3.5) : undefined;
+                const knockbackDist = (opt.type === AttackType.FullSwing) ? opt.knockbackDistance : undefined;
 
-                this.ReceiveDemage(z, damage.finalDamage, opt.effect, attackRange)
+                this.ReceiveDemage(z, damage.finalDamage, opt.effect, attackRange, knockbackDist)
             })
         })
     }
@@ -107,8 +109,8 @@ export class Monsters {
         return { drop: baseDrop, directExp: baseExp }
     }
 
-    ReceiveDemage(z: MonsterSet, damage: number, effect?: EffectType, attackRange?: number) {
-        if (z && !z.monCtrl.ReceiveDemage(damage, effect, attackRange)) {
+    ReceiveDemage(z: MonsterSet, damage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number) {
+        if (z && !z.monCtrl.ReceiveDemage(damage, effect, attackRange, knockbackDist)) {
             z.live = false
             z.deadtime = new Date().getTime()
             this.mobCount--

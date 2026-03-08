@@ -65,7 +65,8 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
                     type: AttackType.NormalSwing,
                     damage: this.baseSpec.Damage,
                     spec: this.baseSpec,
-                    obj: obj
+                    obj: obj,
+                    distance: this.attackDist
                 } 
                 if (mons == undefined) {
                     msgs.set(obj.name, [msg])
@@ -92,7 +93,8 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
                     type: AttackType.NormalSwing,
                     damage: this.baseSpec.Damage,
                     spec: this.baseSpec,
-                    obj: obj
+                    obj: obj,
+                    distance: this.attackDist
                 } 
                 if (mons == undefined) {
                     msgs.set(obj.name, [msg])

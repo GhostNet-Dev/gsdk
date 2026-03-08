@@ -4,6 +4,7 @@ import { EffectType } from "@Glibs/types/effecttypes"
 
 export enum AttackType {
     NormalSwing, // 근접 공격
+    FullSwing, // 근접 공격
     RangedShot,  // 원거리 공격 (추가)
     Magic0,      // 마법 공격
     Exp,
@@ -87,6 +88,7 @@ export type AttackOption = {
     damage: number
     spec?: BaseSpec,
     distance?: number
+    knockbackDistance?: number
     obj?: THREE.Object3D
     srcMonsterId?: string,
     targetPoint?: THREE.Vector3
