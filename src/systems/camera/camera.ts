@@ -22,7 +22,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     targetObjs: THREE.Object3D[] = []
     private strategy: ICameraStrategy
     private strategies: Map<CameraMode, ICameraStrategy> = new Map()
-    private mode: CameraMode = CameraMode.TopView
+    private mode: CameraMode = CameraMode.Free
     private crosshair?: THREE.Group;
     private preAimSnapshot?: {
         mode: CameraMode
@@ -56,7 +56,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
             this.lookTarget = false
             this.setMode(CameraMode.Free)
         })
-        eventCtrl.RegisterEventListener(EventTypes.OrbitControlsOnOff, (onOff:boolean) => {
+        eventCtrl.RegisterEventListener(EventTypes.OrbitControlsOnOff, (onOff: boolean) => {
             this.controls.enabled = onOff
         })
         eventCtrl.RegisterEventListener(EventTypes.RegisterLandPhysic, (obj: THREE.Object3D) => {
@@ -91,34 +91,35 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         this.controls.addEventListener("end", () => {
             this.strategy?.orbitEnd?.()
         });
-            // 전략 초기화
-            this.strategies.set(CameraMode.TopView, new TopViewCameraStrategy(this.controls));
-            this.strategies.set(CameraMode.ThirdPerson, new ThirdPersonCameraStrategy(this.controls, this, this.targetObjs));
-            this.strategies.set(CameraMode.ThirdFollowPerson, new ThirdPersonFollowCameraStrategy(this.controls, this, this.targetObjs));
-            this.strategies.set(CameraMode.FirstPerson, new FirstPersonCameraStrategy(this.controls));
-            this.strategies.set(CameraMode.Free, new FreeCameraStrategy(this.controls));
-            this.strategies.set(CameraMode.Cinematic, new CinematicCameraStrategy([
-                new THREE.Vector3(0, 10, 20),
-                new THREE.Vector3(10, 10, 0),
-                new THREE.Vector3(0, 5, -10)
-            ], this.controls));
-            this.strategies.set(CameraMode.AimThirdPerson, new AimThirdPersonCameraStrategy(this.controls, this));        // 여기에 다른 전략도 추가하세요
+        // 전략 초기화
+        this.strategies.set(CameraMode.TopView, new TopViewCameraStrategy(this.controls));
+        this.strategies.set(CameraMode.ThirdPerson, new ThirdPersonCameraStrategy(this.controls, this, this.targetObjs));
+        this.strategies.set(CameraMode.ThirdFollowPerson, new ThirdPersonFollowCameraStrategy(this.controls, this, this.targetObjs));
+        this.strategies.set(CameraMode.FirstPerson, new FirstPersonCameraStrategy(this.controls));
+        this.strategies.set(CameraMode.Free, new FreeCameraStrategy(this.controls));
+        this.strategies.set(CameraMode.Cinematic, new CinematicCameraStrategy([
+            new THREE.Vector3(0, 10, 20),
+            new THREE.Vector3(10, 10, 0),
+            new THREE.Vector3(0, 5, -10)
+        ], this.controls));
+        this.strategies.set(CameraMode.AimThirdPerson, new AimThirdPersonCameraStrategy(this.controls, this));        // 여기에 다른 전략도 추가하세요
         this.strategy = this.strategies.get(this.mode)!;
+        this.strategy.init?.();
     }
 
     private createCrosshair() {
         const group = new THREE.Group();
         // Line은 1px로 고정되므로 가장 밝은 노란색과 1.0의 불투명도를 사용합니다.
-        const mat = new THREE.LineBasicMaterial({ 
-            color: 0xffff00, 
-            depthTest: false, 
+        const mat = new THREE.LineBasicMaterial({
+            color: 0xffff00,
+            depthTest: false,
             depthWrite: false,
             transparent: true,
             opacity: 1.0
         });
 
         const size = 0.5; // 월드 단위 크기 (나중에 거리별로 스케일 조절됨)
-        const gap = 0.2; 
+        const gap = 0.2;
 
         const hPoints = [
             new THREE.Vector3(-size, 0, 0), new THREE.Vector3(-gap, 0, 0),
@@ -136,11 +137,11 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
 
         group.add(hLine, vLine);
         group.visible = false;
-        
+
         // 렌더링 우선순위 최상위
         group.renderOrder = 100000;
         group.traverse(obj => obj.frustumCulled = false);
-        
+
         this.add(group);
         this.crosshair = group;
     }
@@ -151,7 +152,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
      */
     public setCrosshairWorldPosition(worldPos: THREE.Vector3) {
         if (!this.crosshair) return;
-        
+
         // 1. 카메라 로컬 좌표계로 변환하여 배치
         const localPos = this.worldToLocal(worldPos.clone());
         this.crosshair.position.copy(localPos);
@@ -161,7 +162,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         const distance = Math.max(0.1, Math.abs(localPos.z));
         const baseScale = 0.025; // 화면상 크기 조절용 상수
         this.crosshair.scale.setScalar(distance * baseScale);
-        
+
         // 3. 항상 카메라 평면과 평행하게 정렬 (부모가 카메라라 이미 정렬됨)
     }
 

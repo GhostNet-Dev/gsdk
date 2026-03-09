@@ -35,6 +35,7 @@ export enum Icons {
     Wheat,
 
     Earth,
+    Planet,
     Pencil,
     Shovel,
     Garbage,
