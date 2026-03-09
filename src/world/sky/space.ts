@@ -1,5 +1,6 @@
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { IWorldMapObject, MapEntryType } from "@Glibs/types/worldmaptypes";
 import * as THREE from "three";
 
 export interface DeepSpaceMegaRingSystemOptions {
@@ -28,8 +29,11 @@ type LoadedTextures = {
   planetTex: THREE.Texture;
 };
 
-export class DeepSpaceMegaRingSystem implements ILoop {
+export class DeepSpaceMegaRingSystem implements IWorldMapObject, ILoop {
   LoopId: number = 0;
+  Type: MapEntryType = MapEntryType.DeepSpaceMegaRingSystem;
+
+  get Mesh() { return this.root }
   private scene: THREE.Scene;
   private textureLoader = new THREE.TextureLoader();
   private clock = new THREE.Clock();
@@ -78,6 +82,13 @@ export class DeepSpaceMegaRingSystem implements ILoop {
       cameraStartPosition:
         options.cameraStartPosition ?? new THREE.Vector3(0, 5000, 25000),
     };
+  }
+  async Create(opts: DeepSpaceMegaRingSystemOptions) {
+    this.options ={ ...this.options, ...opts}
+    await this.init()
+  }
+  Delete() {
+    this.dispose()
   }
 
   async init(): Promise<void> {

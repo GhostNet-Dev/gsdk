@@ -169,7 +169,7 @@ export class MeteorAction implements IActionComponent, ILoop {
         peakScale: 1.2,
         endScale: 0.05,
         peakRatio: 0.2,
-        particleCount: 70,
+        particleCount: 50,
       })
     }
 
@@ -189,7 +189,7 @@ export class MeteorAction implements IActionComponent, ILoop {
         peakScale: 1.0,
         endScale: 0.05,
         peakRatio: 0.18,
-        particleCount: 55,
+        particleCount: 30,
       })
     }
 

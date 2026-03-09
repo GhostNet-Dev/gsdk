@@ -35,6 +35,7 @@ export enum MapEntryType {
     WindyInstancedVegetation = "WindyInstancedVegetation",
     Beach = "Beach",
     DungeonMapObject = "DungeonMapObject",
+    DeepSpaceMegaRingSystem = "DeepSpaceMegaRingSystem",
 }
 
 export enum MapType {
