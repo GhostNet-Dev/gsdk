@@ -32,6 +32,8 @@ type FireballParticle = THREE.Sprite & {
 export class FireballCore {
   readonly root: THREE.Group
 
+  private static sharedTexture: THREE.CanvasTexture | null = null
+
   private emitter: THREE.Mesh
   private coreLight: THREE.PointLight
   private particles: FireballParticle[] = []
@@ -49,6 +51,8 @@ export class FireballCore {
   private emissionEnabled = true
   private fadeMultiplier = 1
   private baseLightIntensity: number
+  private lastRootPosition = new THREE.Vector3()
+  private rootMovement = new THREE.Vector3()
 
   private colorCore: THREE.Color
   private colorAura: THREE.Color
@@ -59,16 +63,21 @@ export class FireballCore {
 
     this.particleCount = options.particleCount ?? 200
     this.radius = (options.radius ?? 0.8) * scale
-    this.riseSpeed = (options.riseSpeed ?? 1.5) * scale
+    this.riseSpeed = (options.riseSpeed ?? 0.8) * scale
     this.expansionSpeed = (options.expansionSpeed ?? 0.5) * scale
     this.turbulence = (options.turbulence ?? 1.5) * scale
     this.baseScale = (options.baseScale ?? 1) * scale
-    this.lifeTime = options.lifeTime ?? 0.6
+    this.lifeTime = options.lifeTime ?? 1.3
     this.opacity = options.opacity ?? 0.7
 
     this.colorCore = new THREE.Color(options.colorCore ?? "#ffffcc")
     this.colorAura = new THREE.Color(options.colorAura ?? "#ff9900")
     this.colorRing = new THREE.Color(options.colorRing ?? "#ff2200")
+
+    if (!FireballCore.sharedTexture) {
+      FireballCore.sharedTexture = this.createHexagonTexture()
+    }
+    this.particleTexture = FireballCore.sharedTexture!
 
     this.root = new THREE.Group()
 
@@ -86,12 +95,12 @@ export class FireballCore {
     this.emitter.add(this.coreLight)
     this.root.add(this.emitter)
 
-    this.particleTexture = this.createHexagonTexture()
     this.initParticles()
   }
 
   setPosition(position: THREE.Vector3) {
-    this.emitter.position.copy(position)
+    this.root.position.copy(position)
+    this.emitter.position.set(0, 0, 0)
   }
 
   setFade(multiplier: number) {
@@ -109,13 +118,19 @@ export class FireballCore {
 
   reset(position: THREE.Vector3) {
     this.setPosition(position)
+    this.lastRootPosition.copy(this.root.position)
     this.setFade(1)
     this.startEmission()
     this.particles.forEach((sprite) => this.spawnParticle(sprite))
   }
 
   update(elapsedSec: number, deltaSec: number) {
+    this.rootMovement.copy(this.root.position).sub(this.lastRootPosition)
+    this.lastRootPosition.copy(this.root.position)
+
     this.particles.forEach((sprite) => {
+      sprite.position.sub(this.rootMovement)
+
       const u = sprite.userData
       u.age += deltaSec
 
@@ -160,8 +175,7 @@ export class FireballCore {
       if (Array.isArray(material)) material.forEach((m) => m.dispose())
       else material?.dispose?.()
     })
-
-    this.particleTexture.dispose()
+    // sharedTexture은 인스턴스별로 해제하지 않음
   }
 
   private createHexagonTexture() {

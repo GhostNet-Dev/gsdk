@@ -19,6 +19,8 @@ export enum KeyType {
     Action6,
     Action7,
     Action8,
+    TurnLeft,
+    TurnRight,
     System0,
     Count,
 }

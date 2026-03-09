@@ -20,6 +20,7 @@ import { GhostAction } from "./visualactions/ghostact";
 import { WaterDefenceAction } from "./skillactions/waterdefenceact";
 import { MeteorAction } from "./skillactions/meteoract";
 import SwingArcEffectAction from "./itemactions/swingarcact";
+import { ComboSkillAction } from "./skillactions/comboact";
 
 export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scene, camera: Camera) {
     ActionRegistry.register("statBoost", def => new StatBoostAction(def))
@@ -58,4 +59,5 @@ export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scen
     ActionRegistry.register("firedefence", def => new FireballDefenceAction(eventCtrl, camera, def))
     ActionRegistry.register("electricdefence", def => new ElectricDefenceAction(eventCtrl, def))
     ActionRegistry.register("waterdefence", def => new WaterDefenceAction(eventCtrl, def))
+    ActionRegistry.register("comboMelee", def => new ComboSkillAction(def))
 }

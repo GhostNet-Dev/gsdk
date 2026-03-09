@@ -62,10 +62,12 @@ export class ConfettiSystem implements ILoop {
   private particles: { p: Particle, type: ParticleType }[] = [];
 
   private rainActive = false;
+  private isStopping = false;
   private isRegistered = false; // 루프 등록 여부 체크
 
   private width = window.innerWidth;
   private height = window.innerHeight;
+  private opacity = 1.0;
 
   // 생성자 주입 (Dependency Injection)
   constructor(private eventCtrl: IEventController) {
@@ -96,6 +98,8 @@ export class ConfettiSystem implements ILoop {
   // --- Public Methods ---
 
   public blast(amount = 120) {
+    this.isStopping = false;
+    this.opacity = 1.0;
     this.mount();
     for (let i = 0; i < amount; i++) {
       this.particles.push({ p: new Particle(this.width, this.height, 'blast'), type: 'blast' });
@@ -104,6 +108,8 @@ export class ConfettiSystem implements ILoop {
   }
 
   public startRain() {
+    this.isStopping = false;
+    this.opacity = 1.0;
     this.mount();
     this.rainActive = true;
     this.start();
@@ -111,6 +117,7 @@ export class ConfettiSystem implements ILoop {
 
   public stopRain() {
     this.rainActive = false;
+    this.isStopping = true;
     // 여기선 등록 해제하지 않음. 잔여 파티클이 사라진 후 Update 내부에서 자동 해제.
   }
 
@@ -132,6 +139,16 @@ export class ConfettiSystem implements ILoop {
       this.particles.push({ p: new Particle(this.width, this.height, 'rain'), type: 'rain' });
     }
 
+    // 1-1. 종료 중인 경우 페이드 아웃
+    if (this.isStopping && this.particles.length > 0) {
+      this.opacity -= 0.02; // 약 50프레임(0.8s) 내외로 소멸
+      if (this.opacity <= 0) {
+        this.opacity = 0;
+        this.particles = [];
+        this.isStopping = false;
+      }
+    }
+
     // 2. 종료 조건 체크 (파티클 없고 && 비도 안 내림)
     if (this.particles.length === 0 && !this.rainActive) {
       this.ctx.clearRect(0, 0, this.width, this.height);
@@ -146,6 +163,7 @@ export class ConfettiSystem implements ILoop {
 
     // 3. 그리기
     this.ctx.clearRect(0, 0, this.width, this.height);
+    this.ctx.globalAlpha = this.opacity;
 
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const { p, type } = this.particles[i];

@@ -113,6 +113,7 @@ export class DialogManager {
       case 'warning': return '경고';
       case 'tutorial': return '튜토리얼';
       case 'scroll': return '탐험 기록';
+      case 'skill-slots': return '스킬 슬롯 설정';
       default: return 'Dialog';
     }
   }

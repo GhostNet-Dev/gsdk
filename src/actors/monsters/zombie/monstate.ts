@@ -72,7 +72,7 @@ export abstract class MonState {
         if (this.spec.Status.hit) {
             const ctrl = this.spec.Owner as any; // MonsterCtrl
             const attackRange = ctrl.pendingAttackRange;
-            
+            const explicitKbDist = ctrl.pendingKnockbackDist;
             let knockbackVector: THREE.Vector3 | undefined = undefined;
             
             // 넉백 정보가 있고(근접공격), 공격 사거리 정보가 유효할 때만 계산
@@ -86,9 +86,16 @@ export abstract class MonState {
 
                 const currentDist = monPos.distanceTo(attPos);
                 
-                // 2. 사거리 기반 동적 거리 계산 (85% 지점 유지)
-                const maxAllowedDist = attackRange * 0.85;
-                const pushAmount = Math.max(0, maxAllowedDist - currentDist);
+                let pushAmount = 0;
+                if (explicitKbDist > 0) {
+                    // 1. FullSwing 등 명시적 넉백 거리가 있는 경우
+                    pushAmount = explicitKbDist;
+                } else {
+                    // 2. NormalSwing: 확실히 뒤로 밀리되, 플레이어의 사거리를 벗어나지 않도록 제한
+                    const desiredPush = Math.max(1.5, attackRange * 0.5);
+                    // 사거리를 벗어나지 않도록 pushAmount 캡핑 (약간의 여유 0.1 남김)
+                    pushAmount = Math.min(desiredPush, Math.max(0, (attackRange - 0.1) - currentDist));
+                }
                 
                 if (pushAmount > 0) {
                     knockbackVector = new THREE.Vector3().subVectors(monPos, attPos).normalize();
@@ -98,6 +105,7 @@ export abstract class MonState {
                 
                 // 정보 소모
                 ctrl.pendingAttackRange = 0;
+                ctrl.pendingKnockbackDist = 0;
             }
 
             this.Uninit();
@@ -116,7 +124,7 @@ export abstract class MonState {
 export class HurtZState extends MonState implements IMonsterAction {
     hurtTime = 0
     hurtDuration = 0.5
-    private readonly KNOCKBACK_SPEED = 5.0; // 넉백 속도
+    private readonly KNOCKBACK_SPEED = 15.0; // 넉백 속도
     private knockbackDir?: THREE.Vector3;
     private maxPushDistance = 0;
     private currentPushedDistance = 0;

@@ -181,7 +181,7 @@ export class ProjectileCtrl implements IActionUser {
       const k = obj.target.name;
       const v = {
         type: AttackType.RangedShot,
-        spec: VirtualActorFactory.createFusionActor(this.baseSpec, [this.creatorSpec]),
+        spec: VirtualActorFactory.createFusionActor(this.creatorSpec!, [this.baseSpec]),
         damage: this.damage,
         obj: obj.target,
       };
@@ -217,7 +217,7 @@ export class ProjectileCtrl implements IActionUser {
     const k = hit.target.name;
     const v = {
       type: AttackType.RangedShot,
-      spec: VirtualActorFactory.createFusionActor(this.baseSpec, [this.creatorSpec]),
+      spec: VirtualActorFactory.createFusionActor(this.creatorSpec!, [this.baseSpec]),
       damage: this.damage,
       obj: hit.target,
     };

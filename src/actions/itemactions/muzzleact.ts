@@ -13,12 +13,12 @@ export class MuzzleAction implements IActionComponent {
     transparent: true,
     opacity: 1,
     depthWrite: false,
-    depthTest: false,
+    depthTest: true,
     blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide
   });
-  flash1 = new THREE.Mesh(new THREE.PlaneGeometry(this.size, this.size), this.mat);
-  flash2 = new THREE.Mesh(new THREE.PlaneGeometry(this.size, this.size), this.mat);
+  flash1 = new THREE.Mesh(new THREE.PlaneGeometry(this.size * 2.2, this.size * 0.5), this.mat);
+  flash2 = new THREE.Mesh(new THREE.PlaneGeometry(this.size * 2.2, this.size * 0.5), this.mat);
   flashLight = new THREE.PointLight(0xffaa66, 2, 4);
   scale = .5
 
@@ -27,7 +27,7 @@ export class MuzzleAction implements IActionComponent {
     scene: THREE.Scene,
     private texture: THREE.Texture,
     private socket: string = "muzzlePoint", // 기본값
-    private size: number = 0.6,
+    private size: number = 0.8,
     private duration: number = 0.08
   ) { 
     eventCtrl.SendEventMessage(EventTypes.SetNonGlow, this.flash1)
@@ -58,19 +58,19 @@ export class MuzzleAction implements IActionComponent {
   ) {
 
     const forward = direction.clone().normalize();
-    const up = new THREE.Vector3(0, 1, 0);
-    const q1 = new THREE.Quaternion().setFromUnitVectors(up, forward);
+    const zAxis = new THREE.Vector3(0, 0, 1);
+    const q1 = new THREE.Quaternion().setFromUnitVectors(zAxis, forward);
 
     this.flash1.position.copy(position);
     this.flash1.quaternion.copy(q1);
 
-    const q2 = new THREE.Quaternion().setFromAxisAngle(up, Math.PI / 2);
+    const q2 = new THREE.Quaternion().setFromAxisAngle(zAxis, Math.PI / 2);
     this.flash2.position.copy(position);
     this.flash2.quaternion.copy(q1).multiply(q2);
 
     this.flashLight.position.copy(position);
 
-    this.show(this.duration)
+    this.show(this.duration * 1000)
   }
 
   private disposeTimer?: ReturnType<typeof setTimeout>

@@ -40,7 +40,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         private audioListener?: THREE.AudioListener,
         { lookTarget = false } = {}
     ) {
-        super(45, canvas.Width / canvas.Height, 0.1, 1000)
+        super(45, canvas.Width / canvas.Height, 0.1, 200000)
         if (audioListener) this.add(audioListener)
 
         this.createCrosshair();

@@ -86,6 +86,31 @@ const COST_5: LevelCost[] = COST_0;
 
 
 export const DefaultTechTreeDefs: TechTreeDefBase[] = [
+    // =================================================================
+    // [TEST] 콤보 근접 스킬 (comboMelee)
+    // =================================================================
+    {
+        id: "test_blade_storm",
+        kind: "skill",
+        name: "블레이드 스톰",
+        desc: "5연속 칼날 콤보를 퍼붓습니다. 마지막 타격은 강력한 피니셔입니다.",
+        icon: "🌪️",
+        rarity: "rare",
+        tags: ["melee", "combo"],
+        cost: [{ lv: 1, cost: { points: 1 } }],
+        tech: actionDefs.BladeStorm,
+    },
+    {
+        id: "test_double_slash",
+        kind: "skill",
+        name: "더블 슬래시",
+        desc: "강력한 2연타로 적을 베어 넘깁니다.",
+        icon: "⚔️",
+        rarity: "uncommon",
+        tags: ["melee", "combo"],
+        cost: [{ lv: 1, cost: { points: 1 } }],
+        tech: actionDefs.DoubleSlash,
+    },
     {
         id: "fireball",
         kind: "skill",
@@ -94,6 +119,15 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "🔥",
         cost: [1, 2, 3, 4, 5].map(lv => ({ lv, cost: { points: lv } })),
         tech: actionDefs.FireBall,
+    },
+    {
+        id: "testMeteor",
+        kind: "skill",
+        name: "Meteor",
+        desc: "화염구를 발사합니다.",
+        icon: "🔥",
+        cost: [1, 2, 3, 4, 5].map(lv => ({ lv, cost: { points: lv } })),
+        tech: actionDefs.Meteor,
     },
     {
         id: "fireDefence",

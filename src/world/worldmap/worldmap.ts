@@ -26,6 +26,7 @@ import { WindyInstancedVegetation } from '../fluffynature/massfluffy';
 import { InstancedVegetation } from '../fluffynature/massstatic';
 import { Beach } from '../ocean/beach';
 import { DungeonMapObject } from '../dungeon/dungeonbuilder';
+import { DeepSpaceMegaRingSystem } from '../sky/space';
 
 
 export default class WorldMap {
@@ -59,6 +60,7 @@ export default class WorldMap {
         WindyInstancedVegetation: WindyInstancedVegetation,
         Beach: Beach,
         DungeonMapObject: DungeonMapObject,
+        DeepSpaceMegaRingSystem: DeepSpaceMegaRingSystem,
     };
     private worldMapTypes: Record<string, any> = {
         CustomGround: { scene: this.scene, eventCtrl: this.eventCtrl },
@@ -80,6 +82,7 @@ export default class WorldMap {
         WindyInstancedVegetation: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl, camera: this.camera },
         Beach: { scene: this.scene, eventCtrl: this.eventCtrl },
         DungeonMapObject: {  },
+        DeepSpaceMegaRingSystem: { eventCtrl: this.eventCtrl, scene: this.scene }
     }
 
     constructor(
