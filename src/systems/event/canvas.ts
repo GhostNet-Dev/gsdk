@@ -48,8 +48,9 @@ export class Canvas {
     clock = new THREE.Clock
     update() {
         const time = Math.min(this.clock.getDelta() * this.timeScale, 1)
+        const elapsed = this.clock.elapsedTime;
         this.loopObjs.forEach((obj) => {
-            obj.update(time)
+            obj.update(time, elapsed)
         })
     }
 

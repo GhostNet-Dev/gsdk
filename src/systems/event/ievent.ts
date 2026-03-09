@@ -13,7 +13,7 @@ export interface IKeyCommand {
 
 export interface ILoop {
     LoopId: number
-    update(delta: number): void
+    update(delta: number, elapsed?: number): void
     StartLoop?(): void
     StopLoop?(): void
 }
