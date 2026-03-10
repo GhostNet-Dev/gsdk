@@ -22,13 +22,6 @@ export class GalaxyMapUI {
     this.root = document.createElement("div");
     this.root.className = "gsm-root";
     this.root.innerHTML = `
-      <div class="gsm-hud">
-        은하 전략 지도 뷰<br />
-        클릭: 행성 확대 + 인접 행성 강조<br />
-        ESC: 전체 은하 지도 복귀<br />
-        기본 씬/카메라는 외부에서 주입됩니다.
-      </div>
-
       <div class="gsm-panel">
         <div class="gsm-planet-title">
           <span data-ref="planetName">Atlas</span>
@@ -129,11 +122,10 @@ export class GalaxyMapUI {
     style.id = "gsm-style";
     style.textContent = `
       .gsm-root { position:absolute; inset:0; pointer-events:none; font-family:Arial,sans-serif; color:#f2f7ff; }
-      .gsm-hud, .gsm-panel, .gsm-legend-panel {
+      .gsm-panel, .gsm-legend-panel {
         position:absolute; background:rgba(8,12,22,0.70); border:1px solid rgba(190,220,255,0.18);
         border-radius:14px; backdrop-filter:blur(8px); box-shadow:0 0 24px rgba(90,150,255,0.16);
       }
-      .gsm-hud { left:14px; top:14px; padding:10px 12px; font:13px/1.55 sans-serif; max-width:430px; }
       .gsm-panel { right:14px; top:14px; width:340px; padding:14px; }
       .gsm-legend-panel { right:14px; bottom:14px; width:340px; padding:12px 14px; font-size:12px; line-height:1.5; }
       .gsm-planet-title { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:20px; font-weight:700; flex-wrap:wrap; }

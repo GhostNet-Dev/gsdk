@@ -182,6 +182,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.emitSelection();
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
 
+    this.root.userData.obj = this
     return this.root;
   }
 
