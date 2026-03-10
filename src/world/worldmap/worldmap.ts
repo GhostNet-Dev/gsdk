@@ -92,6 +92,7 @@ export default class WorldMap {
             scene: this.scene, 
             camera: this.camera as THREE.PerspectiveCamera, 
             renderer: this.renderer,
+            eventCtrl: this.eventCtrl,
             controls: (this.camera as any).controls
         } }
     }
@@ -135,9 +136,10 @@ export default class WorldMap {
         //     this.eventCtrl.SendEventMessage(EventTypes.SetGlow, map)
 
         if (mapType != MapEntryType.UltimateModular &&
-            mapType != MapEntryType.FenceModular && 
+            mapType != MapEntryType.FenceModular &&
             mapType != MapEntryType.Rain &&
-            mapType != MapEntryType.WaterFoamRipples)
+            mapType != MapEntryType.WaterFoamRipples &&
+            mapType != MapEntryType.GalaxyPlanetNetwork)
             this.scene.add(map)
 
         return map

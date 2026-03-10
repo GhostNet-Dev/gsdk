@@ -1,3 +1,4 @@
+import IEventController from "@Glibs/interface/ievent";
 import * as THREE from "three";
 
 export type FactionKey = "alliance" | "empire" | "guild" | "neutral";
@@ -76,6 +77,7 @@ export interface GalaxyContext {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
+  eventCtrl: IEventController
   controls?: CameraRigAdapter;
   interactionDom?: HTMLElement;
   uiRoot?: HTMLElement;

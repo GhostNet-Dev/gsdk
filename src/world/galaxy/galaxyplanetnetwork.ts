@@ -7,8 +7,9 @@ import {
   PlanetDef,
   PlanetInfoViewModel
 } from "./galaxytypes";
-import { ILoop } from "@Glibs/interface/ievent";
+import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { IWorldMapObject, MapEntryType } from "../worldmap/worldmaptypes";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
 type PlanetGroup = THREE.Group & {
   userData: {
@@ -88,6 +89,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
   private readonly scene: THREE.Scene;
   private readonly camera: THREE.PerspectiveCamera;
   private readonly renderer: THREE.WebGLRenderer;
+  private readonly eventCtrl: IEventController;
   private readonly interactionDom: HTMLElement;
   private readonly controls?: GalaxyContext["controls"];
   private options?: Required<GalaxyPlanetNetworkOptions>;
@@ -135,13 +137,15 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     startPos: new THREE.Vector3(),
     endPos: new THREE.Vector3(),
     startTarget: new THREE.Vector3(),
-    endTarget: new THREE.Vector3()
+    endTarget: new THREE.Vector3(),
+    onComplete: undefined as (() => void) | undefined
   };
 
   constructor(private ctx: GalaxyContext) {
     this.scene = ctx.scene;
     this.camera = ctx.camera;
     this.renderer = ctx.renderer;
+    this.eventCtrl = ctx.eventCtrl;
     this.interactionDom = ctx.interactionDom ?? ctx.renderer.domElement;
     this.controls = ctx.controls;
   }
@@ -165,7 +169,6 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       this.selectedGroup,
       this.chokepointGroup
     );
-    this.scene.add(this.root);
 
     this.injectGalaxyMap(resolved);
     this.buildEdges();
@@ -177,6 +180,9 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.refreshSelectedDecor();
     this.bindEvents();
     this.emitSelection();
+    this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+
+    return this.root;
   }
 
   Delete() {
@@ -194,7 +200,14 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       this.camera.position.lerpVectors(this.cameraTween.startPos, this.cameraTween.endPos, eased);
       this.currentTarget().lerpVectors(this.cameraTween.startTarget, this.cameraTween.endTarget, eased);
 
-      if (p >= 1) this.cameraTween.active = false;
+      if (p >= 1) {
+        this.cameraTween.active = false;
+        this.cameraTween.onComplete?.();
+        this.cameraTween.onComplete = undefined;
+        this.controls?.update?.();
+      }
+    } else {
+      this.controls?.update?.();
     }
 
     this.planets.forEach((planet, i) => {
@@ -241,10 +254,10 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.updateMarkers(elapsed);
     this.updateSelectedDecor(elapsed);
     this.updateEdges(elapsed);
-    this.controls?.update?.();
   }
 
   dispose(): void {
+    this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
     this.unbindEvents();
 
     if (this.root.parent === this.scene) {
@@ -275,6 +288,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.focusMode = false;
     this.selectedPlanetIndex = 0;
     this.cameraTween.active = false;
+    this.cameraTween.onComplete = undefined;
   }
 
   focusOnPlanet(indexOrId: number | string): void {
@@ -302,12 +316,12 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       .add(dir.multiplyScalar(dist))
       .add(new THREE.Vector3(0, dist * 0.06, 0));
 
-    this.startCameraTween(endPos, target, this.options!.focus.tweenSeconds ?? 1);
-
-    if (this.controls) {
-      this.controls.minDistance = Math.max(10, dist * 0.55);
-      this.controls.maxDistance = dist * 2.4;
-    }
+    this.startCameraTween(endPos, target, this.options!.focus.tweenSeconds ?? 1, () => {
+      if (this.controls) {
+        this.controls.minDistance = Math.max(10, dist * 0.55);
+        this.controls.maxDistance = dist * 2.4;
+      }
+    });
   }
 
   resetToOverview(): void {
@@ -317,13 +331,14 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.startCameraTween(
       this.overviewPosition,
       this.overviewTarget,
-      this.options!.focus.tweenSeconds ?? 1
+      this.options!.focus.tweenSeconds ?? 1,
+      () => {
+        if (this.controls) {
+          this.controls.minDistance = this.overviewMinDistance;
+          this.controls.maxDistance = this.overviewMaxDistance;
+        }
+      }
     );
-
-    if (this.controls) {
-      this.controls.minDistance = this.overviewMinDistance;
-      this.controls.maxDistance = this.overviewMaxDistance;
-    }
   }
 
   getSelectedPlanetInfo(): PlanetInfoViewModel {
@@ -795,7 +810,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     }
   }
 
-  private startCameraTween(endPos: THREE.Vector3, endTarget: THREE.Vector3, duration: number): void {
+  private startCameraTween(endPos: THREE.Vector3, endTarget: THREE.Vector3, duration: number, onComplete?: () => void): void {
     this.cameraTween.active = true;
     this.cameraTween.progress = 0;
     this.cameraTween.duration = Math.max(0.001, duration);
@@ -803,6 +818,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.cameraTween.endPos.copy(endPos);
     this.cameraTween.startTarget.copy(this.currentTarget());
     this.cameraTween.endTarget.copy(endTarget);
+    this.cameraTween.onComplete = onComplete;
   }
 
   private currentTarget(): THREE.Vector3 {
