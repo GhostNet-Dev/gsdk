@@ -1,5 +1,32 @@
 import { PlanetInfoViewModel } from "./galaxytypes";
 
+const GALAXY_UI_PANEL_WIDTH = 340;
+const GALAXY_UI_GAP = 14;
+const GALAXY_UI_BOTTOM_PANEL_HEIGHT = 260;
+
+export function getGalaxyFocusCenterNdc(viewportWidth: number, viewportHeight: number): { x: number; y: number } {
+  const safeWidth = Math.max(1, viewportWidth);
+  const safeHeight = Math.max(1, viewportHeight);
+
+  if (safeWidth >= safeHeight) {
+    const reservedWidth = GALAXY_UI_PANEL_WIDTH + GALAXY_UI_GAP * 2;
+    const remainingWidth = Math.max(1, safeWidth - reservedWidth);
+    const centerX = remainingWidth * 0.5;
+    return {
+      x: (centerX / safeWidth) * 2 - 1,
+      y: 0
+    };
+  }
+
+  const reservedHeight = GALAXY_UI_BOTTOM_PANEL_HEIGHT + GALAXY_UI_GAP * 2;
+  const remainingHeight = Math.max(1, safeHeight - reservedHeight);
+  const centerY = remainingHeight * 0.5;
+  return {
+    x: 0,
+    y: 1 - (centerY / safeHeight) * 2
+  };
+}
+
 export class GalaxyMapUI {
   private root: HTMLDivElement;
   private planetName!: HTMLElement;
@@ -68,6 +95,8 @@ export class GalaxyMapUI {
 
     container.appendChild(this.root);
     this.cacheRefs();
+    this.updateLayoutMode();
+    window.addEventListener("resize", this.updateLayoutMode);
   }
 
   updatePlanet(info: PlanetInfoViewModel): void {
@@ -94,8 +123,15 @@ export class GalaxyMapUI {
   }
 
   dispose(): void {
+    window.removeEventListener("resize", this.updateLayoutMode);
     this.root.remove();
   }
+
+  private updateLayoutMode = (): void => {
+    const landscape = window.innerWidth >= window.innerHeight;
+    this.root.classList.toggle("gsm-layout-landscape", landscape);
+    this.root.classList.toggle("gsm-layout-portrait", !landscape);
+  };
 
   private cacheRefs(): void {
     const q = (name: string) => this.root.querySelector(`[data-ref="${name}"]`) as HTMLElement;
@@ -128,6 +164,11 @@ export class GalaxyMapUI {
       }
       .gsm-panel { right:14px; top:14px; width:340px; padding:14px; }
       .gsm-legend-panel { right:14px; bottom:14px; width:340px; padding:12px 14px; font-size:12px; line-height:1.5; }
+      .gsm-layout-portrait .gsm-panel {
+        left:14px; right:14px; top:auto; bottom:14px; width:auto; max-width:none;
+        max-height:calc(100vh - 28px); overflow:auto;
+      }
+      .gsm-layout-portrait .gsm-legend-panel { display:none; }
       .gsm-planet-title { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:20px; font-weight:700; flex-wrap:wrap; }
       .gsm-small { color:#aeb8cc; }
       .gsm-badge {

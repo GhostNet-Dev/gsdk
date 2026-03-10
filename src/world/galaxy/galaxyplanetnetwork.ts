@@ -7,6 +7,7 @@ import {
   PlanetDef,
   PlanetInfoViewModel
 } from "./galaxytypes";
+import { getGalaxyFocusCenterNdc } from "./galaxymapui";
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { IWorldMapObject, MapEntryType } from "../worldmap/worldmaptypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
@@ -307,17 +308,18 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
 
     const selected = this.planets[index];
     const target = selected.userData.basePosition.clone();
+    const shiftedTarget = this.getFocusAreaCenterWorld(target);
 
     let dir = this.camera.position.clone().sub(this.currentTarget());
     if (dir.lengthSq() < 0.0001) dir.set(0.55, 0.36, 1.0);
     dir.normalize();
 
     const dist = (this.options!.focus.distance ?? 32) + selected.userData.radius * 4.0;
-    const endPos = target.clone()
+    const endPos = shiftedTarget.clone()
       .add(dir.multiplyScalar(dist))
       .add(new THREE.Vector3(0, dist * 0.06, 0));
 
-    this.startCameraTween(endPos, target, this.options!.focus.tweenSeconds ?? 1, () => {
+    this.startCameraTween(endPos, shiftedTarget, this.options!.focus.tweenSeconds ?? 1, () => {
       if (this.controls) {
         this.controls.minDistance = Math.max(10, dist * 0.55);
         this.controls.maxDistance = dist * 2.4;
@@ -824,6 +826,22 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
 
   private currentTarget(): THREE.Vector3 {
     return this.controls?.target ?? this.internalTarget;
+  }
+
+  private getFocusAreaCenterWorld(target: THREE.Vector3): THREE.Vector3 {
+    const ndc = getGalaxyFocusCenterNdc(window.innerWidth, window.innerHeight);
+    if (Math.abs(ndc.x) < 0.0001 && Math.abs(ndc.y) < 0.0001) return target.clone();
+
+    const viewDir = this.camera.getWorldDirection(new THREE.Vector3());
+    const depth = Math.max(0.001, target.clone().sub(this.camera.position).dot(viewDir));
+
+    const projected = target.clone().project(this.camera);
+    projected.x -= ndc.x;
+    projected.y -= ndc.y;
+
+    const rayPoint = new THREE.Vector3(projected.x, projected.y, 0.5).unproject(this.camera);
+    const rayDir = rayPoint.sub(this.camera.position).normalize();
+    return this.camera.position.clone().add(rayDir.multiplyScalar(depth));
   }
 
   private computeOverviewState(): void {
