@@ -86,6 +86,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
   get Mesh() { return this.root; }
   readonly Type = MapEntryType.GalaxyPlanetNetwork;
   public onSelectionChanged?: (info: PlanetInfoViewModel) => void;
+  public onFocusModeChanged?: (focused: boolean) => void;
 
   private readonly scene: THREE.Scene;
   private readonly camera: THREE.PerspectiveCamera;
@@ -142,6 +143,9 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     onComplete: undefined as (() => void) | undefined
   };
 
+  // 임시 투영 계산용 카메라 - 매번 생성하지 않고 재사용
+  private readonly tempCam = new THREE.PerspectiveCamera();
+
   constructor(private ctx: GalaxyContext) {
     this.scene = ctx.scene;
     this.camera = ctx.camera;
@@ -181,6 +185,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.refreshSelectedDecor();
     this.bindEvents();
     this.emitSelection();
+    if (this.onFocusModeChanged) this.onFocusModeChanged(false);
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
 
     this.root.userData.obj = this
@@ -200,15 +205,25 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       const eased = 1 - Math.pow(1 - p, 3);
 
       this.camera.position.lerpVectors(this.cameraTween.startPos, this.cameraTween.endPos, eased);
-      this.currentTarget().lerpVectors(this.cameraTween.startTarget, this.cameraTween.endTarget, eased);
+
+      const currentTarget = this.currentTarget();
+      currentTarget.lerpVectors(this.cameraTween.startTarget, this.cameraTween.endTarget, eased);
+      this.camera.lookAt(currentTarget);
 
       if (p >= 1) {
         this.cameraTween.active = false;
-        this.cameraTween.onComplete?.();
+        if (this.cameraTween.onComplete) this.cameraTween.onComplete();
         this.cameraTween.onComplete = undefined;
-        this.controls?.update?.();
+
+        // Ensure OrbitControls is synced with the final state
+        this.eventCtrl.SendEventMessage(EventTypes.OrbitControlsOnOff, true);
+        if (this.controls) {
+          this.controls.target.copy(this.cameraTween.endTarget);
+          this.controls.update?.();
+        }
       }
     } else {
+
       this.controls?.update?.();
     }
 
@@ -302,19 +317,38 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
 
     this.selectedPlanetIndex = index;
     this.focusMode = true;
+    if (this.onFocusModeChanged) this.onFocusModeChanged(true);
     this.applyVisibilityTargets();
     this.refreshSelectedDecor();
     this.emitSelection();
 
     const selected = this.planets[index];
     const target = selected.userData.basePosition.clone();
-    const shiftedTarget = this.getFocusAreaCenterWorld(target);
 
     let dir = this.camera.position.clone().sub(this.currentTarget());
     if (dir.lengthSq() < 0.0001) dir.set(0.55, 0.36, 1.0);
     dir.normalize();
 
     const dist = (this.options!.focus.distance ?? 32) + selected.userData.radius * 4.0;
+
+    // 최종 카메라 위치(endPos)를 먼저 계산한 뒤, 그 카메라 기준으로 UI 회피 offset을 구한다.
+    // (현재 원거리 카메라 기준으로 계산하면 depth 차이로 인해 offset이 과도하게 커짐)
+    const baseEndPos = target.clone()
+      .add(dir.clone().multiplyScalar(dist))
+      .add(new THREE.Vector3(0, dist * 0.06, 0));
+
+    // tempCam을 재사용하여 최종 카메라 위치 기준의 orbit 중심(shiftedTarget) 계산
+    this.tempCam.fov = this.camera.fov;
+    this.tempCam.aspect = this.camera.aspect;
+    this.tempCam.near = this.camera.near;
+    this.tempCam.far = this.camera.far;
+    this.tempCam.updateProjectionMatrix();
+    this.tempCam.position.copy(baseEndPos);
+    this.tempCam.lookAt(target);
+    this.tempCam.updateMatrixWorld();
+
+    const shiftedTarget = this.getFocusAreaCenterWorld(target, baseEndPos);
+
     const endPos = shiftedTarget.clone()
       .add(dir.multiplyScalar(dist))
       .add(new THREE.Vector3(0, dist * 0.06, 0));
@@ -329,6 +363,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
 
   resetToOverview(): void {
     this.focusMode = false;
+    if (this.onFocusModeChanged) this.onFocusModeChanged(false);
     this.applyVisibilityTargets();
 
     this.startCameraTween(
@@ -814,6 +849,9 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
   }
 
   private startCameraTween(endPos: THREE.Vector3, endTarget: THREE.Vector3, duration: number, onComplete?: () => void): void {
+    // Disable OrbitControls during tweening to prevent jitter
+    this.eventCtrl.SendEventMessage(EventTypes.OrbitControlsOnOff, false);
+
     this.cameraTween.active = true;
     this.cameraTween.progress = 0;
     this.cameraTween.duration = Math.max(0.001, duration);
@@ -824,25 +862,42 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.cameraTween.onComplete = onComplete;
   }
 
+
   private currentTarget(): THREE.Vector3 {
     return this.controls?.target ?? this.internalTarget;
   }
 
-  private getFocusAreaCenterWorld(target: THREE.Vector3): THREE.Vector3 {
-    const ndc = getGalaxyFocusCenterNdc(window.innerWidth, window.innerHeight);
-    if (Math.abs(ndc.x) < 0.0001 && Math.abs(ndc.y) < 0.0001) return target.clone();
+  private getFocusAreaCenterWorld(planetPos: THREE.Vector3, cameraPos: THREE.Vector3): THREE.Vector3 {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const ndc = getGalaxyFocusCenterNdc(rect.width, rect.height);
 
-    const viewDir = this.camera.getWorldDirection(new THREE.Vector3());
-    const depth = Math.max(0.001, target.clone().sub(this.camera.position).dot(viewDir));
+    // If no UI offset is needed, just return the planet position
+    if (Math.abs(ndc.x) < 0.0001 && Math.abs(ndc.y) < 0.0001) return planetPos.clone();
 
-    const projected = target.clone().project(this.camera);
-    projected.x -= ndc.x;
-    projected.y -= ndc.y;
+    // 1. Setup a temporary camera at the intended end position
+    this.tempCam.copy(this.camera);
+    this.tempCam.position.copy(cameraPos);
+    this.tempCam.lookAt(planetPos);
+    this.tempCam.updateMatrixWorld();
+    this.tempCam.updateProjectionMatrix();
 
-    const rayPoint = new THREE.Vector3(projected.x, projected.y, 0.5).unproject(this.camera);
-    const rayDir = rayPoint.sub(this.camera.position).normalize();
-    return this.camera.position.clone().add(rayDir.multiplyScalar(depth));
+    // 2. We want the 'planetPos' to appear at 'ndc' in the viewport.
+    // This means the camera should actually be looking at a point that is 
+    // offset by '-ndc' from the planet's perspective in screen space.
+    const invNdc = new THREE.Vector3(-ndc.x, -ndc.y, 0.5);
+    const rayPoint = invNdc.unproject(this.tempCam);
+    const rayDir = rayPoint.sub(this.tempCam.position).normalize();
+
+    // 3. Find the point along this ray at the same depth as the planet
+    const viewDir = new THREE.Vector3();
+    this.tempCam.getWorldDirection(viewDir);
+    const planetDepth = planetPos.clone().sub(this.tempCam.position).dot(viewDir);
+
+    // 4. This is our new target. When the camera looks here, 
+    // the original planetPos will be shifted to the desired 'ndc' position.
+    return this.tempCam.position.clone().add(rayDir.multiplyScalar(planetDepth));
   }
+
 
   private computeOverviewState(): void {
     const center = new THREE.Vector3();
@@ -1634,3 +1689,4 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     material.dispose();
   }
 }
+

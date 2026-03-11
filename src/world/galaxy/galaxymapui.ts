@@ -9,22 +9,22 @@ export function getGalaxyFocusCenterNdc(viewportWidth: number, viewportHeight: n
   const safeHeight = Math.max(1, viewportHeight);
 
   if (safeWidth >= safeHeight) {
-    const reservedWidth = GALAXY_UI_PANEL_WIDTH + GALAXY_UI_GAP * 2;
-    const remainingWidth = Math.max(1, safeWidth - reservedWidth);
-    const centerX = remainingWidth * 0.5;
+    // Landscape: UI is on the right side.
+    // Push center slightly more to the left by adding a larger gap
+    const reservedWidth = GALAXY_UI_PANEL_WIDTH + GALAXY_UI_GAP * 4;
     return {
-      x: (centerX / safeWidth) * 2 - 1,
+      x: -(reservedWidth / safeWidth),
       y: 0
     };
+  } else {
+    // Portrait: UI is at the bottom.
+    // Push center more to the top by adding a larger gap to the bottom height
+    const reservedHeight = GALAXY_UI_BOTTOM_PANEL_HEIGHT + GALAXY_UI_GAP * 4;
+    return {
+      x: 0,
+      y: (reservedHeight / safeHeight)
+    };
   }
-
-  const reservedHeight = GALAXY_UI_BOTTOM_PANEL_HEIGHT + GALAXY_UI_GAP * 2;
-  const remainingHeight = Math.max(1, safeHeight - reservedHeight);
-  const centerY = remainingHeight * 0.5;
-  return {
-    x: 0,
-    y: 1 - (centerY / safeHeight) * 2
-  };
 }
 
 export class GalaxyMapUI {
@@ -93,6 +93,7 @@ export class GalaxyMapUI {
       </div>
     `;
 
+    this.root.style.display = "none";
     container.appendChild(this.root);
     this.cacheRefs();
     this.updateLayoutMode();
@@ -120,6 +121,10 @@ export class GalaxyMapUI {
     this.planetChokeScore.textContent = info.chokeScore.toFixed(2);
     this.planetDescription.textContent = info.description;
     this.planetNeighbors.innerHTML = info.neighbors.map((n) => `<li>${n}</li>`).join("");
+  }
+
+  setVisible(visible: boolean): void {
+    this.root.style.display = visible ? "block" : "none";
   }
 
   dispose(): void {
