@@ -6,7 +6,7 @@ export type DialogType =
   | 'quest-log' | 'quest-detail' | 'quest-complete'
   | 'inventory' | 'character'
   | 'input' | 'warning' | 'tutorial' | 'scroll' | 'techtree'
-  | 'skill-slots';
+  | 'skill-slots' | 'building';
 
 export interface DialogDescriptor<TProps = any> {
   id: string;

@@ -114,6 +114,7 @@ export class DialogManager {
       case 'tutorial': return '튜토리얼';
       case 'scroll': return '탐험 기록';
       case 'skill-slots': return '스킬 슬롯 설정';
+      case 'building': return '건설 — 기지 확장';
       default: return 'Dialog';
     }
   }
