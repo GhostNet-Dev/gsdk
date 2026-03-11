@@ -108,5 +108,5 @@ export interface PlanetInfoViewModel {
   degree: number;
   chokeScore: number;
   description: string;
-  neighbors: string[];
+  neighbors: { name: string, id: string }[];
 }

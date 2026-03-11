@@ -1,5 +1,6 @@
 import { BuffProperty, buffDefs } from "@Glibs/magical/buff/buffdefs";
 import { ActionId, ActionProperty, actionDefs } from "@Glibs/types/actiontypes";
+import { BuildingProperty, buildingDefs } from "@Glibs/interactives/building/buildingdefs";
 
 export type TechId = string;
 export type Tag = string;
@@ -19,7 +20,7 @@ export interface LevelCost {
     cost?: Partial<Record<"points" | "gold" | "materials", number>>;
 }
 
-export type TechTreeTypes = BuffProperty | ActionProperty;
+export type TechTreeTypes = BuffProperty | ActionProperty | BuildingProperty;
 export type Requirement =
     | { type: "has"; id: TechId; minLv?: number }
     | { type: "tag"; tag: Tag }
@@ -86,6 +87,41 @@ const COST_5: LevelCost[] = COST_0;
 
 
 export const DefaultTechTreeDefs: TechTreeDefBase[] = [
+    {
+        id: "cc",
+        kind: "building",
+        name: "지휘 본부",
+        desc: "핵심 지휘 본부입니다.",
+        icon: "🏰",
+        rarity: "common",
+        tags: ["base"],
+        cost: [{ lv: 1, cost: { gold: 100 } }],
+        tech: buildingDefs.CommandCenter
+    },
+    {
+        id: "supply",
+        kind: "building",
+        name: "보급고",
+        desc: "인구수를 늘려주는 보급고입니다.",
+        icon: "🏠",
+        rarity: "common",
+        tags: ["supply"],
+        requires: [{ type: "has", id: "cc", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 50 } }],
+        tech: buildingDefs.SupplyDepot
+    },
+    {
+        id: "barracks",
+        kind: "building",
+        name: "병영",
+        desc: "보병 유닛을 생산하는 시설입니다.",
+        icon: "⚔️",
+        rarity: "common",
+        tags: ["production"],
+        requires: [{ type: "has", id: "supply", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 150 } }],
+        tech: buildingDefs.Barracks
+    },
     // =================================================================
     // [TEST] 콤보 근접 스킬 (comboMelee)
     // =================================================================

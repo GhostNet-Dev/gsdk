@@ -816,8 +816,12 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     const planet = this.planets[index];
     const faction = FACTION_DEFS[planet.userData.faction];
     const stats = planet.userData.stats;
-    const neighbors = [...this.adjacency[index]].map((i) => this.planets[i].userData.name);
+    const neighbors = [...this.adjacency[index]].map(i => ({
+      name: this.planets[i].userData.name,
+      id: this.planets[i].userData.id
+    }));
     const isChoke = this.chokepointIndices.has(index);
+
 
     return {
       id: planet.userData.id,

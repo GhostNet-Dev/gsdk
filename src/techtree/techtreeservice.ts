@@ -104,6 +104,14 @@ export class TechTreeService {
     return true;
   }
 
+  /**
+   * 비용 차감 없이 레벨만 증가시킵니다. (건설 완료 시 사용 등)
+   */
+  addLevel(nodeId: TechId) {
+    const curLv = this.levels[nodeId] ?? 0;
+    this.levels[nodeId] = curLv + 1;
+  }
+
   refundDownTo(nodeId: TechId, targetLv: number): boolean {
     const node = this.mustNode(nodeId);
     const curLv = this.levels[nodeId] ?? 0;

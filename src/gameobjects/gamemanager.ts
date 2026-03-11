@@ -5,6 +5,8 @@ import { Buff } from "@Glibs/magical/buff/buff";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { TechTreeKind } from "@Glibs/techtree/techtreedefs";
 import { ActionProperty } from "@Glibs/types/actiontypes";
+import { BuildingManager } from "@Glibs/interactives/building/buildingmanager";
+import { BuildingMode } from "@Glibs/interactives/building/buildingdefs";
 
 type LearnedSkillMessage = {
     nodeId: string;
@@ -18,17 +20,41 @@ export default class GameManager {
     // 활성화된 패시브/버프 객체 추적 (key: nodeId, value: Runtime Buff)
     private activeBuffs = new Map<string, Buff>();
     private activeSkills = new Map<string, LearnedSkillMessage>();
+    private buildingManager: BuildingManager;
 
     constructor(
         private eventCtrl: IEventController,
         private service: TechTreeService,
     ) { 
+        this.buildingManager = new BuildingManager(this.eventCtrl, this.service);
         this.eventCtrl.RegisterEventListener(EventTypes.LevelUp, () => {
             this.addResource(1)
         })
         this.eventCtrl.RegisterEventListener(EventTypes.AddSkillPoint, (point: number) => {
             this.addPoints(point)
         })
+    }
+
+    /**
+     * 건설 모드를 설정합니다 (Timer 또는 Turn).
+     */
+    setBuildingMode(mode: BuildingMode) {
+        this.buildingManager.setMode(mode);
+    }
+
+    /**
+     * 다음 턴으로 진행합니다 (턴제 모드일 때 사용).
+     */
+    nextTurn() {
+        this.buildingManager.advanceTurn();
+    }
+
+    /**
+     * 특정 건물을 건설합니다.
+     */
+    buildBuilding(nodeId: string): boolean {
+        const taskId = this.buildingManager.startBuild(nodeId);
+        return taskId !== null;
     }
     public addPoints(amount: number) {
         // 1. 직접 지갑의 포인트를 증가시킵니다.

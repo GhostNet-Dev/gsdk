@@ -10,7 +10,6 @@ export function getGalaxyFocusCenterNdc(viewportWidth: number, viewportHeight: n
 
   if (safeWidth >= safeHeight) {
     // Landscape: UI is on the right side.
-    // Push center slightly more to the left by adding a larger gap
     const reservedWidth = GALAXY_UI_PANEL_WIDTH + GALAXY_UI_GAP * 4;
     return {
       x: -(reservedWidth / safeWidth),
@@ -18,18 +17,16 @@ export function getGalaxyFocusCenterNdc(viewportWidth: number, viewportHeight: n
     };
   } else {
     // Portrait: UI is at the bottom.
-    // We need to push the planet UP significantly to clear the bottom UI.
-    // Increasing reservedHeight and the multiplier to ensure it's in the top half.
     const reservedHeight = GALAXY_UI_BOTTOM_PANEL_HEIGHT + GALAXY_UI_GAP * 6;
     return {
       x: 0,
-      y: (reservedHeight / safeHeight) * 1.7
+      y: (reservedHeight / safeHeight) * 1.4
     };
   }
 }
 
 export class GalaxyMapUI {
-  private root: HTMLDivElement;
+  private root: HTMLElement;
   private planetName!: HTMLElement;
   private planetFactionBadge!: HTMLElement;
   private planetChokeBadge!: HTMLElement;
@@ -44,6 +41,8 @@ export class GalaxyMapUI {
   private planetChokeScore!: HTMLElement;
   private planetDescription!: HTMLElement;
   private planetNeighbors!: HTMLElement;
+
+  public onNeighborClick?: (planetId: string) => void;
 
   constructor(container: HTMLElement = document.body) {
     this.ensureStyle();
@@ -73,7 +72,7 @@ export class GalaxyMapUI {
         <div class="gsm-section-title">설명</div>
         <div class="gsm-desc" data-ref="planetDescription"></div>
 
-        <div class="gsm-section-title">연결된 행성</div>
+        <div class="gsm-section-title">연결된 행성 (클릭하여 이동)</div>
         <ul class="gsm-neighbor-list" data-ref="planetNeighbors"></ul>
       </div>
 
@@ -93,7 +92,6 @@ export class GalaxyMapUI {
         </div>
       </div>
     `;
-
     this.root.style.display = "none";
     container.appendChild(this.root);
     this.cacheRefs();
@@ -101,17 +99,18 @@ export class GalaxyMapUI {
     window.addEventListener("resize", this.updateLayoutMode);
   }
 
+  private updateLayoutMode = (): void => {
+    const landscape = window.innerWidth >= window.innerHeight;
+    this.root.classList.toggle("gsm-layout-landscape", landscape);
+    this.root.classList.toggle("gsm-layout-portrait", !landscape);
+  };
+
   updatePlanet(info: PlanetInfoViewModel): void {
     this.planetName.textContent = info.name;
     this.planetFactionBadge.textContent = info.factionLabel;
-    this.planetFactionBadge.setAttribute(
-      "style",
-      `color:${info.factionTextColor};background:${info.factionBgColor};border-color:${info.factionBorderColor};`
-    );
-
+    this.planetFactionBadge.setAttribute("style", `color:${info.factionTextColor};background:${info.factionBgColor};border-color:${info.factionBorderColor};`);
     this.planetChokeBadge.style.display = info.isChokepoint ? "inline-flex" : "none";
     this.planetSubtitle.textContent = info.subtitle;
-
     this.planetEconomy.textContent = String(info.economy);
     this.planetIndustry.textContent = String(info.industry);
     this.planetDefense.textContent = String(info.defense);
@@ -121,7 +120,21 @@ export class GalaxyMapUI {
     this.planetDegree.textContent = String(info.degree);
     this.planetChokeScore.textContent = info.chokeScore.toFixed(2);
     this.planetDescription.textContent = info.description;
-    this.planetNeighbors.innerHTML = info.neighbors.map((n) => `<li>${n}</li>`).join("");
+    
+    // 연결된 행성 목록 생성
+    this.planetNeighbors.innerHTML = info.neighbors
+      .map((n) => `<li class="gsm-neighbor-item" data-id="${n.id}">${n.name}</li>`)
+      .join("");
+
+    // 클릭 이벤트 바인딩
+    this.planetNeighbors.querySelectorAll(".gsm-neighbor-item").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        const id = (e.currentTarget as HTMLElement).getAttribute("data-id");
+        if (id && this.onNeighborClick) {
+          this.onNeighborClick(id);
+        }
+      });
+    });
   }
 
   setVisible(visible: boolean): void {
@@ -132,12 +145,6 @@ export class GalaxyMapUI {
     window.removeEventListener("resize", this.updateLayoutMode);
     this.root.remove();
   }
-
-  private updateLayoutMode = (): void => {
-    const landscape = window.innerWidth >= window.innerHeight;
-    this.root.classList.toggle("gsm-layout-landscape", landscape);
-    this.root.classList.toggle("gsm-layout-portrait", !landscape);
-  };
 
   private cacheRefs(): void {
     const q = (name: string) => this.root.querySelector(`[data-ref="${name}"]`) as HTMLElement;
@@ -159,7 +166,6 @@ export class GalaxyMapUI {
 
   private ensureStyle(): void {
     if (document.getElementById("gsm-style")) return;
-
     const style = document.createElement("style");
     style.id = "gsm-style";
     style.textContent = `
@@ -167,6 +173,7 @@ export class GalaxyMapUI {
       .gsm-panel, .gsm-legend-panel {
         position:absolute; background:rgba(8,12,22,0.70); border:1px solid rgba(190,220,255,0.18);
         border-radius:14px; backdrop-filter:blur(8px); box-shadow:0 0 24px rgba(90,150,255,0.16);
+        pointer-events: auto;
       }
       .gsm-panel { right:14px; top:14px; width:340px; padding:14px; }
       .gsm-legend-panel { right:14px; bottom:14px; width:340px; padding:12px 14px; font-size:12px; line-height:1.5; }
@@ -188,7 +195,12 @@ export class GalaxyMapUI {
       .gsm-value { font-size:16px; font-weight:700; }
       .gsm-kv { display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,.06); font-size:13px; }
       .gsm-kv:last-child { border-bottom:none; }
-      .gsm-neighbor-list { margin:8px 0 0; padding-left:18px; max-height:140px; overflow:auto; font-size:13px; }
+      .gsm-neighbor-list { margin:8px 0 0; padding-left:18px; max-height:140px; overflow:auto; font-size:13px; list-style: none; }
+      .gsm-neighbor-item { 
+        padding: 4px 8px; margin-bottom: 4px; border-radius: 6px; 
+        background: rgba(255,255,255,0.05); cursor: pointer; transition: background 0.2s;
+      }
+      .gsm-neighbor-item:hover { background: rgba(255,255,255,0.12); color: #fff; }
       .gsm-chip-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
       .gsm-chip {
         display:inline-flex; align-items:center; gap:6px; font-size:12px; padding:4px 8px; border-radius:999px;
