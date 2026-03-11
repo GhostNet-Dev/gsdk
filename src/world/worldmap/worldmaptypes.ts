@@ -36,6 +36,8 @@ export enum MapEntryType {
     Beach = "Beach",
     DungeonMapObject = "DungeonMapObject",
     DeepSpaceMegaRingSystem = "DeepSpaceMegaRingSystem",
+    GalaxySkybox = "GalaxySkybox",
+    GalaxyPlanetNetwork = "GalaxyPlanetNetwork",
 }
 
 export enum MapType {

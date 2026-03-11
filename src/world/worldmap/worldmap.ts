@@ -27,6 +27,8 @@ import { InstancedVegetation } from '../fluffynature/massstatic';
 import { Beach } from '../ocean/beach';
 import { DungeonMapObject } from '../dungeon/dungeonbuilder';
 import { DeepSpaceMegaRingSystem } from '../sky/space';
+import { GalaxySkybox } from '../sky/galaxybox';
+import { GalaxyPlanetNetwork } from '../galaxy/galaxyplanetnetwork';
 
 
 export default class WorldMap {
@@ -61,6 +63,8 @@ export default class WorldMap {
         Beach: Beach,
         DungeonMapObject: DungeonMapObject,
         DeepSpaceMegaRingSystem: DeepSpaceMegaRingSystem,
+        GalaxySkybox: GalaxySkybox,
+        GalaxyPlanetNetwork: GalaxyPlanetNetwork
     };
     private worldMapTypes: Record<string, any> = {
         CustomGround: { scene: this.scene, eventCtrl: this.eventCtrl },
@@ -82,7 +86,15 @@ export default class WorldMap {
         WindyInstancedVegetation: { loader: this.loader, scene: this.scene, eventCtrl: this.eventCtrl, camera: this.camera },
         Beach: { scene: this.scene, eventCtrl: this.eventCtrl },
         DungeonMapObject: {  },
-        DeepSpaceMegaRingSystem: { eventCtrl: this.eventCtrl, scene: this.scene }
+        DeepSpaceMegaRingSystem: { eventCtrl: this.eventCtrl, scene: this.scene },
+        GalaxySkybox: { scene: this.scene },
+        GalaxyPlanetNetwork: { ctx: { 
+            scene: this.scene, 
+            camera: this.camera as THREE.PerspectiveCamera, 
+            renderer: this.renderer,
+            eventCtrl: this.eventCtrl,
+            controls: (this.camera as any).controls
+        } }
     }
 
     constructor(
@@ -124,9 +136,10 @@ export default class WorldMap {
         //     this.eventCtrl.SendEventMessage(EventTypes.SetGlow, map)
 
         if (mapType != MapEntryType.UltimateModular &&
-            mapType != MapEntryType.FenceModular && 
+            mapType != MapEntryType.FenceModular &&
             mapType != MapEntryType.Rain &&
-            mapType != MapEntryType.WaterFoamRipples)
+            mapType != MapEntryType.WaterFoamRipples &&
+            mapType != MapEntryType.GalaxyPlanetNetwork)
             this.scene.add(map)
 
         return map
@@ -190,8 +203,8 @@ export default class WorldMap {
         this.scene.add(map)
         return map
     }
-    MakeSky(light: THREE.DirectionalLight) {
-        return new SkyBoxAllTime(light)
+    MakeSky() {
+        return new SkyBoxAllTime(this.light)
     }
     MakeWind() {
         return new Wind(this.eventCtrl)
