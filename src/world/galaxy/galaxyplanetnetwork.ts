@@ -71,6 +71,11 @@ const DEFAULT_OPTIONS: Required<GalaxyPlanetNetworkOptions> = {
     neighborDepth: 1,
     distance: 32,
     tweenSeconds: 0.9
+  },
+  label: {
+    fontSize: 52,
+    baseScale: 0.02,
+    offset: 1.15
   }
 };
 
@@ -161,7 +166,8 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.options = {
       placementMode: options.placementMode ?? DEFAULT_OPTIONS.placementMode,
       layout: { ...DEFAULT_OPTIONS.layout, ...(options.layout ?? {}) },
-      focus: { ...DEFAULT_OPTIONS.focus, ...(options.focus ?? {}) }
+      focus: { ...DEFAULT_OPTIONS.focus, ...(options.focus ?? {}) },
+      label: { ...DEFAULT_OPTIONS.label, ...(options.label ?? {}) }
     };
 
     const resolved = this.resolveGalaxyMap(mapDef);
@@ -259,18 +265,25 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       const planet = this.planets[(label.userData as any).planetIndex];
       label.position.set(
         planet.position.x,
-        planet.position.y - planet.userData.radius - 1.15,
+        planet.position.y - planet.userData.radius - this.options!.label.offset!,
         planet.position.z
       );
+
+      // 카메라 거리에 따른 동적 스케일링 (화면상 크기 유지)
+      const dist = this.camera.position.distanceTo(label.position);
+      // 포커스 뷰 기준 거리 (기존 focusOnPlanet의 dist 계산식 참조)
+      const focusDist = (this.options!.focus.distance ?? 32) + planet.userData.radius * 4.0;
+      // 기준 스케일 계수 (makeTextSprite에서 설정한 0.02)
+      const baseScale = this.options!.label.baseScale!;
+      const scaleFactor = (dist / focusDist) * baseScale;
+      
+      const ud = label.userData as any;
+      label.scale.set(ud.baseWidth * scaleFactor, ud.baseHeight * scaleFactor, 1);
 
       (label.userData as any).alpha += ((label.userData as any).targetAlpha - (label.userData as any).alpha) * 0.12;
       (label.material as THREE.SpriteMaterial).opacity = (label.userData as any).alpha;
       label.visible = (label.userData as any).alpha > 0.03;
     });
-
-    this.updateMarkers(elapsed);
-    this.updateSelectedDecor(elapsed);
-    this.updateEdges(elapsed);
   }
 
   dispose(): void {
@@ -601,12 +614,12 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
 
       const factionColor = FACTION_DEFS[def.faction].color;
       const flag = this.createFactionFlag(factionColor, starTexture, def.radius);
-      flag.position.set(def.radius * 0.55, def.radius * 1.55, 0);
+      flag.position.set(0, def.radius, 0);
       planet.add(flag);
       planet.userData.flag = flag;
 
-      const label = this.makeTextSprite(def.name, FACTION_DEFS[def.faction].text, 52);
-      label.position.copy(planet.position).add(new THREE.Vector3(0, -def.radius - 1.15, 0));
+      const label = this.makeTextSprite(def.name, FACTION_DEFS[def.faction].text, this.options!.label.fontSize!);
+      label.position.copy(planet.position).add(new THREE.Vector3(0, -def.radius - this.options!.label.offset!, 0));
       label.userData.planetIndex = i;
       label.userData.alpha = 1;
       label.userData.targetAlpha = 1;
@@ -627,7 +640,11 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       planet.userData.chokepointScore = this.chokepointScores[i];
     });
 
-    this.clickTargets = this.planets.map((p) => p.userData.planetMesh);
+    // 행성 메쉬와 라벨 스프라이트를 모두 클릭 대상에 포함합니다.
+    this.clickTargets = [
+      ...this.planets.map((p) => p.userData.planetMesh),
+      ...this.labels
+    ];
   }
 
   private refreshSelectedDecor(): void {
@@ -870,6 +887,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
   private getFocusAreaCenterWorld(planetPos: THREE.Vector3, cameraPos: THREE.Vector3): THREE.Vector3 {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const ndc = getGalaxyFocusCenterNdc(rect.width, rect.height);
+    console.log(rect, ndc)
 
     // If no UI offset is needed, just return the planet position
     if (Math.abs(ndc.x) < 0.0001 && Math.abs(ndc.y) < 0.0001) return planetPos.clone();
@@ -979,7 +997,16 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.raycaster.setFromCamera(this.pointer, this.camera);
     const hits = this.raycaster.intersectObjects(this.clickTargets, false);
     if (!hits.length) return null;
-    return hits[0].object.parent as PlanetGroup;
+
+    const hitObject = hits[0].object;
+
+    // 클릭된 객체가 라벨(Sprite)인 경우, userData에 저장된 인덱스로 행성 반환
+    if (hitObject.userData && hitObject.userData.planetIndex !== undefined) {
+      return this.planets[hitObject.userData.planetIndex];
+    }
+
+    // 클릭된 객체가 행성(Mesh)인 경우, 기존처럼 부모 객체를 반환
+    return hitObject.parent as PlanetGroup;
   }
 
   private resolveGalaxyMap(mapDef: GalaxyMapDef): GalaxyMapDef {
@@ -1247,13 +1274,13 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     return mesh;
   }
 
-  private makeTextSprite(text: string, color = "#ffffff", fontSize = 52): THREE.Sprite {
+  private makeTextSprite(text: string, color = "#ffffff", fontSize = 104): THREE.Sprite {
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d")!;
     ctx.font = `bold ${fontSize}px Arial`;
 
-    const paddingX = 22;
-    const paddingY = 16;
+    const paddingX = 44;
+    const paddingY = 32;
     const metrics = ctx.measureText(text);
     const width = Math.ceil(metrics.width + paddingX * 2);
     const height = Math.ceil(fontSize + paddingY * 2);
@@ -1265,16 +1292,20 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     c.font = `bold ${fontSize}px Arial`;
     c.textAlign = "center";
     c.textBaseline = "middle";
-    c.fillStyle = "rgba(0,0,0,0.24)";
-    c.fillRect(0, 0, width, height);
-    c.strokeStyle = "rgba(0,0,0,0.5)";
-    c.lineWidth = 8;
-    c.strokeText(text, width / 2, height / 2 + 1);
+
+    // 텍스트 외곽선 보강
+    c.strokeStyle = "rgba(0,0,0,0.8)";
+    c.lineWidth = 16;
+    c.strokeText(text, width / 2, height / 2 + 2);
+
     c.fillStyle = color;
     c.fillText(text, width / 2, height / 2);
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    tex.minFilter = THREE.LinearFilter;
+    
     const mat = new THREE.SpriteMaterial({
       map: tex,
       transparent: true,
@@ -1282,8 +1313,9 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     });
 
     const sprite = new THREE.Sprite(mat);
-    const scale = 0.02;
-    sprite.scale.set(width * scale, height * scale, 1);
+    sprite.userData.baseWidth = width;
+    sprite.userData.baseHeight = height;
+    
     sprite.center.set(0.5, 1.0);
     sprite.frustumCulled = false;
     return sprite;

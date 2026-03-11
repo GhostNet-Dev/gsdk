@@ -18,11 +18,12 @@ export function getGalaxyFocusCenterNdc(viewportWidth: number, viewportHeight: n
     };
   } else {
     // Portrait: UI is at the bottom.
-    // Push center more to the top by adding a larger gap to the bottom height
-    const reservedHeight = GALAXY_UI_BOTTOM_PANEL_HEIGHT + GALAXY_UI_GAP * 4;
+    // We need to push the planet UP significantly to clear the bottom UI.
+    // Increasing reservedHeight and the multiplier to ensure it's in the top half.
+    const reservedHeight = GALAXY_UI_BOTTOM_PANEL_HEIGHT + GALAXY_UI_GAP * 6;
     return {
       x: 0,
-      y: (reservedHeight / safeHeight)
+      y: (reservedHeight / safeHeight) * 1.7
     };
   }
 }

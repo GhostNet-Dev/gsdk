@@ -54,10 +54,17 @@ export interface GalaxyFocusOptions {
   tweenSeconds?: number;
 }
 
+export interface GalaxyLabelOptions {
+  fontSize?: number;
+  baseScale?: number;
+  offset?: number;
+}
+
 export interface GalaxyPlanetNetworkOptions {
   placementMode?: "optimized" | "manual";
   layout?: GalaxyLayoutOptions;
   focus?: GalaxyFocusOptions;
+  label?: GalaxyLabelOptions;
 }
 
 export interface GalaxySkyboxOptions {

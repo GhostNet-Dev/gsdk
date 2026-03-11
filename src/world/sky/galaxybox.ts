@@ -60,6 +60,7 @@ export class GalaxySkybox implements ILoop, IWorldMapObject {
     }
 
     this.created = true;
+    return this.group
   }
 
   Delete() {
