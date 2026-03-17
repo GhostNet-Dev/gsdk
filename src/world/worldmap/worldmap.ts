@@ -29,6 +29,7 @@ import { DungeonMapObject } from '../dungeon/dungeonbuilder';
 import { DeepSpaceMegaRingSystem } from '../sky/space';
 import { GalaxySkybox } from '../sky/galaxybox';
 import { GalaxyPlanetNetwork } from '../galaxy/galaxyplanetnetwork';
+import SteppedTerrain from '../ground/steppedterrain';
 
 
 export default class WorldMap {
@@ -64,7 +65,8 @@ export default class WorldMap {
         DungeonMapObject: DungeonMapObject,
         DeepSpaceMegaRingSystem: DeepSpaceMegaRingSystem,
         GalaxySkybox: GalaxySkybox,
-        GalaxyPlanetNetwork: GalaxyPlanetNetwork
+        GalaxyPlanetNetwork: GalaxyPlanetNetwork,
+        SteppedTerrain: SteppedTerrain
     };
     private worldMapTypes: Record<string, any> = {
         CustomGround: { scene: this.scene, eventCtrl: this.eventCtrl },
@@ -94,7 +96,8 @@ export default class WorldMap {
             renderer: this.renderer,
             eventCtrl: this.eventCtrl,
             controls: (this.camera as any).controls
-        } }
+        } },
+        SteppedTerrain: { scene: this.scene, eventCtrl: this.eventCtrl }
     }
 
     constructor(

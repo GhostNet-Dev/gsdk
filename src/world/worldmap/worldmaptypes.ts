@@ -38,6 +38,7 @@ export enum MapEntryType {
     DeepSpaceMegaRingSystem = "DeepSpaceMegaRingSystem",
     GalaxySkybox = "GalaxySkybox",
     GalaxyPlanetNetwork = "GalaxyPlanetNetwork",
+    SteppedTerrain = "SteppedTerrain",
 }
 
 export enum MapType {
