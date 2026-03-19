@@ -24,10 +24,11 @@ export default class GameManager {
     private buildingManager: BuildingManager;
 
     constructor(
+        private scene: THREE.Scene,
         private eventCtrl: IEventController,
         private service: TechTreeService,
     ) { 
-        this.buildingManager = new BuildingManager(this.eventCtrl, this.service);
+        this.buildingManager = new BuildingManager(this.scene, this.eventCtrl, this.service);
         this.eventCtrl.RegisterEventListener(EventTypes.LevelUp, () => {
             this.addResource(1)
         })

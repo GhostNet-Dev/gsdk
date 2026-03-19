@@ -153,6 +153,7 @@ export const EventTypes = {
     HighlightGrid: "highlightgrid",
     GridArrowClick: "gridarrowclick",
     RequestBuilding: "requestbuilding",
+    ResponseBuilding: "responsebuilding",
 
     // VFX
     GlobalEffect: "globaleffect",

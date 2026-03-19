@@ -140,6 +140,8 @@ export default class CustomGround implements IWorldMapObject {
   private loader = new Loader();
 
   private lastNodeId?: string;
+  private gridSize = 4.0;
+  private occupiedBuildings: Array<{ pos: THREE.Vector3, width: number, depth: number }> = [];
 
   constructor(
     private scene: THREE.Scene,
@@ -156,7 +158,13 @@ export default class CustomGround implements IWorldMapObject {
     });
     this.eventCtrl.RegisterEventListener(EventTypes.HighlightGrid, (data: { pos: THREE.Vector3, width: number, depth: number, color?: THREE.Color, nodeId?: string }) => {
       this.lastNodeId = data.nodeId
-      this.HighlightGrid(data.pos, data.width, data.depth, data.color);
+      this.HighlightGrid(data.pos, data.width, data.depth, data.color, data.nodeId);
+    });
+    this.eventCtrl.RegisterEventListener(EventTypes.ResponseBuilding, (buildings: any[]) => {
+      this.occupiedBuildings = buildings;
+      if (this.highlightMesh && this.highlightMesh.visible) {
+        this.HighlightGrid(this.highlightMesh.position, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
+      }
     });
   }
 
@@ -181,27 +189,30 @@ export default class CustomGround implements IWorldMapObject {
         const arrow = intersectsArrow[0].object;
         const dir = arrow.name.split('_').pop();
         
-        console.log(`🎯 [CustomGround] 화살표 명중! 방향: ${dir}, 메쉬 이름: ${arrow.name}`);
-        
         const worldDelta = new THREE.Vector3();
-        if (dir === 'N') worldDelta.z = -1;
-        if (dir === 'S') worldDelta.z = 1;
-        if (dir === 'W') worldDelta.x = -1;
-        if (dir === 'E') worldDelta.x = 1;
+        if (dir === 'N') worldDelta.z = -this.gridSize;
+        if (dir === 'S') worldDelta.z = this.gridSize;
+        if (dir === 'W') worldDelta.x = -this.gridSize;
+        if (dir === 'E') worldDelta.x = this.gridSize;
 
         this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { dir, delta: worldDelta });
         
         const currentWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
         const nextWorldPos = currentWorldPos.add(worldDelta);
         
-        this.HighlightGrid(nextWorldPos, this.lastWidth, this.lastDepth, this.lastColor);
+        this.HighlightGrid(nextWorldPos, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
         return;
     }
 
     const intersectsHighlight = this.raycaster.intersectObject(this.highlightMesh);
     if (intersectsHighlight.length > 0) {
-        console.log("🏗️ [CustomGround] 하이라이트 그리드 클릭: 건설 요청");
         const worldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
+        if (this.checkOccupancy(worldPos, this.lastWidth, this.lastDepth)) {
+            console.warn("🚫 [CustomGround] 이미 점유된 지역입니다. 건설 불가!");
+            return;
+        }
+
+        console.log("🏗️ [CustomGround] 하이라이트 그리드 클릭: 건설 요청");
         this.eventCtrl.SendEventMessage(EventTypes.RequestBuilding, {
             nodeId: this.lastNodeId,
             pos: worldPos,
@@ -211,9 +222,19 @@ export default class CustomGround implements IWorldMapObject {
         return;
     }
 
-    // 화살표도 아니고 하이라이트 메시도 아닌 곳을 클릭했을 때
-    console.log("👋 [CustomGround] 다른 곳 클릭: 그리드 종료");
-    this.eventCtrl.SendEventMessage(EventTypes.HideGrid);
+    const intersectsGround = this.raycaster.intersectObject(this.obj);
+    if (intersectsGround.length > 0) {
+        const oldWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
+        this.HighlightGrid(intersectsGround[0].point, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
+        const newWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
+        const delta = newWorldPos.clone().sub(oldWorldPos);
+        this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { dir: 'GROUND', delta });
+        return;
+    }
+
+    if (target.tagName === 'CANVAS') {
+        this.eventCtrl.SendEventMessage(EventTypes.HideGrid);
+    }
   }
 
   /* -------------------------------- 생성 -------------------------------- */
@@ -289,10 +310,6 @@ export default class CustomGround implements IWorldMapObject {
     this.applyBeachSlope(); // 기본 옵션으로 자동 적용
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLandPhysic, this.obj);
     return ground;
-  }
-
-  Delete(...param: any) {
-    // 필요 시 구현
   }
 
   /* --------------------------- 리샘플 & 재구성 --------------------------- */
@@ -934,7 +951,7 @@ export default class CustomGround implements IWorldMapObject {
       if (!this.gridHelper && this.obj) {
         // 로컬 단위 크기 (planeWidth/Height) 사용
         const size = Math.max(this.planeWidth, this.planeHeight);
-        const divisions = Math.round(size);
+        const divisions = Math.round(size / this.gridSize);
         this.gridHelper = new THREE.GridHelper(size, divisions, 0xffffff, 0xcccccc);
         
         // 부모(this.obj)의 스케일을 상쇄
@@ -962,11 +979,12 @@ export default class CustomGround implements IWorldMapObject {
   private CreateArrows() {
     this.arrowGroup = new THREE.Group();
     
+    const offset = 3.5 * (this.gridSize / 4);
     const dirs = [
-      { id: 'N', pos: [0, 0, -2], rot: Math.PI / 2 },
-      { id: 'S', pos: [0, 0, 2], rot: -Math.PI / 2 },
-      { id: 'W', pos: [-2, 0, 0], rot: Math.PI },
-      { id: 'E', pos: [2, 0, 0], rot: 0 }
+      { id: 'N', pos: [0, 0, -offset * 4], rot: Math.PI / 2 },
+      { id: 'S', pos: [0, 0, offset * 4], rot: -Math.PI / 2 },
+      { id: 'W', pos: [-offset * 4, 0, 0], rot: Math.PI },
+      { id: 'E', pos: [offset * 4, 0, 0], rot: 0 }
     ];
 
     this.loader.GetAssets(Char.UltimateLvAndMaArrow).CloneModel().then((model: THREE.Group) => {
@@ -977,7 +995,7 @@ export default class CustomGround implements IWorldMapObject {
         arrow.name = `build_arrow_${d.id}`;
         arrow.position.set(d.pos[0], 0.1, d.pos[2]);
         arrow.rotation.y = d.rot;
-        arrow.scale.set(1, 1, 3)
+        arrow.scale.set(this.gridSize, this.gridSize, this.gridSize * 2)
         
         arrow.traverse((child: any) => {
           if (child instanceof THREE.Mesh) {
@@ -989,17 +1007,18 @@ export default class CustomGround implements IWorldMapObject {
       });
       
       if (this.highlightMesh) {
-          this.HighlightGrid(this.highlightMesh.position, this.lastWidth, this.lastDepth, this.lastColor);
+          this.HighlightGrid(this.highlightMesh.position, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
       }
     });
     
     this.obj.add(this.arrowGroup);
   }
 
-  HighlightGrid(worldPos: THREE.Vector3, width: number, depth: number, color: THREE.Color = new THREE.Color(0x00ff00)) {
+  HighlightGrid(worldPos: THREE.Vector3, width: number, depth: number, color: THREE.Color = new THREE.Color(0x00ff00), nodeId?: string) {
     this.lastWidth = width;
     this.lastDepth = depth;
     this.lastColor = color;
+    this.lastNodeId = nodeId;
     
     if (!this.highlightMesh && this.obj) {
       const geom = new THREE.PlaneGeometry(1, 1);
@@ -1018,8 +1037,8 @@ export default class CustomGround implements IWorldMapObject {
     // 월드 좌표를 지면의 로컬 좌표로 변환
     const localPos = this.obj.worldToLocal(worldPos.clone());
     
-    // [수정 핵심] 로컬 공간에서 그리드 한 칸의 실제 크기는 s (보통 2) 입니다.
-    const s = 1 / this.scale; 
+    // [수정 핵심] 로컬 공간에서 그리드 한 칸의 실제 크기는 gridSize / scale 입니다.
+    const s = this.gridSize / this.scale; 
     
     // 1. 기준 좌표를 그리드 교차점(선)의 배수로 스냅합니다.
     const lineX = Math.round(localPos.x / s) * s;
@@ -1034,12 +1053,21 @@ export default class CustomGround implements IWorldMapObject {
     this.highlightMesh.position.set(lineX + offsetX, 0.25, lineZ + offsetZ);
     this.highlightMesh.visible = true;
 
+    // [추가] 점유 상태 체크 및 색상 변경
+    const worldPosCenter = this.obj.localToWorld(this.highlightMesh.position.clone());
+    const isOccupied = this.checkOccupancy(worldPosCenter, width, depth);
+    const finalColor = isOccupied ? new THREE.Color(0xff0000) : color;
+
+    if (this.highlightMesh.material instanceof THREE.MeshBasicMaterial) {
+      this.highlightMesh.material.color.copy(finalColor);
+    }
+
     // 화살표 위치 업데이트
     if (this.arrowGroup) {
         this.arrowGroup.position.copy(this.highlightMesh.position);
         this.arrowGroup.visible = true;
         
-        const margin = 0.5 * s;
+        const margin = 1.0 * s;
         this.arrowGroup.children.forEach(child => {
             const arrow = child as THREE.Mesh;
             const dir = arrow.name.split('_').pop();
@@ -1050,15 +1078,42 @@ export default class CustomGround implements IWorldMapObject {
             if (dir === 'E') arrow.position.set((width * s * 0.5 + margin), 0, 0);
         });
     }
-    
-    if (this.highlightMesh.material instanceof THREE.MeshBasicMaterial) {
-      this.highlightMesh.material.color.copy(color);
-    }
   }
 
   ClearHighlight() {
     if (this.highlightMesh) this.highlightMesh.visible = false;
     if (this.arrowGroup) this.arrowGroup.visible = false;
+  }
+
+  private checkOccupancy(pos: THREE.Vector3, width: number, depth: number): boolean {
+    // 현재 하이라이트된 영역의 바운딩 박스 (간소화된 2D 체크)
+    const halfW = (width * this.gridSize) * 0.5;
+    const halfD = (depth * this.gridSize) * 0.5;
+    
+    const minX = pos.x - halfW + 0.1; // 약간의 여유를 둬서 경계선 충돌 방지
+    const maxX = pos.x + halfW - 0.1;
+    const minZ = pos.z - halfD + 0.1;
+    const maxZ = pos.z + halfD - 0.1;
+
+    for (const b of this.occupiedBuildings) {
+      const bHalfW = (b.width * this.gridSize) * 0.5;
+      const bHalfD = (b.depth * this.gridSize) * 0.5;
+      
+      const bMinX = b.pos.x - bHalfW;
+      const bMaxX = b.pos.x + bHalfW;
+      const bMinZ = b.pos.z - bHalfD;
+      const bMaxZ = b.pos.z + bHalfD;
+
+      // AABB 충돌 검사
+      if (minX < bMaxX && maxX > bMinX && minZ < bMaxZ && maxZ > bMinZ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Delete(...param: any) {
+    this.Dispose();
   }
 
   /* -------------------------------- 정리 -------------------------------- */
