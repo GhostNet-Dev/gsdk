@@ -4,6 +4,8 @@ import { IWorldMapObject, MapEntryType } from '../worldmap/worldmaptypes';
 import { CustomGroundData } from '@Glibs/types/worldmaptypes';
 import IEventController from '@Glibs/interface/ievent';
 import { EventTypes } from '@Glibs/types/globaltypes';
+import { Loader } from '@Glibs/loader/loader';
+import { Char } from '@Glibs/loader/assettypes';
 
 /* ----------------------------- Helpers ----------------------------- */
 function toU8(a: Uint8Array | Uint8ClampedArray): Uint8Array {
@@ -113,6 +115,10 @@ export default class CustomGround implements IWorldMapObject {
   texelDensityX = 2;   // px per 1 world-unit (X 방향)
   texelDensityZ = 2;   // px per 1 world-unit (Z 방향)
 
+  // 격자 및 강조 표시
+  private gridHelper?: THREE.GridHelper;
+  private highlightMesh?: THREE.Mesh;
+
   // 브러시/스케일
   scale = 0.5;
   radius = 50 / this.scale;
@@ -126,10 +132,89 @@ export default class CustomGround implements IWorldMapObject {
 
   private _scratchV3 = new THREE.Vector3();
 
+  private raycaster = new THREE.Raycaster();
+  private mouse = new THREE.Vector2();
+  private lastWidth = 1;
+  private lastDepth = 1;
+  private lastColor = new THREE.Color(0x00ff00);
+  private loader = new Loader();
+
+  private lastNodeId?: string;
+
   constructor(
     private scene: THREE.Scene,
     private eventCtrl: IEventController,
-  ) { }
+    private camera: THREE.Camera, 
+  ) { 
+    this.eventCtrl.RegisterEventListener(EventTypes.ShowGrid, () => {
+      window.addEventListener('pointerdown', this.onPointerDown);
+      this.ToggleGrid(true)
+    });
+    this.eventCtrl.RegisterEventListener(EventTypes.HideGrid, () => {
+      window.removeEventListener('pointerdown', this.onPointerDown);
+      this.ToggleGrid(false)
+    });
+    this.eventCtrl.RegisterEventListener(EventTypes.HighlightGrid, (data: { pos: THREE.Vector3, width: number, depth: number, color?: THREE.Color, nodeId?: string }) => {
+      this.lastNodeId = data.nodeId
+      this.HighlightGrid(data.pos, data.width, data.depth, data.color);
+    });
+  }
+
+  private onPointerDown = (e: PointerEvent) => {
+    if (!this.highlightMesh || !this.highlightMesh.visible || !this.arrowGroup) return;
+
+    const target = e.target as HTMLElement;
+    const rect = target.getBoundingClientRect?.();
+
+    if (rect) {
+        this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    } else {
+        this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    }
+
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+    const intersectsArrow = this.raycaster.intersectObjects(this.arrowGroup.children, true);
+    if (intersectsArrow.length > 0) {
+        const arrow = intersectsArrow[0].object;
+        const dir = arrow.name.split('_').pop();
+        
+        console.log(`🎯 [CustomGround] 화살표 명중! 방향: ${dir}, 메쉬 이름: ${arrow.name}`);
+        
+        const worldDelta = new THREE.Vector3();
+        if (dir === 'N') worldDelta.z = -1;
+        if (dir === 'S') worldDelta.z = 1;
+        if (dir === 'W') worldDelta.x = -1;
+        if (dir === 'E') worldDelta.x = 1;
+
+        this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { dir, delta: worldDelta });
+        
+        const currentWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
+        const nextWorldPos = currentWorldPos.add(worldDelta);
+        
+        this.HighlightGrid(nextWorldPos, this.lastWidth, this.lastDepth, this.lastColor);
+        return;
+    }
+
+    const intersectsHighlight = this.raycaster.intersectObject(this.highlightMesh);
+    if (intersectsHighlight.length > 0) {
+        console.log("🏗️ [CustomGround] 하이라이트 그리드 클릭: 건설 요청");
+        const worldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
+        this.eventCtrl.SendEventMessage(EventTypes.RequestBuilding, {
+            nodeId: this.lastNodeId,
+            pos: worldPos,
+            width: this.lastWidth,
+            depth: this.lastDepth
+        });
+        return;
+    }
+
+    // 화살표도 아니고 하이라이트 메시도 아닌 곳을 클릭했을 때
+    console.log("👋 [CustomGround] 다른 곳 클릭: 그리드 종료");
+    this.eventCtrl.SendEventMessage(EventTypes.HideGrid);
+  }
 
   /* -------------------------------- 생성 -------------------------------- */
   /**
@@ -842,11 +927,154 @@ export default class CustomGround implements IWorldMapObject {
     this.blendMap.needsUpdate = true;
   }
 
+  /* -------------------------------- 격자 -------------------------------- */
+  ToggleGrid(visible: boolean) {
+    console.log(`[CustomGround] ToggleGrid: ${visible}, obj exists: ${!!this.obj}`);
+    if (visible) {
+      if (!this.gridHelper && this.obj) {
+        // 로컬 단위 크기 (planeWidth/Height) 사용
+        const size = Math.max(this.planeWidth, this.planeHeight);
+        const divisions = Math.round(size);
+        this.gridHelper = new THREE.GridHelper(size, divisions, 0xffffff, 0xcccccc);
+        
+        // 부모(this.obj)의 스케일을 상쇄
+        const s = 1 / this.scale;
+        this.gridHelper.scale.set(s, s, s);
+        this.gridHelper.position.set(0, 0.2, 0); 
+
+        const mat = this.gridHelper.material as THREE.LineBasicMaterial;
+        mat.depthTest = true; // 수정: 다른 오브젝트에 가려지도록 true로 설정
+        mat.transparent = true;
+        mat.opacity = 0.6; // 약간 투명하게 조절
+        this.gridHelper.renderOrder = 0; // 수정: 최상단 렌더링 해제
+        
+        this.obj.add(this.gridHelper);
+      }
+      if (this.gridHelper) this.gridHelper.visible = true;
+    } else {
+      if (this.gridHelper) this.gridHelper.visible = false;
+      this.ClearHighlight();
+    }
+  }
+
+  private arrowGroup?: THREE.Group;
+
+  private CreateArrows() {
+    this.arrowGroup = new THREE.Group();
+    
+    const dirs = [
+      { id: 'N', pos: [0, 0, -2], rot: Math.PI / 2 },
+      { id: 'S', pos: [0, 0, 2], rot: -Math.PI / 2 },
+      { id: 'W', pos: [-2, 0, 0], rot: Math.PI },
+      { id: 'E', pos: [2, 0, 0], rot: 0 }
+    ];
+
+    this.loader.GetAssets(Char.UltimateLvAndMaArrow).CloneModel().then((model: THREE.Group) => {
+      if (!model) return;
+
+      dirs.forEach(d => {
+        const arrow = model.clone();
+        arrow.name = `build_arrow_${d.id}`;
+        arrow.position.set(d.pos[0], 0.1, d.pos[2]);
+        arrow.rotation.y = d.rot;
+        arrow.scale.set(1, 1, 3)
+        
+        arrow.traverse((child: any) => {
+          if (child instanceof THREE.Mesh) {
+            child.name = arrow.name;
+          }
+        });
+
+        this.arrowGroup?.add(arrow);
+      });
+      
+      if (this.highlightMesh) {
+          this.HighlightGrid(this.highlightMesh.position, this.lastWidth, this.lastDepth, this.lastColor);
+      }
+    });
+    
+    this.obj.add(this.arrowGroup);
+  }
+
+  HighlightGrid(worldPos: THREE.Vector3, width: number, depth: number, color: THREE.Color = new THREE.Color(0x00ff00)) {
+    this.lastWidth = width;
+    this.lastDepth = depth;
+    this.lastColor = color;
+    
+    if (!this.highlightMesh && this.obj) {
+      const geom = new THREE.PlaneGeometry(1, 1);
+      geom.rotateX(-Math.PI / 2);
+      const mat = new THREE.MeshBasicMaterial({ 
+        color, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthTest: true 
+      });
+      this.highlightMesh = new THREE.Mesh(geom, mat);
+      this.highlightMesh.renderOrder = 0;
+      this.obj.add(this.highlightMesh);
+      this.CreateArrows();
+    }
+
+    if (!this.highlightMesh || !this.obj) return;
+
+    // 월드 좌표를 지면의 로컬 좌표로 변환
+    const localPos = this.obj.worldToLocal(worldPos.clone());
+    
+    // [수정 핵심] 로컬 공간에서 그리드 한 칸의 실제 크기는 s (보통 2) 입니다.
+    const s = 1 / this.scale; 
+    
+    // 1. 기준 좌표를 그리드 교차점(선)의 배수로 스냅합니다.
+    const lineX = Math.round(localPos.x / s) * s;
+    const lineZ = Math.round(localPos.z / s) * s;
+
+    // 2. 크기에 따라 중앙 정렬 오프셋을 계산합니다.
+    // 홀수 칸(1, 3...)이면 셀의 중앙(s / 2)에 둬야 하고, 짝수 칸(2, 4...)이면 그리드 선(0)에 맞춰야 합니다.
+    const offsetX = (width % 2 !== 0) ? (s / 2) : 0;
+    const offsetZ = (depth % 2 !== 0) ? (s / 2) : 0;
+
+    this.highlightMesh.scale.set(width * s, 1, depth * s);
+    this.highlightMesh.position.set(lineX + offsetX, 0.25, lineZ + offsetZ);
+    this.highlightMesh.visible = true;
+
+    // 화살표 위치 업데이트
+    if (this.arrowGroup) {
+        this.arrowGroup.position.copy(this.highlightMesh.position);
+        this.arrowGroup.visible = true;
+        
+        const margin = 0.5 * s;
+        this.arrowGroup.children.forEach(child => {
+            const arrow = child as THREE.Mesh;
+            const dir = arrow.name.split('_').pop();
+            
+            if (dir === 'N') arrow.position.set(0, 0, -(depth * s * 0.5 + margin));
+            if (dir === 'S') arrow.position.set(0, 0, (depth * s * 0.5 + margin));
+            if (dir === 'W') arrow.position.set(-(width * s * 0.5 + margin), 0, 0);
+            if (dir === 'E') arrow.position.set((width * s * 0.5 + margin), 0, 0);
+        });
+    }
+    
+    if (this.highlightMesh.material instanceof THREE.MeshBasicMaterial) {
+      this.highlightMesh.material.color.copy(color);
+    }
+  }
+
+  ClearHighlight() {
+    if (this.highlightMesh) this.highlightMesh.visible = false;
+    if (this.arrowGroup) this.arrowGroup.visible = false;
+  }
+
   /* -------------------------------- 정리 -------------------------------- */
   Dispose() {
+    this.eventCtrl.DeregisterEventListener(EventTypes.ShowGrid);
+    this.eventCtrl.DeregisterEventListener(EventTypes.HideGrid);
+    this.eventCtrl.DeregisterEventListener(EventTypes.HighlightGrid);
+
     this.shaderMaterial?.dispose();
     this.geometry?.dispose();
     this.blendMap?.dispose();
+    this.gridHelper?.dispose();
+    if (this.highlightMesh) {
+      this.highlightMesh.geometry.dispose();
+      (this.highlightMesh.material as THREE.Material).dispose();
+    }
     if (this.obj) this.obj.userData.mapObj = undefined;
   }
 

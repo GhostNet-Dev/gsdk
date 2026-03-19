@@ -3,11 +3,13 @@ import type { IDialogView, ViewContext } from '../souldlgtypes';
 import { TechTreeDefBase } from '@Glibs/techtree/techtreedefs';
 import { BuildingProperty } from '@Glibs/interactives/building/buildingdefs';
 import { TooltipComponent } from '../core/tooltip';
+import { EventTypes } from '@Glibs/types/globaltypes';
+import * as THREE from 'three';
 
 type BuildingViewProps = {
     buildings: TechTreeDefBase[];
     canLevelUp: (id: string) => { ok: boolean; reason?: string };
-    onBuild: (id: string) => void;
+    onBuild: (id: string, pos: THREE.Vector3) => void;
 };
 
 const CSS_BUILDING = css`
@@ -95,6 +97,11 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
     private props!: BuildingViewProps;
     private tip!: TooltipComponent;
     private selectedId: string | null = null;
+    
+    // 배치 관련 상태
+    private isPlacing = false;
+    private currentPos = new THREE.Vector3(0, 0, 0);
+    private placingNode: TechTreeDefBase | null = null;
 
     mount(ctx: ViewContext, props: BuildingViewProps) {
         this.ctx = ctx;
@@ -108,9 +115,16 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
 
         this.render();
         document.addEventListener('pointerdown', this.onGlobalDown, true);
+        this.ctx.events?.RegisterEventListener(EventTypes.GridArrowClick, this.onArrowClick);
     }
 
+    private onArrowClick = (data: { dir: string, delta: THREE.Vector3 }) => {
+        if (!this.isPlacing) return;
+        this.currentPos.add(data.delta);
+    };
+
     private onGlobalDown = (e: Event) => {
+        if (this.isPlacing) return;
         if (!this.tip.pinned) return;
         const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
         if (this.tip.tip && (path.includes(this.tip.tip) || this.tip.tip.contains(e.target as Node))) {
@@ -120,6 +134,9 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
     };
 
     private render() {
+        this.ctx.render.setTitle(this.shell, '건설 — 기지 확장');
+        this.ctx.render.setWide(this.shell, true);
+
         const doc = (this.shell.sr instanceof ShadowRoot) ? this.shell.sr : document;
         this.shell.body.innerHTML = '';
 
@@ -168,6 +185,18 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
         ]);
     }
 
+    private finalizeBuild(node: TechTreeDefBase) {
+        const prop = node.tech as BuildingProperty;
+        this.ctx.events?.SendEventMessage(EventTypes.ShowGrid);
+        this.ctx.events?.SendEventMessage(EventTypes.HighlightGrid, {
+            pos: new THREE.Vector3(0, 0, 0),
+            width: prop.size.width,
+            depth: prop.size.depth,
+            nodeId: node.id
+        });
+        this.ctx.manager.close();
+    }
+
     private updateSelection() {
         const doc = (this.shell.sr instanceof ShadowRoot) ? this.shell.sr : document;
         const slots = doc.querySelectorAll('.gnx-build-slot');
@@ -185,7 +214,6 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
         let reasonText = reason || '잠겨 있음';
         if (reason === 'insufficient funds') reasonText = '자금이 부족합니다';
         else if (reason?.startsWith('requirement not met')) {
-            // "requirement not met: has(cc)" 같은 형식을 한국어로 변환 시도
             const req = reason.split(': ')[1] || '';
             if (req.includes('has(')) {
                 const targetId = req.match(/has\(([^)]+)\)/)?.[1];
@@ -223,8 +251,7 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
             if (tipEl) {
                 tipEl.querySelector('[data-action="build"]')?.addEventListener('click', () => {
                     if (isEnabled) {
-                        this.props.onBuild(node.id);
-                        this.ctx.manager.close();
+                        this.finalizeBuild(node);
                     }
                 });
                 tipEl.querySelector('[data-action="close"]')?.addEventListener('click', () => {
@@ -237,5 +264,6 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
     unmount() {
         this.tip.destroy();
         document.removeEventListener('pointerdown', this.onGlobalDown, true);
+        this.ctx.events?.DeregisterEventListener(EventTypes.GridArrowClick, this.onArrowClick);
     }
 }

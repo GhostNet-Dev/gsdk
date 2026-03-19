@@ -147,6 +147,13 @@ export const EventTypes = {
     // Environment
     DayNightCtrl: "daynight",
 
+    // Grid
+    ShowGrid: "showgrid",
+    HideGrid: "hidegrid",
+    HighlightGrid: "highlightgrid",
+    GridArrowClick: "gridarrowclick",
+    RequestBuilding: "requestbuilding",
+
     // VFX
     GlobalEffect: "globaleffect",
 

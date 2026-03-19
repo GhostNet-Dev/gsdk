@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import IEventController from "@Glibs/interface/ievent";
 import { TechNode } from "@Glibs/techtree/technode";
 import { TechTreeService } from "@Glibs/techtree/techtreeservice";
@@ -52,8 +53,8 @@ export default class GameManager {
     /**
      * 특정 건물을 건설합니다.
      */
-    buildBuilding(nodeId: string): boolean {
-        const taskId = this.buildingManager.startBuild(nodeId);
+    buildBuilding(nodeId: string, pos?: THREE.Vector3): boolean {
+        const taskId = this.buildingManager.startBuild(nodeId, pos);
         return taskId !== null;
     }
     public addPoints(amount: number) {

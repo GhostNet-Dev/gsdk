@@ -69,7 +69,7 @@ export default class WorldMap {
         SteppedTerrain: SteppedTerrain
     };
     private worldMapTypes: Record<string, any> = {
-        CustomGround: { scene: this.scene, eventCtrl: this.eventCtrl },
+        CustomGround: { scene: this.scene, eventCtrl: this.eventCtrl, camera: this.camera },
         GeometryGround: { scene: this.scene, eventCtrl: this.eventCtrl },
         ProduceTerrain3: { scene: this.scene, eventCtrl: this.eventCtrl  },
         Ground: { width: 1024 * 3, height: 1024 * 3, planeSize: 256 },

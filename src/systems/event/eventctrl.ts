@@ -12,4 +12,11 @@ export class EventController implements IEventController {
     SendEventMessage(type: string, ...args: any[]): void {
         this.eventEmitter.emit(type, ...args)
     }
+    DeregisterEventListener(type: string, callback?: (...e: any[]) => void): void {
+        if (callback) {
+            this.eventEmitter.removeListener(type, callback)
+        } else {
+            this.eventEmitter.removeAllListeners(type)
+        }
+    }
 }
