@@ -23,6 +23,7 @@ export interface BuildingTask {
   remainingTurns: number;
   isFinished: boolean;
   constructionModel?: THREE.Object3D;
+  progressMesh?: THREE.Group;
 }
 
 export class BuildingManager {
@@ -129,6 +130,35 @@ export class BuildingManager {
   }
 
   update(delta: number) {
+    // 건설 중인 태스크 업데이트
+    for (const [taskId, task] of this.activeTasks.entries()) {
+      if (task.isFinished) continue;
+
+      if (this.currentMode === BuildingMode.Timer) {
+        const elapsed = (Date.now() - task.startTime) / 1000;
+        task.progress = Math.min(elapsed / task.prop.buildTime, 1.0);
+        
+        // 링 게이지 업데이트
+        if (task.progressMesh) {
+          const ring = task.progressMesh.getObjectByName('ring_progress') as THREE.Mesh;
+          if (ring) {
+            const { innerRadius, outerRadius } = task.progressMesh.userData;
+            // 기존 지오메트리 해제
+            ring.geometry.dispose();
+            // 진행률에 따른 각도 계산 (0 ~ 2*PI)
+            const thetaLength = task.progress * Math.PI * 2;
+            const newGeom = new THREE.RingGeometry(innerRadius, outerRadius, 64, 1, Math.PI / 2, -thetaLength);
+            newGeom.rotateX(-Math.PI / 2);
+            ring.geometry = newGeom;
+          }
+        }
+
+        if (task.progress >= 1.0) {
+          this.finishBuild(taskId);
+        }
+      }
+    }
+
     for (const building of this.buildingObjects.values()) {
       building.update(delta);
     }
@@ -165,6 +195,8 @@ export class BuildingManager {
 
     // [추가] 건설 중인 상태를 보여주기 위해 가이드 모델을 복제하여 배치
     let constructionModel: THREE.Object3D | undefined;
+    let progressMesh: THREE.Group | undefined;
+
     if (this.guideModel && pos) {
       constructionModel = this.guideModel.clone();
       constructionModel.position.copy(pos);
@@ -189,6 +221,12 @@ export class BuildingManager {
         }
       });
       this.scene.add(constructionModel);
+
+      // [추가] 게이지 링 생성 (건물 바닥에 배치)
+      progressMesh = this.createProgressMesh(prop.size.width, prop.size.depth);
+      progressMesh.position.copy(pos);
+      progressMesh.position.y += 0.5; // 지면(0)보다 약간 위에 배치하여 Z-fighting 방지
+      this.scene.add(progressMesh);
     }
 
     const taskId = `task_${this.nextTaskId++}`;
@@ -200,16 +238,12 @@ export class BuildingManager {
       progress: 0,
       remainingTurns: prop.buildTurns,
       isFinished: false,
-      constructionModel
+      constructionModel,
+      progressMesh
     };
 
     this.activeTasks.set(taskId, task);
     this.sendBuildingStatus();
-
-    if (this.currentMode === BuildingMode.Timer) {
-      // 타이머 모드: 지정된 시간 후 완료
-      setTimeout(() => this.finishBuild(taskId), prop.buildTime * 1000);
-    }
 
     return taskId;
   }
@@ -242,9 +276,12 @@ export class BuildingManager {
     task.remainingTurns = 0;
     task.isFinished = true;
 
-    // 건설 중이던 임시 모델 제거
+    // 건설 중이던 임시 모델 및 게이지 제거
     if (task.constructionModel) {
       this.scene.remove(task.constructionModel);
+    }
+    if (task.progressMesh) {
+      this.scene.remove(task.progressMesh);
     }
 
     this.service.addLevel(task.nodeId);
@@ -321,5 +358,44 @@ export class BuildingManager {
     }));
 
     this.eventCtrl.SendEventMessage(EventTypes.ResponseBuilding, [...buildings, ...pending]);
+  }
+
+  /**
+   * 게이지 링 메쉬 생성 (배경 + 진행링)
+   */
+  private createProgressMesh(width: number, depth: number): THREE.Group {
+    const group = new THREE.Group();
+    // 건물 크기에 따른 반지름 결정 (그리드 단위 기반)
+    const radius = Math.max(width, depth) * 2.0; 
+    const innerRadius = radius * 0.8;
+    const outerRadius = radius;
+
+    // 1. 배경 링 (회색 반투명)
+    const bgGeom = new THREE.RingGeometry(innerRadius, outerRadius, 64);
+    bgGeom.rotateX(-Math.PI / 2);
+    const bgMat = new THREE.MeshBasicMaterial({ 
+      color: 0x222222, 
+      transparent: true, 
+      opacity: 0.5,
+      side: THREE.DoubleSide
+    });
+    const bg = new THREE.Mesh(bgGeom, bgMat);
+    group.add(bg);
+
+    // 2. 진행 링 (초록색)
+    const barMat = new THREE.MeshBasicMaterial({ 
+      color: 0x00ff00, 
+      transparent: true, 
+      opacity: 0.8,
+      side: THREE.DoubleSide
+    });
+    const bar = new THREE.Mesh(new THREE.BufferGeometry(), barMat);
+    bar.name = 'ring_progress';
+    group.add(bar);
+
+    // 카메라 관련 이벤트(Billboarding) 제거 (바닥에 고정되므로 불필요)
+    group.userData = { innerRadius, outerRadius };
+
+    return group;
   }
 }
