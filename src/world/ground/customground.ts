@@ -159,6 +159,12 @@ export default class CustomGround implements IWorldMapObject {
     this.eventCtrl.RegisterEventListener(EventTypes.HighlightGrid, (data: { pos: THREE.Vector3, width: number, depth: number, color?: THREE.Color, nodeId?: string }) => {
       this.lastNodeId = data.nodeId
       this.HighlightGrid(data.pos, data.width, data.depth, data.color, data.nodeId);
+      
+      // [추가] 초기 배치 시 BuildingManager 가이드 위치 동기화
+      if (this.highlightMesh) {
+          const snappedWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
+          this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { dir: 'SYNC', delta: new THREE.Vector3(), pos: snappedWorldPos });
+      }
     });
     this.eventCtrl.RegisterEventListener(EventTypes.ResponseBuilding, (buildings: any[]) => {
       this.occupiedBuildings = buildings;
@@ -195,12 +201,14 @@ export default class CustomGround implements IWorldMapObject {
         if (dir === 'W') worldDelta.x = -this.gridSize;
         if (dir === 'E') worldDelta.x = this.gridSize;
 
-        this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { dir, delta: worldDelta });
-        
         const currentWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
         const nextWorldPos = currentWorldPos.add(worldDelta);
         
         this.HighlightGrid(nextWorldPos, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
+        
+        // [수정] 스냅된 최종 월드 좌표를 함께 전달
+        const snappedWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
+        this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { dir, delta: worldDelta, pos: snappedWorldPos });
         return;
     }
 
@@ -228,7 +236,9 @@ export default class CustomGround implements IWorldMapObject {
         this.HighlightGrid(intersectsGround[0].point, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
         const newWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
         const delta = newWorldPos.clone().sub(oldWorldPos);
-        this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { dir: 'GROUND', delta });
+        
+        // [수정] 스냅된 최종 월드 좌표를 함께 전달
+        this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { dir: 'GROUND', delta, pos: newWorldPos });
         return;
     }
 

@@ -53,9 +53,13 @@ export class BuildingManager {
     });
 
     // 가이드 모델 이동을 위한 GridArrowClick 리스너
-    this.eventCtrl.RegisterEventListener(EventTypes.GridArrowClick, (data: { delta: THREE.Vector3 }) => {
+    this.eventCtrl.RegisterEventListener(EventTypes.GridArrowClick, (data: { delta: THREE.Vector3, pos?: THREE.Vector3 }) => {
       if (this.guideModel) {
-        this.guideModel.position.add(data.delta);
+        if (data.pos) {
+          this.guideModel.position.copy(data.pos);
+        } else {
+          this.guideModel.position.add(data.delta);
+        }
       }
     });
 
