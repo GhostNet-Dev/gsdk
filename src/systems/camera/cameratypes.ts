@@ -7,12 +7,14 @@ export enum CameraMode {
     FirstPerson,
     Free,
     Cinematic,
-    AimThirdPerson
+    AimThirdPerson,
+    Grid,
+    Restore
 }
 
 export interface ICameraStrategy {
-    init?(): void
-    uninit?(): void
+    init?(camera: THREE.PerspectiveCamera): void
+    uninit?(camera: THREE.PerspectiveCamera): void
     update(camera: THREE.Camera, player?: IPhysicsObject): void
     orbitStart?(): void
     orbitEnd?(): void

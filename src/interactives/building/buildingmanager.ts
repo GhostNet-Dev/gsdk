@@ -2,7 +2,7 @@ import * as THREE from "three";
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { TechTreeService } from "@Glibs/techtree/techtreeservice";
 import { BuildingMode, BuildingProperty } from "./buildingdefs";
-import { subWallet } from "@Glibs/inventory/wallet";
+import { geWallet, subWallet } from "@Glibs/inventory/wallet";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { IBuildingObject, BuildingType } from "./ibuildingobj";
 import { Loader } from "@Glibs/loader/loader";
@@ -13,6 +13,7 @@ import { TechResearch } from "./buildingobjs/techresearch";
 import { ResourceProduction } from "./buildingobjs/resourceproduction";
 import { Wall } from "./buildingobjs/wall";
 import { Bunker } from "./buildingobjs/bunker";
+import { CameraMode } from "@Glibs/systems/camera/cameratypes";
 
 export interface BuildingTask {
   nodeId: string;
@@ -78,13 +79,16 @@ export class BuildingManager implements ILoop {
   }
 
   private async showGuide(nodeId: string, pos: THREE.Vector3) {
+    // 1. 카메라 모드 변경 (건설 시야 확보)
+    this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.Grid);
+
     // 이미 같은 가이드가 있으면 위치만 업데이트
     if (this.currentGuideNodeId === nodeId && this.guideModel) {
       this.guideModel.position.copy(pos);
       return;
     }
 
-    this.hideGuide();
+    this.hideGuide(false);
 
     const node = this.service.index.byId.get(nodeId);
     if (!node || node.kind !== "building") return;
@@ -98,6 +102,11 @@ export class BuildingManager implements ILoop {
       if (!model) return;
 
       this.guideModel = model as THREE.Group;
+      // 가이드 모델이 마우스 레이캐스팅을 방해하지 않도록 설정
+      this.guideModel.traverse((child) => {
+        child.raycast = () => { };
+      });
+
       this.guideModel.position.copy(pos);
       this.guideModel.scale.set(prop.scale, prop.scale, prop.scale);
 
@@ -124,12 +133,16 @@ export class BuildingManager implements ILoop {
     material.depthWrite = false;
   }
 
-  private hideGuide() {
+  private hideGuide(restoreCamera = true) {
     if (this.guideModel) {
       this.scene.remove(this.guideModel);
       this.guideModel = null;
     }
     this.currentGuideNodeId = null;
+
+    if (restoreCamera) {
+      this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.Restore);
+    }
   }
 
   update(delta: number) {
@@ -141,7 +154,7 @@ export class BuildingManager implements ILoop {
         const elapsed = (Date.now() - task.startTime) / 1000;
         task.progress = Math.min(elapsed / task.prop.buildTime, 1.0);
         const remaining = Math.max(0, task.prop.buildTime - elapsed);
-        
+
         // 링 게이지 업데이트
         if (task.progressMesh) {
           const ring = task.progressMesh.getObjectByName('ring_progress') as THREE.Mesh;
@@ -158,8 +171,8 @@ export class BuildingManager implements ILoop {
         if (task.progress >= 1.0) {
           this.finishBuild(taskId);
         }
-        }
-        }
+      }
+    }
 
 
     for (const building of this.buildingObjects.values()) {
@@ -175,8 +188,34 @@ export class BuildingManager implements ILoop {
    * 건물을 지을 수 있는지 확인합니다.
    */
   canBuild(nodeId: string): { ok: boolean; reason?: string } {
-    const res = this.service.canLevelUp(nodeId);
-    if (!res.ok) return { ok: false, reason: res.reason };
+    const node = this.service.index.byId.get(nodeId);
+    if (!node || node.kind !== "building") return { ok: false, reason: "invalid building type" };
+
+    const prop = node.tech as BuildingProperty;
+    const curLv = this.service.levels[nodeId] ?? 0;
+
+    // 1. 고유 건물 중복 체크
+    if (prop.isUnique) {
+      const isAlreadyBuilding = Array.from(this.activeTasks.values()).some(t => t.nodeId === nodeId);
+      const isAlreadyExists = Array.from(this.buildingObjects.values()).some(b => b.property.id === nodeId);
+      if (isAlreadyBuilding || isAlreadyExists) {
+        return { ok: false, reason: "unique building already exists" };
+      }
+    }
+
+    // 2. 테크트리 조건 및 비용 체크
+    if (curLv === 0) {
+      // 최초 건설 (해금 필요)
+      const res = this.service.canLevelUp(nodeId);
+      if (!res.ok) return { ok: false, reason: res.reason };
+    } else {
+      // 이미 해금됨 - 반복 건설 비용 체크 (1레벨 건설 비용 기준)
+      const cost = this.service.costOf(nodeId, 1);
+      if (!geWallet(this.service.ctx.wallet, cost)) {
+        return { ok: false, reason: "insufficient funds for construction" };
+      }
+    }
+
     return { ok: true };
   }
 
@@ -184,9 +223,10 @@ export class BuildingManager implements ILoop {
    * 건물 건설을 시작합니다.
    */
   async startBuild(nodeId: string, pos?: THREE.Vector3): Promise<string | null> {
-    const res = this.service.canLevelUp(nodeId);
-    if (!res.ok) {
-      console.error(`Cannot build ${nodeId}: ${res.reason}`);
+    const check = this.canBuild(nodeId);
+    if (!check.ok) {
+      console.error(`Cannot build ${nodeId}: ${check.reason}`);
+      this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, check.reason);
       return null;
     }
 
@@ -194,7 +234,11 @@ export class BuildingManager implements ILoop {
     if (!node || node.kind !== "building") return null;
 
     const prop = node.tech as BuildingProperty;
-    subWallet(this.service.ctx.wallet, res.cost!);
+    const curLv = this.service.levels[nodeId] ?? 0;
+
+    // 비용 차감
+    const cost = (curLv === 0) ? this.service.canLevelUp(nodeId).cost! : this.service.costOf(nodeId, 1);
+    subWallet(this.service.ctx.wallet, cost);
 
     // [최적화] 건설 중인 상태를 보여주기 위해 고유 모델을 생성하여 배치
     let constructionModel: THREE.Object3D | undefined;
@@ -232,17 +276,29 @@ export class BuildingManager implements ILoop {
           template = model;
         }
       }
-      
+
       if (template) {
         // 템플릿을 복제하여 사용 (재질 공유)
         constructionModel = template.clone();
         constructionModel.position.copy(pos);
         constructionModel.scale.set(prop.scale, prop.scale, prop.scale);
+
+        // 건설 중인 모델이 마우스 레이캐스팅을 방해하지 않도록 설정
+        constructionModel.traverse((child) => {
+          child.raycast = () => { };
+        });
+
         this.scene.add(constructionModel);
       }
 
       // [추가] 게이지 링 생성 (건물 바닥에 배치)
       progressMesh = this.createProgressMesh(prop.size.width, prop.size.depth);
+
+      // 게이지 메쉬가 마우스 레이캐스팅을 방해하지 않도록 설정
+      progressMesh.traverse((child) => {
+        child.raycast = () => { };
+      });
+
       progressMesh.position.copy(pos);
       progressMesh.position.y += 0.5; // 지면(0)보다 약간 위에 배치하여 Z-fighting 방지
       this.scene.add(progressMesh);
@@ -263,7 +319,7 @@ export class BuildingManager implements ILoop {
 
     this.activeTasks.set(taskId, task);
     this.sendBuildingStatus();
-    
+
     return taskId;
   }
 
@@ -303,7 +359,10 @@ export class BuildingManager implements ILoop {
       this.scene.remove(task.progressMesh);
     }
 
-    this.service.addLevel(task.nodeId);
+    // 최초 건설 시에만 전역 테크 레벨을 1로 올림 (해금)
+    if ((this.service.levels[task.nodeId] ?? 0) === 0) {
+      this.service.addLevel(task.nodeId);
+    }
 
     // 실제 건물 오브젝트 생성
     if (task.pos) {
@@ -381,7 +440,7 @@ export class BuildingManager implements ILoop {
       width: b.property.size.width,
       depth: b.property.size.depth
     }));
-    
+
     const pending = Array.from(this.activeTasks.values()).filter(t => !t.isFinished && t.pos).map(t => ({
       pos: t.pos!,
       width: t.prop.size.width,
@@ -397,16 +456,16 @@ export class BuildingManager implements ILoop {
   private createProgressMesh(width: number, depth: number): THREE.Group {
     const group = new THREE.Group();
     // 건물 크기에 따른 반지름 결정 (그리드 단위 기반)
-    const radius = Math.max(width, depth) * 2.0; 
+    const radius = Math.max(width, depth) * 2.0;
     const innerRadius = radius * 0.9;
     const outerRadius = radius;
 
     // 1. 배경 링 (회색 반투명)
     const bgGeom = new THREE.RingGeometry(innerRadius, outerRadius, 64);
     bgGeom.rotateX(-Math.PI / 2);
-    const bgMat = new THREE.MeshBasicMaterial({ 
-      color: 0x222222, 
-      transparent: true, 
+    const bgMat = new THREE.MeshBasicMaterial({
+      color: 0x222222,
+      transparent: true,
       opacity: 0.5,
       side: THREE.DoubleSide
     });
@@ -414,9 +473,9 @@ export class BuildingManager implements ILoop {
     group.add(bg);
 
     // 2. 진행 링 (초록색)
-    const barMat = new THREE.MeshBasicMaterial({ 
-      color: 0x00ff00, 
-      transparent: true, 
+    const barMat = new THREE.MeshBasicMaterial({
+      color: 0x00ff00,
+      transparent: true,
       opacity: 0.8,
       side: THREE.DoubleSide
     });

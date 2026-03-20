@@ -13,6 +13,7 @@ import FirstPersonCameraStrategy from "./firstperson";
 import FreeCameraStrategy from "./freeview";
 import CinematicCameraStrategy from "./cinemaview";
 import AimThirdPersonCameraStrategy from "./aimview";
+import GridViewCameraStrategy from "./gridview";
 import { AttackOption } from "@Glibs/types/playertypes";
 
 export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
@@ -23,6 +24,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     private strategy: ICameraStrategy
     private strategies: Map<CameraMode, ICameraStrategy> = new Map()
     private mode: CameraMode = CameraMode.Free
+    private previousMode: CameraMode = CameraMode.Free
     private crosshair?: THREE.Group;
     private preAimSnapshot?: {
         mode: CameraMode
@@ -102,9 +104,11 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
             new THREE.Vector3(10, 10, 0),
             new THREE.Vector3(0, 5, -10)
         ], this.controls));
-        this.strategies.set(CameraMode.AimThirdPerson, new AimThirdPersonCameraStrategy(this.controls, this));        // 여기에 다른 전략도 추가하세요
+        this.strategies.set(CameraMode.AimThirdPerson, new AimThirdPersonCameraStrategy(this.controls, this));
+        this.strategies.set(CameraMode.Grid, new GridViewCameraStrategy(this.controls));
+        // 여기에 다른 전략도 추가하세요
         this.strategy = this.strategies.get(this.mode)!;
-        this.strategy.init?.();
+        this.strategy.init?.(this);
     }
 
     private createCrosshair() {
@@ -224,11 +228,16 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         })
     }
     setMode(mode: CameraMode) {
+        if (mode === CameraMode.Restore) {
+            mode = this.previousMode;
+        }
+
         if (!this.strategies.has(mode)) return
         // ✅ 방어 코드 추가: 현재 카메라 모드와 변경하려는 모드가 같으면 초기화를 무시합니다.
         if (this.mode === mode) return;
 
         const prevMode = this.mode
+        this.previousMode = prevMode;
 
         if (mode === CameraMode.AimThirdPerson && prevMode !== CameraMode.AimThirdPerson) {
             this.preAimSnapshot = {
@@ -239,11 +248,11 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
             }
         }
 
-        this.strategy?.uninit?.();
+        this.strategy?.uninit?.(this);
 
         this.mode = mode
         this.strategy = this.strategies.get(mode)!
-        this.strategy.init?.()
+        this.strategy.init?.(this)
 
         if (
             prevMode === CameraMode.AimThirdPerson &&

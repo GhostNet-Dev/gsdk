@@ -169,7 +169,8 @@ export default class CustomGround implements IWorldMapObject {
     this.eventCtrl.RegisterEventListener(EventTypes.ResponseBuilding, (buildings: any[]) => {
       this.occupiedBuildings = buildings;
       if (this.highlightMesh && this.highlightMesh.visible) {
-        this.HighlightGrid(this.highlightMesh.position, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
+        const worldPosCenter = this.obj.localToWorld(this.highlightMesh.position.clone());
+        this.HighlightGrid(worldPosCenter, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
       }
     });
   }
