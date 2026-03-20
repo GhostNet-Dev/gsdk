@@ -8,6 +8,7 @@ import { TechTreeKind } from "@Glibs/techtree/techtreedefs";
 import { ActionProperty } from "@Glibs/types/actiontypes";
 import { BuildingManager } from "@Glibs/interactives/building/buildingmanager";
 import { BuildingMode } from "@Glibs/interactives/building/buildingdefs";
+import { BuildingInfoBar } from "@Glibs/ux/dialog/buildinginfobar";
 
 type LearnedSkillMessage = {
     nodeId: string;
@@ -22,6 +23,7 @@ export default class GameManager {
     private activeBuffs = new Map<string, Buff>();
     private activeSkills = new Map<string, LearnedSkillMessage>();
     private buildingManager: BuildingManager;
+    private buildingInfoBar: BuildingInfoBar;
 
     constructor(
         private scene: THREE.Scene,
@@ -29,6 +31,7 @@ export default class GameManager {
         private service: TechTreeService,
     ) { 
         this.buildingManager = new BuildingManager(this.scene, this.eventCtrl, this.service);
+        this.buildingInfoBar = new BuildingInfoBar(this.eventCtrl);
         this.eventCtrl.RegisterEventListener(EventTypes.LevelUp, () => {
             this.addResource(1)
         })

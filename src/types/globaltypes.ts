@@ -152,6 +152,7 @@ export const EventTypes = {
     HideGrid: "hidegrid",
     HighlightGrid: "highlightgrid",
     GridArrowClick: "gridarrowclick",
+    ShowBuildingInfo: "showbuildinginfo",
     RequestBuilding: "requestbuilding",
     ResponseBuilding: "responsebuilding",
 

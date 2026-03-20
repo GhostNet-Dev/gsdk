@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import IEventController from "@Glibs/interface/ievent";
+import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { TechTreeService } from "@Glibs/techtree/techtreeservice";
 import { BuildingMode, BuildingProperty } from "./buildingdefs";
 import { subWallet } from "@Glibs/inventory/wallet";
@@ -26,7 +26,8 @@ export interface BuildingTask {
   progressMesh?: THREE.Group;
 }
 
-export class BuildingManager {
+export class BuildingManager implements ILoop {
+  LoopId: number = 0;
   private activeTasks: Map<string, BuildingTask> = new Map();
   private buildingObjects: Map<string, IBuildingObject> = new Map();
   private nextTaskId: number = 0;
@@ -69,9 +70,7 @@ export class BuildingManager {
       this.hideGuide();
     });
 
-    this.eventCtrl.RegisterEventListener(EventTypes.RegisterLoop, (delta: number) => {
-      this.update(delta);
-    });
+    this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
   }
 
   private async showGuide(nodeId: string, pos: THREE.Vector3) {
@@ -137,15 +136,14 @@ export class BuildingManager {
       if (this.currentMode === BuildingMode.Timer) {
         const elapsed = (Date.now() - task.startTime) / 1000;
         task.progress = Math.min(elapsed / task.prop.buildTime, 1.0);
+        const remaining = Math.max(0, task.prop.buildTime - elapsed);
         
         // 링 게이지 업데이트
         if (task.progressMesh) {
           const ring = task.progressMesh.getObjectByName('ring_progress') as THREE.Mesh;
           if (ring) {
             const { innerRadius, outerRadius } = task.progressMesh.userData;
-            // 기존 지오메트리 해제
             ring.geometry.dispose();
-            // 진행률에 따른 각도 계산 (0 ~ 2*PI)
             const thetaLength = task.progress * Math.PI * 2;
             const newGeom = new THREE.RingGeometry(innerRadius, outerRadius, 64, 1, Math.PI / 2, -thetaLength);
             newGeom.rotateX(-Math.PI / 2);
@@ -156,8 +154,9 @@ export class BuildingManager {
         if (task.progress >= 1.0) {
           this.finishBuild(taskId);
         }
-      }
-    }
+        }
+        }
+
 
     for (const building of this.buildingObjects.values()) {
       building.update(delta);
@@ -244,7 +243,7 @@ export class BuildingManager {
 
     this.activeTasks.set(taskId, task);
     this.sendBuildingStatus();
-
+    
     return taskId;
   }
 
@@ -367,7 +366,7 @@ export class BuildingManager {
     const group = new THREE.Group();
     // 건물 크기에 따른 반지름 결정 (그리드 단위 기반)
     const radius = Math.max(width, depth) * 2.0; 
-    const innerRadius = radius * 0.8;
+    const innerRadius = radius * 0.9;
     const outerRadius = radius;
 
     // 1. 배경 링 (회색 반투명)
@@ -391,6 +390,7 @@ export class BuildingManager {
     });
     const bar = new THREE.Mesh(new THREE.BufferGeometry(), barMat);
     bar.name = 'ring_progress';
+    bar.position.y += 0.01;
     group.add(bar);
 
     // 카메라 관련 이벤트(Billboarding) 제거 (바닥에 고정되므로 불필요)

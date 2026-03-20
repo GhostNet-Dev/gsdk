@@ -194,6 +194,21 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
             depth: prop.size.depth,
             nodeId: node.id
         });
+
+        // [추가] 하단 정보 바에 선택된 건물 정보 표시
+        let costStr = "무료";
+        if (node.cost && node.cost[0] && node.cost[0].cost) {
+            const costs = node.cost[0].cost;
+            costStr = Object.entries(costs)
+                .map(([type, amount]) => `${amount} ${type}`)
+                .join(", ");
+        }
+        
+        this.ctx.events?.SendEventMessage(EventTypes.ShowBuildingInfo, {
+            name: node.name,
+            cost: costStr
+        });
+
         this.ctx.manager.close();
     }
 
