@@ -415,6 +415,7 @@ export class BuildingManager implements ILoop {
 
           if (buildingObj) {
             this.buildingObjects.set(id, buildingObj);
+            this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, buildingObj.mesh, true)
           }
         }
       } catch (err) {
@@ -456,7 +457,7 @@ export class BuildingManager implements ILoop {
   private createProgressMesh(width: number, depth: number): THREE.Group {
     const group = new THREE.Group();
     // 건물 크기에 따른 반지름 결정 (그리드 단위 기반)
-    const radius = Math.max(width, depth) * 2.0;
+    const radius = Math.max(width, depth) * 3.0;
     const innerRadius = radius * 0.9;
     const outerRadius = radius;
 
@@ -481,7 +482,7 @@ export class BuildingManager implements ILoop {
     });
     const bar = new THREE.Mesh(new THREE.BufferGeometry(), barMat);
     bar.name = 'ring_progress';
-    bar.position.y += 0.01;
+    bar.position.y += 0.05;
     group.add(bar);
 
     // 카메라 관련 이벤트(Billboarding) 제거 (바닥에 고정되므로 불필요)

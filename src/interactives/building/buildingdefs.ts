@@ -59,7 +59,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         scale: 10,
         buildTime: 10,
         buildTurns: 5,
-        size: { width: 3, depth: 3 },
+        size: { width: 4, depth: 4 },
         provides: ["marine", "firebat", "medic"],
         desc: "보병 유닛을 생산하는 시설입니다."
     }
