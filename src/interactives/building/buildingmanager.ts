@@ -37,6 +37,10 @@ export class BuildingManager implements ILoop {
   private currentGuideNodeId: string | null = null;
   private loader = new Loader();
 
+  // [최적화] 건물 종류별 템플릿 캐시
+  private constructionTemplates: Map<string, THREE.Object3D> = new Map();
+  private finishedTemplates: Map<string, THREE.Object3D> = new Map();
+
   constructor(
     private scene: THREE.Scene,
     private eventCtrl: IEventController,
@@ -179,7 +183,7 @@ export class BuildingManager implements ILoop {
   /**
    * 건물 건설을 시작합니다.
    */
-  startBuild(nodeId: string, pos?: THREE.Vector3): string | null {
+  async startBuild(nodeId: string, pos?: THREE.Vector3): Promise<string | null> {
     const res = this.service.canLevelUp(nodeId);
     if (!res.ok) {
       console.error(`Cannot build ${nodeId}: ${res.reason}`);
@@ -192,34 +196,50 @@ export class BuildingManager implements ILoop {
     const prop = node.tech as BuildingProperty;
     subWallet(this.service.ctx.wallet, res.cost!);
 
-    // [추가] 건설 중인 상태를 보여주기 위해 가이드 모델을 복제하여 배치
+    // [최적화] 건설 중인 상태를 보여주기 위해 고유 모델을 생성하여 배치
     let constructionModel: THREE.Object3D | undefined;
     let progressMesh: THREE.Group | undefined;
 
-    if (this.guideModel && pos) {
-      constructionModel = this.guideModel.clone();
-      constructionModel.position.copy(pos);
-      // 건설 중임을 나타내기 위해 가이드(0.5)보다 더 투명하게(0.3) 설정
-      constructionModel.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          if (Array.isArray(child.material)) {
-            child.material = child.material.map(m => {
-              const cloneMat = m.clone();
-              cloneMat.transparent = true;
-              cloneMat.opacity = 0.3;
-              cloneMat.depthWrite = false;
-              return cloneMat;
-            });
-          } else {
-            const cloneMat = child.material.clone();
-            cloneMat.transparent = true;
-            cloneMat.opacity = 0.3;
-            cloneMat.depthWrite = false;
-            child.material = cloneMat;
-          }
+    if (pos) {
+      // 1. 캐시된 템플릿 확인
+      let template = this.constructionTemplates.get(nodeId);
+      if (!template) {
+        const asset = await this.loader.GetAssets(prop.assetKey);
+        // 건설용 고유 템플릿 생성
+        const [model, _exist] = await asset.UniqModel(`construction_template_${nodeId}`);
+        if (model) {
+          // 투명도 0.3 적용 (템플릿에 최초 1회만 수행)
+          model.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+              if (Array.isArray(child.material)) {
+                child.material = child.material.map(m => {
+                  const cloneMat = m.clone();
+                  cloneMat.transparent = true;
+                  cloneMat.opacity = 0.3;
+                  cloneMat.depthWrite = false;
+                  return cloneMat;
+                });
+              } else {
+                const cloneMat = child.material.clone();
+                cloneMat.transparent = true;
+                cloneMat.opacity = 0.3;
+                cloneMat.depthWrite = false;
+                child.material = cloneMat;
+              }
+            }
+          });
+          this.constructionTemplates.set(nodeId, model);
+          template = model;
         }
-      });
-      this.scene.add(constructionModel);
+      }
+      
+      if (template) {
+        // 템플릿을 복제하여 사용 (재질 공유)
+        constructionModel = template.clone();
+        constructionModel.position.copy(pos);
+        constructionModel.scale.set(prop.scale, prop.scale, prop.scale);
+        this.scene.add(constructionModel);
+      }
 
       // [추가] 게이지 링 생성 (건물 바닥에 배치)
       progressMesh = this.createProgressMesh(prop.size.width, prop.size.depth);
@@ -288,9 +308,21 @@ export class BuildingManager implements ILoop {
     // 실제 건물 오브젝트 생성
     if (task.pos) {
       try {
-        const asset = await this.loader.GetAssets(task.prop.assetKey);
-        const model = await asset.CloneModel();
-        if (model) {
+        // [최적화] 캐시된 템플릿 확인
+        let template = this.finishedTemplates.get(task.nodeId);
+        if (!template) {
+          const asset = await this.loader.GetAssets(task.prop.assetKey);
+          // 완성본용 고유 템플릿 생성
+          const [model, _exist] = await asset.UniqModel(`finished_template_${task.nodeId}`);
+          if (model) {
+            this.finishedTemplates.set(task.nodeId, model);
+            template = model;
+          }
+        }
+
+        if (template) {
+          // 템플릿을 복제하여 사용 (재질 공유)
+          const model = template.clone();
           model.position.copy(task.pos);
           model.scale.set(task.prop.scale, task.prop.scale, task.prop.scale);
           this.scene.add(model);
