@@ -37,7 +37,7 @@ export class BuildingManager implements ILoop {
 
   private guideModel: THREE.Group | null = null;
   private currentGuideNodeId: string | null = null;
-  private latestGuidePos: THREE.Vector3 = new THREE.Vector3(); // 최신 가이드 위치 추적
+  private latestGuidePos: THREE.Vector3 = new THREE.Vector3(); // 최신 스냅 위치 저장
   private loader = new Loader();
 
   // [추가] 선택된 건물 및 UI
@@ -64,18 +64,20 @@ export class BuildingManager implements ILoop {
 
     this.eventCtrl.RegisterEventListener(EventTypes.HighlightGrid, (data: { pos: THREE.Vector3, nodeId?: string }) => {
       if (data.nodeId) {
+        // [수정] showGuide는 모델 로딩만 담당하게 하고 위치는 latestGuidePos가 결정
         this.showGuide(data.nodeId, data.pos);
       }
     });
 
     this.eventCtrl.RegisterEventListener(EventTypes.GridArrowClick, (data: { delta: THREE.Vector3, pos?: THREE.Vector3 }) => {
-      // 스냅된 좌표가 오면 즉시 업데이트
+      // CustomGround가 스냅해서 보내주는 최종 월드 좌표를 최우선으로 저장
       if (data.pos) {
         this.latestGuidePos.copy(data.pos);
-      } else {
+      } else if (data.delta) {
         this.latestGuidePos.add(data.delta);
       }
 
+      // 이미 모델이 떠 있다면 즉시 위치 업데이트
       if (this.guideModel) {
         this.guideModel.position.copy(this.latestGuidePos);
       }
@@ -146,7 +148,7 @@ export class BuildingManager implements ILoop {
   private async showGuide(nodeId: string, pos: THREE.Vector3) {
     this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.Grid);
     
-    // 로딩 중에도 위치가 업데이트될 수 있도록 저장
+    // 로딩이 시작되기 전, 일단 현재 위치 저장
     this.latestGuidePos.copy(pos);
 
     if (this.currentGuideNodeId === nodeId && this.guideModel) {
@@ -165,14 +167,16 @@ export class BuildingManager implements ILoop {
     try {
       const asset = await this.loader.GetAssets(prop.assetKey);
       const model = await asset.CloneModel();
-      if (!model) return;
+      
+      // 비동기 로딩 중에 이 가이드가 이미 취소되었거나 바뀐 경우 무시
+      if (this.currentGuideNodeId !== nodeId) return;
 
       this.guideModel = model as THREE.Group;
       this.guideModel.traverse((child) => {
         child.raycast = () => { };
       });
 
-      // 모델이 생성된 직후 "가장 최신의(스냅된)" 위치로 배치
+      // [핵심] 로딩이 끝난 시점의 '가장 최신 스냅 좌표'를 적용
       this.guideModel.position.copy(this.latestGuidePos);
       this.guideModel.scale.set(prop.scale, prop.scale, prop.scale);
 

@@ -1073,6 +1073,10 @@ export default class CustomGround implements IWorldMapObject {
       this.highlightMesh.material.color.copy(finalColor);
     }
 
+    // [추가] 스냅된 좌표를 외부(BuildingManager 등)에 즉시 전파
+    const snappedWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
+    this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { pos: snappedWorldPos });
+
     // 화살표 위치 업데이트
     if (this.arrowGroup) {
         this.arrowGroup.position.copy(this.highlightMesh.position);

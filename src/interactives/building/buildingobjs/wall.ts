@@ -1,54 +1,46 @@
 import * as THREE from 'three';
-import { IBuildingObject, BuildingType } from '../ibuildingobj';
-import { BuildingProperty } from '../buildingdefs';
-import { ISelectionData } from '@Glibs/ux/selectionpanel/selectionpanel';
-import IEventController from '@Glibs/interface/ievent';
+import { BaseBuilding } from './basebuilding';
+import { BuildingType } from '../ibuildingobj';
+import { ICommand } from '@Glibs/ux/selectionpanel/selectionpanel';
 import { EventTypes } from '@Glibs/types/globaltypes';
 
-export class Wall implements IBuildingObject {
-    public readonly type = BuildingType.Wall;
-    public level: number = 1;
-    private currentHp: number;
+export class Wall extends BaseBuilding {
 
     constructor(
-        public readonly id: string,
-        public readonly property: BuildingProperty,
-        public readonly position: THREE.Vector3,
-        public readonly mesh: THREE.Object3D,
-        public readonly eventCtrl: IEventController
+        id: string,
+        property: any,
+        position: THREE.Vector3,
+        mesh: THREE.Object3D,
+        eventCtrl: any
     ) {
-        this.mesh.position.copy(position);
-        this.currentHp = this.property.hp;
+        super(id, BuildingType.Wall, property, position, mesh, eventCtrl);
     }
 
-    update(delta: number): void { }
+    protected onUpdate(delta: number): void { }
 
     private repair() {
         this.currentHp = this.property.hp;
         console.log(`[Wall] Repaired to ${this.currentHp}`);
     }
 
-    destroy(): void {
-        if (this.mesh.parent) this.mesh.parent.remove(this.mesh);
+    protected getSpecificCommands(): ICommand[] {
+        return (this.property.commands || []).map(t => ({
+            ...t,
+            onClick: () => {
+                if (t.id === "repair") this.repair();
+                if (t.type === "research" && t.targetId) {
+                    this.eventCtrl.SendEventMessage(EventTypes.RequestUpgrade, t.targetId);
+                }
+            },
+            isDisabled: () => this.isUpgrading || (t.id === "repair" && this.currentHp >= this.property.hp)
+        }));
     }
 
-    getSelectionData(): ISelectionData {
-        return {
-            title: this.property.name,
-            description: this.property.desc,
-            level: this.level,
-            hp: { current: this.currentHp, max: this.property.hp },
-            status: "건재함",
-            commands: (this.property.commands || []).map(t => ({
-                ...t,
-                onClick: () => {
-                    if (t.id === "repair") this.repair();
-                    if (t.type === "research" && t.targetId) {
-                        this.eventCtrl.SendEventMessage(EventTypes.RequestUpgrade, t.targetId);
-                    }
-                },
-                isDisabled: () => (t.id === "repair" && this.currentHp >= this.property.hp)
-            }))
-        };
+    protected getStatusText(): string {
+        return "건재함";
+    }
+
+    protected getSpecificProgress(): number | undefined {
+        return undefined;
     }
 }

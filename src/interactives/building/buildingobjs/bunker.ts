@@ -1,54 +1,48 @@
 import * as THREE from 'three';
-import { IBuildingObject, BuildingType } from '../ibuildingobj';
-import { BuildingProperty } from '../buildingdefs';
-import { ISelectionData } from '@Glibs/ux/selectionpanel/selectionpanel';
-import IEventController from '@Glibs/interface/ievent';
+import { BaseBuilding } from './basebuilding';
+import { BuildingType } from '../ibuildingobj';
+import { ICommand } from '@Glibs/ux/selectionpanel/selectionpanel';
 import { EventTypes } from '@Glibs/types/globaltypes';
 
-export class Bunker implements IBuildingObject {
-    public readonly type = BuildingType.Bunker;
-    public level: number = 1;
+export class Bunker extends BaseBuilding {
     private occupants: string[] = [];
     private readonly capacity = 4;
 
     constructor(
-        public readonly id: string,
-        public readonly property: BuildingProperty,
-        public readonly position: THREE.Vector3,
-        public readonly mesh: THREE.Object3D,
-        public readonly eventCtrl: IEventController
+        id: string,
+        property: any,
+        position: THREE.Vector3,
+        mesh: THREE.Object3D,
+        eventCtrl: any
     ) {
-        this.mesh.position.copy(position);
+        super(id, BuildingType.Bunker, property, position, mesh, eventCtrl);
     }
 
-    update(delta: number): void { }
+    protected onUpdate(delta: number): void { }
 
     private ejectAll() {
         console.log(`[Bunker] Ejected ${this.occupants.length} units.`);
         this.occupants = [];
     }
 
-    destroy(): void {
-        if (this.mesh.parent) this.mesh.parent.remove(this.mesh);
+    protected getSpecificCommands(): ICommand[] {
+        return (this.property.commands || []).map(t => ({
+            ...t,
+            onClick: () => {
+                if (t.id === "eject_all") this.ejectAll();
+                if (t.type === "research" && t.targetId) {
+                    this.eventCtrl.SendEventMessage(EventTypes.RequestUpgrade, t.targetId);
+                }
+            },
+            isDisabled: () => this.isUpgrading || (t.id === "eject_all" && this.occupants.length === 0)
+        }));
     }
 
-    getSelectionData(): ISelectionData {
-        return {
-            title: this.property.name,
-            description: this.property.desc,
-            level: this.level,
-            hp: { current: this.property.hp, max: this.property.hp },
-            status: `탑승 유닛: ${this.occupants.length} / ${this.capacity}`,
-            commands: (this.property.commands || []).map(t => ({
-                ...t,
-                onClick: () => {
-                    if (t.id === "eject_all") this.ejectAll();
-                    if (t.type === "research" && t.targetId) {
-                        this.eventCtrl.SendEventMessage(EventTypes.RequestUpgrade, t.targetId);
-                    }
-                },
-                isDisabled: () => (t.id === "eject_all" && this.occupants.length === 0)
-            }))
-        };
+    protected getStatusText(): string {
+        return `탑승 유닛: ${this.occupants.length} / ${this.capacity}`;
+    }
+
+    protected getSpecificProgress(): number | undefined {
+        return undefined;
     }
 }

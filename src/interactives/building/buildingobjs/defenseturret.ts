@@ -1,30 +1,27 @@
 import * as THREE from 'three';
-import { IBuildingObject, BuildingType } from '../ibuildingobj';
-import { BuildingProperty } from '../buildingdefs';
-import { ISelectionData } from '@Glibs/ux/selectionpanel/selectionpanel';
-import IEventController from '@Glibs/interface/ievent';
+import { BaseBuilding } from './basebuilding';
+import { BuildingType } from '../ibuildingobj';
+import { ICommand } from '@Glibs/ux/selectionpanel/selectionpanel';
 import { EventTypes } from '@Glibs/types/globaltypes';
 
-export class DefenseTurret implements IBuildingObject {
-    public readonly type = BuildingType.DefenseTurret;
-    public level: number = 1;
+export class DefenseTurret extends BaseBuilding {
     private target: THREE.Object3D | null = null;
     private attackTimer = 0;
     private readonly attackCooldown = 1.0;
     private isAttacking = true;
 
     constructor(
-        public readonly id: string,
-        public readonly property: BuildingProperty,
-        public readonly position: THREE.Vector3,
-        public readonly mesh: THREE.Object3D,
-        public readonly eventCtrl: IEventController
+        id: string,
+        property: any,
+        position: THREE.Vector3,
+        mesh: THREE.Object3D,
+        eventCtrl: any
     ) {
-        this.mesh.position.copy(position);
+        super(id, BuildingType.DefenseTurret, property, position, mesh, eventCtrl);
     }
 
-    update(delta: number): void {
-        if (!this.isAttacking) return;
+    protected onUpdate(delta: number): void {
+        if (this.isUpgrading || !this.isAttacking) return;
         this.attackTimer += delta;
 
         if (!this.target) {
@@ -56,37 +53,34 @@ export class DefenseTurret implements IBuildingObject {
         console.log(`[Turret ${this.id}] Repairing...`);
     }
 
-    destroy(): void {
-        if (this.mesh.parent) this.mesh.parent.remove(this.mesh);
+    protected getSpecificCommands(): ICommand[] {
+        return (this.property.commands || []).map(t => ({
+            ...t,
+            onClick: () => {
+                if (t.type === 'research') {
+                    this.eventCtrl.SendEventMessage(EventTypes.RequestUpgrade, t.targetId);
+                } else if (t.type === 'produce') {
+                    this.startProduction(t.targetId);
+                } else if (t.type === 'action') {
+                    if (t.id === "attack") this.isAttacking = true;
+                    if (t.id === "stop") { this.isAttacking = false; this.target = null; }
+                    if (t.id === "repair") this.repair();
+                }
+            },
+            isDisabled: () => {
+                if (this.isUpgrading) return true;
+                if (t.id === "attack") return this.isAttacking;
+                if (t.id === "stop") return !this.isAttacking;
+                return false;
+            }
+        }));
     }
 
-    getSelectionData(): ISelectionData {
-        return {
-            title: this.property.name,
-            description: this.property.desc,
-            level: this.level,
-            hp: { current: this.property.hp, max: this.property.hp },
-            status: this.isAttacking ? (this.target ? "교전 중" : "경계 중") : "정지됨",
-            progress: (this.isAttacking && this.target) ? (this.attackTimer / this.attackCooldown) : undefined,
-            commands: (this.property.commands || []).map(t => ({
-                ...t,
-                onClick: () => {
-                    if (t.type === 'research') {
-                        this.eventCtrl.SendEventMessage(EventTypes.RequestUpgrade, t.targetId);
-                    } else if (t.type === 'produce') {
-                        this.startProduction(t.targetId);
-                    } else if (t.type === 'action') {
-                        if (t.id === "attack") this.isAttacking = true;
-                        if (t.id === "stop") { this.isAttacking = false; this.target = null; }
-                        if (t.id === "repair") this.repair();
-                    }
-                },
-                isDisabled: () => {
-                    if (t.id === "attack") return this.isAttacking;
-                    if (t.id === "stop") return !this.isAttacking;
-                    return false;
-                }
-            }))
-        };
+    protected getStatusText(): string {
+        return this.isAttacking ? (this.target ? "교전 중" : "경계 중") : "정지됨";
+    }
+
+    protected getSpecificProgress(): number | undefined {
+        return (this.isAttacking && this.target) ? (this.attackTimer / this.attackCooldown) : undefined;
     }
 }

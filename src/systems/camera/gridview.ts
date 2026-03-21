@@ -35,7 +35,7 @@ export default class GridViewCameraStrategy implements ICameraStrategy {
         camera.updateProjectionMatrix();
 
         // [쿼터뷰 설정] 
-        const fixedPolarAngle = Math.PI / 4;    // 상하 45도 (더 위에서 내려다보는 각도)
+        const fixedPolarAngle = Math.PI / 8;    // 상하 45도 (더 위에서 내려다보는 각도)
         const fixedAzimuthAngle = Math.PI / 4;  // 좌우 45도 (대각선 뷰)
         const distance = 200; // 각도가 세워지면 화면이 좁아보일 수 있으므로 거리를 약간 더 늘림
 
