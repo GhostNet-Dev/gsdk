@@ -12,51 +12,129 @@ interface TechTreeProps {
     onLevelUp?: (id: TechId) => void;
 }
 
-const NODE_W   = 58;   // 노드 크기 (px)
-const NODE_H   = 58;
-const R_GAP    = 170;  // 레벨당 반지름 증가량 (px)
-const PAD      = 90;   // 캔버스 여백
+const NODE_W = 58;
+const NODE_H = 58;
+const R_GAP  = 170;
+const PAD    = 90;
 
 export class TechTreeView implements IDialogView<TechTreeProps> {
     private ctx!: ViewContext;
     private props!: TechTreeProps;
     private container!: HTMLElement;
+    private tabsEl!: HTMLElement;
+    private contentEl!: HTMLElement;
     private canvas!: HTMLCanvasElement;
     private nodesLayer!: HTMLElement;
     private tooltip!: TooltipComponent;
 
     private nodeElements  = new Map<TechId, HTMLElement>();
     private nodePositions = new Map<TechId, { x: number; y: number }>();
-    // 역방향 간선: childId → Set<parentId>
-    private reverseEdges  = new Map<TechId, Set<TechId>>();
-    // 방사형 레이아웃 중심 좌표 및 최대 레벨
+    private levelRadii = new Map<number, number>(); // 동심원 가이드용
     private centerX  = 0;
     private centerY  = 0;
     private maxLevel = 0;
+
+    private roots: TechId[] = [];
+    private selectedRoot: TechId = '';
 
     mount(ctx: ViewContext, props: TechTreeProps): void {
         this.ctx   = ctx;
         this.props = props;
 
+        // gnx-dialog__body는 display:grid / overflow-x:hidden 이라 내부 flex 레이아웃이 깨짐.
+        // techtree 전용으로 body를 flex 컨테이너로 재설정한다.
+        const body = ctx.shell.body;
+        body.style.padding       = '0';
+        body.style.display       = 'flex';
+        body.style.flexDirection = 'column';
+        body.style.overflow      = 'hidden';
+
         this.container = createEl(ctx.shell.sr, 'div');
         this.container.className = 'techtree-view';
-        ctx.shell.body.appendChild(this.container);
+        body.appendChild(this.container);
 
         this.tooltip = new TooltipComponent(ctx.shell.sr);
         this.setupStyles();
-        this.render();
+
+        // 루트 노드(진입 차수 0) 목록
+        this.roots = props.service.index.order.filter(
+            id => (props.service.index.indeg.get(id) ?? 0) === 0
+        );
+        this.selectedRoot = this.roots[0] ?? '';
+
+        // 탭 영역 (고정)
+        this.tabsEl = createEl(ctx.shell.sr, 'div');
+        this.tabsEl.className = 'techtree-tabs';
+        this.container.appendChild(this.tabsEl);
+        this.renderTabs();
+
+        // 트리 콘텐츠 영역 (스크롤)
+        this.contentEl = createEl(ctx.shell.sr, 'div');
+        this.contentEl.className = 'techtree-content';
+        this.container.appendChild(this.contentEl);
+
+        this.renderTree();
     }
 
     private setupStyles() {
         const style = css`
             .techtree-view {
                 position: relative;
+                flex: 1;
+                min-height: 0;
                 width: 100%;
-                height: 100%;
-                min-height: 600px;
                 background: radial-gradient(ellipse at 25% 40%, #16213e 0%, #0f0f1a 60%, #0a0a12 100%);
-                overflow: auto;
+                display: flex;
+                flex-direction: column;
                 user-select: none;
+            }
+            .techtree-tabs {
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 10px 16px;
+                background: rgba(5,5,15,0.6);
+                border-bottom: 1px solid #1a1a2a;
+                overflow-x: auto;
+                scrollbar-width: none;
+                z-index: 10;
+            }
+            .techtree-tabs::-webkit-scrollbar { display: none; }
+            .techtree-tab {
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                padding: 5px 16px;
+                border-radius: 20px;
+                border: 1.5px solid #252535;
+                background: rgba(15,15,28,0.8);
+                color: #4a4a6a;
+                font-size: 12px;
+                font-weight: 700;
+                cursor: pointer;
+                white-space: nowrap;
+                letter-spacing: 0.03em;
+                transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s;
+            }
+            .techtree-tab:hover {
+                border-color: #89b4fa;
+                color: #cdd6f4;
+                background: rgba(137,180,250,0.07);
+            }
+            .techtree-tab.active {
+                border-color: var(--tab-color, #89b4fa);
+                color: var(--tab-color, #89b4fa);
+                background: rgba(137,180,250,0.08);
+                box-shadow: 0 0 10px var(--tab-glow, rgba(137,180,250,0.18));
+            }
+            .techtree-tab-icon { font-size: 15px; line-height: 1; }
+            .techtree-content {
+                flex: 1;
+                min-height: 0;      /* flex + overflow:auto 동작을 위해 필수 */
+                min-width: 0;
+                position: relative;
+                overflow: auto;
                 scroll-behavior: smooth;
             }
             .techtree-canvas {
@@ -156,102 +234,222 @@ export class TechTreeView implements IDialogView<TechTreeProps> {
         this.ctx.render.ensureScopedCSS(this.ctx.shell.sr, style, 'techtree-view');
     }
 
-    private render() {
-        this.container.innerHTML = '';
-        this.nodeElements.clear();
-        this.nodePositions.clear();
-        this.reverseEdges.clear();
+    // ── 탭 렌더링 ──────────────────────────────────────────────────────────
+    private renderTabs() {
+        this.tabsEl.innerHTML = '';
+        this.roots.forEach(rootId => {
+            const node = this.props.service.index.byId.get(rootId)!;
+            const rarityColor = node.rarity
+                ? (RarityConfig[node.rarity]?.color ?? '#89b4fa')
+                : '#89b4fa';
 
-        this.buildReverseEdges();
-
-        this.canvas = createEl(this.ctx.shell.sr, 'canvas');
-        this.canvas.className = 'techtree-canvas';
-        this.container.appendChild(this.canvas);
-
-        this.nodesLayer = createEl(this.ctx.shell.sr, 'div');
-        this.nodesLayer.className = 'techtree-nodes';
-        this.container.appendChild(this.nodesLayer);
-
-        this.calculateLayout();
-        this.drawNodes();
-        requestAnimationFrame(() => this.drawLines());
-    }
-
-    // ── 역방향 간선 구축 (child → parents) ─────────────────────────────────
-    private buildReverseEdges() {
-        const { index } = this.props.service;
-        index.order.forEach(id => this.reverseEdges.set(id, new Set()));
-        index.edges.forEach((children, parentId) => {
-            children.forEach(childId => this.reverseEdges.get(childId)?.add(parentId));
+            const tab = createEl(this.ctx.shell.sr, 'button');
+            tab.className = `techtree-tab${rootId === this.selectedRoot ? ' active' : ''}`;
+            tab.style.setProperty('--tab-color', rarityColor);
+            tab.style.setProperty('--tab-glow', `${rarityColor}33`);
+            tab.innerHTML = `
+                <span class="techtree-tab-icon">${node.icon ?? '📌'}</span>
+                <span>${node.name}</span>
+            `;
+            tab.addEventListener('click', () => this.selectRoot(rootId));
+            this.tabsEl.appendChild(tab);
         });
     }
 
-    // ── 레이아웃 계산 (방사형 + Barycenter 휴리스틱) ──────────────────────
-    private calculateLayout() {
-        const { index } = this.props.service;
-        const levels = new Map<TechId, number>();
+    // ── 탭 선택 ────────────────────────────────────────────────────────────
+    private selectRoot(rootId: TechId) {
+        this.selectedRoot = rootId;
+        Array.from(this.tabsEl.querySelectorAll<HTMLElement>('.techtree-tab'))
+            .forEach((tab, i) => tab.classList.toggle('active', this.roots[i] === rootId));
+        this.renderTree();
+    }
 
-        // 1. BFS로 깊이(레벨) 결정
-        const roots = index.order.filter(id => (index.indeg.get(id) ?? 0) === 0);
-        const queue: { id: TechId; level: number }[] = roots.map(id => ({ id, level: 0 }));
+    // ── 선택된 루트의 서브트리 id 수집 (BFS) ──────────────────────────────
+    private getSubtreeIds(rootId: TechId): Set<TechId> {
+        const result = new Set<TechId>();
+        const queue = [rootId];
         while (queue.length) {
-            const { id, level } = queue.shift()!;
-            levels.set(id, Math.max(levels.get(id) ?? 0, level));
-            index.edges.get(id)?.forEach(child => queue.push({ id: child, level: level + 1 }));
+            const id = queue.shift()!;
+            if (result.has(id)) continue;
+            result.add(id);
+            this.props.service.index.edges.get(id)?.forEach(child => queue.push(child));
         }
+        return result;
+    }
 
-        // 2. 레벨별 배열 구성
-        this.maxLevel = Math.max(...Array.from(levels.values()), 0);
-        const cols: TechId[][] = Array.from({ length: this.maxLevel + 1 }, () => []);
-        levels.forEach((lv, id) => cols[lv].push(id));
+    // ── 트리 콘텐츠 렌더링 ────────────────────────────────────────────────
+    private renderTree() {
+        this.contentEl.innerHTML = '';
+        this.nodeElements.clear();
+        this.nodePositions.clear();
+        if (!this.selectedRoot) return;
 
-        // 3. Barycenter 휴리스틱: 각 링에서 노드를 부모의 평균 각도 순으로 정렬
-        //    → 의존 관계가 있는 노드끼리 각도상 인접 → 선 교차 최소화
-        const score = new Map<TechId, number>();
-        cols[0].forEach((id, i) => score.set(id, i));
+        const subtreeIds = this.getSubtreeIds(this.selectedRoot);
 
-        for (let lv = 1; lv <= this.maxLevel; lv++) {
-            const sorted = cols[lv].map(id => {
-                const parents = this.reverseEdges.get(id)!;
-                if (!parents.size) return { id, s: score.get(id) ?? 0 };
-                let sum = 0;
-                parents.forEach(pid => (sum += score.get(pid) ?? 0));
-                return { id, s: sum / parents.size };
-            }).sort((a, b) => a.s - b.s);
-            sorted.forEach(({ id }, i) => { score.set(id, i); cols[lv][i] = id; });
-        }
+        this.canvas = createEl(this.ctx.shell.sr, 'canvas');
+        this.canvas.className = 'techtree-canvas';
+        this.contentEl.appendChild(this.canvas);
 
-        // 4. 방사형 좌표 할당
-        //    - 레벨 0 단일 루트  → 정중앙
-        //    - 레벨 0 다중 루트  → 반지름 R_GAP*0.35 의 원 위에 균등 배치
-        //    - 레벨 L (L≥1)      → 반지름 L * R_GAP 의 원 위에 균등 배치
-        const maxR    = this.maxLevel * R_GAP + PAD + NODE_W;
-        const canvasW = maxR * 2;
-        const canvasH = maxR * 2;
-        this.centerX = maxR;
-        this.centerY = maxR;
+        this.nodesLayer = createEl(this.ctx.shell.sr, 'div');
+        this.nodesLayer.className = 'techtree-nodes';
+        this.contentEl.appendChild(this.nodesLayer);
 
-        cols.forEach((ids, lv) => {
-            const count = ids.length;
-            if (lv === 0 && count === 1) {
-                this.nodePositions.set(ids[0], { x: this.centerX, y: this.centerY });
-                return;
-            }
-            const radius = lv === 0 ? R_GAP * 0.35 : lv * R_GAP;
-            ids.forEach((id, i) => {
-                // 위쪽(-π/2)에서 시작해 시계방향으로 균등 분배
-                const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
-                this.nodePositions.set(id, {
-                    x: this.centerX + radius * Math.cos(angle),
-                    y: this.centerY + radius * Math.sin(angle),
-                });
+        this.calculateLayout(subtreeIds);
+        this.drawNodes();
+        // rAF1: 선 그리기 (노드 DOM이 layout에 반영된 후)
+        // rAF2: scroll (body flex 재설정 + canvas 크기 반영 후)
+        requestAnimationFrame(() => {
+            this.drawLines();
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => this.scrollToCenter());
             });
+        });
+    }
+
+    // ── 레이아웃 계산 (섹터 기반 + 동적 반지름) ──────────────────────────────
+    //  반지름을 레벨 고정값이 아닌 "인접 자식이 겹치지 않을 최소값"으로 동적 결정.
+    //  → 겹침 제거 + 불필요한 원거리 배치 방지
+    private calculateLayout(subtreeIds: Set<TechId>) {
+        const { index } = this.props.service;
+
+        // 1. BFS 깊이 계산 (maxLevel용)
+        const levels = new Map<TechId, number>();
+        {
+            const q: { id: TechId; lv: number }[] = [{ id: this.selectedRoot, lv: 0 }];
+            while (q.length) {
+                const { id, lv } = q.shift()!;
+                levels.set(id, Math.max(levels.get(id) ?? 0, lv));
+                index.edges.get(id)?.forEach((c: TechId) => {
+                    if (subtreeIds.has(c)) q.push({ id: c, lv: lv + 1 });
+                });
+            }
+        }
+        this.maxLevel = Math.max(...Array.from(levels.values()), 0);
+
+        // 2. 서브트리 크기 계산
+        const subtreeSize = new Map<TechId, number>();
+        const getChildren = (id: TechId): TechId[] =>
+            Array.from(index.edges.get(id) ?? []).filter((c: TechId) => subtreeIds.has(c));
+
+        const computeSize = (id: TechId): number => {
+            const size = 1 + getChildren(id).reduce((s: number, c: TechId) => s + computeSize(c), 0);
+            subtreeSize.set(id, size);
+            return size;
+        };
+        computeSize(this.selectedRoot);
+
+        // 3. 뷰포트 기반 adaptive MIN_RADIAL 계산
+        //    목표: 트리가 뷰포트의 ~80% 안에 들어오도록 레벨당 증분 결정
+        //    - targetR = min(vpW, vpH) × 0.4 (최대 반지름 목표)
+        //    - MIN_RADIAL = clamp(NODE_W+MIN_GAP, 130, targetR / maxLevel)
+        //    - arcRadius가 MIN_RADIAL보다 크면 arcRadius가 실제 반지름을 결정
+        const dlgEl  = this.ctx.shell.dlg as HTMLElement;
+        const bounds = dlgEl.getBoundingClientRect();
+        const tabH   = this.tabsEl.offsetHeight || 48;
+        const vpW    = bounds.width  > 0 ? bounds.width  : Math.min(1080, window.innerWidth  - 32);
+        const vpH    = bounds.height > 0 ? bounds.height - tabH : window.innerHeight * 0.8 - tabH;
+        const targetR = Math.min(vpW, vpH) * 0.4;
+
+        const MIN_GAP    = 14;  // 노드 간 최소 여백 (px)
+        const MIN_RADIAL = this.maxLevel > 0
+            ? Math.max(NODE_W + MIN_GAP, Math.min(130, targetR / this.maxLevel))
+            : 100;
+
+        const tempPos = new Map<TechId, { x: number; y: number }>();
+        tempPos.set(this.selectedRoot, { x: 0, y: 0 });
+
+        this.levelRadii = new Map<number, number>();
+        this.levelRadii.set(0, 0);
+
+        const place = (id: TechId, parentR: number, aStart: number, aEnd: number, lv: number) => {
+            const children = getChildren(id);
+            if (!children.length) return;
+
+            const sectorAngle = aEnd - aStart;
+            const totalSize   = children.reduce((s: number, c: TechId) => s + (subtreeSize.get(c) ?? 1), 0);
+
+            // 자식별 섹터 각도
+            const spans = children.map((c: TechId) =>
+                sectorAngle * ((subtreeSize.get(c) ?? 1) / totalSize)
+            );
+
+            // 인접 자식 중점 간 최소 각도 간격: (span_i + span_{i+1}) / 2
+            let minAdjSep = Infinity;
+            for (let i = 0; i < spans.length - 1; i++) {
+                minAdjSep = Math.min(minAdjSep, (spans[i] + spans[i + 1]) / 2);
+            }
+
+            // 호 충돌 방지 최소 반지름
+            // cap: 부모 반지름 + MIN_RADIAL*3 이상 커지지 않도록 제한
+            // → arcRadius의 지수적 폭발(레벨당 2배) 억제
+            const arcRadius = isFinite(minAdjSep)
+                ? Math.min((NODE_W + MIN_GAP) / minAdjSep, parentR + MIN_RADIAL * 3)
+                : 0;
+
+            // 실제 반지름: 두 조건 중 큰 값
+            const radius = Math.max(parentR + MIN_RADIAL, arcRadius);
+
+            // 동심원 가이드용
+            const childLv = lv + 1;
+            this.levelRadii.set(childLv, Math.max(this.levelRadii.get(childLv) ?? 0, radius));
+
+            let cur = aStart;
+            for (let i = 0; i < children.length; i++) {
+                const child = children[i];
+                const span  = spans[i];
+                const mid   = cur + span / 2;
+                tempPos.set(child, {
+                    x: radius * Math.cos(mid),
+                    y: radius * Math.sin(mid),
+                });
+                place(child, radius, cur, cur + span, childLv);
+                cur += span;
+            }
+        };
+
+        place(this.selectedRoot, 0, -Math.PI, Math.PI, 0);
+
+        // 4. bounding box → 캔버스 최소화
+        const margin = PAD + NODE_W / 2;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        tempPos.forEach(({ x, y }) => {
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+        });
+
+        const offsetX = -minX + margin;
+        const offsetY = -minY + margin;
+        const canvasW = (maxX - minX) + margin * 2;
+        const canvasH = (maxY - minY) + margin * 2;
+
+        this.centerX = offsetX;
+        this.centerY = offsetY;
+        tempPos.forEach((pos, id) => {
+            this.nodePositions.set(id, { x: pos.x + offsetX, y: pos.y + offsetY });
         });
 
         this.canvas.width  = canvasW;
         this.canvas.height = canvasH;
         this.nodesLayer.style.width  = `${canvasW}px`;
         this.nodesLayer.style.height = `${canvasH}px`;
+    }
+
+    /** 콘텐츠 영역 스크롤을 루트 노드(중앙)로 초기 정렬
+     *  최대 10프레임까지 재시도 */
+    private scrollToCenter(retry = 0) {
+        const el = this.contentEl;
+        const cw = el.clientWidth;
+        const ch = el.clientHeight;
+
+        if ((cw === 0 || ch === 0) && retry < 10) {
+            requestAnimationFrame(() => this.scrollToCenter(retry + 1));
+            return;
+        }
+
+        el.scrollLeft = Math.max(0, this.centerX - cw / 2);
+        el.scrollTop  = Math.max(0, this.centerY - ch / 2);
     }
 
     // ── 노드 DOM 생성 ───────────────────────────────────────────────────────
@@ -302,7 +500,7 @@ export class TechTreeView implements IDialogView<TechTreeProps> {
 
             el.addEventListener('click', () => {
                 if (service.levelUp(id)) {
-                    this.render();
+                    this.renderTree();
                     this.props.onLevelUp?.(id);
                 }
             });
@@ -426,10 +624,11 @@ export class TechTreeView implements IDialogView<TechTreeProps> {
         });
     }
 
-    /** 레벨별 동심원 가이드 */
+    /** 레벨별 동심원 가이드 (동적 반지름 기반) */
     private drawCircleGuides(cvs: CanvasRenderingContext2D) {
         for (let lv = 1; lv <= this.maxLevel; lv++) {
-            const r = lv * R_GAP;
+            const r = this.levelRadii.get(lv);
+            if (!r) continue;
             cvs.save();
             cvs.beginPath();
             cvs.arc(this.centerX, this.centerY, r, 0, Math.PI * 2);
@@ -473,6 +672,13 @@ export class TechTreeView implements IDialogView<TechTreeProps> {
     }
 
     unmount(): void {
+        // body 스타일 복원
+        const body = this.ctx.shell.body;
+        body.style.padding       = '';
+        body.style.display       = '';
+        body.style.flexDirection = '';
+        body.style.overflow      = '';
+
         this.container.remove();
         this.tooltip.destroy();
     }

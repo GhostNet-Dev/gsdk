@@ -178,7 +178,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "🌪️",
         rarity: "rare",
         tags: ["melee", "combo"],
-        requires: [{ type: "has", id: "root_license" }],
+requires: [{ type: "has", id: "root_license" }],
         cost: [{ lv: 1, cost: { points: 1 } }],
         tech: actionDefs.BladeStorm,
     },
@@ -190,7 +190,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "⚔️",
         rarity: "uncommon",
         tags: ["melee", "combo"],
-        requires: [{ type: "has", id: "root_license" }],
+requires: [{ type: "has", id: "root_license" }],
         cost: [{ lv: 1, cost: { points: 1 } }],
         tech: actionDefs.DoubleSlash,
     },
@@ -200,7 +200,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         name: "Fireball",
         desc: "화염구를 발사합니다.",
         icon: "🔥",
-        requires: [{ type: "has", id: "root_license" }],
+requires: [{ type: "has", id: "root_license" }],
         cost: [1, 2, 3, 4, 5].map(lv => ({ lv, cost: { points: lv } })),
         tech: actionDefs.FireBall,
     },
@@ -210,7 +210,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         name: "Meteor",
         desc: "화염구를 발사합니다.",
         icon: "🔥",
-        requires: [{ type: "has", id: "root_license" }],
+requires: [{ type: "has", id: "root_license" }],
         cost: [1, 2, 3, 4, 5].map(lv => ({ lv, cost: { points: lv } })),
         tech: actionDefs.Meteor,
     },
@@ -237,10 +237,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         cost: [
             { lv: 1, cost: { points: 1 } },
         ],
-        requires: [
-            { type: "has", id: "root_license" },
-            { type: "playerLv", atLeast: 1 }
-        ],
+        requires: [{ type: "playerLv", atLeast: 1 }],
         tech: actionDefs.KnifeThrow
     },
     {
@@ -252,10 +249,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         cost: [
             { lv: 1, cost: { points: 1 } },
         ],
-        requires: [
-            { type: "has", id: "root_license" },
-            { type: "playerLv", atLeast: 2 }
-        ],
+        requires: [{ type: "playerLv", atLeast: 2 }],
         tech: buffDefs.HpBoost
     },
     // =================================================================
@@ -308,7 +302,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "🌐",
         rarity: "uncommon",
         tags: ["stat", "aoe"],
-        requires: [{ type: "has", id: "stat_might", minLv: 2 }],
+        requires: [{ type: "has", id: "stat_proj_speed", minLv: 1 }],
         cost: COST_0,
         tech: actionDefs.AreaStatBoost
     },
@@ -388,7 +382,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "👟",
         rarity: "common",
         tags: ["stat", "utility"],
-        requires: [{ type: "has", id: "root_license" }],
+        requires: [{ type: "has", id: "stat_might", minLv: 1 }],
         cost: COST_0,
         tech: actionDefs.SpeedStatBoost
     },
@@ -400,7 +394,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "💰",
         rarity: "common",
         tags: ["stat", "economy"],
-        requires: [{ type: "has", id: "root_license" }],
+        requires: [{ type: "has", id: "stat_recovery", minLv: 1 }],
         cost: COST_0,
         tech: actionDefs.GreedStatBoost
     },
@@ -440,10 +434,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "⚔️",
         rarity: "rare",
         tags: ["class", "melee"],
-        requires: [
-            { type: "has", id: "stat_might", minLv: 3 },
-            { type: "has", id: "stat_armor", minLv: 1 }
-        ],
+        requires: [{ type: "has", id: "stat_armor", minLv: 1 }],
         cost: COST_0,
         tech: MOCK_TECH
     },
@@ -491,7 +482,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "🌵",
         rarity: "epic",
         tags: ["defense", "holy"],
-        requires: [{ type: "has", id: "class_paladin", minLv: 2 }],
+        requires: [{ type: "has", id: "skill_hammer", minLv: 1 }],
         cost: COST_0,
         tech: MOCK_TECH
     },
@@ -507,10 +498,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "👤",
         rarity: "rare",
         tags: ["class", "rogue"],
-        requires: [
-            { type: "has", id: "stat_speed", minLv: 3 },
-            { type: "has", id: "stat_crit_rate", minLv: 1 }
-        ],
+        requires: [{ type: "has", id: "stat_crit_rate", minLv: 1 }],
         cost: COST_0,
         tech: MOCK_TECH
     },
@@ -628,10 +616,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "⚡",
         rarity: "uncommon",
         tags: ["element", "lightning"],
-        requires: [
-            { type: "has", id: "stat_cooldown", minLv: 2 },
-            { type: "has", id: "stat_proj_speed", minLv: 2 }
-        ],
+        requires: [{ type: "has", id: "stat_cooldown", minLv: 2 }],
         cost: COST_0,
         tech: MOCK_TECH
     },
@@ -669,7 +654,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "🌍",
         rarity: "uncommon",
         tags: ["element", "earth"],
-        requires: [{ type: "has", id: "stat_maxhp", minLv: 3 }],
+        requires: [{ type: "has", id: "class_paladin", minLv: 1 }],
         cost: COST_0,
         tech: MOCK_TECH
     },
@@ -709,10 +694,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "💀",
         rarity: "epic",
         tags: ["class", "dark"],
-        requires: [
-            { type: "has", id: "stat_maxhp", minLv: 5 }, // 피통이 커야함
-            { type: "has", id: "stat_cooldown", minLv: 3 }
-        ],
+        requires: [{ type: "has", id: "elem_earth", minLv: 1 }],
         cost: COST_0,
         tech: MOCK_TECH
     },
@@ -736,11 +718,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "🔮",
         rarity: "legendary",
         tags: ["class", "arcane"],
-        // 화염과 냉기를 모두 섭렵해야 함
-        requires: [
-            { type: "has", id: "elem_fire", minLv: 1 },
-            { type: "has", id: "elem_ice", minLv: 1 }
-        ],
+        requires: [{ type: "has", id: "elem_ice", minLv: 1 }],
         cost: COST_0,
         tech: MOCK_TECH
     },
@@ -808,10 +786,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "👯",
         rarity: "legendary",
         tags: ["ultimate"],
-        requires: [
-            { type: "has", id: "stat_might", minLv: 5 },
-            { type: "has", id: "stat_proj_speed", minLv: 3 }
-        ],
+        requires: [{ type: "has", id: "stat_proj_speed", minLv: 3 }],
         cost: COST_0, // 3단계까지
         tech: MOCK_TECH
     },
@@ -823,10 +798,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         icon: "🐦",
         rarity: "legendary",
         tags: ["ultimate"],
-        requires: [
-            { type: "has", id: "stat_maxhp", minLv: 5 },
-            { type: "has", id: "stat_recovery", minLv: 5 }
-        ],
+        requires: [{ type: "has", id: "stat_recovery", minLv: 5 }],
         cost: COST_0,
         tech: MOCK_TECH
     },
