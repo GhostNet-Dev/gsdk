@@ -37,6 +37,7 @@ export class BuildingManager implements ILoop {
 
   private guideModel: THREE.Group | null = null;
   private currentGuideNodeId: string | null = null;
+  private latestGuidePos: THREE.Vector3 = new THREE.Vector3(); // 최신 가이드 위치 추적
   private loader = new Loader();
 
   // [추가] 선택된 건물 및 UI
@@ -68,12 +69,15 @@ export class BuildingManager implements ILoop {
     });
 
     this.eventCtrl.RegisterEventListener(EventTypes.GridArrowClick, (data: { delta: THREE.Vector3, pos?: THREE.Vector3 }) => {
+      // 스냅된 좌표가 오면 즉시 업데이트
+      if (data.pos) {
+        this.latestGuidePos.copy(data.pos);
+      } else {
+        this.latestGuidePos.add(data.delta);
+      }
+
       if (this.guideModel) {
-        if (data.pos) {
-          this.guideModel.position.copy(data.pos);
-        } else {
-          this.guideModel.position.add(data.delta);
-        }
+        this.guideModel.position.copy(this.latestGuidePos);
       }
     });
 
@@ -141,9 +145,12 @@ export class BuildingManager implements ILoop {
 
   private async showGuide(nodeId: string, pos: THREE.Vector3) {
     this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.Grid);
+    
+    // 로딩 중에도 위치가 업데이트될 수 있도록 저장
+    this.latestGuidePos.copy(pos);
 
     if (this.currentGuideNodeId === nodeId && this.guideModel) {
-      this.guideModel.position.copy(pos);
+      this.guideModel.position.copy(this.latestGuidePos);
       return;
     }
 
@@ -165,7 +172,8 @@ export class BuildingManager implements ILoop {
         child.raycast = () => { };
       });
 
-      this.guideModel.position.copy(pos);
+      // 모델이 생성된 직후 "가장 최신의(스냅된)" 위치로 배치
+      this.guideModel.position.copy(this.latestGuidePos);
       this.guideModel.scale.set(prop.scale, prop.scale, prop.scale);
 
       this.guideModel.traverse((child) => {
@@ -398,13 +406,13 @@ export class BuildingManager implements ILoop {
           const id = `building_${Date.now()}_${task.nodeId}`;
 
           switch (task.prop.type) {
-            case BuildingType.DefenseTurret: buildingObj = new DefenseTurret(id, task.prop, task.pos, model); break;
-            case BuildingType.Pilotable: buildingObj = new PilotableBuilding(id, task.prop, task.pos, model); break;
-            case BuildingType.UnitProduction: buildingObj = new UnitProduction(id, task.prop, task.pos, model); break;
-            case BuildingType.TechResearch: buildingObj = new TechResearch(id, task.prop, task.pos, model); break;
-            case BuildingType.ResourceProduction: buildingObj = new ResourceProduction(id, task.prop, task.pos, model); break;
-            case BuildingType.Wall: buildingObj = new Wall(id, task.prop, task.pos, model); break;
-            case BuildingType.Bunker: buildingObj = new Bunker(id, task.prop, task.pos, model); break;
+            case BuildingType.DefenseTurret: buildingObj = new DefenseTurret(id, task.prop, task.pos, model, this.eventCtrl); break;
+            case BuildingType.Pilotable: buildingObj = new PilotableBuilding(id, task.prop, task.pos, model, this.eventCtrl); break;
+            case BuildingType.UnitProduction: buildingObj = new UnitProduction(id, task.prop, task.pos, model, this.eventCtrl); break;
+            case BuildingType.TechResearch: buildingObj = new TechResearch(id, task.prop, task.pos, model, this.eventCtrl); break;
+            case BuildingType.ResourceProduction: buildingObj = new ResourceProduction(id, task.prop, task.pos, model, this.eventCtrl); break;
+            case BuildingType.Wall: buildingObj = new Wall(id, task.prop, task.pos, model, this.eventCtrl); break;
+            case BuildingType.Bunker: buildingObj = new Bunker(id, task.prop, task.pos, model, this.eventCtrl); break;
           }
 
           if (buildingObj) {

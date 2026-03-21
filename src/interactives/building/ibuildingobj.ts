@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { BuildingProperty } from './buildingdefs';
 import { ISelectionData } from '@Glibs/ux/selectionpanel/selectionpanel';
+import IEventController from '@Glibs/interface/ievent';
 
 /**
  * 건물의 성격을 정의하는 Enum
@@ -23,6 +24,7 @@ export interface IBuildingObject {
     readonly type: BuildingType;
     readonly property: BuildingProperty;
     readonly position: THREE.Vector3;
+    readonly eventCtrl: IEventController;
     level: number;
     
     /**

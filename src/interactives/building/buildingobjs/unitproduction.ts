@@ -1,78 +1,82 @@
 import * as THREE from 'three';
 import { IBuildingObject, BuildingType } from '../ibuildingobj';
 import { BuildingProperty } from '../buildingdefs';
-import { ISelectionData } from "@Glibs/ux/selectionpanel/selectionpanel";
-
-export interface ProductionTask {
-    unitId: string;
-    duration: number;
-    elapsed: number;
-    isFinished: boolean;
-}
+import { ISelectionData } from '@Glibs/ux/selectionpanel/selectionpanel';
+import IEventController from '@Glibs/interface/ievent';
+import { EventTypes } from '@Glibs/types/globaltypes';
 
 export class UnitProduction implements IBuildingObject {
     public readonly type = BuildingType.UnitProduction;
     public level: number = 1;
-    private queue: ProductionTask[] = [];
-    private currentTask: ProductionTask | null = null;
+    private isProducing = false;
+    private currentUnit: string | null = null;
+    private productionTimer = 0;
+    private readonly productionTime = 5.0;
 
     constructor(
         public readonly id: string,
         public readonly property: BuildingProperty,
         public readonly position: THREE.Vector3,
-        public readonly mesh: THREE.Object3D
+        public readonly mesh: THREE.Object3D,
+        public readonly eventCtrl: IEventController
     ) {
         this.mesh.position.copy(position);
     }
 
     update(delta: number): void {
-        if (!this.currentTask && this.queue.length > 0) {
-            this.currentTask = this.queue.shift()!;
-        }
-
-        if (this.currentTask) {
-            this.currentTask.elapsed += delta;
-            if (this.currentTask.elapsed >= this.currentTask.duration) {
-                this.onFinished(this.currentTask);
-                this.currentTask = null;
+        if (this.isProducing) {
+            this.productionTimer += delta;
+            if (this.productionTimer >= this.productionTime) {
+                this.spawnUnit();
             }
         }
     }
 
-    private onFinished(task: ProductionTask) {
-        console.log(`[Production ${this.id}] Unit ${task.unitId} finished production.`);
-        // TODO: 월드에 유닛 스폰 로직
+    private startProduction(unitId: string) {
+        if (this.isProducing) return;
+        this.isProducing = true;
+        this.currentUnit = unitId;
+        this.productionTimer = 0;
+        console.log(`[Production] Started: ${unitId}`);
     }
 
-    addQueue(unitId: string, duration = 10): void {
-        this.queue.push({ unitId, duration, elapsed: 0, isFinished: false });
-        console.log(`[Production ${this.id}] Added to queue: ${unitId}`);
+    private spawnUnit() {
+        if (this.currentUnit) {
+            this.eventCtrl.SendEventMessage(EventTypes.Projectile, { 
+                type: "spawn", 
+                unitId: this.currentUnit, 
+                pos: this.position.clone().add(new THREE.Vector3(5, 0, 5)) 
+            });
+            console.log(`[Production] Spawned: ${this.currentUnit}`);
+        }
+        this.isProducing = false;
+        this.currentUnit = null;
+    }
+
+    destroy(): void {
+        if (this.mesh.parent) this.mesh.parent.remove(this.mesh);
     }
 
     getSelectionData(): ISelectionData {
         return {
             title: this.property.name,
-            description: this.property.desc || "유닛을 생산하는 시설입니다.",
+            description: this.property.desc,
             level: this.level,
             hp: { current: this.property.hp, max: this.property.hp },
-            status: this.currentTask ? `생산 중: ${this.currentTask.unitId}` : "대기 중",
-            progress: this.currentTask ? this.currentTask.elapsed / this.currentTask.duration : 0,
-            commands: (this.property.provides || []).map(unitId => ({
-                id: `produce_${unitId}`,
-                name: `${unitId} 생산`,
-                icon: "🤖",
-                onClick: () => this.addQueue(unitId)
+            status: this.isProducing ? `${this.currentUnit} 생산 중...` : "대기 중",
+            progress: this.isProducing ? (this.productionTimer / this.productionTime) : undefined,
+            commands: (this.property.commands || []).map(t => ({
+                ...t,
+                onClick: () => {
+                    if (t.type === "produce" && t.targetId) {
+                        this.startProduction(t.targetId);
+                    }
+                    if (t.type === "research" && t.targetId) {
+                        this.eventCtrl.SendEventMessage(EventTypes.RequestUpgrade, t.targetId);
+                    }
+                },
+                isDisabled: () => this.isProducing
             }))
         };
-    }
-
-    onInteract(): void {
-        console.log(`[Production ${this.id}] Opening production UI...`);
-    }
-
-    destroy(): void {
-        if (this.mesh.parent) {
-            this.mesh.parent.remove(this.mesh);
-        }
     }
 }

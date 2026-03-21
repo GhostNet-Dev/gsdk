@@ -122,6 +122,50 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         cost: [{ lv: 1, cost: { gold: 150 } }],
         tech: buildingDefs.Barracks
     },
+    {
+        id: "ebay",
+        kind: "building",
+        name: "공학 연구소",
+        desc: "보병의 공격력과 방어력을 연구합니다.",
+        icon: "🔬",
+        rarity: "common",
+        tags: ["research"],
+        requires: [{ type: "has", id: "barracks", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 200 } }],
+        tech: buildingDefs.EngineeringBay
+    },
+    {
+        id: "infantry_atk",
+        kind: "trait",
+        name: "보병 공격력 강화",
+        desc: "보병의 공격력을 레벨당 10% 증가시킵니다.",
+        icon: "⚔️",
+        rarity: "uncommon",
+        tags: ["research", "attack"],
+        requires: [{ type: "has", id: "ebay", minLv: 1 }],
+        cost: [
+            { lv: 1, cost: { gold: 100 } },
+            { lv: 2, cost: { gold: 200 } },
+            { lv: 3, cost: { gold: 300 } }
+        ],
+        tech: MOCK_TECH
+    },
+    {
+        id: "infantry_def",
+        kind: "trait",
+        name: "보병 방어력 강화",
+        desc: "보병의 방어력을 레벨당 1 증가시킵니다.",
+        icon: "🛡️",
+        rarity: "uncommon",
+        tags: ["research", "defense"],
+        requires: [{ type: "has", id: "ebay", minLv: 1 }],
+        cost: [
+            { lv: 1, cost: { gold: 100 } },
+            { lv: 2, cost: { gold: 200 } },
+            { lv: 3, cost: { gold: 300 } }
+        ],
+        tech: MOCK_TECH
+    },
     // =================================================================
     // [TEST] 콤보 근접 스킬 (comboMelee)
     // =================================================================

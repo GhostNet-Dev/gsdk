@@ -1,84 +1,65 @@
 import * as THREE from 'three';
 import { IBuildingObject, BuildingType } from '../ibuildingobj';
 import { BuildingProperty } from '../buildingdefs';
-import { ISelectionData } from "@Glibs/ux/selectionpanel/selectionpanel";
+import { ISelectionData } from '@Glibs/ux/selectionpanel/selectionpanel';
+import IEventController from '@Glibs/interface/ievent';
+import { EventTypes } from '@Glibs/types/globaltypes';
 
 export class ResourceProduction implements IBuildingObject {
     public readonly type = BuildingType.ResourceProduction;
     public level: number = 1;
-    private timer = 0;
-    private readonly productionCooldown = 10.0; // 10초마다 자원 생산
-    private readonly amount = 10;
-    private readonly resourceType = "gold";
+    private productionTimer = 0;
+    private readonly productionInterval = 5.0; // 5초마다 자원 생산
     private collectedAmount = 0;
 
     constructor(
         public readonly id: string,
         public readonly property: BuildingProperty,
         public readonly position: THREE.Vector3,
-        public readonly mesh: THREE.Object3D
+        public readonly mesh: THREE.Object3D,
+        public readonly eventCtrl: IEventController
     ) {
         this.mesh.position.copy(position);
     }
 
     update(delta: number): void {
-        this.timer += delta;
-        if (this.timer >= this.productionCooldown) {
-            this.produce();
-            this.timer = 0;
+        this.productionTimer += delta;
+        if (this.productionTimer >= this.productionInterval) {
+            this.collectedAmount += 10 * this.level;
+            this.productionTimer = 0;
         }
     }
 
-    private produce(): void {
-        this.collectedAmount += this.amount;
-        console.log(`[Resource ${this.id}] Produced ${this.amount} ${this.resourceType}. Current: ${this.collectedAmount}`);
+    private collect() {
+        if (this.collectedAmount > 0) {
+            this.eventCtrl.SendEventMessage(EventTypes.Gold, this.collectedAmount);
+            console.log(`[Resource] Collected ${this.collectedAmount} gold.`);
+            this.collectedAmount = 0;
+        }
     }
 
-    private collect(): void {
-        console.log(`[Resource ${this.id}] Collected ${this.collectedAmount} ${this.resourceType}.`);
-        this.collectedAmount = 0;
-        // TODO: 전역 자원(Wallet) 업데이트
-    }
-
-    private upgrade(): void {
-        this.level++;
-        console.log(`[Resource ${this.id}] Upgraded to level ${this.level}.`);
+    destroy(): void {
+        if (this.mesh.parent) this.mesh.parent.remove(this.mesh);
     }
 
     getSelectionData(): ISelectionData {
         return {
             title: this.property.name,
-            description: this.property.desc || "자원을 생산하는 시설입니다.",
+            description: this.property.desc,
             level: this.level,
             hp: { current: this.property.hp, max: this.property.hp },
-            status: `생산된 자원: ${this.collectedAmount}`,
-            progress: this.timer / this.productionCooldown,
-            commands: [
-                {
-                    id: "collect",
-                    name: "자원 수집",
-                    icon: "💰",
-                    onClick: () => this.collect(),
-                    isDisabled: () => this.collectedAmount === 0
+            status: `미수집 자원: ${this.collectedAmount}`,
+            progress: this.productionTimer / this.productionInterval,
+            commands: (this.property.commands || []).map(t => ({
+                ...t,
+                onClick: () => {
+                    if (t.id === "collect") this.collect();
+                    if (t.type === "research" && t.targetId) {
+                        this.eventCtrl.SendEventMessage(EventTypes.RequestUpgrade, t.targetId);
+                    }
                 },
-                {
-                    id: "upgrade",
-                    name: "업그레이드",
-                    icon: "🔼",
-                    onClick: () => this.upgrade()
-                }
-            ]
+                isDisabled: () => (t.id === "collect" && this.collectedAmount <= 0)
+            }))
         };
-    }
-
-    onInteract(): void {
-        console.log(`[Resource ${this.id}] Collecting resources manually?`);
-        this.collect();
-    }
-
-    destroy(): void {
-        if (this.mesh.parent) {
-            this.mesh.parent.remove(this.mesh);
-        }
     }
 }
