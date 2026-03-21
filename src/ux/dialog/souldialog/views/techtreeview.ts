@@ -186,7 +186,6 @@ export class TechTreeView implements IDialogView<TechTreeProps> {
                 opacity: 0.22;
                 filter: grayscale(1) blur(0.4px);
                 cursor: default;
-                pointer-events: none;
             }
             .techtree-node.maxed {
                 background: linear-gradient(145deg, #201a10 0%, #2a2015 100%);
@@ -326,34 +325,35 @@ export class TechTreeView implements IDialogView<TechTreeProps> {
         }
         this.maxLevel = Math.max(...Array.from(levels.values()), 0);
 
-        // 2. 서브트리 크기 계산
-        const subtreeSize = new Map<TechId, number>();
+        // 2. 서브트리의 리프(Leaf) 개수 계산 (각도 배분용)
+        const leafCount = new Map<TechId, number>();
         const getChildren = (id: TechId): TechId[] =>
             Array.from(index.edges.get(id) ?? []).filter((c: TechId) => subtreeIds.has(c));
 
-        const computeSize = (id: TechId): number => {
-            const size = 1 + getChildren(id).reduce((s: number, c: TechId) => s + computeSize(c), 0);
-            subtreeSize.set(id, size);
-            return size;
+        const computeLeafCount = (id: TechId): number => {
+            const children = getChildren(id);
+            if (children.length === 0) {
+                leafCount.set(id, 1);
+                return 1;
+            }
+            const count = children.reduce((s, c) => s + computeLeafCount(c), 0);
+            leafCount.set(id, count);
+            return count;
         };
-        computeSize(this.selectedRoot);
+        computeLeafCount(this.selectedRoot);
 
-        // 3. 뷰포트 기반 adaptive MIN_RADIAL 계산
-        //    목표: 트리가 뷰포트의 ~80% 안에 들어오도록 레벨당 증분 결정
-        //    - targetR = min(vpW, vpH) × 0.4 (최대 반지름 목표)
-        //    - MIN_RADIAL = clamp(NODE_W+MIN_GAP, 130, targetR / maxLevel)
-        //    - arcRadius가 MIN_RADIAL보다 크면 arcRadius가 실제 반지름을 결정
+        // 3. 뷰포트 기반 파라미터 결정
         const dlgEl  = this.ctx.shell.dlg as HTMLElement;
         const bounds = dlgEl.getBoundingClientRect();
         const tabH   = this.tabsEl.offsetHeight || 48;
         const vpW    = bounds.width  > 0 ? bounds.width  : Math.min(1080, window.innerWidth  - 32);
         const vpH    = bounds.height > 0 ? bounds.height - tabH : window.innerHeight * 0.8 - tabH;
-        const targetR = Math.min(vpW, vpH) * 0.4;
+        const targetR = Math.min(vpW, vpH) * 0.45;
 
-        const MIN_GAP    = 14;  // 노드 간 최소 여백 (px)
+        const MIN_GAP    = 25;  // 노드 간 최소 여백 상향
         const MIN_RADIAL = this.maxLevel > 0
-            ? Math.max(NODE_W + MIN_GAP, Math.min(130, targetR / this.maxLevel))
-            : 100;
+            ? Math.max(NODE_W + MIN_GAP, Math.min(150, targetR / this.maxLevel))
+            : 120;
 
         const tempPos = new Map<TechId, { x: number; y: number }>();
         tempPos.set(this.selectedRoot, { x: 0, y: 0 });
@@ -366,30 +366,27 @@ export class TechTreeView implements IDialogView<TechTreeProps> {
             if (!children.length) return;
 
             const sectorAngle = aEnd - aStart;
-            const totalSize   = children.reduce((s: number, c: TechId) => s + (subtreeSize.get(c) ?? 1), 0);
+            const totalLeafs  = leafCount.get(id) ?? 1;
 
-            // 자식별 섹터 각도
+            // 자식별 섹터 각도 (리프 노드 비율에 따라 할당)
             const spans = children.map((c: TechId) =>
-                sectorAngle * ((subtreeSize.get(c) ?? 1) / totalSize)
+                sectorAngle * ((leafCount.get(c) ?? 1) / totalLeafs)
             );
 
-            // 인접 자식 중점 간 최소 각도 간격: (span_i + span_{i+1}) / 2
-            let minAdjSep = Infinity;
-            for (let i = 0; i < spans.length - 1; i++) {
-                minAdjSep = Math.min(minAdjSep, (spans[i] + spans[i + 1]) / 2);
+            // 겹침 방지를 위한 반지름 계산
+            // 호의 길이 (radius * angle) 가 최소 노드 크기보다 커야 함
+            let requiredRadius = parentR + MIN_RADIAL;
+            for (let i = 0; i < children.length; i++) {
+                const span = spans[i];
+                if (span > 0) {
+                    const rForThisChild = (NODE_W + MIN_GAP) / span;
+                    requiredRadius = Math.max(requiredRadius, rForThisChild);
+                }
             }
 
-            // 호 충돌 방지 최소 반지름
-            // cap: 부모 반지름 + MIN_RADIAL*3 이상 커지지 않도록 제한
-            // → arcRadius의 지수적 폭발(레벨당 2배) 억제
-            const arcRadius = isFinite(minAdjSep)
-                ? Math.min((NODE_W + MIN_GAP) / minAdjSep, parentR + MIN_RADIAL * 3)
-                : 0;
+            // 부모 레벨과의 간격 보장 및 급격한 팽창 억제 (하지만 겹침보다는 확장을 우선)
+            const radius = Math.min(requiredRadius, parentR + MIN_RADIAL * 4);
 
-            // 실제 반지름: 두 조건 중 큰 값
-            const radius = Math.max(parentR + MIN_RADIAL, arcRadius);
-
-            // 동심원 가이드용
             const childLv = lv + 1;
             this.levelRadii.set(childLv, Math.max(this.levelRadii.get(childLv) ?? 0, radius));
 
@@ -409,7 +406,7 @@ export class TechTreeView implements IDialogView<TechTreeProps> {
 
         place(this.selectedRoot, 0, -Math.PI, Math.PI, 0);
 
-        // 4. bounding box → 캔버스 최소화
+        // 4. bounding box -> 캔버스 크기 결정
         const margin = PAD + NODE_W / 2;
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         tempPos.forEach(({ x, y }) => {
@@ -656,19 +653,56 @@ export class TechTreeView implements IDialogView<TechTreeProps> {
             const nextLv  = curLv + 1;
             const cost    = service.costOf(id, nextLv);
             const costStr = Object.entries(cost).map(([k, v]) => `${k}: ${v}`).join(', ');
-            body += `
-                <div style="font-size:12px;margin-bottom:5px;color:#9399b2;">단계: <span style="color:#cdd6f4;">${curLv} → ${nextLv}</span></div>
-                <div style="font-size:12px;margin-bottom:10px;color:#9399b2;">비용: <span style="color:#fab387;font-weight:bold;">${costStr || '무료'}</span></div>
-            `;
-            body += res.ok
-                ? `<div style="font-size:11px;color:#a6e3a1;font-weight:bold;text-align:center;border:1px solid #a6e3a1;padding:4px;border-radius:4px;">강화 가능 (클릭)</div>`
-                : `<div style="font-size:11px;color:#f38ba8;background:rgba(243,139,168,0.08);padding:8px;border-radius:4px;border:1px solid rgba(243,139,168,0.2);">⚠️ ${res.reason}</div>`;
+
+            if (curLv === 0 && !res.ok && res.reason.includes('requirement')) {
+                // 잠김 상태 (첫 해금 전)
+                body += `<div style="font-size:12px;margin-bottom:8px;color:#f38ba8;font-weight:bold;">🔒 잠김: 해금 조건</div>`;
+                if (node.requires && node.requires.length > 0) {
+                    node.requires.forEach(req => {
+                        const reqText = this.formatRequirement(req);
+                        const isMet   = service.checkRequirement(req);
+                        body += `<div style="font-size:11px;margin-bottom:4px;color:${isMet ? '#a6e3a1' : '#9399b2'};display:flex;align-items:center;gap:5px;">
+                            <span>${isMet ? '✅' : '❌'}</span>
+                            <span>${reqText}</span>
+                        </div>`;
+                    });
+                } else {
+                    body += `<div style="font-size:11px;color:#f38ba8;">${res.reason}</div>`;
+                }
+            } else {
+                // 활성화됨 또는 강화 가능
+                body += `
+                    <div style="font-size:12px;margin-bottom:5px;color:#9399b2;">단계: <span style="color:#cdd6f4;">${curLv} → ${nextLv}</span></div>
+                    <div style="font-size:12px;margin-bottom:10px;color:#9399b2;">비용: <span style="color:#fab387;font-weight:bold;">${costStr || '무료'}</span></div>
+                `;
+                body += res.ok
+                    ? `<div style="font-size:11px;color:#a6e3a1;font-weight:bold;text-align:center;border:1px solid #a6e3a1;padding:4px;border-radius:4px;">강화 가능 (클릭)</div>`
+                    : `<div style="font-size:11px;color:#f38ba8;background:rgba(243,139,168,0.08);padding:8px;border-radius:4px;border:1px solid rgba(243,139,168,0.2);">⚠️ ${res.reason}</div>`;
+            }
         } else {
             body += `<div style="font-size:11px;color:#fab387;font-weight:bold;text-align:center;background:rgba(250,179,135,0.08);padding:6px;border-radius:4px;">★ 최대 단계</div>`;
         }
 
         this.tooltip.show({ title: node.name, icon: node.icon, body });
         this.tooltip.move(e);
+    }
+
+    private formatRequirement(req: any): string {
+        switch (req.type) {
+            case 'has': {
+                const target = this.props.service.index.byId.get(req.id);
+                const name   = target?.name ?? req.id;
+                return req.minLv && req.minLv > 1 
+                    ? `[${name}] ${req.minLv}단계 이상`
+                    : `[${name}] 보유`;
+            }
+            case 'playerLv': return `플레이어 레벨 ${req.atLeast} 이상`;
+            case 'stat':     return `${req.key} 스탯 ${req.atLeast} 이상`;
+            case 'quest':    return `퀘스트 [${req.id}] 완료`;
+            case 'all':      return '모든 조건 충족';
+            case 'any':      return '다음 중 하나 충족';
+            default:         return '선행 조건 필요';
+        }
     }
 
     unmount(): void {

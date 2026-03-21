@@ -75,9 +75,8 @@ export class TechTreeService {
       if (curLv === 0 && node.requires?.length) checkList.push(...node.requires);
       if (node.requiresPerLevel?.length) checkList.push(...node.requiresPerLevel);
 
-      const env: TechEvalEnv = { levels: this.levels, index: this.index, ctx: this.ctx };
       for (const r of checkList) {
-        if (!this.evaluator.eval(r, env)) {
+        if (!this.checkRequirement(r)) {
           const msg = this.evaluator.describe ? this.evaluator.describe(r) : "requirement";
           return { ok: false, reason: `requirement not met: ${msg}` };
         }
@@ -94,6 +93,11 @@ export class TechTreeService {
     } catch (e: any) {
       return { ok: false, reason: e.message };
     }
+  }
+
+  checkRequirement(req: Requirement): boolean {
+    const env: TechEvalEnv = { levels: this.levels, index: this.index, ctx: this.ctx };
+    return this.evaluator.eval(req, env);
   }
 
   levelUp(nodeId: TechId): boolean {
