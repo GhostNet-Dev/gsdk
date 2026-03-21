@@ -156,6 +156,7 @@ export const EventTypes = {
     RequestBuilding: "requestbuilding",
     ResponseBuilding: "responsebuilding",
     RequestUpgrade: "requestupgrade",
+    UpgradeComplete: "upgradecomplete",
 
     // VFX
     GlobalEffect: "globaleffect",

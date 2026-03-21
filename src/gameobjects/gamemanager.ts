@@ -34,12 +34,36 @@ export default class GameManager {
     ) { 
         this.buildingManager = new BuildingManager(this.scene, this.eventCtrl, this.service, this.camera);
         this.buildingInfoBar = new BuildingInfoBar(this.eventCtrl);
+        
+        // [수정] 플레이어 레벨업 이벤트 (건물 업그레이드와 분리됨)
         this.eventCtrl.RegisterEventListener(EventTypes.LevelUp, () => {
             this.addResource(1)
         })
         this.eventCtrl.RegisterEventListener(EventTypes.AddSkillPoint, (point: number) => {
             this.addPoints(point)
         })
+
+        // [추가] 건물/기술 업그레이드 요청 처리 (비용 먼저 차감)
+        this.eventCtrl.RegisterEventListener(EventTypes.RequestUpgrade, (nodeId: string) => {
+            const check = this.service.canLevelUp(nodeId);
+            if (check.ok) {
+                if (check.cost) this.service.ctx.wallet.subtractMany(check.cost);
+                console.log(`[GameManager] Upgrade started for ${nodeId}. Cost deducted.`);
+            } else {
+                this.eventCtrl.SendEventMessage(EventTypes.Toast, check.reason || "비용이 부족합니다.");
+            }
+        });
+
+        // [추가] 건물/기술 업그레이드 완료 처리 (데이터 동기화 및 효과 적용)
+        this.eventCtrl.RegisterEventListener(EventTypes.UpgradeComplete, (nodeId: string) => {
+            this.service.addLevel(nodeId);
+            const node = this.service.index.byId.get(nodeId);
+            const level = this.service.levels[nodeId];
+            if (node) {
+                this.applyEffect(node, level);
+                console.log(`[GameManager] Upgrade complete for ${nodeId}. Level: ${level}`);
+            }
+        });
     }
 
     /**

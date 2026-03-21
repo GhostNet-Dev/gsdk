@@ -187,6 +187,11 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
 
     private finalizeBuild(node: TechTreeDefBase) {
         const prop = node.tech as BuildingProperty;
+        if (!prop || !prop.size) {
+            console.error(`[BuildingView] Property or size missing for ${node.id}`);
+            return;
+        }
+
         this.ctx.events?.SendEventMessage(EventTypes.ShowGrid);
         this.ctx.events?.SendEventMessage(EventTypes.HighlightGrid, {
             pos: new THREE.Vector3(0, 0, 0),

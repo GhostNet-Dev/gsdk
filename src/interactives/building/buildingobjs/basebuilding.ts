@@ -58,8 +58,8 @@ export abstract class BaseBuilding implements IBuildingObject {
         
         console.log(`[${this.property.name}] Upgrade started. Time: ${this.upgradeTime}s`);
         
-        // 전역 테크트리 레벨업 요청 (비용 차감 및 데이터 동기화)
-        this.eventCtrl.SendEventMessage(EventTypes.LevelUp, this.property.id);
+        // 전역 테크트리 업그레이드 요청 (비용 차감)
+        this.eventCtrl.SendEventMessage(EventTypes.RequestUpgrade, this.property.id);
     }
 
     protected completeUpgrade() {
@@ -69,6 +69,9 @@ export abstract class BaseBuilding implements IBuildingObject {
         
         // HP 회복 또는 능력치 상승 로직 추가 가능
         this.currentHp = this.property.hp; 
+
+        // 전역 테크트리 레벨업 완료 알림 (데이터 동기화 및 효과 적용)
+        this.eventCtrl.SendEventMessage(EventTypes.UpgradeComplete, this.property.id);
     }
 
     destroy(): void {

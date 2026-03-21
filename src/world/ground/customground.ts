@@ -6,6 +6,7 @@ import IEventController from '@Glibs/interface/ievent';
 import { EventTypes } from '@Glibs/types/globaltypes';
 import { Loader } from '@Glibs/loader/loader';
 import { Char } from '@Glibs/loader/assettypes';
+import { buildingDefs } from '../../interactives/building/buildingdefs';
 
 /* ----------------------------- Helpers ----------------------------- */
 function toU8(a: Uint8Array | Uint8ClampedArray): Uint8Array {
@@ -118,6 +119,7 @@ export default class CustomGround implements IWorldMapObject {
   // 격자 및 강조 표시
   private gridHelper?: THREE.GridHelper;
   private highlightMesh?: THREE.Mesh;
+  private rangeMesh?: THREE.Mesh;
 
   // 브러시/스케일
   scale = 0.5;
@@ -141,7 +143,7 @@ export default class CustomGround implements IWorldMapObject {
 
   private lastNodeId?: string;
   private gridSize = 4.0;
-  private occupiedBuildings: Array<{ pos: THREE.Vector3, width: number, depth: number }> = [];
+  private occupiedBuildings: Array<{ pos: THREE.Vector3, width: number, depth: number, buildRange?: number }> = [];
 
   constructor(
     private scene: THREE.Scene,
@@ -167,7 +169,20 @@ export default class CustomGround implements IWorldMapObject {
       }
     });
     this.eventCtrl.RegisterEventListener(EventTypes.ResponseBuilding, (buildings: any[]) => {
-      this.occupiedBuildings = buildings;
+      this.occupiedBuildings = buildings.map(b => {
+        // nodeId가 'cc'와 같은 내부 ID일 경우를 대비해 buildingDefs에서 실제 속성 찾기
+        let property = (buildingDefs as any)[b.nodeId];
+        if (!property && b.nodeId) {
+            property = Object.values(buildingDefs).find(p => p.id === b.nodeId);
+        }
+
+        return {
+          ...b,
+          // b.pos가 단순 객체인 경우 Vector3로 변환하여 distanceTo 메서드 사용 보장
+          pos: b.pos instanceof THREE.Vector3 ? b.pos : new THREE.Vector3(b.pos.x, b.pos.y, b.pos.z),
+          buildRange: b.buildRange ?? property?.buildRange
+        };
+      });
       if (this.highlightMesh && this.highlightMesh.visible) {
         const worldPosCenter = this.obj.localToWorld(this.highlightMesh.position.clone());
         this.HighlightGrid(worldPosCenter, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
@@ -1048,7 +1063,7 @@ export default class CustomGround implements IWorldMapObject {
     // 월드 좌표를 지면의 로컬 좌표로 변환
     const localPos = this.obj.worldToLocal(worldPos.clone());
     
-    // [수정 핵심] 로컬 공간에서 그리드 한 칸의 실제 크기는 gridSize / scale 입니다.
+    // 로컬 공간에서 그리드 한 칸의 실제 크기는 gridSize / scale 입니다.
     const s = this.gridSize / this.scale; 
     
     // 1. 기준 좌표를 그리드 교차점(선)의 배수로 스냅합니다.
@@ -1056,7 +1071,6 @@ export default class CustomGround implements IWorldMapObject {
     const lineZ = Math.round(localPos.z / s) * s;
 
     // 2. 크기에 따라 중앙 정렬 오프셋을 계산합니다.
-    // 홀수 칸(1, 3...)이면 셀의 중앙(s / 2)에 둬야 하고, 짝수 칸(2, 4...)이면 그리드 선(0)에 맞춰야 합니다.
     const offsetX = (width % 2 !== 0) ? (s / 2) : 0;
     const offsetZ = (depth % 2 !== 0) ? (s / 2) : 0;
 
@@ -1064,16 +1078,53 @@ export default class CustomGround implements IWorldMapObject {
     this.highlightMesh.position.set(lineX + offsetX, 0.25, lineZ + offsetZ);
     this.highlightMesh.visible = true;
 
-    // [추가] 점유 상태 체크 및 색상 변경
+    // [추가] buildRange를 위한 rangeMesh 생성 및 업데이트
+    // buildingDefs는 Record<string, BuildingProperty> 타입이지만, nodeId가 def의 키와 매칭되어야 합니다.
+    let property = nodeId ? (buildingDefs as any)[nodeId] : null;
+    if (!property && nodeId) {
+        // [보강] nodeId가 키값이 아닐 경우(예: 'cc')를 위해 id 필드 검색 추가
+        property = Object.values(buildingDefs).find(p => p.id === nodeId);
+    }
+
+    if (property && property.buildRange) {
+        if (!this.rangeMesh) {
+            const rangeGeom = new THREE.RingGeometry(0, 1, 64);
+            rangeGeom.rotateX(-Math.PI / 2);
+            const rangeMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+            this.rangeMesh = new THREE.Mesh(rangeGeom, rangeMat);
+            this.obj.add(this.rangeMesh);
+        }
+        // 원형 범위: buildRange는 반경(radius)으로 해석하여 스케일 설정
+        const rangeScale = property.buildRange * s;
+        this.rangeMesh.scale.set(rangeScale, rangeScale, rangeScale);
+        this.rangeMesh.position.copy(this.highlightMesh.position);
+        this.rangeMesh.visible = true;
+    } else if (this.rangeMesh) {
+        this.rangeMesh.visible = false;
+    }
+
+    // 점유 상태 체크 및 색상 변경
     const worldPosCenter = this.obj.localToWorld(this.highlightMesh.position.clone());
     const isOccupied = this.checkOccupancy(worldPosCenter, width, depth);
-    const finalColor = isOccupied ? new THREE.Color(0xff0000) : color;
+    
+    // [추가] 지원 범위(Pylon과 같은) 내인지 확인
+    // 최초 건물(예: CommandCenter)이거나 범위 제공 건물인 경우 건설 제한 완화 가능
+    const isInRange = this.checkBuildRange(worldPosCenter);
+    
+    // 1순위: 점유(빨간색), 2순위: 범위 밖(노란색/주황색), 3순위: 정상(기본 초록색)
+    let finalColor = color;
+    if (isOccupied) {
+        finalColor = new THREE.Color(0xff0000); // 점유됨: 빨강
+    } else if (!isInRange && property && !property.buildRange) {
+        // 범위가 필요한 일반 건물인데 범위 밖인 경우
+        finalColor = new THREE.Color(0xffaa00); // 범위 밖: 주황
+    }
 
     if (this.highlightMesh.material instanceof THREE.MeshBasicMaterial) {
       this.highlightMesh.material.color.copy(finalColor);
     }
 
-    // [추가] 스냅된 좌표를 외부(BuildingManager 등)에 즉시 전파
+    // 스냅된 좌표를 외부(BuildingManager 등)에 즉시 전파
     const snappedWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
     this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { pos: snappedWorldPos });
 
@@ -1097,6 +1148,7 @@ export default class CustomGround implements IWorldMapObject {
 
   ClearHighlight() {
     if (this.highlightMesh) this.highlightMesh.visible = false;
+    if (this.rangeMesh) this.rangeMesh.visible = false;
     if (this.arrowGroup) this.arrowGroup.visible = false;
   }
 
@@ -1122,6 +1174,23 @@ export default class CustomGround implements IWorldMapObject {
       // AABB 충돌 검사
       if (minX < bMaxX && maxX > bMinX && minZ < bMaxZ && maxZ > bMinZ) {
         return true;
+      }
+    }
+    return false;
+  }
+
+  private checkBuildRange(pos: THREE.Vector3): boolean {
+    // 맵에 아무 건물도 없으면 (최초 건설) 범위를 체크하지 않음
+    if (this.occupiedBuildings.length === 0) return true;
+
+    for (const b of this.occupiedBuildings) {
+      if (b.buildRange) {
+        // 거리 기반 체크 (원형 범위)
+        const dist = pos.distanceTo(b.pos);
+        // buildRange는 그리드 단위이므로 실제 거리로 변환
+        if (dist <= b.buildRange * this.gridSize) {
+          return true;
+        }
       }
     }
     return false;

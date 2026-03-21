@@ -26,6 +26,7 @@ export interface BuildingProperty {
     buildTime: number; // seconds
     buildTurns: number; // number of turns
     size: { width: number; depth: number };
+    buildRange?: number; // 파일런처럼 건물을 지을 수 있는 범위를 제공 (그리드 단위)
     provides?: string[];
     desc?: string;
     commands?: CommandTemplate[];
@@ -40,9 +41,10 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         assetKey: Char.KaykitMedHexagonBuildingBulePackBuildingCastleBlue,
         hp: 2000,
         scale: 10,
-        buildTime: 30,
+        buildTime: 10,
         buildTurns: 10,
         size: { width: 5, depth: 5 },
+        buildRange: 15, // 15칸 범위 제공
         provides: ["scv"],
         desc: "진영의 핵심 거점입니다.",
         commands: [

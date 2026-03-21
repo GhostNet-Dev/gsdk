@@ -109,7 +109,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["supply"],
         requires: [{ type: "has", id: "cc", minLv: 1 }],
         cost: [{ lv: 1, cost: { gold: 50 } }],
-        tech: buildingDefs.SupplyDepot
+        tech: buildingDefs.HomeA
     },
     {
         id: "barracks",
@@ -133,7 +133,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tags: ["research"],
         requires: [{ type: "has", id: "barracks", minLv: 1 }],
         cost: [{ lv: 1, cost: { gold: 200 } }],
-        tech: buildingDefs.EngineeringBay
+        tech: buildingDefs.Blacksmith
     },
     {
         id: "infantry_atk",
