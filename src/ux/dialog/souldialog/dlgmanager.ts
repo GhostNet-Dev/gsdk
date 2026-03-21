@@ -115,6 +115,7 @@ export class DialogManager {
       case 'scroll': return '탐험 기록';
       case 'skill-slots': return '스킬 슬롯 설정';
       case 'building': return '건설 — 기지 확장';
+      case 'techtree': return '기술 트리 — 특성 강화';
       default: return 'Dialog';
     }
   }
