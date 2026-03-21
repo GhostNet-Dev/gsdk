@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { IBuildingObject, BuildingType } from '../ibuildingobj';
 import { BuildingProperty } from '../buildingdefs';
+import { ISelectionData } from "@Glibs/ux/selectionpanel/selectionpanel";
 
 export interface ProductionTask {
     unitId: string;
@@ -11,6 +12,7 @@ export interface ProductionTask {
 
 export class UnitProduction implements IBuildingObject {
     public readonly type = BuildingType.UnitProduction;
+    public level: number = 1;
     private queue: ProductionTask[] = [];
     private currentTask: ProductionTask | null = null;
 
@@ -45,6 +47,23 @@ export class UnitProduction implements IBuildingObject {
     addQueue(unitId: string, duration = 10): void {
         this.queue.push({ unitId, duration, elapsed: 0, isFinished: false });
         console.log(`[Production ${this.id}] Added to queue: ${unitId}`);
+    }
+
+    getSelectionData(): ISelectionData {
+        return {
+            title: this.property.name,
+            description: this.property.desc || "유닛을 생산하는 시설입니다.",
+            level: this.level,
+            hp: { current: this.property.hp, max: this.property.hp },
+            status: this.currentTask ? `생산 중: ${this.currentTask.unitId}` : "대기 중",
+            progress: this.currentTask ? this.currentTask.elapsed / this.currentTask.duration : 0,
+            commands: (this.property.provides || []).map(unitId => ({
+                id: `produce_${unitId}`,
+                name: `${unitId} 생산`,
+                icon: "🤖",
+                onClick: () => this.addQueue(unitId)
+            }))
+        };
     }
 
     onInteract(): void {

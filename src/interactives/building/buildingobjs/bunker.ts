@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { IBuildingObject, BuildingType } from '../ibuildingobj';
 import { BuildingProperty } from '../buildingdefs';
+import { ISelectionData } from "@Glibs/ux/selectionpanel/selectionpanel";
 
 export class Bunker implements IBuildingObject {
     public readonly type = BuildingType.Bunker;
+    public level: number = 1;
     private unitsInside: any[] = [];
     private readonly capacity = 4;
 
@@ -25,6 +27,30 @@ export class Bunker implements IBuildingObject {
 
     onInteract(): void {
         console.log(`[Bunker ${this.id}] Unit entering/leaving.`);
+    }
+
+    getSelectionData(): ISelectionData {
+        return {
+            title: this.property.name,
+            description: this.property.desc || "보병 유닛을 보호하는 방어 시설입니다.",
+            level: this.level,
+            hp: { current: this.property.hp, max: this.property.hp }, // 실제 HP 시스템 연결 전이므로 기본값 사용
+            status: `유닛 수용 중 (${this.unitsInside.length}/${this.capacity})`,
+            commands: [
+                {
+                    id: "eject_all",
+                    name: "모두 퇴거",
+                    icon: "🚪",
+                    onClick: () => this.ejectAll(),
+                    isDisabled: () => this.unitsInside.length === 0
+                }
+            ]
+        };
+    }
+
+    ejectAll() {
+        console.log(`[Bunker ${this.id}] Ejecting all units.`);
+        this.unitsInside = [];
     }
 
     addUnit(unit: any): boolean {

@@ -1,13 +1,16 @@
 import * as THREE from 'three';
 import { IBuildingObject, BuildingType } from '../ibuildingobj';
 import { BuildingProperty } from '../buildingdefs';
+import { ISelectionData } from "@Glibs/ux/selectionpanel/selectionpanel";
 
 export class DefenseTurret implements IBuildingObject {
     public readonly type = BuildingType.DefenseTurret;
+    public level: number = 1;
     private target: THREE.Object3D | null = null;
     private attackTimer = 0;
     private readonly attackCooldown = 1.0; // 1초에 한 번 공격
     private readonly range = 15;
+    private isAttacking = true;
 
     constructor(
         public readonly id: string,
@@ -19,6 +22,8 @@ export class DefenseTurret implements IBuildingObject {
     }
 
     update(delta: number): void {
+        if (!this.isAttacking) return;
+        
         this.attackTimer += delta;
 
         // 타겟이 없거나 사거리 밖이면 새로운 타겟 검색 (실제 구현 시 적 리스트 필요)
@@ -37,6 +42,32 @@ export class DefenseTurret implements IBuildingObject {
                 this.attackTimer = 0;
             }
         }
+    }
+
+    getSelectionData(): ISelectionData {
+        return {
+            title: this.property.name,
+            description: this.property.desc || "자동으로 적을 공격하는 방어 타워입니다.",
+            level: this.level,
+            hp: { current: this.property.hp, max: this.property.hp },
+            status: this.isAttacking ? "상태: 경계 중" : "상태: 정지",
+            commands: [
+                {
+                    id: "attack",
+                    name: "공격 시작",
+                    icon: "⚔️",
+                    onClick: () => { this.isAttacking = true; },
+                    isDisabled: () => this.isAttacking
+                },
+                {
+                    id: "stop",
+                    name: "정지",
+                    icon: "🛑",
+                    onClick: () => { this.isAttacking = false; this.target = null; },
+                    isDisabled: () => !this.isAttacking
+                }
+            ]
+        };
     }
 
     private findTarget() {

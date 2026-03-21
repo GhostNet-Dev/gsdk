@@ -29,8 +29,9 @@ export default class GameManager {
         private scene: THREE.Scene,
         private eventCtrl: IEventController,
         private service: TechTreeService,
+        private camera: THREE.Camera, // [추가] 카메라 주입
     ) { 
-        this.buildingManager = new BuildingManager(this.scene, this.eventCtrl, this.service);
+        this.buildingManager = new BuildingManager(this.scene, this.eventCtrl, this.service, this.camera);
         this.buildingInfoBar = new BuildingInfoBar(this.eventCtrl);
         this.eventCtrl.RegisterEventListener(EventTypes.LevelUp, () => {
             this.addResource(1)

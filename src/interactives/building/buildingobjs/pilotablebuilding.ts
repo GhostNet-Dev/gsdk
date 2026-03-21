@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { IBuildingObject, BuildingType } from '../ibuildingobj';
 import { BuildingProperty } from '../buildingdefs';
+import { ISelectionData } from "@Glibs/ux/selectionpanel/selectionpanel";
 
 export class PilotableBuilding implements IBuildingObject {
     public readonly type = BuildingType.Pilotable;
+    public level: number = 1;
     private isOccupied = false;
     private operator: any = null; // 실제 파일럿/플레이어 객체
 
@@ -24,14 +26,42 @@ export class PilotableBuilding implements IBuildingObject {
     }
 
     onInteract(): void {
-        this.isOccupied = !this.isOccupied;
         if (this.isOccupied) {
-            console.log(`[Pilotable ${this.id}] Operator entered.`);
-            // TODO: 플레이어 제어권 전환 로직
+            this.exit();
         } else {
-            console.log(`[Pilotable ${this.id}] Operator left.`);
-            // TODO: 플레이어 하차 로직
+            this.enter();
         }
+    }
+
+    private enter() {
+        this.isOccupied = true;
+        console.log(`[Pilotable ${this.id}] Operator entered.`);
+        // TODO: 플레이어 제어권 전환 로직
+    }
+
+    private exit() {
+        this.isOccupied = false;
+        console.log(`[Pilotable ${this.id}] Operator left.`);
+        // TODO: 플레이어 하차 로직
+    }
+
+    getSelectionData(): ISelectionData {
+        return {
+            title: this.property.name,
+            description: this.property.desc || "조종사가 탑승하여 제어할 수 있는 시설입니다.",
+            level: this.level,
+            hp: { current: this.property.hp, max: this.property.hp },
+            status: this.isOccupied ? "상태: 운용 중" : "상태: 대기",
+            commands: [
+                {
+                    id: "exit",
+                    name: "하차",
+                    icon: "🚪",
+                    onClick: () => this.exit(),
+                    isDisabled: () => !this.isOccupied
+                }
+            ]
+        };
     }
 
     destroy(): void {

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BuildingProperty } from './buildingdefs';
+import { ISelectionData } from '@Glibs/ux/selectionpanel/selectionpanel';
 
 /**
  * 건물의 성격을 정의하는 Enum
@@ -22,6 +23,7 @@ export interface IBuildingObject {
     readonly type: BuildingType;
     readonly property: BuildingProperty;
     readonly position: THREE.Vector3;
+    level: number;
     
     /**
      * 월드에 배치된 실제 메쉬/오브젝트
@@ -42,4 +44,9 @@ export interface IBuildingObject {
      * 건물 파괴/제거 시 정리 로직
      */
     destroy(): void;
+
+    /**
+     * 하단 UI에 표시할 데이터 제공
+     */
+    getSelectionData(): ISelectionData;
 }

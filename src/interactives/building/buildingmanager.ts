@@ -14,6 +14,7 @@ import { ResourceProduction } from "./buildingobjs/resourceproduction";
 import { Wall } from "./buildingobjs/wall";
 import { Bunker } from "./buildingobjs/bunker";
 import { CameraMode } from "@Glibs/systems/camera/cameratypes";
+import { SelectionPanel } from "@Glibs/ux/selectionpanel/selectionpanel";
 
 export interface BuildingTask {
   nodeId: string;
@@ -38,6 +39,12 @@ export class BuildingManager implements ILoop {
   private currentGuideNodeId: string | null = null;
   private loader = new Loader();
 
+  // [추가] 선택된 건물 및 UI
+  private selectedBuilding: IBuildingObject | null = null;
+  private selectionPanel: SelectionPanel;
+  private raycaster = new THREE.Raycaster();
+  private mouse = new THREE.Vector2();
+
   // [최적화] 건물 종류별 템플릿 캐시
   private constructionTemplates: Map<string, THREE.Object3D> = new Map();
   private finishedTemplates: Map<string, THREE.Object3D> = new Map();
@@ -45,21 +52,21 @@ export class BuildingManager implements ILoop {
   constructor(
     private scene: THREE.Scene,
     private eventCtrl: IEventController,
-    private service: TechTreeService
+    private service: TechTreeService,
+    private camera: THREE.Camera
   ) {
+    this.selectionPanel = new SelectionPanel();
+
     this.eventCtrl.RegisterEventListener(EventTypes.RequestBuilding, (data: { nodeId: string, pos: THREE.Vector3 }) => {
-      // [수정] 가이드를 숨기지 않고 바로 건설 시작 (가이드 유지)
       this.startBuild(data.nodeId, data.pos);
     });
 
-    // 가이드 모델 표시를 위한 HighlightGrid 리스너
     this.eventCtrl.RegisterEventListener(EventTypes.HighlightGrid, (data: { pos: THREE.Vector3, nodeId?: string }) => {
       if (data.nodeId) {
         this.showGuide(data.nodeId, data.pos);
       }
     });
 
-    // 가이드 모델 이동을 위한 GridArrowClick 리스너
     this.eventCtrl.RegisterEventListener(EventTypes.GridArrowClick, (data: { delta: THREE.Vector3, pos?: THREE.Vector3 }) => {
       if (this.guideModel) {
         if (data.pos) {
@@ -70,19 +77,71 @@ export class BuildingManager implements ILoop {
       }
     });
 
-    // 그리드 종료 시 가이드 모델 제거
     this.eventCtrl.RegisterEventListener(EventTypes.HideGrid, () => {
       this.hideGuide();
     });
 
+    // [추가] 마우스 클릭 이벤트 리스너
+    window.addEventListener('pointerdown', this.onPointerDown);
+
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
   }
 
+  private onPointerDown = (e: PointerEvent) => {
+    // UI 요소 클릭 시 무시
+    if ((e.target as HTMLElement).closest('#bottom-selection-panel')) return;
+
+    const rect = document.body.getBoundingClientRect();
+    this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    
+    // 지어진 건물들 중에서 충돌 체크
+    const buildingMeshes: THREE.Object3D[] = [];
+    this.buildingObjects.forEach(b => {
+        if (b.mesh) buildingMeshes.push(b.mesh);
+    });
+    
+    const intersects = this.raycaster.intersectObjects(buildingMeshes, true);
+
+    if (intersects.length > 0) {
+        let obj: THREE.Object3D | null = intersects[0].object;
+        while (obj && !obj.userData.buildingId) {
+            obj = obj.parent;
+        }
+
+        if (obj && obj.userData.buildingId) {
+            this.selectBuilding(obj.userData.buildingId);
+            return;
+        }
+    }
+
+    this.deselectBuilding();
+  };
+
+  private selectBuilding(id: string) {
+    const building = this.buildingObjects.get(id);
+    if (building) {
+        this.selectedBuilding = building;
+        this.updateUI();
+    }
+  }
+
+  private deselectBuilding() {
+    this.selectedBuilding = null;
+    this.selectionPanel.hide();
+  }
+
+  private updateUI() {
+    if (this.selectedBuilding) {
+        this.selectionPanel.show(this.selectedBuilding.getSelectionData());
+    }
+  }
+
   private async showGuide(nodeId: string, pos: THREE.Vector3) {
-    // 1. 카메라 모드 변경 (건설 시야 확보)
     this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.Grid);
 
-    // 이미 같은 가이드가 있으면 위치만 업데이트
     if (this.currentGuideNodeId === nodeId && this.guideModel) {
       this.guideModel.position.copy(pos);
       return;
@@ -102,7 +161,6 @@ export class BuildingManager implements ILoop {
       if (!model) return;
 
       this.guideModel = model as THREE.Group;
-      // 가이드 모델이 마우스 레이캐스팅을 방해하지 않도록 설정
       this.guideModel.traverse((child) => {
         child.raycast = () => { };
       });
@@ -110,7 +168,6 @@ export class BuildingManager implements ILoop {
       this.guideModel.position.copy(pos);
       this.guideModel.scale.set(prop.scale, prop.scale, prop.scale);
 
-      // 반투명 처리
       this.guideModel.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           if (Array.isArray(child.material)) {
@@ -146,16 +203,13 @@ export class BuildingManager implements ILoop {
   }
 
   update(delta: number) {
-    // 건설 중인 태스크 업데이트
     for (const [taskId, task] of this.activeTasks.entries()) {
       if (task.isFinished) continue;
 
       if (this.currentMode === BuildingMode.Timer) {
         const elapsed = (Date.now() - task.startTime) / 1000;
         task.progress = Math.min(elapsed / task.prop.buildTime, 1.0);
-        const remaining = Math.max(0, task.prop.buildTime - elapsed);
 
-        // 링 게이지 업데이트
         if (task.progressMesh) {
           const ring = task.progressMesh.getObjectByName('ring_progress') as THREE.Mesh;
           if (ring) {
@@ -174,9 +228,13 @@ export class BuildingManager implements ILoop {
       }
     }
 
-
     for (const building of this.buildingObjects.values()) {
       building.update(delta);
+    }
+
+    // 선택된 건물의 UI 실시간 업데이트
+    if (this.selectedBuilding) {
+        this.updateUI();
     }
   }
 
@@ -184,9 +242,6 @@ export class BuildingManager implements ILoop {
     this.currentMode = mode;
   }
 
-  /**
-   * 건물을 지을 수 있는지 확인합니다.
-   */
   canBuild(nodeId: string): { ok: boolean; reason?: string } {
     const node = this.service.index.byId.get(nodeId);
     if (!node || node.kind !== "building") return { ok: false, reason: "invalid building type" };
@@ -194,7 +249,6 @@ export class BuildingManager implements ILoop {
     const prop = node.tech as BuildingProperty;
     const curLv = this.service.levels[nodeId] ?? 0;
 
-    // 1. 고유 건물 중복 체크
     if (prop.isUnique) {
       const isAlreadyBuilding = Array.from(this.activeTasks.values()).some(t => t.nodeId === nodeId);
       const isAlreadyExists = Array.from(this.buildingObjects.values()).some(b => b.property.id === nodeId);
@@ -203,13 +257,10 @@ export class BuildingManager implements ILoop {
       }
     }
 
-    // 2. 테크트리 조건 및 비용 체크
     if (curLv === 0) {
-      // 최초 건설 (해금 필요)
       const res = this.service.canLevelUp(nodeId);
       if (!res.ok) return { ok: false, reason: res.reason };
     } else {
-      // 이미 해금됨 - 반복 건설 비용 체크 (1레벨 건설 비용 기준)
       const cost = this.service.costOf(nodeId, 1);
       if (!geWallet(this.service.ctx.wallet, cost)) {
         return { ok: false, reason: "insufficient funds for construction" };
@@ -219,14 +270,11 @@ export class BuildingManager implements ILoop {
     return { ok: true };
   }
 
-  /**
-   * 건물 건설을 시작합니다.
-   */
   async startBuild(nodeId: string, pos?: THREE.Vector3): Promise<string | null> {
     const check = this.canBuild(nodeId);
     if (!check.ok) {
       console.error(`Cannot build ${nodeId}: ${check.reason}`);
-      this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, check.reason);
+      this.eventCtrl.SendEventMessage(EventTypes.Toast, check.reason);
       return null;
     }
 
@@ -236,23 +284,18 @@ export class BuildingManager implements ILoop {
     const prop = node.tech as BuildingProperty;
     const curLv = this.service.levels[nodeId] ?? 0;
 
-    // 비용 차감
     const cost = (curLv === 0) ? this.service.canLevelUp(nodeId).cost! : this.service.costOf(nodeId, 1);
     subWallet(this.service.ctx.wallet, cost);
 
-    // [최적화] 건설 중인 상태를 보여주기 위해 고유 모델을 생성하여 배치
     let constructionModel: THREE.Object3D | undefined;
     let progressMesh: THREE.Group | undefined;
 
     if (pos) {
-      // 1. 캐시된 템플릿 확인
       let template = this.constructionTemplates.get(nodeId);
       if (!template) {
         const asset = await this.loader.GetAssets(prop.assetKey);
-        // 건설용 고유 템플릿 생성
         const [model, _exist] = await asset.UniqModel(`construction_template_${nodeId}`);
         if (model) {
-          // 투명도 0.3 적용 (템플릿에 최초 1회만 수행)
           model.traverse((child) => {
             if (child instanceof THREE.Mesh) {
               if (Array.isArray(child.material)) {
@@ -278,68 +321,43 @@ export class BuildingManager implements ILoop {
       }
 
       if (template) {
-        // 템플릿을 복제하여 사용 (재질 공유)
         constructionModel = template.clone();
         constructionModel.position.copy(pos);
         constructionModel.scale.set(prop.scale, prop.scale, prop.scale);
-
-        // 건설 중인 모델이 마우스 레이캐스팅을 방해하지 않도록 설정
         constructionModel.traverse((child) => {
           child.raycast = () => { };
         });
-
         this.scene.add(constructionModel);
       }
 
-      // [추가] 게이지 링 생성 (건물 바닥에 배치)
       progressMesh = this.createProgressMesh(prop.size.width, prop.size.depth);
-
-      // 게이지 메쉬가 마우스 레이캐스팅을 방해하지 않도록 설정
       progressMesh.traverse((child) => {
         child.raycast = () => { };
       });
-
       progressMesh.position.copy(pos);
-      progressMesh.position.y += 0.5; // 지면(0)보다 약간 위에 배치하여 Z-fighting 방지
+      progressMesh.position.y += 0.5;
       this.scene.add(progressMesh);
     }
 
     const taskId = `task_${this.nextTaskId++}`;
     const task: BuildingTask = {
-      nodeId,
-      prop,
-      pos,
-      startTime: Date.now(),
-      progress: 0,
-      remainingTurns: prop.buildTurns,
-      isFinished: false,
-      constructionModel,
-      progressMesh
+      nodeId, prop, pos, startTime: Date.now(), progress: 0,
+      remainingTurns: prop.buildTurns, isFinished: false,
+      constructionModel, progressMesh
     };
 
     this.activeTasks.set(taskId, task);
     this.sendBuildingStatus();
-
     return taskId;
   }
 
-  /**
-   * [Turn-based Only] 턴을 한 단계 진행시킵니다.
-   */
   advanceTurn() {
     if (this.currentMode !== BuildingMode.Turn) return;
-
     for (const [taskId, task] of this.activeTasks.entries()) {
       if (task.isFinished) continue;
-
       task.remainingTurns--;
       task.progress = (task.prop.buildTurns - task.remainingTurns) / task.prop.buildTurns;
-
-      console.log(`Building progress: ${task.prop.name} - Remaining turns: ${task.remainingTurns}`);
-
-      if (task.remainingTurns <= 0) {
-        this.finishBuild(taskId);
-      }
+      if (task.remainingTurns <= 0) this.finishBuild(taskId);
     }
   }
 
@@ -351,27 +369,18 @@ export class BuildingManager implements ILoop {
     task.remainingTurns = 0;
     task.isFinished = true;
 
-    // 건설 중이던 임시 모델 및 게이지 제거
-    if (task.constructionModel) {
-      this.scene.remove(task.constructionModel);
-    }
-    if (task.progressMesh) {
-      this.scene.remove(task.progressMesh);
-    }
+    if (task.constructionModel) this.scene.remove(task.constructionModel);
+    if (task.progressMesh) this.scene.remove(task.progressMesh);
 
-    // 최초 건설 시에만 전역 테크 레벨을 1로 올림 (해금)
     if ((this.service.levels[task.nodeId] ?? 0) === 0) {
       this.service.addLevel(task.nodeId);
     }
 
-    // 실제 건물 오브젝트 생성
     if (task.pos) {
       try {
-        // [최적화] 캐시된 템플릿 확인
         let template = this.finishedTemplates.get(task.nodeId);
         if (!template) {
           const asset = await this.loader.GetAssets(task.prop.assetKey);
-          // 완성본용 고유 템플릿 생성
           const [model, _exist] = await asset.UniqModel(`finished_template_${task.nodeId}`);
           if (model) {
             this.finishedTemplates.set(task.nodeId, model);
@@ -380,7 +389,6 @@ export class BuildingManager implements ILoop {
         }
 
         if (template) {
-          // 템플릿을 복제하여 사용 (재질 공유)
           const model = template.clone();
           model.position.copy(task.pos);
           model.scale.set(task.prop.scale, task.prop.scale, task.prop.scale);
@@ -390,104 +398,59 @@ export class BuildingManager implements ILoop {
           const id = `building_${Date.now()}_${task.nodeId}`;
 
           switch (task.prop.type) {
-            case BuildingType.DefenseTurret:
-              buildingObj = new DefenseTurret(id, task.prop, task.pos, model);
-              break;
-            case BuildingType.Pilotable:
-              buildingObj = new PilotableBuilding(id, task.prop, task.pos, model);
-              break;
-            case BuildingType.UnitProduction:
-              buildingObj = new UnitProduction(id, task.prop, task.pos, model);
-              break;
-            case BuildingType.TechResearch:
-              buildingObj = new TechResearch(id, task.prop, task.pos, model);
-              break;
-            case BuildingType.ResourceProduction:
-              buildingObj = new ResourceProduction(id, task.prop, task.pos, model);
-              break;
-            case BuildingType.Wall:
-              buildingObj = new Wall(id, task.prop, task.pos, model);
-              break;
-            case BuildingType.Bunker:
-              buildingObj = new Bunker(id, task.prop, task.pos, model);
-              break;
+            case BuildingType.DefenseTurret: buildingObj = new DefenseTurret(id, task.prop, task.pos, model); break;
+            case BuildingType.Pilotable: buildingObj = new PilotableBuilding(id, task.prop, task.pos, model); break;
+            case BuildingType.UnitProduction: buildingObj = new UnitProduction(id, task.prop, task.pos, model); break;
+            case BuildingType.TechResearch: buildingObj = new TechResearch(id, task.prop, task.pos, model); break;
+            case BuildingType.ResourceProduction: buildingObj = new ResourceProduction(id, task.prop, task.pos, model); break;
+            case BuildingType.Wall: buildingObj = new Wall(id, task.prop, task.pos, model); break;
+            case BuildingType.Bunker: buildingObj = new Bunker(id, task.prop, task.pos, model); break;
           }
 
           if (buildingObj) {
+            buildingObj.level = 1; // 기본 레벨 1 설정
             this.buildingObjects.set(id, buildingObj);
-            this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, buildingObj.mesh, true)
+            model.userData.buildingId = id;
           }
         }
       } catch (err) {
         console.error(`Failed to create building object for ${task.nodeId}:`, err);
       }
     }
-
     this.sendBuildingStatus();
-    console.log(`Building finished: ${task.prop.name}`);
   }
 
-  getTasks() {
-    return Array.from(this.activeTasks.values());
-  }
-
-  getBuildings() {
-    return Array.from(this.buildingObjects.values());
-  }
+  getTasks() { return Array.from(this.activeTasks.values()); }
+  getBuildings() { return Array.from(this.buildingObjects.values()); }
 
   private sendBuildingStatus() {
     const buildings = Array.from(this.buildingObjects.values()).map(b => ({
-      pos: b.position,
-      width: b.property.size.width,
-      depth: b.property.size.depth
+      pos: b.position, width: b.property.size.width, depth: b.property.size.depth
     }));
-
     const pending = Array.from(this.activeTasks.values()).filter(t => !t.isFinished && t.pos).map(t => ({
-      pos: t.pos!,
-      width: t.prop.size.width,
-      depth: t.prop.size.depth
+      pos: t.pos!, width: t.prop.size.width, depth: t.prop.size.depth
     }));
-
     this.eventCtrl.SendEventMessage(EventTypes.ResponseBuilding, [...buildings, ...pending]);
   }
 
-  /**
-   * 게이지 링 메쉬 생성 (배경 + 진행링)
-   */
   private createProgressMesh(width: number, depth: number): THREE.Group {
     const group = new THREE.Group();
-    // 건물 크기에 따른 반지름 결정 (그리드 단위 기반)
-    const radius = Math.max(width, depth) * 3.0;
+    const radius = Math.max(width, depth) * 2.0;
     const innerRadius = radius * 0.9;
     const outerRadius = radius;
 
-    // 1. 배경 링 (회색 반투명)
     const bgGeom = new THREE.RingGeometry(innerRadius, outerRadius, 64);
     bgGeom.rotateX(-Math.PI / 2);
-    const bgMat = new THREE.MeshBasicMaterial({
-      color: 0x222222,
-      transparent: true,
-      opacity: 0.5,
-      side: THREE.DoubleSide
-    });
-    const bg = new THREE.Mesh(bgGeom, bgMat);
-    group.add(bg);
+    const bgMat = new THREE.MeshBasicMaterial({ color: 0x222222, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+    group.add(new THREE.Mesh(bgGeom, bgMat));
 
-    // 2. 진행 링 (초록색)
-    const barMat = new THREE.MeshBasicMaterial({
-      color: 0x00ff00,
-      transparent: true,
-      opacity: 0.8,
-      side: THREE.DoubleSide
-    });
+    const barMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
     const bar = new THREE.Mesh(new THREE.BufferGeometry(), barMat);
     bar.name = 'ring_progress';
-    bar.position.y += 0.05;
+    bar.position.y += 0.01;
     group.add(bar);
 
-    // 카메라 관련 이벤트(Billboarding) 제거 (바닥에 고정되므로 불필요)
     group.userData = { innerRadius, outerRadius };
-
     return group;
   }
 }
