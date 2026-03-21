@@ -2,7 +2,6 @@ import * as THREE from "three";
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { TechTreeService } from "@Glibs/techtree/techtreeservice";
 import { BuildingMode, BuildingProperty } from "./buildingdefs";
-import { geWallet, subWallet } from "@Glibs/inventory/wallet";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { IBuildingObject, BuildingType } from "./ibuildingobj";
 import { Loader } from "@Glibs/loader/loader";
@@ -274,7 +273,7 @@ export class BuildingManager implements ILoop {
       if (!res.ok) return { ok: false, reason: res.reason };
     } else {
       const cost = this.service.costOf(nodeId, 1);
-      if (!geWallet(this.service.ctx.wallet, cost)) {
+      if (!this.service.ctx.wallet.hasEnough(cost)) {
         return { ok: false, reason: "insufficient funds for construction" };
       }
     }
@@ -297,7 +296,7 @@ export class BuildingManager implements ILoop {
     const curLv = this.service.levels[nodeId] ?? 0;
 
     const cost = (curLv === 0) ? this.service.canLevelUp(nodeId).cost! : this.service.costOf(nodeId, 1);
-    subWallet(this.service.ctx.wallet, cost);
+    this.service.ctx.wallet.subtractMany(cost);
 
     let constructionModel: THREE.Object3D | undefined;
     let progressMesh: THREE.Group | undefined;

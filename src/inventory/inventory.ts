@@ -9,6 +9,8 @@ import { Bind } from "@Glibs/types/assettypes";
 import { ItemFactory } from "./itemfactory";
 
 
+import { CurrencyType, WalletManager } from "./wallet";
+
 export class Inventory implements IInventory {
     data: InvenData = {
         bodySlot: [],
@@ -20,6 +22,7 @@ export class Inventory implements IInventory {
     constructor(
         private event: IEventController,
         private loader: Loader,
+        private wallet: WalletManager,
         { maxSlot = 15 } = {},
     ) {
         this.MaxSlot = maxSlot

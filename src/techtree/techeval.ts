@@ -1,10 +1,10 @@
-import { Wallet } from "@Glibs/inventory/wallet";
+import { CurrencyType, WalletManager } from "@Glibs/inventory/wallet";
 import { Requirement, Tag, TechId } from "./techtreedefs";
 import { TechIndex } from "./techindex";
 
 export type PlayerContext = {
   playerLv: number;
-  wallet: Wallet;
+  wallet: WalletManager;
   tags: Set<Tag>;
   quests: Map<string, "done" | "in-progress" | "not-started">;
   stats: Record<string, number>;
@@ -48,7 +48,7 @@ export class RequirementEvaluator implements IRequirementEvaluator {
       case "playerLv":
         return env.ctx.playerLv >= req.atLeast;
       case "points":
-        return env.ctx.wallet.points >= req.atLeast;
+        return env.ctx.wallet.getAmount(CurrencyType.Points) >= req.atLeast;
       case "quest":
         return (env.ctx.quests.get(req.id) ?? "not-started") === req.status;
       case "stat":

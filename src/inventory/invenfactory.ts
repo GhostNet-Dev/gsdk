@@ -3,14 +3,18 @@ import { Inventory } from "./inventory";
 import { Item } from "./items/item";
 import IEventController from "@Glibs/interface/ievent";
 import { itemDefs } from "./items/itemdefs";
+import { WalletManager } from "./wallet";
 
 
 export class InvenFactory {
-    inven = new Inventory(this.event, this.loader)
-    invenHouse = new Inventory(this.event, this.loader)
+    inven: Inventory;
+    invenHouse: Inventory;
 
     get ItemDb() { return itemDefs }
-    constructor(private loader: Loader, private event: IEventController) { }
+    constructor(private loader: Loader, private event: IEventController, private wallet: WalletManager) {
+        this.inven = new Inventory(this.event, this.loader, this.wallet);
+        this.invenHouse = new Inventory(this.event, this.loader, this.wallet);
+    }
 
     LoadItems(load: Inventory) {
         this.invenHouse = load

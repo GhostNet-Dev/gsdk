@@ -86,7 +86,7 @@ export class TechTreeService {
       // 3. 비용(Cost) 체크
       const nextLv = curLv + 1;
       const cost = this.costPolicy.nextCost(node, nextLv);
-      if (!geWallet(this.ctx.wallet, cost)) {
+      if (!this.ctx.wallet.hasEnough(cost)) {
           return { ok: false, reason: `insufficient funds`, cost };
       }
 
@@ -99,7 +99,7 @@ export class TechTreeService {
   levelUp(nodeId: TechId): boolean {
     const res = this.canLevelUp(nodeId);
     if (!res.ok) return false;
-    subWallet(this.ctx.wallet, res.cost!);
+    this.ctx.wallet.subtractMany(res.cost!);
     this.levels[nodeId] = res.nextLv;
     return true;
   }
@@ -124,9 +124,7 @@ export class TechTreeService {
       (lv) => this.costPolicy.nextCost(node, lv)
     );
     
-    for (const k of WALLET_KEYS) {
-        this.ctx.wallet[k] = (this.ctx.wallet[k] ?? 0) + (give[k] ?? 0);
-    }
+    this.ctx.wallet.addMany(give);
     this.levels[nodeId] = targetLv;
     return true;
   }

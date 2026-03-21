@@ -9,6 +9,7 @@ import { ActionProperty } from "@Glibs/types/actiontypes";
 import { BuildingManager } from "@Glibs/interactives/building/buildingmanager";
 import { BuildingMode } from "@Glibs/interactives/building/buildingdefs";
 import { BuildingInfoBar } from "@Glibs/ux/dialog/buildinginfobar";
+import { CurrencyType } from "@Glibs/inventory/wallet";
 
 type LearnedSkillMessage = {
     nodeId: string;
@@ -64,10 +65,10 @@ export default class GameManager {
     }
     public addPoints(amount: number) {
         // 1. 직접 지갑의 포인트를 증가시킵니다.
-        // Wallet 인터페이스 구조에 따라 ctx.wallet.points를 수정합니다.
-        this.service.ctx.wallet.points += amount;
+        // WalletManager를 사용하여 포인트를 추가합니다.
+        this.service.ctx.wallet.add(CurrencyType.Points, amount);
     
-        console.log(`포인트가 추가되었습니다. 현재 포인트: ${this.service.ctx.wallet.points}`);
+        console.log(`포인트가 추가되었습니다. 현재 포인트: ${this.service.ctx.wallet.getAmount(CurrencyType.Points)}`);
     }
 
     // =========================================================================
@@ -93,22 +94,21 @@ export default class GameManager {
                 };
             });
     }
+
     /**
      * [New] 재화(포인트, 골드 등)를 추가합니다.
      * @param amount 추가할 양
      * @param type 재화 타입 (기본값: 'points')
      */
-    addResource(amount: number, type: "points" | "gold" = "points") {
+    addResource(amount: number, type: CurrencyType = CurrencyType.Points) {
         const wallet = this.service.ctx.wallet;
         
-        // 기존 값이 없으면 0으로 초기화 후 더하기
-        const current = wallet[type] ?? 0;
-        wallet[type] = current + amount;
+        wallet.add(type, amount);
 
-        console.log(`[Resource] ${type} +${amount} (Total: ${wallet[type]})`);
+        console.log(`[Resource] ${type} +${amount} (Total: ${wallet.getAmount(type)})`);
         
         // (선택) UI 갱신을 위한 이벤트 발송
-        // this.eventCtrl.SendEventMessage(EventTypes.UpdateResource, wallet);
+        // this.eventCtrl.SendEventMessage(EventTypes.UpdateResource, wallet.getWallet());
     }
 
     // =========================================================================

@@ -1,3 +1,4 @@
+import { CostVector, CurrencyType } from "@Glibs/inventory/wallet";
 import { BuffProperty, buffDefs } from "@Glibs/magical/buff/buffdefs";
 import { ActionId, ActionProperty, actionDefs } from "@Glibs/types/actiontypes";
 import { BuildingProperty, buildingDefs } from "@Glibs/interactives/building/buildingdefs";
@@ -17,7 +18,7 @@ export const RarityConfig: Record<Rarity, { rank: number; color: string; label: 
 
 export interface LevelCost {
     lv: number;
-    cost?: Partial<Record<"points" | "gold" | "materials", number>>;
+    cost?: CostVector;
 }
 
 export type TechTreeTypes = BuffProperty | ActionProperty | BuildingProperty;
