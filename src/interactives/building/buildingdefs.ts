@@ -292,7 +292,8 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         buildTime: 10,
         buildTurns: 2,
         size: { width: 1, depth: 1 },
-        desc: "청결한 물을 공급합니다.",
+        buildRange: 8, // 지휘 본부보다 좁은 반경 8칸 범위 제공 (파일런 역할)
+        desc: "청결한 물을 공급하며 주변에 건물을 지을 수 있는 영역을 제공합니다.",
         commands: [
             { id: "collect", name: "수급", icon: "💧", type: "action", shortcut: "W" }
         ]

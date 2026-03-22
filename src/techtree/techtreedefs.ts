@@ -103,7 +103,7 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         id: "well",
         kind: "building",
         name: "우물",
-        desc: "청결한 물을 공급합니다.",
+        desc: "청결한 물을 공급하며 주변에 건물을 지을 수 있는 건설 영역을 제공합니다.",
         icon: "💧",
         rarity: "common",
         tags: ["resource"],

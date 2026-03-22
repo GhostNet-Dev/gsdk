@@ -275,19 +275,12 @@ export default class CustomGround implements IWorldMapObject {
             return;
         }
 
-        // [추가] 범위 밖일 경우 건설 요청 차단
-        if (!this.checkBuildRange(worldPos)) {
-            // nodeId를 키 또는 id로 검색
-            let property = this.lastNodeId ? (buildingDefs as any)[this.lastNodeId] : null;
-            if (!property && this.lastNodeId) {
-                property = Object.values(buildingDefs).find(p => p.id === this.lastNodeId);
-            }
-
-            if (property && !property.buildRange) {
-                console.warn("🚫 [CustomGround] 건설 지원 범위 밖입니다. 건설 불가!");
-                this.eventCtrl.SendEventMessage(EventTypes.Toast, "건설 지원 범위 밖입니다.");
-                return;
-            }
+        // [추가] 범위 밖일 경우 건설 요청 차단 (지휘 본부 제외)
+        const isBaseBuilding = this.lastNodeId === 'cc' || this.lastNodeId === 'CommandCenter';
+        if (!isBaseBuilding && !this.checkBuildRange(worldPos)) {
+            console.warn("🚫 [CustomGround] 건설 지원 범위 밖입니다. 건설 불가!");
+            this.eventCtrl.SendEventMessage(EventTypes.Toast, "건설 지원 범위 밖입니다.");
+            return;
         }
 
         console.log("🏗️ [CustomGround] 하이라이트 그리드 클릭: 건설 요청");
@@ -1164,12 +1157,13 @@ export default class CustomGround implements IWorldMapObject {
     const isOccupied = this.checkOccupancy(worldPosCenter, width, depth);
     
     // [추가] 지원 범위(Pylon과 같은) 내인지 확인
-    // 최초 건물(예: CommandCenter)이거나 범위 제공 건물인 경우 건설 제한 완화 가능
+    // 최초 건물(지휘 본부)만 건설 제한에서 완전히 자유로움
     const isInRange = this.checkBuildRange(worldPosCenter);
+    const isBaseBuilding = nodeId === 'cc' || nodeId === 'CommandCenter';
     
     // 1순위: 점유(빨간색), 2순위: 범위 밖(빨간색), 3순위: 정상(기본 초록색)
     let finalColor = color;
-    if (isOccupied || (!isInRange && property && !property.buildRange)) {
+    if (isOccupied || (!isInRange && !isBaseBuilding)) {
         finalColor = new THREE.Color(0xff0000); // 점유됨 또는 범위 밖: 빨강
     }
 
