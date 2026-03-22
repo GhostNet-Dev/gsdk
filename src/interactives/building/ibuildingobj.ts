@@ -38,6 +38,11 @@ export interface IBuildingObject {
     update(delta: number): void;
 
     /**
+     * 턴 진행 로직
+     */
+    advanceTurn(): void;
+
+    /**
      * 상호작용 (탑승, 생산 메뉴 열기 등)
      */
     onInteract?(): void;

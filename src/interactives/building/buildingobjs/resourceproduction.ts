@@ -24,34 +24,42 @@ export class ResourceProduction extends BaseBuilding {
         
         this.productionTimer += delta;
         if (this.productionTimer >= this.productionInterval) {
-            this.collectedAmount += 10 * this.level;
+            const amount = 10 * this.level;
+            this.eventCtrl.SendEventMessage(this.getResourceType(), amount);
             this.productionTimer = 0;
         }
     }
 
-    private collect() {
-        if (this.collectedAmount > 0) {
-            this.eventCtrl.SendEventMessage(EventTypes.Gold, this.collectedAmount);
-            console.log(`[Resource] Collected ${this.collectedAmount} gold.`);
-            this.collectedAmount = 0;
-        }
+    protected onAdvanceTurn(): void {
+        if (this.isUpgrading) return;
+
+        const amount = 20 * this.level;
+        this.eventCtrl.SendEventMessage(this.getResourceType(), amount);
+    }
+
+    private getResourceType(): string {
+        const id = this.property.id.toLowerCase();
+        if (id.includes('wood') || id.includes('lumber')) return EventTypes.Wood;
+        if (id.includes('well') || id.includes('water')) return EventTypes.Water;
+        if (id.includes('windmill')) return EventTypes.Electric;
+        if (id.includes('watermill') || id.includes('food')) return EventTypes.Food;
+        return EventTypes.Gold;
     }
 
     protected getSpecificCommands(): ICommand[] {
-        return (this.property.commands || []).map(t => ({
+        return (this.property.commands || []).filter(t => t.id !== "collect").map(t => ({
             ...t,
             onClick: () => {
-                if (t.id === "collect") this.collect();
                 if (t.type === "research" && t.targetId) {
                     this.eventCtrl.SendEventMessage(EventTypes.RequestUpgrade, t.targetId);
                 }
             },
-            isDisabled: () => this.isUpgrading || (t.id === "collect" && this.collectedAmount <= 0)
+            isDisabled: () => this.isUpgrading
         }));
     }
 
     protected getStatusText(): string {
-        return `미수집 자원: ${this.collectedAmount}`;
+        return "자원 생산 중";
     }
 
     protected getSpecificProgress(): number | undefined {

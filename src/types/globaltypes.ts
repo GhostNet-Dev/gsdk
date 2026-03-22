@@ -58,7 +58,12 @@ export const EventTypes = {
 
     //reward
     Exp: "exp",
+    People: "people",
     Gold: "gold",
+    Wood: "wood",
+    Water: "water",
+    Electric: "electric",
+    Food: "food",
     LevelUp: "levelup",
     AddSkillPoint: "addskillp",
 

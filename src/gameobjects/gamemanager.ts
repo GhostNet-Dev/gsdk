@@ -29,7 +29,7 @@ export default class GameManager {
     constructor(
         private scene: THREE.Scene,
         private eventCtrl: IEventController,
-        private service: TechTreeService,
+        public service: TechTreeService,
         private camera: THREE.Camera, // [추가] 카메라 주입
     ) { 
         this.buildingManager = new BuildingManager(this.scene, this.eventCtrl, this.service, this.camera);
@@ -37,7 +37,25 @@ export default class GameManager {
         
         // [수정] 플레이어 레벨업 이벤트 (건물 업그레이드와 분리됨)
         this.eventCtrl.RegisterEventListener(EventTypes.LevelUp, () => {
-            this.addResource(1)
+            this.addResource(1, CurrencyType.Exp);
+        })
+        this.eventCtrl.RegisterEventListener(EventTypes.People, (amount: number) => {
+            this.addResource(amount, CurrencyType.People);
+        })
+        this.eventCtrl.RegisterEventListener(EventTypes.Gold, (amount: number) => {
+            this.addResource(amount, CurrencyType.Gold);
+        })
+        this.eventCtrl.RegisterEventListener(EventTypes.Wood, (amount: number) => {
+            this.addResource(amount, CurrencyType.Wood);
+        })
+        this.eventCtrl.RegisterEventListener(EventTypes.Water, (amount: number) => {
+            this.addResource(amount, CurrencyType.Water);
+        })
+        this.eventCtrl.RegisterEventListener(EventTypes.Electric, (amount: number) => {
+            this.addResource(amount, CurrencyType.Electric);
+        })
+        this.eventCtrl.RegisterEventListener(EventTypes.Food, (amount: number) => {
+            this.addResource(amount, CurrencyType.Food);
         })
         this.eventCtrl.RegisterEventListener(EventTypes.AddSkillPoint, (point: number) => {
             this.addPoints(point)

@@ -226,17 +226,7 @@ export class BuildingManager implements ILoop {
         const elapsed = (Date.now() - task.startTime) / 1000;
         task.progress = Math.min(elapsed / task.prop.buildTime, 1.0);
 
-        if (task.progressMesh) {
-          const ring = task.progressMesh.getObjectByName('ring_progress') as THREE.Mesh;
-          if (ring) {
-            const { innerRadius, outerRadius } = task.progressMesh.userData;
-            ring.geometry.dispose();
-            const thetaLength = task.progress * Math.PI * 2;
-            const newGeom = new THREE.RingGeometry(innerRadius, outerRadius, 64, 1, Math.PI / 2, -thetaLength);
-            newGeom.rotateX(-Math.PI / 2);
-            ring.geometry = newGeom;
-          }
-        }
+        this.updateProgressVisual(task);
 
         if (task.progress >= 1.0) {
           this.finishBuild(taskId);
@@ -251,6 +241,19 @@ export class BuildingManager implements ILoop {
     // 선택된 건물의 UI 실시간 업데이트
     if (this.selectedBuilding) {
         this.updateUI();
+    }
+  }
+
+  private updateProgressVisual(task: BuildingTask) {
+    if (!task.progressMesh) return;
+    const ring = task.progressMesh.getObjectByName('ring_progress') as THREE.Mesh;
+    if (ring) {
+      const { innerRadius, outerRadius } = task.progressMesh.userData;
+      ring.geometry.dispose();
+      const thetaLength = task.progress * Math.PI * 2;
+      const newGeom = new THREE.RingGeometry(innerRadius, outerRadius, 64, 1, Math.PI / 2, -thetaLength);
+      newGeom.rotateX(-Math.PI / 2);
+      ring.geometry = newGeom;
     }
   }
 
@@ -378,7 +381,14 @@ export class BuildingManager implements ILoop {
       if (task.isFinished) continue;
       task.remainingTurns--;
       task.progress = (task.prop.buildTurns - task.remainingTurns) / task.prop.buildTurns;
+      
+      this.updateProgressVisual(task);
+
       if (task.remainingTurns <= 0) this.finishBuild(taskId);
+    }
+
+    for (const building of this.buildingObjects.values()) {
+      building.advanceTurn();
     }
   }
 
@@ -432,6 +442,11 @@ export class BuildingManager implements ILoop {
             buildingObj.level = 1; // 기본 레벨 1 설정
             this.buildingObjects.set(id, buildingObj);
             model.userData.buildingId = id;
+
+            // [추가] 인구수 공급 반영
+            if (task.prop.providesPeople) {
+              this.eventCtrl.SendEventMessage(EventTypes.People, task.prop.providesPeople);
+            }
           }
         }
       } catch (err) {

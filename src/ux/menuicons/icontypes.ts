@@ -33,6 +33,12 @@ export enum Icons {
 
     // food
     Wheat,
+    Apple,
+
+    // Nature / Resources
+    Wood,
+    Water,
+    Electric,
 
     Earth,
     Planet,
@@ -49,7 +55,6 @@ export enum Icons {
     BlueBook,
 
     Stats,
-    Apple,
     Pause,
     ShoppingBag,
 

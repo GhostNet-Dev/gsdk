@@ -41,9 +41,28 @@ export abstract class BaseBuilding implements IBuildingObject {
     }
 
     /**
+     * 턴 진행 로직
+     */
+    advanceTurn(): void {
+        if (this.isUpgrading) {
+            // 턴제 모드에서는 턴당 1씩 감소 (또는 설정된 규칙에 따름)
+            this.upgradeTimer += 1; 
+            if (this.upgradeTimer >= this.upgradeTime) {
+                this.completeUpgrade();
+            }
+        }
+        this.onAdvanceTurn();
+    }
+
+    /**
      * 자식 클래스에서 구현할 개별 업데이트 로직
      */
-    protected abstract onUpdate(delta: number): void;
+    protected onUpdate(delta: number): void { }
+
+    /**
+     * 자식 클래스에서 구현할 개별 턴 로직
+     */
+    protected onAdvanceTurn(): void { }
 
     /**
      * 업그레이드 시작 (비용은 테크트리 서비스와 연계 필요)

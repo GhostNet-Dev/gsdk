@@ -26,6 +26,7 @@ export interface BuildingProperty {
     buildTime: number; // seconds
     buildTurns: number; // number of turns
     size: { width: number; depth: number };
+    providesPeople?: number; // 제공하는 인구수 (서플라이)
     buildRange?: number; // 파일런처럼 건물을 지을 수 있는 범위를 제공 (그리드 단위)
     provides?: string[];
     desc?: string;
@@ -44,7 +45,9 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         buildTime: 10,
         buildTurns: 10,
         size: { width: 5, depth: 5 },
+        providesPeople: 15,
         buildRange: 15, // 15칸 범위 제공
+
         provides: ["scv"],
         desc: "진영의 핵심 거점입니다.",
         commands: [
@@ -62,9 +65,9 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         buildTime: 15,
         buildTurns: 3,
         size: { width: 2, depth: 2 },
+        providesPeople: 8,
         desc: "인구수를 늘려주는 주거 시설입니다.",
         commands: [
-            { id: "collect", name: "세금 징수", icon: "💰", type: "action", shortcut: "C" }
         ]
     },
     HomeB: {
@@ -78,9 +81,9 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         buildTime: 20,
         buildTurns: 4,
         size: { width: 3, depth: 3 },
+        providesPeople: 12,
         desc: "더 많은 인구를 수용하는 주택입니다.",
         commands: [
-            { id: "collect", name: "세금 징수", icon: "💰", type: "action", shortcut: "C" }
         ]
     },
     Barracks: {
@@ -92,7 +95,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 1200,
         scale: 10,
         buildTime: 25,
-        buildTurns: 5,
+        buildTurns: 2,
         size: { width: 3, depth: 3 },
         provides: ["marine", "firebat"],
         desc: "지상 보병 유닛을 훈련합니다.",
@@ -109,7 +112,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 1000,
         scale: 10,
         buildTime: 20,
-        buildTurns: 5,
+        buildTurns: 3,
         size: { width: 3, depth: 3 },
         provides: ["archer"],
         desc: "원거리 유닛을 훈련합니다.",
@@ -163,7 +166,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         size: { width: 3, depth: 3 },
         desc: "나무 자원을 가공하여 생산합니다.",
         commands: [
-            { id: "collect", name: "목재 수집", icon: "🪵", type: "action", shortcut: "C" }
+{ id: "collect", name: "목재 수집", icon: "🪵", type: "action", shortcut: "C" }
         ]
     },
     Market: {
@@ -278,7 +281,6 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         size: { width: 3, depth: 3 },
         desc: "식량 생산 효율을 높여줍니다.",
         commands: [
-            { id: "collect", name: "식량 생산", icon: "🌾", type: "action", shortcut: "F" }
         ]
     },
     Well: {
@@ -295,7 +297,6 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         buildRange: 8, // 지휘 본부보다 좁은 반경 8칸 범위 제공 (파일런 역할)
         desc: "청결한 물을 공급하며 주변에 건물을 지을 수 있는 영역을 제공합니다.",
         commands: [
-            { id: "collect", name: "수급", icon: "💧", type: "action", shortcut: "W" }
         ]
     },
     Windmill: {
@@ -311,7 +312,6 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         size: { width: 3, depth: 3 },
         desc: "곡물을 가공하여 자원을 생산합니다.",
         commands: [
-            { id: "collect", name: "곡물 생산", icon: "🥨", type: "action", shortcut: "G" }
         ]
     }
 };

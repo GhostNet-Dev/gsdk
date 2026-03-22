@@ -3,7 +3,12 @@ export enum CurrencyType {
   Gold = "gold",
   Materials = "materials",
   Gems = "gems",
-  Exp = "exp"
+  Exp = "exp",
+  People = "people",
+  Wood = "wood",
+  Water = "water",
+  Electric = "electric",
+  Food = "food"
 }
 
 export type Wallet = Record<CurrencyType, number>;
