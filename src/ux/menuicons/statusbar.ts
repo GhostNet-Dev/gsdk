@@ -12,7 +12,7 @@ export default class StatusBar extends GUX {
     lbar?: LolliBar
 
     constructor({ type = "hp", max = 0, cur = 50, bgOpacity = "0.5",
-        icon = Icons.Save, plusIcon = false, iconSize = "", height = "100%",
+        icon = Icons.Save as Icons | string, plusIcon = false, iconSize = "", height = "100%",
         lolliBar = false, fontFamily = "",
         click = () => { }
     } = {}) {
@@ -25,10 +25,24 @@ export default class StatusBar extends GUX {
         this.Dom.setAttribute("role", "presentation")
         
         // Icon set
-        const iconDom = document.createElement('img') as HTMLImageElement
-        iconDom.src = this.icons.get(icon)!
-        iconDom.classList.add("h-100")
-        if (iconSize.length > 0) iconDom.style.width = iconSize
+        let iconDom: HTMLElement;
+        const iconUrl = typeof icon === 'number' ? this.icons.get(icon as Icons) : undefined;
+
+        if (iconUrl) {
+            const img = document.createElement('img') as HTMLImageElement;
+            img.src = iconUrl;
+            img.classList.add("h-100");
+            if (iconSize.length > 0) img.style.width = iconSize;
+            iconDom = img;
+        } else {
+            const span = document.createElement('span');
+            span.innerText = icon as string;
+            span.classList.add("h-100", "d-flex", "align-items-center", "justify-content-center", "pe-1", "ps-1");
+            if (iconSize.length > 0) span.style.width = iconSize;
+            else span.style.width = "1.5rem";
+            span.style.fontSize = "1rem";
+            iconDom = span;
+        }
         const content: HTMLElement[] = [iconDom]
 
         // value set
