@@ -8,6 +8,7 @@ import * as THREE from 'three';
 
 type BuildingViewProps = {
     buildings: TechTreeDefBase[];
+    allBuildingDefs: Record<string, BuildingProperty>; // 주입받을 모든 건물 정의
     canLevelUp: (id: string) => { ok: boolean; reason?: string };
     onBuild: (id: string, pos: THREE.Vector3) => void;
 };
@@ -97,6 +98,7 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
     private props!: BuildingViewProps;
     private tip!: TooltipComponent;
     private selectedId: string | null = null;
+    private displayNodes: TechTreeDefBase[] = [];
     
     // 배치 관련 상태
     private isPlacing = false;
@@ -109,6 +111,9 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
         this.shell = ctx.shell;
         this.tip = new TooltipComponent(this.shell.sr);
 
+        // [추가] 주입된 buildingDefs를 기반으로 출력용 노드 리스트 생성
+        this.displayNodes = this.prepareDisplayNodes();
+
         ctx.render.setTitle(this.shell, '건설 — 기지 확장');
         ctx.render.setWide(this.shell, true);
         ctx.render.ensureScopedCSS(this.shell.sr, CSS_BUILDING, 'view:building');
@@ -116,6 +121,34 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
         this.render();
         document.addEventListener('pointerdown', this.onGlobalDown, true);
         this.ctx.events?.RegisterEventListener(EventTypes.GridArrowClick, this.onArrowClick);
+    }
+
+    /**
+     * 주입된 buildingDefs를 TechTreeDefBase 형식으로 변환하여 목록 생성
+     */
+    private prepareDisplayNodes(): TechTreeDefBase[] {
+        const { buildings, allBuildingDefs } = this.props;
+        
+        // 1. 이미 테크트리에 정의된 건물들을 먼저 가져옵니다.
+        const result: TechTreeDefBase[] = [...buildings];
+        const existingIds = new Set(result.map(b => b.id)); // tech.id 대신 b.id 사용
+
+        // 2. allBuildingDefs 중 테크트리에 없는 건물을 추가합니다.
+        Object.entries(allBuildingDefs).forEach(([key, prop]) => {
+            if (!existingIds.has(prop.id)) {
+                result.push({
+                    id: prop.id,
+                    kind: 'building',
+                    name: prop.name,
+                    desc: prop.desc || '건물 설명이 없습니다.',
+                    icon: '🏗️',
+                    tech: prop,
+                    cost: [{ lv: 1 }] // 기본 비용 정보
+                });
+            }
+        });
+
+        return result;
     }
 
     private onArrowClick = (data: { dir: string, delta: THREE.Vector3 }) => {
@@ -143,7 +176,7 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
         const grid = createEl(doc, 'div');
         grid.className = 'gnx-build-grid';
 
-        this.props.buildings.forEach(node => {
+        this.displayNodes.forEach(node => {
             const check = this.props.canLevelUp(node.id);
             const isEnabled = check.ok;
 
@@ -221,7 +254,7 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
         const doc = (this.shell.sr instanceof ShadowRoot) ? this.shell.sr : document;
         const slots = doc.querySelectorAll('.gnx-build-slot');
         slots.forEach((el: any, i: number) => {
-            const node = this.props.buildings[i];
+            const node = this.displayNodes[i];
             el.setAttribute('data-selected', String(this.selectedId === node.id));
         });
     }
@@ -237,7 +270,7 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
             const req = reason.split(': ')[1] || '';
             if (req.includes('has(')) {
                 const targetId = req.match(/has\(([^)]+)\)/)?.[1];
-                const targetNode = this.props.buildings.find(b => b.id === targetId);
+                const targetNode = this.displayNodes.find(b => b.id === targetId);
                 reasonText = `선행 건물 필요: ${targetNode?.name || targetId}`;
             } else {
                 reasonText = `요구 조건 미달: ${req}`;

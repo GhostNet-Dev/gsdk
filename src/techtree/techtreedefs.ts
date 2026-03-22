@@ -100,6 +100,42 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tech: buildingDefs.CommandCenter
     },
     {
+        id: "well",
+        kind: "building",
+        name: "우물",
+        desc: "청결한 물을 공급합니다.",
+        icon: "💧",
+        rarity: "common",
+        tags: ["resource"],
+        requires: [{ type: "has", id: "cc", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 30 } }],
+        tech: buildingDefs.Well
+    },
+    {
+        id: "lumbermill",
+        kind: "building",
+        name: "제재소",
+        desc: "나무 자원을 가공하여 생산합니다.",
+        icon: "🪵",
+        rarity: "common",
+        tags: ["resource"],
+        requires: [{ type: "has", id: "cc", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 80 } }],
+        tech: buildingDefs.LumberMill
+    },
+    {
+        id: "mine",
+        kind: "building",
+        name: "광산",
+        desc: "광물 자원을 채굴합니다.",
+        icon: "💎",
+        rarity: "common",
+        tags: ["resource"],
+        requires: [{ type: "has", id: "cc", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 120 } }],
+        tech: buildingDefs.Mine
+    },
+    {
         id: "supply",
         kind: "building",
         name: "보급고",
@@ -110,6 +146,54 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         requires: [{ type: "has", id: "cc", minLv: 1 }],
         cost: [{ lv: 1, cost: { gold: 50 } }],
         tech: buildingDefs.HomeA
+    },
+    {
+        id: "home_b",
+        kind: "building",
+        name: "고급 주택",
+        desc: "더 많은 인구를 수용하는 주택입니다.",
+        icon: "🏡",
+        rarity: "uncommon",
+        tags: ["supply"],
+        requires: [{ type: "has", id: "supply", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 150 } }],
+        tech: buildingDefs.HomeB
+    },
+    {
+        id: "watermill",
+        kind: "building",
+        name: "물레방아",
+        desc: "식량 생산 효율을 높여줍니다.",
+        icon: "⚙️",
+        rarity: "uncommon",
+        tags: ["resource"],
+        requires: [{ type: "has", id: "well", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 100 } }],
+        tech: buildingDefs.Watermill
+    },
+    {
+        id: "windmill",
+        kind: "building",
+        name: "풍차",
+        desc: "곡물을 가공하여 자원을 생산합니다.",
+        icon: "🥨",
+        rarity: "uncommon",
+        tags: ["resource"],
+        requires: [{ type: "has", id: "watermill", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 180 } }],
+        tech: buildingDefs.Windmill
+    },
+    {
+        id: "market",
+        kind: "building",
+        name: "시장",
+        desc: "골드 자원을 생산하는 상업 중심지입니다.",
+        icon: "💰",
+        rarity: "uncommon",
+        tags: ["economy"],
+        requires: [{ type: "has", id: "mine", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 200 } }],
+        tech: buildingDefs.Market
     },
     {
         id: "barracks",
@@ -124,6 +208,18 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tech: buildingDefs.Barracks
     },
     {
+        id: "archery",
+        kind: "building",
+        name: "궁술 훈련장",
+        desc: "원거리 유닛을 훈련합니다.",
+        icon: "🏹",
+        rarity: "uncommon",
+        tags: ["production"],
+        requires: [{ type: "has", id: "barracks", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 180 } }],
+        tech: buildingDefs.ArcheryRange
+    },
+    {
         id: "ebay",
         kind: "building",
         name: "공학 연구소",
@@ -134,6 +230,66 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         requires: [{ type: "has", id: "barracks", minLv: 1 }],
         cost: [{ lv: 1, cost: { gold: 200 } }],
         tech: buildingDefs.Blacksmith
+    },
+    {
+        id: "church",
+        kind: "building",
+        name: "성당",
+        desc: "성스러운 기술을 연구합니다.",
+        icon: "⛪",
+        rarity: "rare",
+        tags: ["research"],
+        requires: [{ type: "has", id: "ebay", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 300 } }],
+        tech: buildingDefs.Church
+    },
+    {
+        id: "tavern",
+        kind: "building",
+        name: "여관",
+        desc: "영웅이나 특수 유닛을 고용합니다.",
+        icon: "🍺",
+        rarity: "rare",
+        tags: ["production"],
+        requires: [{ type: "has", id: "ebay", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 250 } }],
+        tech: buildingDefs.Tavern
+    },
+    {
+        id: "tower_a",
+        kind: "building",
+        name: "경비탑",
+        desc: "화살로 적을 공격하는 방어 시설입니다.",
+        icon: "🏹",
+        rarity: "common",
+        tags: ["defense"],
+        requires: [{ type: "has", id: "barracks", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 120 } }],
+        tech: buildingDefs.TowerA
+    },
+    {
+        id: "tower_b",
+        kind: "building",
+        name: "파수탑",
+        desc: "더 높은 체력을 가진 방어 탑입니다.",
+        icon: "🛡️",
+        rarity: "uncommon",
+        tags: ["defense"],
+        requires: [{ type: "has", id: "tower_a", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 200 } }],
+        tech: buildingDefs.TowerB
+    },
+    {
+        id: "tower_catapult",
+        kind: "building",
+        name: "투석기 탑",
+        desc: "강력한 바위를 던져 광역 피해를 줍니다.",
+        icon: "☄️",
+        rarity: "rare",
+        tags: ["defense"],
+        requires: [{ type: "has", id: "tower_b", minLv: 1 }],
+        cost: [{ lv: 1, cost: { gold: 350 } }],
+        tech: buildingDefs.TowerCatapult
     },
     {
         id: "infantry_atk",

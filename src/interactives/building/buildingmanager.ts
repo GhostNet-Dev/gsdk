@@ -264,22 +264,22 @@ export class BuildingManager implements ILoop {
     const prop = node.tech as BuildingProperty;
     const curLv = this.service.levels[nodeId] ?? 0;
 
+    // 1. Unique 건물 중복 체크 (월드에 이미 존재하거나 건설 중인지 확인)
     if (prop.isUnique) {
       const isAlreadyBuilding = Array.from(this.activeTasks.values()).some(t => t.nodeId === nodeId);
-      const isAlreadyExists = Array.from(this.buildingObjects.values()).some(b => b.property.id === nodeId);
+      const isAlreadyExists = Array.from(this.buildingObjects.values()).some(b => b.property.id === prop.id);
       if (isAlreadyBuilding || isAlreadyExists) {
         return { ok: false, reason: "unique building already exists" };
       }
     }
 
+    // 2. 건설 권한 체크 (테크트리 레벨이 0이면 해금 시도, 1 이상이면 즉시 건설 가능)
     if (curLv === 0) {
       const res = this.service.canLevelUp(nodeId);
       if (!res.ok) return { ok: false, reason: res.reason };
     } else {
-      const cost = this.service.costOf(nodeId, 1);
-      if (!this.service.ctx.wallet.hasEnough(cost)) {
-        return { ok: false, reason: "insufficient funds for construction" };
-      }
+      // 이미 해금(레벨 1 이상)된 경우, 추가 건설 시 비용 정책이 있다면 여기서 체크
+      // 현재는 레벨 1이 건설 가능한 상태임을 의미하므로 통과
     }
 
     return { ok: true };
@@ -299,8 +299,13 @@ export class BuildingManager implements ILoop {
     const prop = node.tech as BuildingProperty;
     const curLv = this.service.levels[nodeId] ?? 0;
 
-    const cost = (curLv === 0) ? this.service.canLevelUp(nodeId).cost! : this.service.costOf(nodeId, 1);
-    this.service.ctx.wallet.subtractMany(cost);
+    // [수정] 테크트리에서 이미 해금(레벨 1 이상)되었다면 추가 비용 차감 방지
+    if (curLv === 0) {
+        const canLevel = this.service.canLevelUp(nodeId);
+        if (canLevel.ok && canLevel.cost) {
+            this.service.ctx.wallet.subtractMany(canLevel.cost);
+        }
+    }
 
     let constructionModel: THREE.Object3D | undefined;
     let progressMesh: THREE.Group | undefined;
