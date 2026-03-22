@@ -16,6 +16,11 @@ export enum BuildingType {
     Bunker = "Bunker"                       // 벙커
 }
 
+export enum BuildingMode {
+    Timer,
+    Turn
+}
+
 /**
  * 모든 건물 오브젝트가 구현해야 하는 공통 인터페이스
  */
@@ -41,6 +46,11 @@ export interface IBuildingObject {
      * 턴 진행 로직
      */
     advanceTurn(): void;
+
+    /**
+     * 건물의 동작 모드 설정 (타이머 vs 턴제)
+     */
+    setMode(mode: BuildingMode): void;
 
     /**
      * 상호작용 (탑승, 생산 메뉴 열기 등)

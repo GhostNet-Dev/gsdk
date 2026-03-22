@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { TechTreeService } from "@Glibs/techtree/techtreeservice";
-import { BuildingMode, BuildingProperty } from "./buildingdefs";
+import { BuildingProperty } from "./buildingdefs";
 import { EventTypes } from "@Glibs/types/globaltypes";
-import { IBuildingObject, BuildingType } from "./ibuildingobj";
+import { IBuildingObject, BuildingType, BuildingMode } from "./ibuildingobj";
 import { Loader } from "@Glibs/loader/loader";
 import { DefenseTurret } from "./buildingobjs/defenseturret";
 import { PilotableBuilding } from "./buildingobjs/pilotablebuilding";
@@ -259,6 +259,9 @@ export class BuildingManager implements ILoop {
 
   setMode(mode: BuildingMode) {
     this.currentMode = mode;
+    for (const building of this.buildingObjects.values()) {
+        building.setMode(mode);
+    }
   }
 
   canBuild(nodeId: string): { ok: boolean; reason?: string } {
@@ -439,6 +442,7 @@ export class BuildingManager implements ILoop {
           }
 
           if (buildingObj) {
+            buildingObj.setMode(this.currentMode);
             buildingObj.level = 1; // 기본 레벨 1 설정
             this.buildingObjects.set(id, buildingObj);
             model.userData.buildingId = id;

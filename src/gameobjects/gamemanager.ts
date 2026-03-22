@@ -7,7 +7,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { TechTreeKind } from "@Glibs/techtree/techtreedefs";
 import { ActionProperty } from "@Glibs/types/actiontypes";
 import { BuildingManager } from "@Glibs/interactives/building/buildingmanager";
-import { BuildingMode } from "@Glibs/interactives/building/buildingdefs";
+import { BuildingMode } from "@Glibs/interactives/building/ibuildingobj";
 import { BuildingInfoBar } from "@Glibs/ux/dialog/buildinginfobar";
 import { CurrencyType } from "@Glibs/inventory/wallet";
 

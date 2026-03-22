@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { IBuildingObject, BuildingType } from '../ibuildingobj';
+import { IBuildingObject, BuildingType, BuildingMode } from '../ibuildingobj';
 import { BuildingProperty } from '../buildingdefs';
 import { ISelectionData, ICommand } from '@Glibs/ux/selectionpanel/selectionpanel';
 import IEventController from '@Glibs/interface/ievent';
@@ -14,6 +14,11 @@ export abstract class BaseBuilding implements IBuildingObject {
     protected upgradeTimer: number = 0;
     protected upgradeTime: number = 0;
     protected currentHp: number;
+    protected currentMode: BuildingMode = BuildingMode.Timer;
+
+    // 자원 생산 관련 내부 상태 (상속 클래스와의 이름 충돌 방지를 위해 명확히 정의)
+    protected resourceProductionTimer: number = 0;
+    protected resourceProductionTurnCount: number = 0;
 
     constructor(
         public readonly id: string,
@@ -28,30 +33,87 @@ export abstract class BaseBuilding implements IBuildingObject {
     }
 
     /**
-     * 공통 업데이트 로직 (업그레이드 타이머 등)
+     * 건물의 동작 모드 설정 (타이머 vs 턴제)
+     */
+    setMode(mode: BuildingMode): void {
+        this.currentMode = mode;
+        // 모드 변경 시 카운터 초기화
+        this.resourceProductionTimer = 0;
+        this.resourceProductionTurnCount = 0;
+    }
+
+    /**
+     * 공통 업데이트 로직 (업그레이드 및 자동 생산)
      */
     update(delta: number): void {
-        if (this.isUpgrading) {
+        if (this.isUpgrading && this.currentMode === BuildingMode.Timer) {
             this.upgradeTimer += delta;
             if (this.upgradeTimer >= this.upgradeTime) {
                 this.completeUpgrade();
             }
         }
+
+        // 자동 자원 생산 처리 (시간제)
+        this.handleAutoResourceProduction(delta);
+
         this.onUpdate(delta);
     }
 
     /**
-     * 턴 진행 로직
+     * 턴 진행 로직 (업그레이드 및 자동 생산)
      */
     advanceTurn(): void {
-        if (this.isUpgrading) {
-            // 턴제 모드에서는 턴당 1씩 감소 (또는 설정된 규칙에 따름)
+        if (this.isUpgrading && this.currentMode === BuildingMode.Turn) {
             this.upgradeTimer += 1; 
             if (this.upgradeTimer >= this.upgradeTime) {
                 this.completeUpgrade();
             }
         }
+
+        // 자동 자원 생산 처리 (턴제)
+        this.handleTurnResourceProduction();
+
         this.onAdvanceTurn();
+    }
+
+    /**
+     * [시간제] 자동 자원 생산 로직
+     */
+    private handleAutoResourceProduction(delta: number) {
+        if (this.isUpgrading || this.currentMode !== BuildingMode.Timer || !this.property.production) return;
+
+        this.resourceProductionTimer += delta;
+        if (this.resourceProductionTimer >= this.property.production.interval) {
+            this.produceResources();
+            this.resourceProductionTimer = 0;
+        }
+    }
+
+    /**
+     * [턴제] 자동 자원 생산 로직
+     */
+    private handleTurnResourceProduction() {
+        if (this.isUpgrading || this.currentMode !== BuildingMode.Turn || !this.property.production) return;
+
+        this.resourceProductionTurnCount += 1;
+        if (this.resourceProductionTurnCount >= this.property.production.turns) {
+            this.produceResources();
+            this.resourceProductionTurnCount = 0;
+        }
+    }
+
+    /**
+     * 실제 자원 지급 처리
+     */
+    protected produceResources() {
+        const prod = this.property.production;
+        if (!prod) return;
+
+        for (const [type, amount] of Object.entries(prod.resources)) {
+            // 레벨에 따른 가중치 적용 (레벨당 기본 생산량만큼 추가)
+            const totalAmount = (amount as number) * this.level;
+            this.eventCtrl.SendEventMessage(type, totalAmount);
+        }
     }
 
     /**

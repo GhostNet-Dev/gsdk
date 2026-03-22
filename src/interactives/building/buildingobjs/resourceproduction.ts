@@ -1,14 +1,11 @@
 import * as THREE from 'three';
 import { BaseBuilding } from './basebuilding';
-import { BuildingType } from '../ibuildingobj';
+import { BuildingType, BuildingMode } from '../ibuildingobj';
 import { ICommand } from '@Glibs/ux/selectionpanel/selectionpanel';
 import { EventTypes } from '@Glibs/types/globaltypes';
+import { CurrencyType } from '@Glibs/inventory/wallet';
 
 export class ResourceProduction extends BaseBuilding {
-    private productionTimer = 0;
-    private readonly productionInterval = 5.0; // 5초마다 자원 생산
-    private collectedAmount = 0;
-
     constructor(
         id: string,
         property: any,
@@ -17,33 +14,6 @@ export class ResourceProduction extends BaseBuilding {
         eventCtrl: any
     ) {
         super(id, BuildingType.ResourceProduction, property, position, mesh, eventCtrl);
-    }
-
-    protected onUpdate(delta: number): void {
-        if (this.isUpgrading) return;
-        
-        this.productionTimer += delta;
-        if (this.productionTimer >= this.productionInterval) {
-            const amount = 10 * this.level;
-            this.eventCtrl.SendEventMessage(this.getResourceType(), amount);
-            this.productionTimer = 0;
-        }
-    }
-
-    protected onAdvanceTurn(): void {
-        if (this.isUpgrading) return;
-
-        const amount = 20 * this.level;
-        this.eventCtrl.SendEventMessage(this.getResourceType(), amount);
-    }
-
-    private getResourceType(): string {
-        const id = this.property.id.toLowerCase();
-        if (id.includes('wood') || id.includes('lumber')) return EventTypes.Wood;
-        if (id.includes('well') || id.includes('water')) return EventTypes.Water;
-        if (id.includes('windmill')) return EventTypes.Electric;
-        if (id.includes('watermill') || id.includes('food')) return EventTypes.Food;
-        return EventTypes.Gold;
     }
 
     protected getSpecificCommands(): ICommand[] {
@@ -63,6 +33,12 @@ export class ResourceProduction extends BaseBuilding {
     }
 
     protected getSpecificProgress(): number | undefined {
-        return this.productionTimer / this.productionInterval;
+        if (!this.property.production) return undefined;
+
+        if (this.currentMode === BuildingMode.Timer) {
+            return this.resourceProductionTimer / this.property.production.interval;
+        } else {
+            return this.resourceProductionTurnCount / this.property.production.turns;
+        }
     }
 }

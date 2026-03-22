@@ -7,8 +7,8 @@ import { EventTypes } from '@Glibs/types/globaltypes';
 export class UnitProduction extends BaseBuilding {
     private isProducing = false;
     private currentUnit: string | null = null;
-    private productionTimer = 0;
-    private readonly productionTime = 5.0;
+    private unitProductionTimer = 0;
+    private readonly unitProductionTime = 5.0;
 
     constructor(
         id: string,
@@ -22,8 +22,8 @@ export class UnitProduction extends BaseBuilding {
 
     protected onUpdate(delta: number): void {
         if (this.isProducing) {
-            this.productionTimer += delta;
-            if (this.productionTimer >= this.productionTime) {
+            this.unitProductionTimer += delta;
+            if (this.unitProductionTimer >= this.unitProductionTime) {
                 this.spawnUnit();
             }
         }
@@ -33,7 +33,7 @@ export class UnitProduction extends BaseBuilding {
         if (this.isProducing || this.isUpgrading) return;
         this.isProducing = true;
         this.currentUnit = unitId;
-        this.productionTimer = 0;
+        this.unitProductionTimer = 0;
         console.log(`[Production] Started: ${unitId}`);
     }
 
@@ -67,6 +67,6 @@ export class UnitProduction extends BaseBuilding {
     }
 
     protected getSpecificProgress(): number | undefined {
-        return this.isProducing ? (this.productionTimer / this.productionTime) : undefined;
+        return this.isProducing ? (this.unitProductionTimer / this.unitProductionTime) : undefined;
     }
 }
