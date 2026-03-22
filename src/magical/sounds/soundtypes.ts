@@ -30,4 +30,5 @@ export enum SoundType {
     SwordAttack2 = `${soundPath}tommusic/sfx/attacks/sword_attacks_hits_and_blocks/sword_attack_2.mp3`,
     SwordAttack3 = `${soundPath}tommusic/sfx/attacks/sword_attacks_hits_and_blocks/sword_attack_3.mp3`,
     BatAttack1 = `${soundPath}tommusic/sfx/attacks/sword_attacks_hits_and_blocks/sword_impact_hit_3.mp3`,
+    BatAttack2 = `${soundPath}battle/yodguard-a-massive-axe-impact-hitting-metal-3-450254.mp3`,
 }

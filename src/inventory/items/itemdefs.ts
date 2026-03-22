@@ -52,7 +52,7 @@ export const itemDefs = {
     level: "common",
     stackable: false,
     binding: true, autoAttack: true,
-    sound: SoundType.BatAttack1,
+    sound: SoundType.BatAttack2,
     stats: { "attack": 3, "damageMin": 3, "damageMax": 5, "speed": 1, "attackRange": 3 },
     actions: [actionDefs.FireFlame, actionDefs.SwingArc],
     weight: 1,

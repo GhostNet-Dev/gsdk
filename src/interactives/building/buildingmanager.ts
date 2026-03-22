@@ -97,10 +97,11 @@ export class BuildingManager implements ILoop {
   }
 
   private onPointerDown = (e: PointerEvent) => {
-    // UI 요소 클릭 시 무시
-    if ((e.target as HTMLElement).closest('#bottom-selection-panel')) return;
+    // 오직 <canvas> 요소에서 발생한 클릭만 처리 (모든 UI 클릭 무시)
+    const target = e.target as HTMLElement;
+    if (target.tagName !== 'CANVAS') return;
 
-    const rect = document.body.getBoundingClientRect();
+    const rect = target.getBoundingClientRect();
     this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
