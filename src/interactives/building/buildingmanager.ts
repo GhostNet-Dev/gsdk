@@ -86,6 +86,10 @@ export class BuildingManager implements ILoop {
       this.hideGuide();
     });
 
+    this.eventCtrl.RegisterEventListener(EventTypes.ShowGrid, () => {
+        this.sendBuildingStatus();
+    });
+
     // [추가] 마우스 클릭 이벤트 리스너
     window.addEventListener('pointerdown', this.onPointerDown);
 
@@ -436,10 +440,16 @@ export class BuildingManager implements ILoop {
 
   private sendBuildingStatus() {
     const buildings = Array.from(this.buildingObjects.values()).map(b => ({
-      pos: b.position, width: b.property.size.width, depth: b.property.size.depth
+      nodeId: b.property.id,
+      pos: b.position, 
+      width: b.property.size.width, 
+      depth: b.property.size.depth
     }));
     const pending = Array.from(this.activeTasks.values()).filter(t => !t.isFinished && t.pos).map(t => ({
-      pos: t.pos!, width: t.prop.size.width, depth: t.prop.size.depth
+      nodeId: t.nodeId,
+      pos: t.pos!, 
+      width: t.prop.size.width, 
+      depth: t.prop.size.depth
     }));
     this.eventCtrl.SendEventMessage(EventTypes.ResponseBuilding, [...buildings, ...pending]);
   }

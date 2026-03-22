@@ -119,7 +119,8 @@ export default class CustomGround implements IWorldMapObject {
   // 격자 및 강조 표시
   private gridHelper?: THREE.GridHelper;
   private highlightMesh?: THREE.Mesh;
-  private rangeMesh?: THREE.Mesh;
+  private rangeMesh?: THREE.Mesh; // 현재 배치 중인 건물의 범위 preview
+  private existingRangeGroup?: THREE.Group; // 이미 배치된 건물들의 범위
 
   // 브러시/스케일
   scale = 0.5;
@@ -143,7 +144,7 @@ export default class CustomGround implements IWorldMapObject {
 
   private lastNodeId?: string;
   private gridSize = 4.0;
-  private occupiedBuildings: Array<{ pos: THREE.Vector3, width: number, depth: number, buildRange?: number }> = [];
+  private occupiedBuildings: Array<{ nodeId?: string, pos: THREE.Vector3, width: number, depth: number, buildRange?: number }> = [];
 
   constructor(
     private scene: THREE.Scene,
@@ -183,9 +184,47 @@ export default class CustomGround implements IWorldMapObject {
           buildRange: b.buildRange ?? property?.buildRange
         };
       });
+      
+      this.updateExistingRangeMeshes();
+
       if (this.highlightMesh && this.highlightMesh.visible) {
         const worldPosCenter = this.obj.localToWorld(this.highlightMesh.position.clone());
         this.HighlightGrid(worldPosCenter, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
+      }
+    });
+  }
+
+  private updateExistingRangeMeshes() {
+    if (!this.existingRangeGroup) {
+      this.existingRangeGroup = new THREE.Group();
+      if (this.obj) this.obj.add(this.existingRangeGroup);
+    }
+    this.existingRangeGroup.clear();
+
+    const s = this.gridSize / this.scale;
+    console.log(`[CustomGround] Updating existing ranges. Total occupied: ${this.occupiedBuildings.length}`);
+
+    this.occupiedBuildings.forEach(b => {
+      if (b.buildRange) {
+        console.log(`[CustomGround] Adding range circle for ${b.nodeId} at ${b.pos.x}, ${b.pos.z} with range ${b.buildRange}`);
+        const rangeGeom = new THREE.CircleGeometry(1, 64);
+        rangeGeom.rotateX(-Math.PI / 2);
+        const rangeMat = new THREE.MeshBasicMaterial({ 
+            color: 0x00ffff, 
+            transparent: true, 
+            opacity: 0.2, 
+            side: THREE.DoubleSide,
+            depthWrite: false // 지면과 겹칠 때 깜빡임 방지
+        });
+        const mesh = new THREE.Mesh(rangeGeom, rangeMat);
+        mesh.renderOrder = 1; // 지면(0)보다 높게 설정
+        
+        const localPos = this.obj.worldToLocal(b.pos.clone());
+        mesh.position.set(localPos.x, 0.5, localPos.z); // 높이를 0.5로 상향
+        
+        const rangeScale = b.buildRange * s;
+        mesh.scale.set(rangeScale, 1, rangeScale);
+        this.existingRangeGroup?.add(mesh);
       }
     });
   }
@@ -234,6 +273,21 @@ export default class CustomGround implements IWorldMapObject {
         if (this.checkOccupancy(worldPos, this.lastWidth, this.lastDepth)) {
             console.warn("🚫 [CustomGround] 이미 점유된 지역입니다. 건설 불가!");
             return;
+        }
+
+        // [추가] 범위 밖일 경우 건설 요청 차단
+        if (!this.checkBuildRange(worldPos)) {
+            // nodeId를 키 또는 id로 검색
+            let property = this.lastNodeId ? (buildingDefs as any)[this.lastNodeId] : null;
+            if (!property && this.lastNodeId) {
+                property = Object.values(buildingDefs).find(p => p.id === this.lastNodeId);
+            }
+
+            if (property && !property.buildRange) {
+                console.warn("🚫 [CustomGround] 건설 지원 범위 밖입니다. 건설 불가!");
+                this.eventCtrl.SendEventMessage(EventTypes.Toast, "건설 지원 범위 밖입니다.");
+                return;
+            }
         }
 
         console.log("🏗️ [CustomGround] 하이라이트 그리드 클릭: 건설 요청");
@@ -1078,6 +1132,8 @@ export default class CustomGround implements IWorldMapObject {
     this.highlightMesh.position.set(lineX + offsetX, 0.25, lineZ + offsetZ);
     this.highlightMesh.visible = true;
 
+    if (this.existingRangeGroup) this.existingRangeGroup.visible = true;
+
     // [추가] buildRange를 위한 rangeMesh 생성 및 업데이트
     // buildingDefs는 Record<string, BuildingProperty> 타입이지만, nodeId가 def의 키와 매칭되어야 합니다.
     let property = nodeId ? (buildingDefs as any)[nodeId] : null;
@@ -1111,13 +1167,10 @@ export default class CustomGround implements IWorldMapObject {
     // 최초 건물(예: CommandCenter)이거나 범위 제공 건물인 경우 건설 제한 완화 가능
     const isInRange = this.checkBuildRange(worldPosCenter);
     
-    // 1순위: 점유(빨간색), 2순위: 범위 밖(노란색/주황색), 3순위: 정상(기본 초록색)
+    // 1순위: 점유(빨간색), 2순위: 범위 밖(빨간색), 3순위: 정상(기본 초록색)
     let finalColor = color;
-    if (isOccupied) {
-        finalColor = new THREE.Color(0xff0000); // 점유됨: 빨강
-    } else if (!isInRange && property && !property.buildRange) {
-        // 범위가 필요한 일반 건물인데 범위 밖인 경우
-        finalColor = new THREE.Color(0xffaa00); // 범위 밖: 주황
+    if (isOccupied || (!isInRange && property && !property.buildRange)) {
+        finalColor = new THREE.Color(0xff0000); // 점유됨 또는 범위 밖: 빨강
     }
 
     if (this.highlightMesh.material instanceof THREE.MeshBasicMaterial) {
@@ -1149,6 +1202,7 @@ export default class CustomGround implements IWorldMapObject {
   ClearHighlight() {
     if (this.highlightMesh) this.highlightMesh.visible = false;
     if (this.rangeMesh) this.rangeMesh.visible = false;
+    if (this.existingRangeGroup) this.existingRangeGroup.visible = false;
     if (this.arrowGroup) this.arrowGroup.visible = false;
   }
 
