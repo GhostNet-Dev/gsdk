@@ -5,6 +5,7 @@ const uiPath = 'ui/Icons/'
 const uiButton = 'ui/ButtonsText/'
 const pack1Path = 'ui/pack1/'
 const pack2Path = 'ui/pack2/'
+const pack3Path = 'ui/pack3/'
 
 const icons = new Map<Icons, string>()
 
@@ -58,6 +59,8 @@ icons.set(Icons.Axe, rootPath + pack1Path + 'Items/Axe/64px/Axe 2nd Outline 64px
 
 icons.set(Icons.Pause, rootPath + uiPath + 'Icon_Small_WhiteOutline_Pause.png')
 icons.set(Icons.ShoppingBag, rootPath + pack1Path + 'Main/Shopping Bag/64px/Golden Shopping Bag 1st Outline 64px.png')
+
+icons.set(Icons.Beam, rootPath + pack3Path + 'beam.png')
 
 const GetIconDb = () => { return icons }
 

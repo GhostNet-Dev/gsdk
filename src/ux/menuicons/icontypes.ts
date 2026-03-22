@@ -39,6 +39,7 @@ export enum Icons {
     Wood,
     Water,
     Electric,
+    Beam,
 
     Earth,
     Planet,
