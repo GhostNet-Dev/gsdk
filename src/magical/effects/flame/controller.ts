@@ -42,7 +42,7 @@ class Controller {
       GreyColor: '#3c342f',
       DarkColor: "#181818",
 
-      TimeScale: 3,
+      TimeScale: 1,
 
       ParticleSpread: 1,
       ParticleColor: '#ffb400',

@@ -24,11 +24,22 @@ export enum SoundType {
     NigitRain =  `${soundPath}tommusic/bgs_loops/forest_night/forest_night_rain.mp3`,
 
     
+    //fantasy
+    AmbianceWindClam = `${soundPath}essentials_series_nox_sound/nature_essentials_nox_sound/ambiance_wind_calm_loop_stereo.mp3`,
+    AmbianceFireBig = `${soundPath}essentials_series_nox_sound/nature_essentials_nox_sound/ambiance_fire_big_loop_mono.mp3`,
     WhispersOfEldertree =  `${soundPath}bgm/free6fantasy/1_-_Whispers_of_the_Eldertree_(Loop).mp3`,
 
+
+    //space
+    CinematicEpicTrailerRisingPanic = `${soundPath}bgm/space/openmindaudio-cinematic-epic-trailer-rising-panic-464789.mp3`,
+    SpaceAmbience = `${soundPath}bgm/space/lexin_music-space-ambient-sci-fi-121842.mp3`,
+
+    //battle sound
     SwordAttack1 = `${soundPath}tommusic/sfx/attacks/sword_attacks_hits_and_blocks/sword_attack_1.mp3`,
     SwordAttack2 = `${soundPath}tommusic/sfx/attacks/sword_attacks_hits_and_blocks/sword_attack_2.mp3`,
     SwordAttack3 = `${soundPath}tommusic/sfx/attacks/sword_attacks_hits_and_blocks/sword_attack_3.mp3`,
     BatAttack1 = `${soundPath}tommusic/sfx/attacks/sword_attacks_hits_and_blocks/sword_impact_hit_3.mp3`,
     BatAttack2 = `${soundPath}battle/yodguard-a-massive-axe-impact-hitting-metal-3-450254.mp3`,
+    BatAttack3 = `${soundPath}battle/yodguard-a-massive-axe-impact-hitting-metal-2-450253.mp3`,
+    BatAttack4 = `${soundPath}battle/dragon-studio-violent-sword-slice-393839.mp3`,
 }

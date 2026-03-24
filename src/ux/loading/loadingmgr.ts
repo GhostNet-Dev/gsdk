@@ -100,21 +100,25 @@ export default class LoadingMgr {
             this.finishProcessing();
         }
     }
-    private async close() {
+    private close() {
         if (this.loadingCompleteTask) {
-            await this.loadingCompleteTask();
+            this.loadingCompleteTask();
             this.loadingCompleteTask = undefined; // 사용 후 초기화
         }
         this.progressBar.SetProgress(100)
 
-        // UI 제거 및 리소스 정리
+        // UI를 서서히 투명하게 만듦 (1초 동안 진행)
+        this.progressBar.Dom.style.opacity = '0';
+
+        // 트랜지션이 끝난 후에 리소스 정리 (1초 후)
         this.closeTimeout = setTimeout(() => {
             this.progressBar.Delete()
             if (this.progressBar.Dom.parentNode === document.body) {
                 document.body.removeChild(this.progressBar.Dom)
             }
             this.closeTimeout = null;
-        }, 500);
+        }, 1000);
         console.log("모든 로딩 작업 완료.");
     }
+
     }

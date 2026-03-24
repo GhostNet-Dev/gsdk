@@ -163,11 +163,13 @@ export class SimpleCircleProgressBar extends GUX implements IProgressBar {
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgb(0, 0, 0);
             z-index: 1000;
             display: flex;
             justify-content: center;
             align-items: center;
+            opacity: 1;
+            transition: opacity 1s ease-in-out;
         `;
 
         this.progressContainer = document.createElement('div');
