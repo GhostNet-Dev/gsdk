@@ -52,6 +52,14 @@ export const interactableDefs = {
     assetKey: Char.None,
     name: "obstacle",
     stats: { },
+  },
+  Flame: {
+    id: "flame",
+    type: "event",
+    level: "common",
+    assetKey: Char.None,
+    name: "flame",
+    stats: { },
   }
 } as const
 

@@ -269,6 +269,12 @@ export const actionDefs = {
     type: "fireflame",
     trigger: "onActivate",
   },
+  SurfaceFlame: { // 모델 표면을 인식해 샘플 포인트마다 불길 클러스터를 생성한다.
+    type: "surfaceflame",
+    trigger: "onActivate",
+    sampleCount: 4,  // 표면 샘플 포인트 수
+    flameScale: 0.18, // 각 불꽃 클러스터의 스케일
+  },
   GhostAura: { // 물체에 유령효과를 엊는다.
     type: "ghostaura",
     trigger: "onActivate",

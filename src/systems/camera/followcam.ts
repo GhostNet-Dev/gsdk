@@ -10,6 +10,8 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
     private defaultOffset = new THREE.Vector3(0, 2.5, -20);
     private lookTarget = new THREE.Vector3();
     private lerpFactor = 0.15; // 부드러움 조절
+    private readonly verticalLookOffset = 2.0; // 캐릭터를 화면 하단 1/3 지점에 배치하기 위한 look target 오프셋
+    private lookAnchor = new THREE.Vector3();
 
     private isFreeView = false;
     private dragTimer: ReturnType<typeof setTimeout> | null = null;
@@ -36,7 +38,7 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         this.controls.enableRotate = true;
         this.controls.enablePan = false;
         this.controls.enableDamping = true;
-        this.controls.maxPolarAngle = Math.PI / 2 - 0.1; 
+        this.controls.maxPolarAngle = Math.PI * 0.85;
         this.controls.minDistance = 2.0;
         this.controls.maxDistance = 20.0;
         this.controls.minAzimuthAngle = -Infinity;
@@ -106,6 +108,7 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
 
             this.dummyCamera.position.copy(player.CenterPos).add(targetOffset);
             this.controls.target.copy(player.CenterPos);
+            this.controls.target.y += this.verticalLookOffset;
 
             // 🌟 핵심 픽스 1: 댐핑 관성 우회 🌟
             // 순간적으로 댐핑을 끄고 업데이트하여 OrbitControls가 어깨 쪽으로 튕겨 돌아가려는 현상 방지
@@ -128,6 +131,7 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         this.prevPlayerPos.copy(player.CenterPos);
 
         this.controls.target.copy(player.CenterPos);
+        this.controls.target.y += this.verticalLookOffset;
 
         const offset = new THREE.Vector3().subVectors(this.dummyCamera.position, player.CenterPos);
         if (!this.hasStableOffset && offset.lengthSq() > 0.0001) {
@@ -195,27 +199,35 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         const distance = direction.length();
         direction.normalize();
 
-        this.raycaster.set(player.CenterPos, direction);
-        this.raycaster.far = distance;
+        // 카메라가 플레이어보다 위에 있을 때만 raycasting (위를 바라볼 때 오버헤드 방지)
+        if (this.obstacles.length > 0 && finalIdealPos.y >= player.CenterPos.y) {
+            this.raycaster.set(player.CenterPos, direction);
+            this.raycaster.far = distance;
 
-        // 🌟 핵심 픽스 2: 레이캐스터가 '플레이어 자신'을 타격하여 강제 줌인되는 현상 방지 🌟
-        const hits = this.raycaster.intersectObjects(this.obstacles, true).filter(hit => {
-            let current: THREE.Object3D | null = hit.object;
-            while (current) {
-                if (current.uuid === player.Meshs.uuid) return false;
-                current = current.parent;
+            // 🌟 핵심 픽스 2: 레이캐스터가 '플레이어 자신'을 타격하여 강제 줌인되는 현상 방지 🌟
+            const hits = this.raycaster.intersectObjects(this.obstacles, true).filter(hit => {
+                let current: THREE.Object3D | null = hit.object;
+                while (current) {
+                    if (current.uuid === player.Meshs.uuid) return false;
+                    current = current.parent;
+                }
+                return true;
+            });
+
+            if (hits.length > 0 && hits[0].distance > 0.5) {
+                finalIdealPos = hits[0].point.clone().add(direction.multiplyScalar(-0.2));
             }
-            return true;
-        });
-
-        if (hits.length > 0 && hits[0].distance > 0.5) {
-            finalIdealPos = hits[0].point.clone().add(direction.multiplyScalar(-0.2));
         }
+
+        // 지형(y=0) 아래로 카메라가 뚫리는 것 방지
+        if (finalIdealPos.y < 0) finalIdealPos.y = 0;
 
         // 실제 카메라 위치 보간 (부드러운 시점 복귀)
         camera.position.lerp(finalIdealPos, this.lerpFactor);
         
-        this.lookTarget.lerp(player.CenterPos, this.lerpFactor);
+        this.lookAnchor.copy(player.CenterPos);
+        this.lookAnchor.y += this.verticalLookOffset;
+        this.lookTarget.lerp(this.lookAnchor, this.lerpFactor);
         camera.lookAt(this.lookTarget);
     }
 }

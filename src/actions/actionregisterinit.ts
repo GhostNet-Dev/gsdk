@@ -17,6 +17,7 @@ import { ElectricAction } from "./visualactions/electricact";
 import { FireballDefenceAction } from "./skillactions/firedefenceact";
 import { ElectricDefenceAction } from "./skillactions/electricdefenceact";
 import { GhostAction } from "./visualactions/ghostact";
+import { SurfaceFlameAction } from "./visualactions/surfaceflameact";
 import { WaterDefenceAction } from "./skillactions/waterdefenceact";
 import { MeteorAction } from "./skillactions/meteoract";
 import SwingArcEffectAction from "./itemactions/swingarcact";
@@ -54,6 +55,7 @@ export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scen
     ActionRegistry.register("darkparticle", def => new DarkAction(eventCtrl, scene))
     ActionRegistry.register("stunstars", def => new StunStarsAction(eventCtrl, scene))
     ActionRegistry.register("fireflame", def => new FireAction(eventCtrl, camera))
+    ActionRegistry.register("surfaceflame", def => new SurfaceFlameAction(eventCtrl, def.sampleCount, def.flameScale))
     ActionRegistry.register("electricaura", def => new ElectricAction(eventCtrl))
     ActionRegistry.register("ghostaura", def => new GhostAction(eventCtrl))
     ActionRegistry.register("firedefence", def => new FireballDefenceAction(eventCtrl, camera, def))

@@ -170,6 +170,8 @@ export enum EventTypes {
     // Interactor를 제어하는 함수들
     CampfireCtrl = "campfire",
     CampfireInteract = "campfireinter",
+    FlameCtrl = "flamectrl",
+    FlameInteract = "flameinter",
     DarkParticle = "darkparticle",
 
     GameCenter = "gcenter",
