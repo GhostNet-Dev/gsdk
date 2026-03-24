@@ -139,17 +139,32 @@ export class SimpleCircleProgressBar extends GUX implements IProgressBar {
         this.container.style.display = 'none';
     }
     Delete() {
-        if (this.progressContainer) this.container.removeChild(this.progressContainer)
+        if (this.progressContainer) {
+            this.container.removeChild(this.progressContainer);
+            this.progressContainer = undefined;
+        }
+        this.isCreated = false;
     }
     // ProgressBar.ts (Create 메서드만 수정)
 
     Create(): void {
         if (this.isCreated) return;
 
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = undefined;
+        }
+        this.currentProgress = 0;
+        this.targetProgress = 0;
+
         this.container.style.cssText = `
-            position: relative;
-            width: 100%;
-            height: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -220,5 +235,6 @@ export class SimpleCircleProgressBar extends GUX implements IProgressBar {
         this.updateVisuals();
         
         this.isCreated = true;
+        this.SetProgress(0)
     }
 }

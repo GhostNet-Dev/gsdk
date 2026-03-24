@@ -57,7 +57,7 @@ export class Effector {
                 ret = new FlameSmokeVfx(this.game, ...arg)
                 break;
             case EffectType.Flame:
-                ret = new FlameVfx(this.game)
+                ret = new FlameVfx(this.eventCtrl, this.game)
                 break;
             case EffectType.BlueParticle:
                 ret = new NebulaVfx(this.game, "")

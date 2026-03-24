@@ -16,7 +16,10 @@ export default class GameCenter {
     mode = new Map<string, IGameMode>();
     curr: string = ""
     currentMode?: IGameMode
-    constructor(private eventCtrl: IEventController, private scene: THREE.Scene) {
+    constructor(
+      private eventCtrl: IEventController, 
+      private scene: THREE.Scene,
+    ) {
         this.eventCtrl.RegisterEventListener(EventTypes.GameCenter, (mode: string) => {
             this.ChangeMode(mode)
         })
@@ -25,13 +28,13 @@ export default class GameCenter {
     RegisterGameMode(mode: string, obj: IGameMode) {
         this.mode.set(mode, obj)
     }
-    ChangeMode(mode: string) {
+    async ChangeMode(mode: string) {
         if(this.curr == mode) return
 
         const obj = this.mode.get(mode)
         if(!obj) throw new Error("undefined mode = " + mode);
 
-        this.currentMode?.Uninit()
+        await this.currentMode?.Uninit()
         this.currentMode?.Objects.forEach((obj) => {
             this.scene.remove(obj)
         })
@@ -41,7 +44,7 @@ export default class GameCenter {
         this.currentMode?.Physics.forEach((obj) => {
             this.scene.remove(obj.Meshs)
         })
-        obj.Init()
+        await obj.Init()
         obj.Objects.forEach((o) =>{
             this.scene.add(o)
         })
@@ -53,6 +56,7 @@ export default class GameCenter {
         })
         this.currentMode = obj
         this.curr = mode
+        this.eventCtrl.SendEventMessage(EventTypes.LoadingStart, 1)
     }
     Renderer(r: IPostPro, delta: number) {
         this.currentMode?.Renderer(r, delta)

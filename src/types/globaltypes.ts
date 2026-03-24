@@ -140,6 +140,7 @@ export enum EventTypes {
     RegisterLoadingCompleteItem = "regcompitems",
     RegLoadingCommonItems = "regloadcitems",
     RegLoadingCompleteCommonItem = "regcompcitems",
+    LoadingStart = "loadingstart",
     ShowProgress = "showprogress",
 
     // Sounds

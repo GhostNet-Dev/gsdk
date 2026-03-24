@@ -72,7 +72,7 @@ export class DeepSpaceMegaRingSystem implements IWorldMapObject, ILoop {
       planetPosition: options.planetPosition ?? new THREE.Vector3(0, 0, -10000),
 
       ringInnerScale: options.ringInnerScale ?? 1.4,
-      ringOuterRadius: options.ringOuterRadius ?? 18000,
+      ringOuterRadius: options.ringOuterRadius ?? 9000,
 
       asteroidCount: options.asteroidCount ?? 1000,
       asteroidMinDist: options.asteroidMinDist ?? 20000,
@@ -85,13 +85,13 @@ export class DeepSpaceMegaRingSystem implements IWorldMapObject, ILoop {
   }
   async Create(opts: DeepSpaceMegaRingSystemOptions) {
     this.options ={ ...this.options, ...opts}
-    await this.init()
+    return await this.init()
   }
   Delete() {
     this.dispose()
   }
 
-  async init(): Promise<void> {
+  async init() {
     if (this.initialized || this.disposed) return;
 
     const textures = await this.loadTextures();
@@ -106,6 +106,7 @@ export class DeepSpaceMegaRingSystem implements IWorldMapObject, ILoop {
     this.initialized = true;
     this.clock.start();
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+    return this.root
   }
 
   update(delta?: number, elapsed?: number): void {

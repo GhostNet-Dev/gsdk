@@ -69,6 +69,7 @@ function ensureRetroStyles() {
     "https://fonts.googleapis.com/css?family=Candal",
     "https://fonts.googleapis.com/css?family=Permanent+Marker",
     "https://fonts.googleapis.com/css?family=Monoton",
+    "https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Cinzel:wght@700&display=swap",
   ];
   for (const u of FONTS) FontManager.load(u);
 
@@ -76,10 +77,61 @@ function ensureRetroStyles() {
   StyleManager.inject(
     "retro-80s-pack-vars",
     `
-:root { --ts-base-font: 200px; }
+:root { --ts-base-font: 180px; }
 
 /* 공통 */
 .retro-block { display:inline-block; line-height:1; }
+
+/* ------------------- CELESTIAL FRONT (Starfallen) ------------------- */
+.celestial-main {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  background: linear-gradient(to bottom, #ffffff 0%, #378DBC 45%, #1a2a6c 50%, #b21f1f 55%, #fdbb2d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 15px rgba(55, 141, 188, 0.6));
+  animation: cosmic-glow 4s ease-in-out infinite alternate;
+  margin: 0;
+  font-size: var(--ts-base-font);
+  position: relative;
+  display: block;
+}
+
+@keyframes cosmic-glow {
+  from { filter: drop-shadow(0 0 10px rgba(55, 141, 188, 0.4)); }
+  to { filter: drop-shadow(0 0 25px rgba(0, 212, 255, 0.8)); }
+}
+
+.celestial-sub {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: calc(var(--ts-base-font) * 0.25);
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  white-space: nowrap;
+  background: linear-gradient(to top, #ff9d00 0%, #ff4e00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: block;
+  margin-top: -0.1em;
+  opacity: 0.9;
+  text-align: center;
+  position: relative;
+  width: 100%;
+}
+
+.celestial-sub::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 120%; height: 2px;
+  background: linear-gradient(90deg, transparent, #ff9d00, transparent);
+  box-shadow: 0 0 15px #ff4e00;
+}
 
 /* ------------------- CHROME ------------------- */
 .chrome {
@@ -454,5 +506,46 @@ export class FutureCopEffect implements ITitleEffect {
     wrap.appendChild(cop);
 
     return replaceWith(el, wrap);
-  }
-}
+    }
+    }
+
+    /**
+    * CelestialFrontEffect
+    * 장엄한 스페이스 오페라 테마의 타이틀 효과
+    * 메인 타이틀은 금속성 네온 블루, 부제는 타오르는 지평선 일출 느낌을 줍니다.
+    */
+    export class CelestialFrontEffect implements ITitleEffect {
+      name = "celestial-front";
+      constructor(private subText = "Dawn of War") {}
+      apply(el: HTMLElement) {
+        ensureRetroStyles();
+        const fullText = (el.textContent ?? "").trim();
+
+        // '|' 구분자가 있으면 분리하고, 없으면 전체를 메인 제목으로 사용
+        const parts = fullText.split('|');
+        const mainTitle = parts[0] || fullText;
+        const subTitle = parts[1] || this.subText;
+
+        const wrap = document.createElement("div");
+        wrap.style.textAlign = "center";
+        wrap.style.display = "flex";
+        wrap.style.flexDirection = "column";
+        wrap.style.alignItems = "center";
+        wrap.style.width = "max-content";
+        wrap.style.maxWidth = "100%";
+        wrap.style.margin = "0 auto";
+
+        const main = document.createElement("h1");
+        main.className = "celestial-main";
+        main.textContent = mainTitle;
+
+        const sub = document.createElement("div");
+        sub.className = "celestial-sub";
+        sub.textContent = subTitle;
+
+        wrap.appendChild(main);
+        wrap.appendChild(sub);
+
+        return replaceWith(el, wrap);
+      }
+    }
