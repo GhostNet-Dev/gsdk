@@ -10,7 +10,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { StatKey } from "@Glibs/types/stattypes";
 import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
-import { IMonsterAction } from "@Glibs/actors/monsters/monstertypes";
+import { IActorState } from "@Glibs/actors/monsters/monstertypes";
 
 
 export class FlyCtrl implements ILoop, IFlyCtrl, IActionUser {
@@ -21,7 +21,7 @@ export class FlyCtrl implements ILoop, IFlyCtrl, IActionUser {
     RunSt = new RunFState(this, this.fly, this.gphysic, this.property, this.baseSpec)
     DyingSt = new DyingFState(this, this.fly, this.gphysic)
 
-    currentState: IMonsterAction = this.IdleSt
+    currentState: IActorState = this.IdleSt
     target? :IPhysicsObject
     dir = new THREE.Vector3(0, 0, 0)
     moveDirection = new THREE.Vector3()

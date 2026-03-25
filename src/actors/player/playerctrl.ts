@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Player } from "./player";
-import { DeadState, IPlayerAction, IdleState, JumpState, MagicH1State, MagicH2State, RollState, RunState, SleepingIdleState } from "./states/playerstate";
+import { DeadState, IActorState, IdleState, JumpState, MagicH1State, MagicH2State, RollState, RunState, SleepingIdleState } from "./states/playerstate";
 import { AttackIdleState, AttackState } from "./states/attackstate";
 import { BaseSpec } from "../battle/basespec";
 import { BuildingState, DeleteState, PickFruitState, PickFruitTreeState, PlantAPlantState, WarteringState } from "./states/farmstate";
@@ -94,8 +94,8 @@ export class PlayerCtrl implements ILoop, IActionUser {
     DeleteSt: DeleteState
     SleepingIdleSt: SleepingIdleState
 
-    currentState: IPlayerAction
-    currentIdleState: IPlayerAction
+    currentState: IActorState
+    currentIdleState: IActorState
 
     TreeIdleSt: TreeIdleState
     CutDownTreeSt: CutDownTreeState
@@ -792,7 +792,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         }
     }
 
-    changeState(state: IPlayerAction) {
+    changeState(state: IActorState) {
         this.currentState.Uninit()
         this.currentState = state
         this.currentState.Init()

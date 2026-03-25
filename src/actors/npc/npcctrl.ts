@@ -8,19 +8,19 @@ import { DefaultStatus } from "@Glibs/types/playertypes";
 import { StatKey } from "@Glibs/types/stattypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { Buff } from "@Glibs/magical/buff/buff";
-import { IPlayerAction } from "../player/states/playerstate";
+import { IActorState } from "../player/states/playerstate";
 
 export class NpcCtrl implements ILoop, IActionUser {
     LoopId = 0
     baseSpec: BaseSpec
-    currentState: IPlayerAction
+    currentState: IActorState
     constructor(
         private npc: Npc,
         public inventory: IInventory,
         private gphysic: IGPhysic,
         private camera: THREE.Camera,
         private eventCtrl: IEventController,
-        private state: IPlayerAction,
+        private state: IActorState,
         { name = "npc"  } = {},
         private stat?: Partial<Record<StatKey, number>> ,
     ) {

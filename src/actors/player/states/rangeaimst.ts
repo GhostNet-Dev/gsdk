@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { IPlayerAction } from "./playerstate";
+import { IActorState } from "./playerstate";
 import { Player } from "../player";
 import { BaseSpec } from "../../battle/basespec";
 import { IGPhysic } from "@Glibs/interface/igphysics";
@@ -13,7 +13,7 @@ import { KeyType } from "@Glibs/types/eventtypes";
 import { AttackItemType } from "@Glibs/types/inventypes";
 import { AttackState } from "./attackstate";
 
-export class RangeAimState extends AttackState implements IPlayerAction {
+export class RangeAimState extends AttackState implements IActorState {
     private waitReleaseBeforeFire = false
     private keepAimCameraOnExit = false
 
@@ -59,7 +59,7 @@ export class RangeAimState extends AttackState implements IPlayerAction {
         super.Uninit()
     }
 
-    Update(): IPlayerAction {
+    Update(): IActorState {
         const d = this.DefaultCheck({ attack: false })
         if (d != undefined) {
             this.Uninit()

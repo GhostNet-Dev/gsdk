@@ -22,8 +22,8 @@ export default class CharMiniRenderer implements IViewer, ILoop {
     private directlight = new THREE.DirectionalLight(0xffffff, 3);
     private grass = new ZeldaGrass(this.eventCtrl)
     private sky = new SkyBoxAllTime(this.directlight, { daytime: 0 })
-    private player = new Npc(this.loader, this.loader.GetAssets(Char.CharHumanMale),
-        this.eventCtrl, this.scene, this.inventory)
+    private player = new Npc(this.loader.GetAssets(Char.CharHumanMale),
+        this.scene, this.eventCtrl, this.inventory)
 
     frustumSize = 5; // 뷰포트의 전체 높이 (또는 너비)를 결정하는 값. 이 값을 조절하여 캐릭터의 크기를 조절합니다.
 

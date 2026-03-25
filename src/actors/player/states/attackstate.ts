@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { IPlayerAction, State } from "./playerstate"
+import { IActorState, State } from "./playerstate"
 import { Player } from "../player";
 import { BaseSpec } from "../../battle/basespec";
 import { AttackItemType } from "@Glibs/types/inventypes";
@@ -17,7 +17,7 @@ import { ActionCostSpec } from "@Glibs/actors/battle/resourcecosttypes";
 import { actionCostService } from "@Glibs/actors/battle/actioncostservice";
 import { ItemId } from "@Glibs/inventory/items/itemdefs";
 
-export abstract class AttackState extends State implements IPlayerAction {
+export abstract class AttackState extends State implements IActorState {
     raycast = new THREE.Raycaster()
     attackDist = 5
     attackDir = new THREE.Vector3()
@@ -37,7 +37,7 @@ export abstract class AttackState extends State implements IPlayerAction {
         this.raycast.params.Points.threshold = 20
     }
     abstract Init(): void;
-    abstract Update(delta: number): IPlayerAction;
+    abstract Update(delta: number): IActorState;
 
     getAnimationForItem(item: IItem): ActionType {
         switch (item.AttackType) {
@@ -165,7 +165,7 @@ export abstract class AttackState extends State implements IPlayerAction {
         return true
     }
 
-    ChangeMode(state: IPlayerAction) {
+    ChangeMode(state: IActorState) {
         this.Uninit()
         state.Init()
         return state
@@ -248,7 +248,7 @@ export abstract class AttackState extends State implements IPlayerAction {
     }
 }
 
-export class AttackIdleState extends State implements IPlayerAction {
+export class AttackIdleState extends State implements IActorState {
     constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
         super(playerPhy, player, gphysic, baseSpec)
     }
@@ -258,7 +258,7 @@ export class AttackIdleState extends State implements IPlayerAction {
     Uninit(): void {
 
     }
-    Update(): IPlayerAction {
+    Update(): IActorState {
         const d = this.DefaultCheck()
         if (d != undefined) return d
 

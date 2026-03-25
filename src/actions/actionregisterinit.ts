@@ -22,7 +22,7 @@ import { WaterDefenceAction } from "./skillactions/waterdefenceact";
 import { MeteorAction } from "./skillactions/meteoract";
 import SwingArcEffectAction from "./itemactions/swingarcact";
 import { ComboSkillAction } from "./skillactions/comboact";
-import { WarpArrivalAction } from "./visualactions/warparrivalact";
+import { WarpArrivalAction, WarpArrivalOptions } from "./visualactions/warparrivalact";
 
 export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scene, camera: Camera) {
     ActionRegistry.register("statBoost", def => new StatBoostAction(def))
@@ -63,5 +63,5 @@ export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scen
     ActionRegistry.register("electricdefence", def => new ElectricDefenceAction(eventCtrl, def))
     ActionRegistry.register("waterdefence", def => new WaterDefenceAction(eventCtrl, def))
     ActionRegistry.register("comboMelee", def => new ComboSkillAction(def))
-    ActionRegistry.register("warpArrival", def => new WarpArrivalAction(eventCtrl, def))
+    ActionRegistry.register("warpArrival", def => new WarpArrivalAction(eventCtrl, def as WarpArrivalOptions))
 }

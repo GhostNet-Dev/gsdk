@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { IPlayerAction } from "./playerstate"
+import { IActorState } from "./playerstate"
 import { Player } from "../player";
 import { BaseSpec } from "../../battle/basespec";
 import { PlayerCtrl } from "../playerctrl";
@@ -18,7 +18,7 @@ const DEFAULT_MELEE_ATTACK_COST: ActionCostSpec = {
     cost: cost.optional(cost.atom("stamina", 5))
 }
 
-export class MeleeAttackState extends AttackState implements IPlayerAction {
+export class MeleeAttackState extends AttackState implements IActorState {
     constructor(playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic, 
         protected eventCtrl: IEventController, spec: BaseSpec
     ) {
@@ -113,7 +113,7 @@ export class MeleeAttackState extends AttackState implements IPlayerAction {
         super.Uninit()
     }
 
-    Update(delta: number): IPlayerAction {
+    Update(delta: number): IActorState {
         const d = this.DefaultCheck()
         if(d != undefined) {
             this.Uninit()

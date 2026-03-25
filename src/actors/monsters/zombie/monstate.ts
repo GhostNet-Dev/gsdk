@@ -5,11 +5,11 @@ import IEventController from "@Glibs/interface/ievent";
 import { ActionType, AttackType } from "@Glibs/types/playertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
-import { IMonsterAction } from "../monstertypes";
+import { IActorState } from "../monstertypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { MonsterProperty } from "@Glibs/types/monstertypes";
 
-type States = Record<string, IMonsterAction>
+type States = Record<string, IActorState>
 
 export function NewDefaultMonsterState(
     id: number,
@@ -18,7 +18,7 @@ export function NewDefaultMonsterState(
     gphysic: IGPhysic,  
     eventCtrl: IEventController, 
     spec: BaseSpec
-): IMonsterAction
+): IActorState
 { 
     const defSt: States = {}
     defSt["IdleSt"] = new IdleZState(defSt, zombie, gphysic, spec)
@@ -121,7 +121,7 @@ export abstract class MonState {
         }
     }
 }
-export class HurtZState extends MonState implements IMonsterAction {
+export class HurtZState extends MonState implements IActorState {
     hurtTime = 0
     hurtDuration = 0.5
     private readonly KNOCKBACK_SPEED = 15.0; // 넉백 속도
@@ -152,7 +152,7 @@ export class HurtZState extends MonState implements IMonsterAction {
         this.knockbackDir = undefined;
         this.maxPushDistance = 0;
     }
-    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
         const checkDying = this.CheckDying()
         if (checkDying != undefined) return checkDying
 
@@ -194,7 +194,7 @@ export class HurtZState extends MonState implements IMonsterAction {
         return this
     }
 }
-export class JumpZState extends MonState implements IMonsterAction {
+export class JumpZState extends MonState implements IActorState {
     speed = 10
     velocity_y = 16
     dirV = new THREE.Vector3(0, 0, 0)
@@ -213,7 +213,7 @@ export class JumpZState extends MonState implements IMonsterAction {
     Uninit(): void {
         this.velocity_y = 16
     }
-    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
         const checkHit = this.CheckHit(target)
         if (checkHit != undefined) return checkHit
 
@@ -253,7 +253,7 @@ export class JumpZState extends MonState implements IMonsterAction {
         return this
     }
 }
-export class AttackZState extends MonState implements IMonsterAction {
+export class AttackZState extends MonState implements IActorState {
     keytimeout?:NodeJS.Timeout
     attackProcess = false
     attackTime = 0
@@ -283,7 +283,7 @@ export class AttackZState extends MonState implements IMonsterAction {
     MX = new THREE.Matrix4()
     QT = new THREE.Quaternion()
 
-    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
         const checkHit = this.CheckHit(target)
         if (checkHit != undefined) return checkHit
         const dist = this.zombie.Pos.distanceTo(target.Pos)
@@ -329,7 +329,7 @@ export class AttackZState extends MonState implements IMonsterAction {
     }
 }
 
-export class IdleZState extends MonState implements IMonsterAction {
+export class IdleZState extends MonState implements IActorState {
     constructor(state: States, zombie: Zombie, gphysic: IGPhysic, spec: BaseSpec) {
         super(state, zombie, gphysic, spec)
         this.Init()
@@ -340,7 +340,7 @@ export class IdleZState extends MonState implements IMonsterAction {
     Uninit(): void {
         
     }
-    Update(_delta: number, v: THREE.Vector3, player: IPhysicsObject): IMonsterAction {
+    Update(_delta: number, v: THREE.Vector3, player: IPhysicsObject): IActorState {
         const checkHit = this.CheckHit(player)
         if (checkHit != undefined) return checkHit
         const checkRun = this.CheckRun(v)
@@ -351,7 +351,7 @@ export class IdleZState extends MonState implements IMonsterAction {
         return this
     }
 }
-export class DyingZState extends MonState implements IMonsterAction {
+export class DyingZState extends MonState implements IActorState {
     fadeMode = false
     fade = 1
     constructor(states: States, zombie: Zombie, private prop: MonsterProperty, gphysic: IGPhysic, private eventCtrl: IEventController, spec: BaseSpec) {
@@ -368,11 +368,11 @@ export class DyingZState extends MonState implements IMonsterAction {
     }
     Uninit(): void {
     }
-    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
         return this
     }
 }
-export class RunZState extends MonState implements IMonsterAction {
+export class RunZState extends MonState implements IActorState {
     speed = this.spec.Speed
     constructor(states: States, zombie: Zombie, gphysic: IGPhysic, spec: BaseSpec) {
         super(states, zombie, gphysic, spec)
@@ -390,7 +390,7 @@ export class RunZState extends MonState implements IMonsterAction {
     QT = new THREE.Quaternion()
     dir = new THREE.Vector3()
 
-    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
         const checkHit = this.CheckHit(target)
         if (checkHit != undefined) return checkHit
         const checkGravity = this.CheckGravity()

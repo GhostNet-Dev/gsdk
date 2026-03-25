@@ -1,49 +1,48 @@
 import { ItemId } from "@Glibs/inventory/items/itemdefs"
 import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { Char } from "@Glibs/types/assettypes"
-import IEventController from "@Glibs/interface/ievent"
-import { IGPhysic } from "@Glibs/interface/igphysics"
-import { Zombie } from "@Glibs/actors/monsters/zombie"
-import { BaseSpec } from "@Glibs/actors/battle/basespec"
-import { IPhysicsObject } from "@Glibs/interface/iobject"
 import { ActionDef } from "@Glibs/actions/actiontypes"
+import { IActorState } from "@Glibs/actors/player/states/playerstate"
 
-export class MonsterId {
-    public static Zombie = "Zombie"
-    public static DashZombie = "DashZombie"
-    public static Minotaur = "Minataur"
-    public static Batpig = "Batpig"
-    public static Bilby = "Bilby"
-    public static Birdmon = "Birdmon"
-    public static Crab = "Crab"
-    public static Builder = "Builder"
-    public static Golem = "Golem"
-    public static BigGolem = "Biggolem"
-    public static KittenMonk = "Kittenmonk"
-    public static Skeleton = "Skeleton"
-    public static Snake = "Snake"
-    public static ToadMage = "Toadmage"
-    public static Viking = "Viking"
-    public static WereWolf = "Werewolf"
+export { IActorState }
 
-    public static Stone = "stone"
-    public static Tree = "tree"
-    public static Bee = "Bee"
+export enum MonsterId {
+    Zombie = "Zombie",
+    DashZombie = "DashZombie",
+    Minotaur = "Minataur",
+    Batpig = "Batpig",
+    Bilby = "Bilby",
+    Birdmon = "Birdmon",
+    Crab = "Crab",
+    Builder = "Builder",
+    Golem = "Golem",
+    BigGolem = "Biggolem",
+    KittenMonk = "Kittenmonk",
+    Skeleton = "Skeleton",
+    Snake = "Snake",
+    ToadMage = "Toadmage",
+    Viking = "Viking",
+    WereWolf = "Werewolf",
 
-    public static DefaultBall = "DefaultBall"
-    public static DefaultBullet = "DefaultBullet"
-    public static WarhamerTracer = "WarT"
-    public static BulletLine = "BulletL"
-    public static Fireball = "fb"
-    public static Knife = "knife"
-    public static List = [
-        this.Zombie, this.Minotaur, this.Batpig, this.Bilby, this.Birdmon,
-        this.Crab, this.Builder, this.Golem, this.BigGolem, this.KittenMonk,
-        this.Skeleton, this.Snake, this.ToadMage, this.Viking, this.WereWolf
-    ]
+    Stone = "stone",
+    Tree = "tree",
+    Bee = "Bee",
+
+    DefaultBall = "DefaultBall",
+    DefaultBullet = "DefaultBullet",
+    WarhamerTracer = "WarT",
+    BulletLine = "BulletL",
+    Fireball = "fb",
+    Knife = "knife",
 }
 
-export type MonsterIdType = typeof MonsterId.List[number];
+export const MonsterIdList = [
+    MonsterId.Zombie, MonsterId.Minotaur, MonsterId.Batpig, MonsterId.Bilby, MonsterId.Birdmon,
+    MonsterId.Crab, MonsterId.Builder, MonsterId.Golem, MonsterId.BigGolem, MonsterId.KittenMonk,
+    MonsterId.Skeleton, MonsterId.Snake, MonsterId.ToadMage, MonsterId.Viking, MonsterId.WereWolf
+]
+
+export type MonsterIdType = MonsterId;
 
 export enum MonsterType {
     Undead, Dragon, Machine, Warrior, Angel, Element,
@@ -65,11 +64,5 @@ export type MonsterProperty = {
     stats?: Partial<Record<StatKey, number>>
     drop?: MonDrop[]
     actions?: ActionDef[],
-    idleStates?: (...params: any) => IMonsterAction
-}
-
-export interface IMonsterAction {
-    Init(param?: any): void
-    Uninit(): void
-    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction
+    idleStates?: (...params: any) => IActorState
 }

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { IPlayerAction } from "./playerstate"
+import { IActorState } from "./playerstate"
 import { Player } from "../player";
 import { BaseSpec } from "../../battle/basespec";
 import { PlayerCtrl } from "../playerctrl";
@@ -24,7 +24,7 @@ const DEFAULT_AIM_RANGE_ATTACK_COST: ActionCostSpec = {
     )
 }
 
-export class AimRangeAttackState extends AttackState implements IPlayerAction {
+export class AimRangeAttackState extends AttackState implements IActorState {
     constructor(playerCtrl: PlayerCtrl, player: Player, gphysic: IGPhysic,
         protected eventCtrl: IEventController, spec: BaseSpec
     ) {
@@ -105,7 +105,7 @@ export class AimRangeAttackState extends AttackState implements IPlayerAction {
         super.Uninit()
     }
 
-    Update(delta: number): IPlayerAction {
+    Update(delta: number): IActorState {
         const d = this.DefaultCheck({ attack: false, run: false })
         if (d != undefined) {
             this.Uninit()

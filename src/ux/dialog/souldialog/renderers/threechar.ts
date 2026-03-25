@@ -18,8 +18,8 @@ export class ThreeCharacterRenderer implements ICharacterRenderer, ILoop {
   private renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true }); // 투명 배경
   private model: THREE.Group | null = null;
   private mixer: THREE.AnimationMixer | null = null;
-  private player = new Npc(this.loader, this.loader.GetAssets(Char.CharHumanMale),
-    this.eventCtrl, this.scene, this.inventory)
+  private player = new Npc(this.loader.GetAssets(Char.CharHumanMale),
+    this.scene, this.eventCtrl, this.inventory)
 
   constructor(
     private loader: Loader,

@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { IPlayerAction } from "./playerstate";
+import { IActorState } from "./playerstate";
 import { Player } from "../player";
 import { BaseSpec } from "../../battle/basespec";
 import { PlayerCtrl } from "../playerctrl";
@@ -151,7 +151,7 @@ const DEFAULT_COMBO_MELEE_ATTACK_COST: ActionCostSpec = {
 /* ComboMeleeState                                                            */
 /* -------------------------------------------------------------------------- */
 
-export class ComboMeleeState extends AttackState implements IPlayerAction {
+export class ComboMeleeState extends AttackState implements IActorState {
     private chain!: ComboChain;
     private _injectedChain?: ComboChain;
     private stepIndex = 0;
@@ -591,7 +591,7 @@ export class ComboMeleeState extends AttackState implements IPlayerAction {
         return this.currentStep.cancelInto?.includes(action) ?? true;
     }
 
-    Update(_: number): IPlayerAction {
+    Update(_: number): IActorState {
         if (this.playerCtrl.KeyState[KeyType.Action1]) {
             this.onAttackButtonPressed()
         }

@@ -10,11 +10,12 @@ import IEventController from "@Glibs/interface/ievent";
 import { IItem } from "@Glibs/interface/iinven";
 import { AttackItemType } from "@Glibs/types/inventypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
+import { IPhysicsObject } from "@Glibs/interface/iobject";
 
-export interface IPlayerAction {
-    Init(): void
+export interface IActorState {
+    Init(param?: any): void
     Uninit(): void
-    Update(delta: number, v?: THREE.Vector3): IPlayerAction
+    Update(delta: number, v?: THREE.Vector3, target?: IPhysicsObject): IActorState
 }
 
 export class State {
@@ -25,7 +26,7 @@ export class State {
         protected baseSpec: BaseSpec
     ) { }
 
-    DefaultCheck({ run = true, attack = true, jump = true, magic = true, roll = true } = {}): IPlayerAction | undefined {
+    DefaultCheck({ run = true, attack = true, jump = true, magic = true, roll = true } = {}): IActorState | undefined {
         const checkRun = (run) ? this.CheckRun() : undefined
         if (checkRun != undefined) return checkRun
 
@@ -58,7 +59,7 @@ export class State {
                 const rangedItem = this.playerCtrl.baseSpec.GetRangedItem()
                 const hasDedicatedRanged = !!this.playerCtrl.baseSpec.GetBindItem(Bind.Weapon_Ranged)
                 const hasMelee = !!meleeItem
-                let state: IPlayerAction
+                let state: IActorState
 
                 if (hasMelee && hasDedicatedRanged) {
                     const closestDist = this.playerCtrl.getClosestTargetDistance()
@@ -107,7 +108,7 @@ export class State {
             }
         }
     }
-    CheckMagic2(): IPlayerAction | undefined {
+    CheckMagic2(): IActorState | undefined {
         if (this.playerCtrl.KeyState[KeyType.Action4]) {
             if (this.playerCtrl.mode == AppMode.Play) {
                 this.playerCtrl.MagicH2St.Init()
@@ -182,7 +183,7 @@ export class State {
         }
     }
 }
-export class RollState extends State implements IPlayerAction {
+export class RollState extends State implements IActorState {
     // 구르기 속도와 지속 시간 설정
     private rollSpeed = 10.5
     private rollDuration = 0.6 // 초 단위 (애니메이션 길이에 맞게 조절)
@@ -219,7 +220,7 @@ export class RollState extends State implements IPlayerAction {
     // 구르기 중에는 다른 상호작용이 불가능해야 하므로 주석 처리하거나 비워둡니다.
     // CheckInteraction() {}
 
-    Update(delta: number): IPlayerAction {
+    Update(delta: number): IActorState {
         this.rollTimer += delta
 
         // ✅ 구르기 종료 체크
@@ -272,9 +273,9 @@ export class RollState extends State implements IPlayerAction {
         return this
     }
 }
-export class MagicH2State extends State implements IPlayerAction {
+export class MagicH2State extends State implements IActorState {
     keytimeout?: NodeJS.Timeout
-    next: IPlayerAction = this
+    next: IActorState = this
 
     constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
         super(playerPhy, player, gphysic, baseSpec)
@@ -292,7 +293,7 @@ export class MagicH2State extends State implements IPlayerAction {
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
     }
-    Update(): IPlayerAction {
+    Update(): IActorState {
         const d = this.DefaultCheck()
         if (d != undefined) {
             this.Uninit()
@@ -302,9 +303,9 @@ export class MagicH2State extends State implements IPlayerAction {
         return this.next
     }
 }
-export class MagicH1State extends State implements IPlayerAction {
+export class MagicH1State extends State implements IActorState {
     keytimeout?: NodeJS.Timeout
-    next: IPlayerAction = this
+    next: IActorState = this
 
     constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
         super(playerPhy, player, gphysic, baseSpec)
@@ -322,7 +323,7 @@ export class MagicH1State extends State implements IPlayerAction {
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
     }
-    Update(): IPlayerAction {
+    Update(): IActorState {
         const d = this.DefaultCheck()
         if (d != undefined) {
             this.Uninit()
@@ -333,7 +334,7 @@ export class MagicH1State extends State implements IPlayerAction {
     }
 }
 
-export class DeadState extends State implements IPlayerAction {
+export class DeadState extends State implements IActorState {
     constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
         super(playerPhy, player, gphysic, baseSpec)
         //this.Init()
@@ -344,11 +345,11 @@ export class DeadState extends State implements IPlayerAction {
     Uninit(): void {
 
     }
-    Update(): IPlayerAction {
+    Update(): IActorState {
         return this
     }
 }
-export class IdleState extends State implements IPlayerAction {
+export class IdleState extends State implements IActorState {
     constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
         super(playerPhy, player, gphysic, baseSpec)
         this.Init()
@@ -363,7 +364,7 @@ export class IdleState extends State implements IPlayerAction {
     Uninit(): void {
 
     }
-    Update(): IPlayerAction {
+    Update(): IActorState {
         const d = this.DefaultCheck()
         if (d != undefined) return d
 
@@ -393,7 +394,7 @@ export class IdleState extends State implements IPlayerAction {
         }
     }
 }
-export class RunState extends State implements IPlayerAction {
+export class RunState extends State implements IActorState {
     speed = 7
     constructor(
         playerPhy: PlayerCtrl,
@@ -428,7 +429,7 @@ export class RunState extends State implements IPlayerAction {
         return this.speed * safeMultiplier
     }
 
-    Update(delta: number, v: THREE.Vector3): IPlayerAction {
+    Update(delta: number, v: THREE.Vector3): IActorState {
         const d = this.DefaultCheck({ magic: false, run: false })
         if (d != undefined) {
             this.Uninit()
@@ -540,7 +541,7 @@ export class RunState extends State implements IPlayerAction {
         }
     }
 }
-export class JumpState implements IPlayerAction {
+export class JumpState implements IActorState {
     speed = 5
     velocity_y = 16
     dirV = new THREE.Vector3(0, 0, 0)
@@ -565,7 +566,7 @@ export class JumpState implements IPlayerAction {
     Uninit(): void {
         this.velocity_y = 16
     }
-    Update(delta: number, v: THREE.Vector3): IPlayerAction {
+    Update(delta: number, v: THREE.Vector3): IActorState {
         const movY = this.velocity_y * delta
 
         // Camera-relative movement:
@@ -626,7 +627,7 @@ export class JumpState implements IPlayerAction {
         return this
     }
 }
-export class SleepingIdleState extends State implements IPlayerAction {
+export class SleepingIdleState extends State implements IActorState {
     constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
         super(playerPhy, player, gphysic, baseSpec)
         this.Init()
@@ -638,7 +639,7 @@ export class SleepingIdleState extends State implements IPlayerAction {
     Uninit(): void {
 
     }
-    Update(): IPlayerAction {
+    Update(): IActorState {
         const d = this.DefaultCheck()
         if (d != undefined) return d
 

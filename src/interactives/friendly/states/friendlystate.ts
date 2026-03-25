@@ -7,7 +7,7 @@ import { ActionType } from "@Glibs/types/playertypes";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
-import { IMonsterAction } from "@Glibs/actors/monsters/monstertypes";
+import { IActorState } from "@Glibs/actors/monsters/monstertypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 
 
@@ -28,7 +28,7 @@ class State {
 }
 
 
-export class IdleFState extends State implements IMonsterAction {
+export class IdleFState extends State implements IActorState {
     raycast = new THREE.Raycaster()
     attackDir = new THREE.Vector3()
     attackDist = 5
@@ -53,7 +53,7 @@ export class IdleFState extends State implements IMonsterAction {
     Uninit(): void {
         
     }
-    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
         const dist = this.fly.Pos.distanceTo(target.Pos)
         if(dist > this.protectDist) {
             const checkRun = this.CheckRun(v)
@@ -98,7 +98,7 @@ export class IdleFState extends State implements IMonsterAction {
         }
     }
 }
-export class AttackFState extends State implements IMonsterAction {
+export class AttackFState extends State implements IActorState {
     dirV = new THREE.Vector3(0, 0, 0)
     ZeroV = new THREE.Vector3(0, 0, 0)
     YV = new THREE.Vector3(0, 1, 0)
@@ -141,7 +141,7 @@ export class AttackFState extends State implements IMonsterAction {
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
     }
-    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
         const dist = this.fly.Pos.distanceTo(target.Pos)
         if (dist > this.playDist) {
             const checkRun = this.CheckRun(v)
@@ -201,7 +201,7 @@ export class AttackFState extends State implements IMonsterAction {
     }
 }
 
-export class DyingFState extends State implements IMonsterAction {
+export class DyingFState extends State implements IActorState {
     fadeMode = false
     fade = 1
     constructor(zCtrl: FlyCtrl, zombie: Fly, gphysic: IGPhysic) {
@@ -216,11 +216,11 @@ export class DyingFState extends State implements IMonsterAction {
     Uninit(): void {
         
     }
-    Update(): IMonsterAction {
+    Update(): IActorState {
         return this
     }
 }
-export class RunFState extends State implements IMonsterAction {
+export class RunFState extends State implements IActorState {
     speed = this.spec.Speed
     constructor(fCtrl: FlyCtrl, fly: Fly, gphysic: IGPhysic, private property: MonsterProperty, private spec: BaseSpec) {
         super(fCtrl, fly, gphysic)
@@ -237,7 +237,7 @@ export class RunFState extends State implements IMonsterAction {
     MX = new THREE.Matrix4()
     QT = new THREE.Quaternion()
 
-    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IMonsterAction {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
         const dist = this.fly.Pos.distanceTo(target.Pos)
 
         if(dist < this.protectDist) {

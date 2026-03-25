@@ -19,16 +19,16 @@ export class Npc extends PhysicsObject {
     bindMesh: Record<string, THREE.Group> = {}
 
     constructor(
-        private loader: Loader, 
         asset: IAsset,
+        private scene: THREE.Scene,
         private eventCtrl: IEventController,
-        private game: THREE.Scene,
-        fab: InvenFactory,
+        fab?: InvenFactory,
     ) {
         super(asset)
 
         this.eventCtrl.RegisterEventListener(EventTypes.Equipment, async (id: ItemId) => {
             // right hand
+          if (!fab) return
             const item = await fab.inven.GetNewItem(id)
             this.ReloadBindingItem(item)
         })
@@ -81,17 +81,23 @@ export class Npc extends PhysicsObject {
         this.meshs.visible = true
     }
 
-    async Loader(asset: IAsset, position: THREE.Vector3, name: string) {
-        this.asset = asset
-        const [meshs, _exist] = await asset.UniqModel(name)
+    async Loader(asset: IAsset | THREE.Vector3, position: THREE.Vector3 | string, name: string = "npc") {
+        if (asset instanceof THREE.Vector3) {
+            name = position as string
+            position = asset
+        } else {
+            this.asset = asset
+            position = position as THREE.Vector3
+        }
+        const [meshs, _exist] = await this.asset.UniqModel(name!)
         this.eventCtrl.SendEventMessage(EventTypes.SetNonGlow, meshs)
         
         this.meshs = meshs
         this.meshs.position.copy(position)
 
-        this.mixer = asset.GetMixer(name)
+        this.mixer = this.asset.GetMixer(name)
 
-        this.clipMap.set(ActionType.Idle, asset.GetAnimationClip(Ani.Idle))
+        this.clipMap.set(ActionType.Idle, this.asset.GetAnimationClip(Ani.Idle))
         this.changeAnimate(this.clipMap.get(this.currentActionType))
 
         this.meshs.visible = false

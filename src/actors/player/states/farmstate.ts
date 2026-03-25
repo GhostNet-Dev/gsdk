@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { IPlayerAction, State } from "./playerstate"
+import { IActorState, State } from "./playerstate"
 import { AttackOption, AttackType } from "@Glibs/types/playertypes";
 import { PlayerCtrl } from "../playerctrl";
 import { IGPhysic } from "@Glibs/interface/igphysics";
@@ -13,8 +13,8 @@ import { FurnBox, FurnState } from "@Glibs/types/furntypes";
 import { PlantBox, PlantState, PlantType } from "@Glibs/types/planttypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
 
-export class PickFruitState extends State implements IPlayerAction {
-    next: IPlayerAction = this
+export class PickFruitState extends State implements IActorState {
+    next: IActorState = this
     attackDist = 3
     attackDir = new THREE.Vector3()
     raycast = new THREE.Raycaster()
@@ -75,7 +75,7 @@ export class PickFruitState extends State implements IPlayerAction {
             return this.playerCtrl.currentIdleState
         }
     }
-    Update(delta: number): IPlayerAction {
+    Update(delta: number): IActorState {
         const d = this.DefaultCheck()
         if (d != undefined) {
             this.Uninit()
@@ -96,8 +96,8 @@ export class PickFruitState extends State implements IPlayerAction {
         return this.next
     }
 }
-export class PickFruitTreeState extends State implements IPlayerAction {
-    next: IPlayerAction = this
+export class PickFruitTreeState extends State implements IActorState {
+    next: IActorState = this
     attackDist = 3
     attackDir = new THREE.Vector3()
     raycast = new THREE.Raycaster()
@@ -158,7 +158,7 @@ export class PickFruitTreeState extends State implements IPlayerAction {
             return this.playerCtrl.currentIdleState
         }
     }
-    Update(delta: number): IPlayerAction {
+    Update(delta: number): IActorState {
         const d = this.DefaultCheck()
         if (d != undefined) {
             this.Uninit()
@@ -178,8 +178,8 @@ export class PickFruitTreeState extends State implements IPlayerAction {
         return this.next
     }
 }
-export class PlantAPlantState extends State implements IPlayerAction {
-    next: IPlayerAction = this
+export class PlantAPlantState extends State implements IActorState {
+    next: IActorState = this
     attackDist = 3
     attackDir = new THREE.Vector3()
     raycast = new THREE.Raycaster()
@@ -240,7 +240,7 @@ export class PlantAPlantState extends State implements IPlayerAction {
         this.targetMsg.damage = 0
         this.eventCtrl.SendEventMessage(EventTypes.Attack + this.target, [this.targetMsg])
     }
-    Update(): IPlayerAction {
+    Update(): IActorState {
         const d = this.DefaultCheck()
         if (d != undefined) {
             this.Uninit()
@@ -255,7 +255,7 @@ export class PlantAPlantState extends State implements IPlayerAction {
         return this.next
     }
 }
-export class WarteringState extends State implements IPlayerAction {
+export class WarteringState extends State implements IActorState {
     warteringCan?: IItem
     attackDist = 3
     attackDir = new THREE.Vector3()
@@ -324,7 +324,7 @@ export class WarteringState extends State implements IPlayerAction {
             return this.playerCtrl.currentIdleState
         }
     }
-    Update(): IPlayerAction {
+    Update(): IActorState {
         const d = this.DefaultCheck()
         if (d != undefined) {
             this.Uninit()
@@ -339,8 +339,8 @@ export class WarteringState extends State implements IPlayerAction {
         return this
     }
 }
-export class DeleteState extends State implements IPlayerAction {
-    next: IPlayerAction = this
+export class DeleteState extends State implements IActorState {
+    next: IActorState = this
     attackDist = 3
     attackDir = new THREE.Vector3()
     raycast = new THREE.Raycaster()
@@ -399,7 +399,7 @@ export class DeleteState extends State implements IPlayerAction {
         this.targetMsg.damage = 0
         this.eventCtrl.SendEventMessage(EventTypes.Attack + this.target, [this.targetMsg])
     }
-    Update(delta: number): IPlayerAction {
+    Update(delta: number): IActorState {
         const d = this.DefaultCheck()
         if (d != undefined) {
             this.Uninit()
@@ -417,7 +417,7 @@ export class DeleteState extends State implements IPlayerAction {
     }
 }
 
-export class BuildingState extends State implements IPlayerAction {
+export class BuildingState extends State implements IActorState {
     hammer?: IItem
     attackDist = 3
     attackDir = new THREE.Vector3()
@@ -493,7 +493,7 @@ export class BuildingState extends State implements IPlayerAction {
             return this.playerCtrl.currentIdleState
         }
     }
-    Update(): IPlayerAction {
+    Update(): IActorState {
         const d = this.DefaultCheck()
         if (d != undefined) {
             this.Uninit()

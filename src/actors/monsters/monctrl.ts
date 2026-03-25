@@ -7,7 +7,7 @@ import { IPhysicsObject } from "@Glibs/interface/iobject";
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { MonsterProperty } from "./monstertypes";
 import { EffectType } from "@Glibs/types/effecttypes";
-import { IMonsterAction } from "./monstertypes";
+import { IActorState } from "./monstertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
@@ -19,8 +19,8 @@ import { Buff } from "@Glibs/magical/buff/buff";
 export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     LoopId = 0
     baseSpec: BaseSpec = new BaseSpec(this.stats, this)
-    currentState: IMonsterAction
-    idleState: IMonsterAction
+    currentState: IActorState
+    idleState: IActorState
     raycast = new THREE.Raycaster()
     dir = new THREE.Vector3(0, 0, 0)
     moveDirection = new THREE.Vector3()

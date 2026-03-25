@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { IPlayerAction, State } from "./playerstate"
+import { IActorState, State } from "./playerstate"
 import { PlayerCtrl } from "../playerctrl";
 import { Player } from "../player";
 import { IGPhysic } from "@Glibs/interface/igphysics";
@@ -8,8 +8,8 @@ import { ActionType, AttackType } from "../playertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
 
-export class DeckState extends State implements IPlayerAction {
-    next: IPlayerAction = this
+export class DeckState extends State implements IActorState {
+    next: IActorState = this
     attackDist = 3
     attackDir = new THREE.Vector3()
     raycast = new THREE.Raycaster()
@@ -44,7 +44,7 @@ export class DeckState extends State implements IPlayerAction {
     }
     Uninit(): void {
     }
-    Update(): IPlayerAction {
+    Update(): IActorState {
         const d = this.DefaultCheck()
         if (d != undefined) {
             this.Uninit()

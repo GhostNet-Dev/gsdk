@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { IGPhysic } from "@Glibs/interface/igphysics"
 import { Player } from "../player"
 import { PlayerCtrl } from "../playerctrl"
-import { IPlayerAction, State } from "./playerstate"
+import { IActorState, State } from "./playerstate"
 import { ActionType } from "@Glibs/types/playertypes"
 import { KeyType } from "@Glibs/types/eventtypes"
 import { Vector3 } from "three"
@@ -11,7 +11,7 @@ import { EventTypes } from "@Glibs/types/globaltypes"
 import { TriggerType } from "@Glibs/types/actiontypes"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
 
-export class CutDownTreeState extends State implements IPlayerAction {
+export class CutDownTreeState extends State implements IActorState {
     TargetIntId: string =""
     triggerType: TriggerType = "onInteract"
     attackProcess = false
@@ -34,7 +34,7 @@ export class CutDownTreeState extends State implements IPlayerAction {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
         this.attackProcess = false
     }
-    Update(delta: number, v: Vector3): IPlayerAction {
+    Update(delta: number, v: Vector3): IActorState {
         const d = this.DefaultCheck({ attack: false, magic: false })
         if(d != undefined) {
             this.Uninit()
@@ -60,7 +60,7 @@ export class CutDownTreeState extends State implements IPlayerAction {
     }
 }
 
-export class TreeIdleState extends State implements IPlayerAction {
+export class TreeIdleState extends State implements IActorState {
     TargetIntId: string =""
     triggerType: TriggerType = "onInteract"
 
@@ -73,7 +73,7 @@ export class TreeIdleState extends State implements IPlayerAction {
     }
     Uninit(): void {
     }
-    Update(): IPlayerAction {
+    Update(): IActorState {
         const d = this.DefaultCheck({ attack: false, magic: false })
         if(d != undefined) return d
 
