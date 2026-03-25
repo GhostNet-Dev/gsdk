@@ -1,6 +1,6 @@
 import * as THREE from "three";
 
-import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
+import { ActionContext, IActionComponent, IActionUser, TriggerType } from "@Glibs/types/actiontypes";
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 
@@ -82,7 +82,9 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
     this.cooldownTimer = 0;
   }
 
-  trigger(target: IActionUser): void {
+  trigger(target: IActionUser, triggerType: TriggerType): void {
+    if (triggerType !== "onTrigger") return;
+    
     if (!this.obj) {
       this.bindTarget(target);
     }

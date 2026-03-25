@@ -20,7 +20,6 @@ export class Npc extends PhysicsObject {
 
     constructor(
         asset: IAsset,
-        private scene: THREE.Scene,
         private eventCtrl: IEventController,
         fab?: InvenFactory,
     ) {

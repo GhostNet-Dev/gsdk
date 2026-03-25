@@ -1,9 +1,10 @@
+import { MonsterId } from "@Glibs/types/monstertypes";
 import { StatKey } from "@Glibs/types/stattypes";
 import { MonsterGrade, baseStatPresets } from "./stats";
 
 export class StatFactory {
     // 몬스터 ID로 기본 스탯 가져오기
-    static getDefaultStats(monId: string): Partial<Record<StatKey, number>> {
+    static getDefaultStats(monId: MonsterId): Partial<Record<StatKey, number>> {
         return baseStatPresets[monId] || {};
     }
 

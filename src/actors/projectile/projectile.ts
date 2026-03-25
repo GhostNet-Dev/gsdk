@@ -231,7 +231,7 @@ export class Projectile implements ILoop {
     // 3) 없으면 새로 생성
     if (!set) {
       const model = this.GetModel(id);
-      const stat = StatFactory.getDefaultStats(id as string);
+      const stat = StatFactory.getDefaultStats(id);
       const ctrl = new ProjectileCtrl(model, this.targetList, this.physicList, this.eventCtrl, msg.range, stat);
 
       set = { model, ctrl, releasing: false, initializing: false };

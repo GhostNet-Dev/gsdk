@@ -22,7 +22,7 @@ export class CreateMon {
     ) {
     }
     async Call(monId: MonsterId, id: number, pos?: THREE.Vector3): Promise<MonsterSet> {
-        const stat = StatFactory.getDefaultStats(monId as string)
+        const stat = StatFactory.getDefaultStats(monId)
         
         if(!pos) pos = new THREE.Vector3(10, 0, 15)
         const property = this.monDb.GetItem(monId)

@@ -6,7 +6,6 @@ import { Loader } from '@Glibs/loader/loader';
 import { InvenFactory } from '@Glibs/inventory/invenfactory';
 import { Npc } from '@Glibs/actors/npc/npc';
 import { Char } from '@Glibs/types/assettypes';
-import { IAsset } from '@Glibs/interface/iasset';
 import { EventTypes } from '@Glibs/types/globaltypes';
 import { ActionType } from '@Glibs/types/playertypes';
 import { Player } from '@Glibs/actors/player/player';
@@ -19,7 +18,7 @@ export class ThreeCharacterRenderer implements ICharacterRenderer, ILoop {
   private model: THREE.Group | null = null;
   private mixer: THREE.AnimationMixer | null = null;
   private player = new Npc(this.loader.GetAssets(Char.CharHumanMale),
-    this.scene, this.eventCtrl, this.inventory)
+    this.eventCtrl, this.inventory)
 
   constructor(
     private loader: Loader,

@@ -108,7 +108,6 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
 
             this.dummyCamera.position.copy(player.CenterPos).add(targetOffset);
             this.controls.target.copy(player.CenterPos);
-            this.controls.target.y += this.verticalLookOffset;
 
             // 🌟 핵심 픽스 1: 댐핑 관성 우회 🌟
             // 순간적으로 댐핑을 끄고 업데이트하여 OrbitControls가 어깨 쪽으로 튕겨 돌아가려는 현상 방지
@@ -131,7 +130,6 @@ export default class ThirdPersonFollowCameraStrategy implements ICameraStrategy 
         this.prevPlayerPos.copy(player.CenterPos);
 
         this.controls.target.copy(player.CenterPos);
-        this.controls.target.y += this.verticalLookOffset;
 
         const offset = new THREE.Vector3().subVectors(this.dummyCamera.position, player.CenterPos);
         if (!this.hasStableOffset && offset.lengthSq() > 0.0001) {

@@ -618,6 +618,10 @@ export enum Char {
   KaykitMedHexagonDecorationPropsPackWeaponrack,
   KaykitMedHexagonDecorationPropsPackWheelbarrow,
 
+  SpaceShipPack1Bomber,
+  SpaceShipPack1Carrier,
+  SpaceShipPack1Fighter,
+
   OceanStarterSubMarine,
   OceanStarterSmallCoral,
   OceanStarterSmallBoat,

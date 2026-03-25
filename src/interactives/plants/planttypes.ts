@@ -32,17 +32,18 @@ export type PlantProperty = {
     drop?: MonDrop[]
 }
 
-export class PlantId {
-    public static AppleTree = "appletree"
-    public static CoconutTree = "coconutree"
-    public static Tomato = "tomato"
-    public static Potato = "potato"
-    public static Carrot = "carrot"
-    public static List = [
-        this.AppleTree, this.CoconutTree, this.Tomato, this.Potato,
-        this.Carrot
-    ]
+export enum PlantId {
+    AppleTree = "appletree",
+    CoconutTree = "coconutree",
+    Tomato = "tomato",
+    Potato = "potato",
+    Carrot = "carrot",
 }
+
+export const PlantIdList = [
+    PlantId.AppleTree, PlantId.CoconutTree, PlantId.Tomato, PlantId.Potato,
+    PlantId.Carrot
+]
 
 export class PlantBox extends THREE.Mesh {
     constructor(public Id: number, public ObjName: string,

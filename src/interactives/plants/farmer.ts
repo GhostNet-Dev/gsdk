@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { Tomato } from "./tomato";
-import { PlantId, PlantProperty } from "@Glibs/types/planttypes";
+import { PlantId, PlantIdList, PlantProperty } from "@Glibs/types/planttypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { TreeCtrl } from "./treectrl";
 import IEventController, { IKeyCommand, ILoop } from "@Glibs/interface/ievent";
@@ -16,7 +16,7 @@ import { Char } from "@Glibs/loader/assettypes";
 
 
 export type PlantEntry = {
-    id: string
+    id: PlantId
     createTime: number // ms, 0.001 sec
     lv: number // tree age
     state: PlantState
@@ -37,9 +37,9 @@ export class Farmer implements ILoop {
     LoopId = 0
     controllable = false
     target?: IPhysicsObject
-    targetId?: string
+    targetId?: PlantId
     // 심을때 가이드하기 위한 메시
-    plantsFab = new Map<string, IPhysicsObject>()
+    plantsFab = new Map<PlantId, IPhysicsObject>()
     plantset: PlantSet[] = []
     recycle: PlantSet[] = []
 
@@ -58,9 +58,9 @@ export class Farmer implements ILoop {
 
             switch (e) {
                 case EventFlag.Start:
-                    this.target = this.plantsFab.get(id)
+                    this.target = this.plantsFab.get(id as PlantId)
                     if (!this.target) return
-                    this.targetId = id
+                    this.targetId = id as PlantId
                     this.controllable = true
                     this.game.add(this.target.Meshs)
                     this.target.Visible = true
@@ -253,7 +253,7 @@ export class Farmer implements ILoop {
     }
     async FarmLoader() {
         // TODO need refac
-        PlantId.List.map(async (id) => {
+        PlantIdList.map(async (id) => {
             await this.allocModel(id)
         })
     }
@@ -282,7 +282,7 @@ export class Farmer implements ILoop {
             await plant.MassLoader(plantEntry.position, this.plantset.length.toString())
             return plant
         }
-        this.plantsFab.set(id as string, plant)
+        this.plantsFab.set(id, plant)
         await plant.MassLoader(p)
         return plant
     }

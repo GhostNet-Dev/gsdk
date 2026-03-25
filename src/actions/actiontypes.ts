@@ -38,6 +38,7 @@ export type TriggerType =
   | "onFire"
   | "onHit"
   | "onActivate"
+  | "onTrigger"
 
 
 export interface ActionDef {
@@ -286,6 +287,10 @@ export const actionDefs = {
   ElectricAura: { // 물체에 전기가 흐르는 효과를 엊는다. 
     type: "electricaura",
     trigger: "onActivate",
+  },
+  WarpArrival: { // 워프 도착 효과
+    type: "warpArrival",
+    trigger: "onTrigger" as TriggerType,
   },
   // =================================================================
   // friendly

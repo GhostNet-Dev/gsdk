@@ -65,7 +65,7 @@ export class Friendly {
         const friendly = new Fly(asset, id as string)
         await friendly.Loader(pos)
 
-        const stat = StatFactory.getDefaultStats(id as string)
+        const stat = StatFactory.getDefaultStats(id)
 
         const zCtrl = new FlyCtrl(friendly, this.player, this.targetList,
             this.gphysic, this.eventCtrl, property, stat)
