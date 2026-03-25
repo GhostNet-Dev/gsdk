@@ -174,6 +174,11 @@ export enum EventTypes {
     FlameInteract = "flameinter",
     DarkParticle = "darkparticle",
 
+    // Controllable actor control
+    SetControlSource = "setcontrolsource",
+    IssueControllableCommand = "issuectrlcmd",
+    IssueControllableGroupCommand = "issuectrlgroupcmd",
+
     GameCenter = "gcenter",
 }
 
