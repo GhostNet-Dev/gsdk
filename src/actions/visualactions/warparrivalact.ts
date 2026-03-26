@@ -22,6 +22,7 @@ export interface WarpArrivalOptions {
   cycleDelaySec?: number;
   emissiveColor?: THREE.ColorRepresentation;
   flashColor?: THREE.ColorRepresentation;
+  onComplete?: () => void;
 }
 
 export class WarpArrivalAction implements IActionComponent, ILoop {
@@ -32,6 +33,8 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
   private emissiveMats: EmissiveMaterial[] = [];
   private originalMats = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
   private baseScale = new THREE.Vector3(1, 1, 1);
+  private arrivalPos = new THREE.Vector3();
+  private meshLength = 1;
 
   private isWarping = false;
   private warpingProgress = 0;
@@ -45,6 +48,7 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
   private readonly cycleDelaySec: number;
   private readonly emissiveColor: THREE.Color;
   private readonly flashColor: THREE.Color;
+  private readonly onComplete?: () => void;
   private loopRegistered = false;
 
   constructor(
@@ -59,6 +63,7 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
     this.cycleDelaySec = opts.cycleDelaySec ?? 4;
     this.emissiveColor = new THREE.Color(opts.emissiveColor ?? 0x3366ff);
     this.flashColor = new THREE.Color(opts.flashColor ?? 0xffffff);
+    this.onComplete = opts.onComplete;
   }
 
   activate(target: IActionUser, _context?: ActionContext): void {
@@ -108,6 +113,11 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
         this.baseScale.z * currentScaleZ
       );
 
+      // 워프 종료 지점을 기준으로 뒤로만 늘어지도록 위치 보정
+      const offset = (currentScaleZ - 1) * (this.meshLength * this.baseScale.z) * 0.5;
+      this.obj.position.copy(this.arrivalPos);
+      this.obj.translateZ(-offset);
+
       const glowTrigger = Math.sin(t * Math.PI * 1.2);
       const currentGlow = Math.max(0, glowTrigger);
       const intensity = currentGlow * this.maxEmissiveIntensity;
@@ -123,9 +133,11 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
 
       if (t >= 1) {
         this.obj.scale.copy(this.baseScale);
+        this.obj.position.copy(this.arrivalPos);
         this.resetVisuals();
         this.isWarping = false;
         this.cooldownTimer = 0;
+        this.onComplete?.();
       }
 
       return;
@@ -144,12 +156,18 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
 
     this.isWarping = true;
     this.warpingProgress = 0;
+    // bindTarget()에서 이미 arrivalPos를 올바르게 저장함
+    // obj.position은 이미 translateZ(-offset)이 적용된 상태이므로 덮어쓰면 이중 오프셋 버그 발생
 
     this.obj.scale.set(
       this.baseScale.x * this.minScaleXY,
       this.baseScale.y * this.minScaleXY,
       this.baseScale.z * this.maxScaleZ
     );
+
+    const offset = (this.maxScaleZ - 1) * (this.meshLength * this.baseScale.z) * 0.5;
+    this.obj.position.copy(this.arrivalPos);
+    this.obj.translateZ(-offset);
   }
 
   private bindTarget(target: IActionUser) {
@@ -158,7 +176,27 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
 
     this.obj = obj;
     this.baseScale.copy(obj.scale);
+    this.arrivalPos.copy(obj.position);
+    
+    // 모델의 Z축 길이를 계산
+    const box = new THREE.Box3().setFromObject(obj);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    this.meshLength = size.z / this.baseScale.z;
+
     this.prepareMaterials(obj);
+
+    // 초기 상태 설정
+    this.obj.scale.set(
+      this.baseScale.x * this.minScaleXY,
+      this.baseScale.y * this.minScaleXY,
+      this.baseScale.z * this.maxScaleZ
+    );
+    
+    const offset = (this.maxScaleZ - 1) * (this.meshLength * this.baseScale.z) * 0.5;
+    this.obj.position.copy(this.arrivalPos);
+    this.obj.translateZ(-offset);
+
     this.registerLoop();
   }
 

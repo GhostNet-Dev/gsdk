@@ -117,7 +117,7 @@ export default class LoadingMgr {
                 document.body.removeChild(this.progressBar.Dom)
             }
             this.closeTimeout = null;
-        }, 1000);
+        }, 100);
         console.log("모든 로딩 작업 완료.");
     }
 

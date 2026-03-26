@@ -14,6 +14,7 @@ export class NpcCtrl implements ILoop, IActionUser {
     LoopId = 0
     baseSpec: BaseSpec
     currentState: IActorState
+    get objs() { return this.npc.Meshs }
     constructor(
         private npc: Npc,
         public inventory: IInventory,

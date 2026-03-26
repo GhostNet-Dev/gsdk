@@ -76,7 +76,7 @@ export class Npc extends PhysicsObject {
 
     Init(pos: THREE.Vector3 = new THREE.Vector3(0, 0, 0)) {
         this.meshs.position.copy(pos)
-        console.log("player Init: ", pos)
+        console.log("npc Init: ", pos)
         this.meshs.visible = true
     }
 

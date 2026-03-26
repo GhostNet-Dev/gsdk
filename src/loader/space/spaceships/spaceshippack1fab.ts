@@ -51,7 +51,7 @@ class SpaceShipPack1Fab extends AssetModel {
       child.castShadow = true
       child.receiveShadow = true
     })
-    const scale = 10
+    const scale = 1
     meshs.scale.set(scale, scale, scale)
   }
 }
