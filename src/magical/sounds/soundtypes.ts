@@ -23,6 +23,9 @@ export enum SoundType {
     NightLoop =  `${soundPath}essentials_series_nox_sound/nature_essentials_nox_sound/ambiance_night_loop_stereo.mp3`,
     NigitRain =  `${soundPath}tommusic/bgs_loops/forest_night/forest_night_rain.mp3`,
 
+    //sfx
+    SuspectBoom = `${soundPath}sfx/dragon-studio-suspenseful-boom-451863.mp3`,
+    CinematicBoom = `${soundPath}sfx/dragon-studio-cinematic-boom-01-414572.mp3`,
     
     //fantasy
     AmbianceWindClam = `${soundPath}essentials_series_nox_sound/nature_essentials_nox_sound/ambiance_wind_calm_loop_stereo.mp3`,

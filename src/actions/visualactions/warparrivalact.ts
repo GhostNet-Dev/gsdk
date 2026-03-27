@@ -35,6 +35,7 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
   private baseScale = new THREE.Vector3(1, 1, 1);
   private arrivalPos = new THREE.Vector3();
   private meshLength = 1;
+  private frontTipLocalZ = 0; // 그룹 원점에서 front tip까지의 local Z 거리 (world units)
 
   private isWarping = false;
   private warpingProgress = 0;
@@ -113,8 +114,8 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
         this.baseScale.z * currentScaleZ
       );
 
-      // 워프 종료 지점을 기준으로 뒤로만 늘어지도록 위치 보정
-      const offset = (currentScaleZ - 1) * (this.meshLength * this.baseScale.z) * 0.5;
+      // 워프 종료 지점을 기준으로 front tip을 고정하고 뒤로만 늘어지도록 위치 보정
+      const offset = (currentScaleZ - 1) * this.frontTipLocalZ;
       this.obj.position.copy(this.arrivalPos);
       this.obj.translateZ(-offset);
 
@@ -165,7 +166,7 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
       this.baseScale.z * this.maxScaleZ
     );
 
-    const offset = (this.maxScaleZ - 1) * (this.meshLength * this.baseScale.z) * 0.5;
+    const offset = (this.maxScaleZ - 1) * this.frontTipLocalZ;
     this.obj.position.copy(this.arrivalPos);
     this.obj.translateZ(-offset);
   }
@@ -178,11 +179,33 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
     this.baseScale.copy(obj.scale);
     this.arrivalPos.copy(obj.position);
     
-    // 모델의 Z축 길이를 계산
+    // 모델의 local Z 방향 실제 길이와 front tip 거리 계산
     const box = new THREE.Box3().setFromObject(obj);
     const size = new THREE.Vector3();
     box.getSize(size);
     this.meshLength = size.z / this.baseScale.z;
+
+    // 그룹 원점에서 front tip(local +Z 방향 최대점)까지의 거리를 정확하게 계산
+    // size.z/2 대신 사용하여 pivot이 중심에 없는 모델도 처리
+    const localZDir = new THREE.Vector3(0, 0, 1).applyQuaternion(obj.quaternion);
+    const objPos = new THREE.Vector3();
+    obj.getWorldPosition(objPos);
+    const corners = [
+      new THREE.Vector3(box.min.x, box.min.y, box.min.z),
+      new THREE.Vector3(box.max.x, box.min.y, box.min.z),
+      new THREE.Vector3(box.min.x, box.max.y, box.min.z),
+      new THREE.Vector3(box.min.x, box.min.y, box.max.z),
+      new THREE.Vector3(box.max.x, box.max.y, box.min.z),
+      new THREE.Vector3(box.max.x, box.min.y, box.max.z),
+      new THREE.Vector3(box.min.x, box.max.y, box.max.z),
+      new THREE.Vector3(box.max.x, box.max.y, box.max.z),
+    ];
+    let maxProj = -Infinity;
+    for (const corner of corners) {
+      maxProj = Math.max(maxProj, corner.sub(objPos).dot(localZDir));
+    }
+    this.frontTipLocalZ = maxProj;
+    console.log("[WarpArrival] meshLength:", this.meshLength, "frontTipLocalZ:", this.frontTipLocalZ, "size:", size);
 
     this.prepareMaterials(obj);
 
@@ -193,7 +216,7 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
       this.baseScale.z * this.maxScaleZ
     );
     
-    const offset = (this.maxScaleZ - 1) * (this.meshLength * this.baseScale.z) * 0.5;
+    const offset = (this.maxScaleZ - 1) * this.frontTipLocalZ;
     this.obj.position.copy(this.arrivalPos);
     this.obj.translateZ(-offset);
 
