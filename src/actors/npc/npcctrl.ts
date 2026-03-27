@@ -19,8 +19,8 @@ export class NpcCtrl implements ILoop, IActionUser {
         private npc: Npc,
         public inventory: IInventory,
         private eventCtrl: IEventController,
-        private gphysic: IGPhysic,
-        private state: IActorState,
+        public gphysic: IGPhysic,
+        state: IActorState,
         { name = "npc"  } = {},
         private stat?: Partial<Record<StatKey, number>> ,
     ) {
