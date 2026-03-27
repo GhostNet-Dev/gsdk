@@ -276,6 +276,20 @@ export const actionDefs = {
     sampleCount: 4,  // 표면 샘플 포인트 수
     flameScale: 0.18, // 각 불꽃 클러스터의 스케일
   },
+  DamageBurning: { // 피격 이후 손상된 부위에서 화염/연기/파편이 계속 발생하는 효과
+    type: "damageburning",
+    trigger: "onHit",
+    sampleCount: 3,
+    fireIntensity: 0.75,
+    smokeIntensity: 0.55,
+    debrisIntensity: 0.12,
+    burstFireCount: 20,
+    burstSmokeCount: 12,
+    burstDebrisCount: 10,
+    flameScale: 10,
+    smokeScale: 6,
+    debrisScale: 1,
+  },
   GhostAura: { // 물체에 유령효과를 엊는다.
     type: "ghostaura",
     trigger: "onActivate",
