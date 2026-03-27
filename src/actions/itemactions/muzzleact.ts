@@ -5,7 +5,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 
 export class MuzzleAction implements IActionComponent {
   type = "muzzleFlash"
-  triggerType: TriggerType = "onFire"
+  triggerType: TriggerType = TriggerType.OnFire
 
   mat = new THREE.MeshBasicMaterial({
     map: this.texture,

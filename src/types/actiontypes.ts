@@ -1,1 +1,475 @@
-../actions/actiontypes.ts
+import { CharacterStatus } from "@Glibs/actors/battle/charstatus"
+import { StatSystem } from "@Glibs/inventory/stat/statsystem"
+import { cost } from "@Glibs/actors/battle/resourcecosttypes"
+
+export interface IActionUser {
+  name?: string
+  objs?: THREE.Group | THREE.Mesh | THREE.Object3D
+  targets?: THREE.Object3D[]
+
+  baseSpec: {
+    stats: StatSystem
+    status: CharacterStatus
+    ReceiveCalcDamage: (damage: number) => void
+    ReceiveCalcHeal: (heal: number) => void
+  }
+
+  applyAction(action: IActionComponent, context?: ActionContext): void
+  removeAction(action: IActionComponent, context?: ActionContext): void
+}
+
+/*
+| 트리거                                         | 의미                       |
+| ------------------------------------------- | ------------------------ |
+| `onCast`                                    | 스킬 사용 시 발동               |
+| `onEquip`, `onUnequip`                      | 장비 착용 시점                 |
+| `onBuffApply`, `onBuffTick`, `onBuffRemove` | 버프 지속/종료 시점              |
+| `onInteract` (확장 가능)                        | InteractableObject 지원 예정 |
+*/
+export enum TriggerType {
+  OnCast = "onCast",
+  OnBuffApply = "onBuffApply",
+  OnBuffTick = "onBuffTick",
+  OnBuffRemove = "onBuffRemove",
+  OnEquip = "onEquip",
+  OnUnequip = "onUnequip",
+  OnInteract = "onInteract",
+  OnEnterArea = "onEnterArea",
+  OnAttackHit = "onAttackHit",
+  OnAttack = "onAttack",
+  OnUse = "onUse",
+  OnUnuse = "onUnuse",
+  OnFire = "onFire",
+  OnHit = "onHit",
+  OnActivate = "onActivate",
+  OnTrigger = "onTrigger",
+}
+
+
+export interface ActionDef {
+  type: string
+  trigger: TriggerType
+  [key: string]: any
+}
+
+
+
+
+export interface ActionContext {
+  source?: any
+  destination?: any
+  level?: number
+  skillId?: string
+  via?: "item" | "skill" | "buff"
+  direction?: THREE.Vector3
+  param?: any
+}
+
+
+export interface IActionComponent {
+  id?: string
+
+  // 즉시 발동 (예: 스킬 사용, 아이템 사용)
+  activate?(target: IActionUser, context?: ActionContext): void
+
+  deactivate?(target: IActionUser, context?: ActionContext): void
+
+  // 지속 적용 (예: 장비 착용, 버프 적용)
+  apply?(target: IActionUser, context?: ActionContext): void
+
+  trigger?(target: IActionUser, triggerType: TriggerType, context?: ActionContext): void
+
+  // 해제 (예: 장비 해제, 버프 제거)
+  remove?(target: IActionUser): void
+
+  // 발동 가능 여부 (쿨다운 등)
+  isAvailable?(context?: ActionContext): boolean
+}
+
+export const actionDefs = {
+
+  // =================================================================
+  // 1. [공용 스탯 - 공격] (이전 VS 트리 통합)
+  // =================================================================
+
+  StatBoost: {
+    type: "statBoost",
+    trigger: TriggerType.OnBuffApply,
+    stats: { defense: 5, maxHp: 20 }
+  },
+  HpStatBoost: {
+    type: "hpStatBoost",
+    trigger: TriggerType.OnActivate,
+    levels: [
+      { hp: 3, },
+      { hp: 5, },
+      { hp: 10, }
+    ]
+  },
+  AttackStatBoost: {
+    type: "attackStatBoost",
+    trigger: TriggerType.OnActivate,
+    levels: [
+      { attack: 3, },
+      { attack: 5, },
+      { attack: 7, },
+      { attack: 10, },
+      { attack: 14, }
+    ]
+  },
+  ProjectileSpeedStatBoost: {
+    type: "projectileSpeedStatBoost",
+    trigger: TriggerType.OnActivate,
+    levels: [
+      { projectileSpeed: 0.1 },
+      { projectileSpeed: 0.2 },
+      { projectileSpeed: 0.3 },
+    ]
+  },
+  AreaStatBoost: {
+    type: "areaStatBoost",
+    trigger: TriggerType.OnActivate,
+    levels: [
+      { attackRange: 0.4 },
+      { attackRange: 0.8 },
+      { attackRange: 1.2 },
+      { attackRange: 1.6 },
+      { attackRange: 2.0 },
+    ]
+  },
+  CooldownStatBoost: {
+    type: "cooldownStatBoost",
+    trigger: TriggerType.OnActivate,
+    levels: [
+      { cooldownReduction: 0.05 },
+      { cooldownReduction: 0.10 },
+      { cooldownReduction: 0.15 },
+      { cooldownReduction: 0.20 },
+      { cooldownReduction: 0.25 },
+    ]
+  },
+  CritRateStatBoost: {
+    type: "critRateStatBoost",
+    trigger: TriggerType.OnActivate,
+    levels: [
+      { criticalRate: 3 },
+      { criticalRate: 6 },
+      { criticalRate: 9 },
+      { criticalRate: 12 },
+      { criticalRate: 15 },
+    ]
+  },
+  RecoveryStatBoost: {
+    type: "recoveryStatBoost",
+    trigger: TriggerType.OnActivate,
+    levels: [
+      { hpRegen: 0.5 },
+      { hpRegen: 1.0 },
+      { hpRegen: 1.5 },
+      { hpRegen: 2.0 },
+      { hpRegen: 2.5 },
+    ]
+  },
+  MaxHpStatBoost: {
+    type: "maxHpStatBoost",
+    trigger: TriggerType.OnActivate,
+    levels: [
+      { hp: 20 },
+      { hp: 35 },
+      { hp: 50 },
+      { hp: 70 },
+      { hp: 95 },
+    ]
+  },
+  ArmorStatBoost: {
+    type: "armorStatBoost",
+    trigger: TriggerType.OnActivate,
+    levels: [
+      { defense: 4 },
+      { defense: 8 },
+      { defense: 12 },
+    ]
+  },
+  SpeedStatBoost: {
+    type: "speedStatBoost",
+    trigger: TriggerType.OnActivate,
+    levels: [
+      { movementSpeed: 0.05 },
+      { movementSpeed: 0.1 },
+      { movementSpeed: 0.15 },
+    ]
+  },
+  GreedStatBoost: {
+    type: "greedStatBoost",
+    trigger: TriggerType.OnActivate,
+    levels: [
+      { goldBonus: 0.05 },
+      { goldBonus: 0.1 },
+      { goldBonus: 0.15 },
+      { goldBonus: 0.2 },
+      { goldBonus: 0.25 },
+    ]
+  },
+  LuckStatBoost: {
+    type: "luckStatBoost",
+    trigger: TriggerType.OnActivate,
+    levels: [
+      { luck: 1 },
+      { luck: 2 },
+      { luck: 3 },
+    ]
+  },
+  MagnetStatBoost: {
+    type: "magnetStatBoost",
+    trigger: TriggerType.OnActivate,
+    levels: [
+      { itemDropRate: 0.05 },
+      { itemDropRate: 0.1 },
+      { itemDropRate: 0.15 },
+    ]
+  },
+  // =================================================================
+  // 1. Effector
+  // =================================================================
+  MuzzleFlash: { // 총열 불꽃 효과
+    type: "muzzleFlash",
+    trigger: TriggerType.OnFire,
+    texture: "https://hons.ghostwebservice.com/assets/texture/particlepack/muzzle_02.png",
+    socket: "muzzlePoint",
+    size: 1,
+    duration: 0.1
+  },
+  Casing: { // 탄피 배출
+    type: "casing",
+    trigger: TriggerType.OnFire,
+    socket: "casingEjectionPoint",
+  },
+  Shaker: { // 나무에 도끼 충격과 같은 강한 흔들림 효과를 적용합니다.
+    type: "shaker",
+    trigger: TriggerType.OnHit,
+  },
+  Fluffy: { // 나무에 바람에 흔들림 효과를 적용합니다.
+    type: "fluffy",
+    trigger: TriggerType.OnActivate,
+  },
+  Swing: { // 칼을 휘두를때 발생하는 효과
+    type: "swing",
+    trigger: TriggerType.OnUse,
+    socketA: "localTipAOffset",
+    socketB: "localTipBOffset",
+  },
+  SwingArc: { // 칼을 휘두를때 발생하는 효과
+    type: "swingarc",
+    trigger: TriggerType.OnUse,
+    socketA: "localTipAOffset",
+    socketB: "localTipBOffset",
+  },
+  StunStars: { // 머리 위에 별이 도는 효과
+    type: "stunstars",
+    trigger: TriggerType.OnActivate as TriggerType,
+  },
+  DarkParticle: { // 어둠 덩어리가 배출되는 효과
+    type: "darkparticle",
+    trigger: TriggerType.OnActivate,
+  },
+  FireFlame: { // 물체에 불꽃 효과를 엊는다.
+    type: "fireflame",
+    trigger: TriggerType.OnActivate,
+  },
+  SurfaceFlame: { // 모델 표면을 인식해 샘플 포인트마다 불길 클러스터를 생성한다.
+    type: "surfaceflame",
+    trigger: TriggerType.OnActivate,
+    sampleCount: 4,  // 표면 샘플 포인트 수
+    flameScale: 0.18, // 각 불꽃 클러스터의 스케일
+  },
+  DamageBurning: { // 피격 이후 손상된 부위에서 화염/연기/파편이 계속 발생하는 효과
+    type: "damageburning",
+    trigger: TriggerType.OnActivate,
+    sampleCount: 3,
+    fireIntensity: 0.75,
+    smokeIntensity: 0.55,
+    debrisIntensity: 0.12,
+    burstFireCount: 20,
+    burstSmokeCount: 12,
+    burstDebrisCount: 10,
+    flameScale: 10,
+    smokeScale: 6,
+    debrisScale: 1,
+  },
+  GhostAura: { // 물체에 유령효과를 엊는다.
+    type: "ghostaura",
+    trigger: TriggerType.OnActivate,
+  },
+  FireDefence: {
+    type: "firedefence",
+    trigger: TriggerType.OnActivate,
+  },
+  ElectricAura: { // 물체에 전기가 흐르는 효과를 엊는다. 
+    type: "electricaura",
+    trigger: TriggerType.OnActivate,
+  },
+  WarpArrival: { // 워프 도착 효과
+    type: "warpArrival",
+    trigger: TriggerType.OnTrigger as TriggerType,
+  },
+  // =================================================================
+  // friendly
+  // =================================================================
+  ElectricDefence: {
+    type: "electricdefence",
+    trigger: TriggerType.OnActivate,
+  },
+  WaterDefence: {
+    type: "waterdefence",
+    trigger: TriggerType.OnActivate,
+  },
+  // =================================================================
+  // Skill Effector
+  // =================================================================
+  Knockback: {
+    type: "knockback",
+    trigger: TriggerType.OnHit,
+    force: 1.5
+  },
+  // =================================================================
+  // buff
+  // =================================================================
+  Regen: {
+    type: "regen",
+    trigger: TriggerType.OnBuffTick,
+    amount: 2
+  },
+  Bleed: {
+    type: "bleed",
+    trigger: TriggerType.OnHit,
+    chance: 0.3,
+    dps: 5
+  },
+
+  CurseTorment: {
+    type: "statBoost",
+    trigger: TriggerType.OnActivate,
+    levels: [
+      { },
+      { goldBonus: 2, expBonus: 2, itemDropRate: 1, defense: -2, hp: -5 },
+      { goldBonus: 4, expBonus: 4, itemDropRate: 2, defense: -4, hp: -10 },
+      { goldBonus: 6, expBonus: 6, itemDropRate: 3, defense: -6, hp: -15 },
+      { goldBonus: 8, expBonus: 8, itemDropRate: 4, defense: -8, hp: -20 },
+      { goldBonus: 10, expBonus: 10, itemDropRate: 5, defense: -10, hp: -25 },
+    ]
+  },
+  // =================================================================
+  // Magic
+  // =================================================================
+  KnifeThrow: {
+    id: "skill_knife",
+    name: "Knife Throw",
+    trigger: TriggerType.OnCast,
+    type: "projectileKnife",
+    castAction: "MagicH1",
+    cooldown: 1.2,
+    levels: [
+      { damage: 8, radius: 0.3, speed: 16 },
+      { damage: 12, radius: 0.35, speed: 17 },
+      { damage: 16, radius: 0.4, speed: 18 }
+    ]
+  },
+  FanOfKnives: {
+    id: "skill_fan_of_knives",
+    name: "Fan Of Knives",
+    trigger: TriggerType.OnCast,
+    type: "projectileKnifeFan",
+    castAction: "MagicH1",
+    cooldown: 2.2,
+    levels: [
+      { damage: 7, radius: 0.3, speed: 15, projectileCount: 5, spreadAngleDeg: 55 },
+      { damage: 10, radius: 0.35, speed: 16, projectileCount: 7, spreadAngleDeg: 70 },
+      { damage: 13, radius: 0.4, speed: 17, projectileCount: 9, spreadAngleDeg: 85 }
+    ]
+  },
+  FireBall: {
+    id: "fireball",
+    name: "Fireball",
+    trigger: TriggerType.OnCast,
+    type: "projectileFire",
+    castAction: "MagicH1",
+    cooldown: 3,
+    resourceCost: {
+      id: "skill_fireball_cast",
+      cost: cost.any(cost.atom("mp", 8), cost.atom("stamina", 12))
+    },
+    levels: [
+      { damage: 10, radius: 1.0, speed: 10 },
+      { damage: 15, radius: 1.2, speed: 10 },
+      { damage: 20, radius: 1.5, speed: 10 }
+    ]
+  },
+  Meteor: {
+    id: "skill_meteor",
+    name: "Meteor",
+    trigger: TriggerType.OnCast,
+    type: "meteor",
+    castAction: "MagicH2",
+    cooldown: 7,
+    resourceCost: {
+      id: "skill_meteor_cast",
+      cost: cost.any(cost.atom("mp", 20), cost.atom("stamina", 30))
+    },
+    distance: 8,
+    fallDuration: 0.65,
+    ringRadius: 1.9,
+    ringCount: 6,
+    levels: [
+      { damage: 20, radius: 2.0 },
+      { damage: 28, radius: 2.4 },
+      { damage: 36, radius: 2.8 }
+    ]
+  },
+  Heal: {
+    id: "heal",
+    name: "Heal",
+    trigger: TriggerType.OnCast,
+    type: "regen",
+    castAction: "MagicH2",
+    cooldown: 5,
+    levels: [
+      { amount: 20 },
+      { amount: 35 },
+      { amount: 50 }
+    ]
+  },
+  // =================================================================
+  // Combo Melee Skills
+  // =================================================================
+  BladeStorm: {
+    id: "skill_blade_storm",
+    name: "Blade Storm",
+    trigger: TriggerType.OnCast as TriggerType,
+    type: "comboMelee",
+    castAction: "none",
+    cooldown: 0,
+    chainName: "BladeStorm5",
+    resourceCost: {
+      id: "skill_blade_storm_cast",
+      cost: cost.optional(cost.atom("stamina", 20))
+    }
+  },
+  DoubleSlash: {
+    id: "skill_double_slash",
+    name: "Double Slash",
+    trigger: TriggerType.OnCast as TriggerType,
+    type: "comboMelee",
+    castAction: "none",
+    cooldown: 0,
+    chainName: "DoubleSlash",
+    resourceCost: {
+      id: "skill_double_slash_cast",
+      cost: cost.optional(cost.atom("stamina", 12))
+    }
+  }
+}
+
+
+export type ActionDefs = typeof actionDefs
+export type ActionId = keyof ActionDefs
+export type ActionProperty = ActionDefs[ActionId] // 공통 타입

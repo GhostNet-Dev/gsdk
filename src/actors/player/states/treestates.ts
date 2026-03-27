@@ -13,7 +13,7 @@ import { BaseSpec } from "@Glibs/actors/battle/basespec"
 
 export class CutDownTreeState extends State implements IActorState {
     TargetIntId: string =""
-    triggerType: TriggerType = "onInteract"
+    triggerType: TriggerType = TriggerType.OnInteract
     attackProcess = false
     attackTime = 0
     attackSpeed = 2
@@ -62,7 +62,7 @@ export class CutDownTreeState extends State implements IActorState {
 
 export class TreeIdleState extends State implements IActorState {
     TargetIntId: string =""
-    triggerType: TriggerType = "onInteract"
+    triggerType: TriggerType = TriggerType.OnInteract
 
     constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {
         super(playerPhy, player, gphysic, baseSpec)

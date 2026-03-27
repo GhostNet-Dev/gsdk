@@ -6,7 +6,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 
 export class BulletCasingAct implements IActionComponent, ILoop {
     LoopId = 0
-    triggerType: TriggerType = "onFire"
+    triggerType: TriggerType = TriggerType.OnFire
 
     // === 탄피 관리를 위한 배열 ===
     shellCasings: THREE.Mesh[] = [];

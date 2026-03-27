@@ -448,7 +448,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
 
         const runCast = () => {
             if (typeof targetAction.trigger === "function") {
-                targetAction.trigger(this, "onCast", context)
+                targetAction.trigger(this, TriggerType.OnCast, context)
                 return
             }
             targetAction.activate?.(this, context)

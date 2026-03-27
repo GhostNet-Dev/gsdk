@@ -1,7 +1,6 @@
 import * as THREE from "three"
 import IEventController, { ILoop } from "@Glibs/interface/ievent"
-import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes"
-import { ActionDef } from "../actiontypes"
+import { ActionContext, IActionComponent, IActionUser, ActionDef, TriggerType } from "@Glibs/types/actiontypes"
 import { EventTypes } from "@Glibs/types/globaltypes"
 import { createFireballCore, FireballCore } from "@Glibs/magical/libs/fireballcore"
 import { isCooldownReady } from "./cooldownhelper"
@@ -55,8 +54,8 @@ export class MeteorAction implements IActionComponent, ILoop {
 
   activate(_target: IActionUser, _context?: ActionContext) {}
 
-  trigger(target: IActionUser, triggerType: "onCast", context?: ActionContext) {
-    if (triggerType !== "onCast") return
+  trigger(target: IActionUser, triggerType: TriggerType, context?: ActionContext) {
+    if (triggerType !== TriggerType.OnCast) return
 
     const now = performance.now()
     if (!isCooldownReady(this.lastUsed, this.cooldown, target, now)) return

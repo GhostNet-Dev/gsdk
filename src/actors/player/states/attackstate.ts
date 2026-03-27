@@ -1,3 +1,4 @@
+import { TriggerType } from "@Glibs/types/actiontypes";
 import * as THREE from "three";
 import { IActorState, State } from "./playerstate"
 import { Player } from "../player";
@@ -72,7 +73,7 @@ export abstract class AttackState extends State implements IActorState {
         })
         this.keytimeout = []
         const handItem = this.playerCtrl.baseSpec.GetBindItem(Bind.Hands_R)
-        if (handItem) (handItem as Item).trigger("onUnuse")
+        if (handItem) (handItem as Item).trigger(TriggerType.OnUnuse)
         this.player.releaseDashsedCircle()
     }
     autoDirection(rangeMultiplier = 1.0) {

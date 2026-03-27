@@ -291,8 +291,8 @@ export class DamageBurningAction implements IActionComponent, ILoop {
 
   private disposeParticle(particle: DamageParticle): void {
     this.scene.remove(particle.mesh);
-    const mesh = particle.mesh as THREE.Mesh;
-    if ((mesh as THREE.Sprite).isSprite) {
+    const mesh = particle.mesh as any;
+    if (mesh.isSprite) {
       (mesh.material as THREE.SpriteMaterial).dispose();
       return;
     }

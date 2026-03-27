@@ -4,7 +4,7 @@ import gsap from "gsap";
 
 export class ShakerAction implements IActionComponent {
     id = "shaker"
-    triggerType: TriggerType = "onHit"
+    triggerType: TriggerType = TriggerType.OnHit
     shader: any[] = []
 
     constructor() { }

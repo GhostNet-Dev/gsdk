@@ -2,8 +2,7 @@ import * as THREE from "three"
 import IEventController from "@Glibs/interface/ievent"
 import { MonsterId } from "@Glibs/types/monstertypes"
 import { EventTypes } from "@Glibs/types/globaltypes"
-import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes"
-import { ActionDef } from "../actiontypes"
+import { ActionContext, IActionComponent, IActionUser, ActionDef, TriggerType } from "@Glibs/types/actiontypes"
 import { isCooldownReady } from "./cooldownhelper"
 
 export class FireballAction implements IActionComponent {
@@ -22,8 +21,8 @@ export class FireballAction implements IActionComponent {
     // Fireball은 지속 효과가 없어 별도 activate 동작이 필요하지 않습니다.
   }
 
-  trigger(target: IActionUser, triggerType: "onCast", context?: ActionContext) {
-    if (triggerType !== "onCast") return
+  trigger(target: IActionUser, triggerType: TriggerType, context?: ActionContext) {
+    if (triggerType !== TriggerType.OnCast) return
     this.castProjectile(target, context)
   }
 

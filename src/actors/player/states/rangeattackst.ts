@@ -1,3 +1,4 @@
+import { TriggerType } from "@Glibs/types/actiontypes";
 import * as THREE from "three";
 import { IActorState } from "./playerstate"
 import { Player } from "../player";
@@ -62,7 +63,7 @@ export class RangeAttackState extends AttackState implements IActorState {
         this.player.Meshs.getWorldDirection(this.attackDir)
         this.player.GetMuzzlePosition(startPos);
 
-        (itemInfo as Item).trigger("onFire", { direction: this.attackDir })
+        (itemInfo as Item).trigger(TriggerType.OnFire, { direction: this.attackDir })
 
         this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
             id: MonsterId.BulletLine, 

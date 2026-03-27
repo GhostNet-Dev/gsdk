@@ -1,3 +1,4 @@
+import { TriggerType } from "@Glibs/types/actiontypes";
 import * as THREE from "three";
 import { IActorState } from "./playerstate";
 import { Player } from "../player";
@@ -565,7 +566,7 @@ export class ComboMeleeState extends AttackState implements IActorState {
 
             // 아이템 Action.activate는 장착 시점(PlayerCtrl.Equipment)에서 1회 호출됨
             // 공격 시작/콤보 스텝에서는 onUse 트리거만 발행
-            (handItem as Item).trigger?.("onUse");
+            (handItem as Item).trigger?.(TriggerType.OnUse);
             if ((handItem as any).Sound) {
                 this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, (handItem as any).Mesh, (handItem as any).Sound);
             }

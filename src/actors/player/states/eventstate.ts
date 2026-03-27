@@ -13,7 +13,7 @@ import { BaseSpec } from "@Glibs/actors/battle/basespec"
 
 export class EventActionState extends State implements IActorState {
     TargetIntId: string =""
-    triggerType: TriggerType = "onInteract"
+    triggerType: TriggerType = TriggerType.OnInteract
     attackTime = 0
     modeTime = 0
     keytimeout?:NodeJS.Timeout
@@ -56,7 +56,7 @@ export class EventActionState extends State implements IActorState {
 }
 export class EventIdleState extends State implements IActorState {
     TargetIntId: string =""
-    triggerType: TriggerType = "onInteract"
+    triggerType: TriggerType = TriggerType.OnInteract
     modeTime = 0
 
     constructor(playerPhy: PlayerCtrl, player: Player, gphysic: IGPhysic, baseSpec: BaseSpec) {

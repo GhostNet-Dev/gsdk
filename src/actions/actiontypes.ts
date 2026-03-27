@@ -26,19 +26,24 @@ export interface IActionUser {
 | `onBuffApply`, `onBuffTick`, `onBuffRemove` | 버프 지속/종료 시점              |
 | `onInteract` (확장 가능)                        | InteractableObject 지원 예정 |
 */
-export type TriggerType =
-  | "onCast"
-  | "onBuffApply" | "onBuffTick" | "onBuffRemove"
-  | "onEquip" | "onUnequip"
-  | "onInteract"
-  | "onEnterArea"
-  | "onAttackHit"
-  | "onAttack"
-  | "onUse" | "onUnuse"
-  | "onFire"
-  | "onHit"
-  | "onActivate"
-  | "onTrigger"
+export enum TriggerType {
+  OnCast = "onCast",
+  OnBuffApply = "onBuffApply",
+  OnBuffTick = "onBuffTick",
+  OnBuffRemove = "onBuffRemove",
+  OnEquip = "onEquip",
+  OnUnequip = "onUnequip",
+  OnInteract = "onInteract",
+  OnEnterArea = "onEnterArea",
+  OnAttackHit = "onAttackHit",
+  OnAttack = "onAttack",
+  OnUse = "onUse",
+  OnUnuse = "onUnuse",
+  OnFire = "onFire",
+  OnHit = "onHit",
+  OnActivate = "onActivate",
+  OnTrigger = "onTrigger",
+}
 
 
 export interface ActionDef {
@@ -46,6 +51,7 @@ export interface ActionDef {
   trigger: TriggerType
   [key: string]: any
 }
+
 
 
 
@@ -278,7 +284,7 @@ export const actionDefs = {
   },
   DamageBurning: { // 피격 이후 손상된 부위에서 화염/연기/파편이 계속 발생하는 효과
     type: "damageburning",
-    trigger: "onHit",
+    trigger: "onActivate",
     sampleCount: 3,
     fireIntensity: 0.75,
     smokeIntensity: 0.55,

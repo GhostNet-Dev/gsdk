@@ -1,3 +1,4 @@
+import { TriggerType } from "@Glibs/types/actiontypes";
 import * as THREE from "three";
 import { IActorState } from "./playerstate"
 import { Player } from "../player";
@@ -43,7 +44,7 @@ export class MeleeAttackState extends AttackState implements IActorState {
                 this.detectEnermy = true
             }
 
-            (handItem as Item).trigger("onUse")
+            (handItem as Item).trigger(TriggerType.OnUse)
             if (handItem.Sound) this.eventCtrl.SendEventMessage(EventTypes.RegisterSound, handItem.Mesh, handItem.Sound)
         }
         
@@ -82,7 +83,7 @@ export class MeleeAttackState extends AttackState implements IActorState {
     }
     
     meleeAttack(itemInfo: IItem) {
-        (itemInfo as Item).trigger("onAttack", { direction: this.attackDir })
+        (itemInfo as Item).trigger(TriggerType.OnAttack, { direction: this.attackDir })
 
         const targets = this.getTargetsInCone(this.attackDist)
         if (targets.length > 0) {
