@@ -14,7 +14,8 @@ function hasEmissive(material: THREE.Material): material is EmissiveMaterial {
 }
 
 export interface WarpArrivalOptions {
-  progressSpeed?: number;
+  durationSec?: number;
+  progressSpeed?: number; // @deprecated durationSec 사용 권장
   maxScaleZ?: number;
   minScaleXY?: number;
   maxEmissiveIntensity?: number;
@@ -56,7 +57,9 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
     private readonly eventCtrl: IEventController,
     opts: WarpArrivalOptions = {}
   ) {
-    this.progressSpeed = opts.progressSpeed ?? 0.007;
+    this.progressSpeed = opts.durationSec
+      ? 1 / opts.durationSec
+      : (opts.progressSpeed ?? (1 / 3));
     this.maxScaleZ = opts.maxScaleZ ?? 150;
     this.minScaleXY = opts.minScaleXY ?? 0.01;
     this.maxEmissiveIntensity = opts.maxEmissiveIntensity ?? 10;
@@ -101,7 +104,7 @@ export class WarpArrivalAction implements IActionComponent, ILoop {
     if (!this.obj) return;
 
     if (this.isWarping) {
-      this.warpingProgress += this.progressSpeed;
+      this.warpingProgress += this.progressSpeed * delta;
       const t = Math.min(1, this.warpingProgress);
       const easedT = t * t * t * t;
 
