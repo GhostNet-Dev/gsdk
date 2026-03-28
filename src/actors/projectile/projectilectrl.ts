@@ -8,6 +8,7 @@ import { BaseSpec } from "../battle/basespec";
 import { StatKey } from "@Glibs/types/stattypes";
 import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
 import { VirtualActorFactory } from "../battle/virtualactorfab";
+import { MonsterId } from "@Glibs/types/monstertypes";
 
 export class ProjectileCtrl implements IActionUser {
   raycast = new THREE.Raycaster();
@@ -42,6 +43,7 @@ export class ProjectileCtrl implements IActionUser {
     private eventCtrl: IEventController,
     private range: number,
     private stats: Partial<Record<StatKey, number>>,
+    private projectileId?: MonsterId,
   ) {
     this.baseSpec = new BaseSpec(this.stats, this);
   }
@@ -53,6 +55,12 @@ export class ProjectileCtrl implements IActionUser {
   private tracerRange?: number;
   private hasAttacked = false;
   private useRaycast = false;
+
+  // 유도탄 지원 필드
+  private homingActive = false;
+  private homingTurnRate = 6.5;
+  private homingTarget: THREE.Object3D | null = null;
+
 
   applyAction(action: IActionComponent, ctx?: ActionContext) {
     action.apply?.(this, ctx);
@@ -76,6 +84,9 @@ export class ProjectileCtrl implements IActionUser {
     this.tracerRange = undefined;
     this.hasAttacked = false;
     this.useRaycast = false;
+
+    this.homingActive = false;
+    this.homingTarget = null;
   }
 
   start(
@@ -109,6 +120,9 @@ export class ProjectileCtrl implements IActionUser {
     this.hasAttacked = false;
     this.useRaycast = !!opt?.useRaycast;
 
+    this.homingActive = this.projectileId === MonsterId.EnergyHoming;
+    this.homingTarget = this.homingActive ? this.findHomingTarget() : null;
+
     if (this.isHitscan) {
       // end 확정
       const nd = d.lengthSq() < 1e-8 ? new THREE.Vector3(0, 0, 1) : d.clone().normalize();
@@ -139,6 +153,26 @@ export class ProjectileCtrl implements IActionUser {
       // 라스건 플리커 같은 연출이 있으면 여기서 update 유지
       this.projectile.update(this.position);
       return;
+    }
+
+    if (this.homingActive) {
+      if (!this.homingTarget || !this.targetList.includes(this.homingTarget)) {
+        this.homingTarget = this.findHomingTarget();
+      }
+
+      if (this.homingTarget) {
+        const toTarget = new THREE.Vector3().subVectors(this.homingTarget.position, this.position);
+        if (toTarget.lengthSq() > 1e-6) {
+          const desired = toTarget.normalize();
+          const current = this.moveDirection.lengthSq() > 1e-6
+            ? this.moveDirection.clone().normalize()
+            : desired.clone();
+          const steer = THREE.MathUtils.clamp(this.homingTurnRate * delta, 0, 1);
+          current.lerp(desired, steer).normalize();
+          const speedMag = Math.max(0.0001, this.moveDirection.length());
+          this.moveDirection.copy(current.multiplyScalar(speedMag));
+        }
+      }
     }
 
     const dirLen = this.moveDirection.length();
@@ -347,6 +381,25 @@ export class ProjectileCtrl implements IActionUser {
     }
 
     return false;
+  }
+
+  private findHomingTarget(): THREE.Object3D | null {
+    let nearest: THREE.Object3D | null = null;
+    let nearestDist = Number.POSITIVE_INFINITY;
+
+    for (const target of this.targetList) {
+      if (this.isOwnerOrSelfTarget(target)) continue;
+
+      const dist = this.position.distanceTo(target.position);
+      if (dist > this.range) continue;
+
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = target;
+      }
+    }
+
+    return nearest;
   }
 
   private getClosestPointOnSegment(
