@@ -15,6 +15,7 @@ import { KnifeModel } from "./knifemodel";
 import { Loader } from "@Glibs/loader/loader";
 import { Char } from "@Glibs/types/assettypes";
 import { StreakTracerModel } from "./streaktracer";
+import { EnergyHomingModel } from "./energyhoming";
 
 export interface IProjectileModel {
   get Meshs():
@@ -104,6 +105,8 @@ export class Projectile implements ILoop {
         return new StreakTracerModel({ camera: this.camera, eventCtrl: this.eventCtrl });
       case MonsterId.Knife:
         return new KnifeModel(this.loader?.GetAssets(Char.KayKitAdvDagger));
+      case MonsterId.EnergyHoming:
+        return new EnergyHomingModel();
       case MonsterId.DefaultBall:
       default:
         return new DefaultBall(0.1);
@@ -232,7 +235,7 @@ export class Projectile implements ILoop {
     if (!set) {
       const model = this.GetModel(id);
       const stat = StatFactory.getDefaultStats(id);
-      const ctrl = new ProjectileCtrl(model, this.targetList, this.physicList, this.eventCtrl, msg.range, stat);
+      const ctrl = new ProjectileCtrl(model, this.targetList, this.physicList, this.eventCtrl, msg.range, stat, id);
 
       set = { model, ctrl, releasing: false, initializing: false };
       pool.push(set);

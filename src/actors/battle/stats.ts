@@ -158,6 +158,12 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
     attackMelee: 1,
     speed: 100.0, // High speed for tracer
   },
+  [MonsterId.EnergyHoming]: {
+    hp: 1,
+    attackMelee: 10,
+    speed: 7.0,
+    attackRange: 20,
+  },
 };
 
 

@@ -34,6 +34,7 @@ export enum MonsterId {
     BulletLine = "BulletL",
     Fireball = "fb",
     Knife = "knife",
+    EnergyHoming = "EnergyHoming",
 }
 
 export const MonsterIdList = [
