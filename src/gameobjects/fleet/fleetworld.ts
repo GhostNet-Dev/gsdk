@@ -181,7 +181,7 @@ export class FleetWorld {
   private readonly taskObjs: ILoop[] = []
   private readonly fleetRoot = new THREE.Group()
   private readonly fleetManager: FleetManager
-  private readonly projectionProbe = new THREE.Object3D()
+  private readonly projectionProbe = new THREE.PerspectiveCamera()
   private readonly projectionViewMatrix = new THREE.Matrix4()
   private readonly projectionViewProjectionMatrix = new THREE.Matrix4()
   private selectedShipId?: string
@@ -204,6 +204,15 @@ export class FleetWorld {
       LoopId: 0,
       update: (_delta: number) => this.updateShipStatusVisuals(),
     })
+    
+    // Initialize projection probe with main camera's properties
+    if (this.camera instanceof THREE.PerspectiveCamera) {
+      this.projectionProbe.fov = this.camera.fov
+      this.projectionProbe.near = this.camera.near
+      this.projectionProbe.far = this.camera.far
+      this.projectionProbe.aspect = this.camera.aspect
+      this.projectionProbe.updateProjectionMatrix()
+    }
   }
 
   get objects(): THREE.Object3D[] {
@@ -602,36 +611,36 @@ export class FleetWorld {
     const desiredPosition = target.clone().add(desiredOffset)
     const desiredTarget = this.resolveFocusTarget(target, desiredPosition, radius)
 
-    gsap.to(this.camera.position, {
-      x: desiredPosition.x,
-      y: desiredPosition.y,
-      z: desiredPosition.z,
+    const animationObj = {
+      px: this.camera.position.x,
+      py: this.camera.position.y,
+      pz: this.camera.position.z,
+      tx: currentTarget.x,
+      ty: currentTarget.y,
+      tz: currentTarget.z,
+    }
+
+    gsap.to(animationObj, {
+      px: desiredPosition.x,
+      py: desiredPosition.y,
+      pz: desiredPosition.z,
+      tx: desiredTarget.x,
+      ty: desiredTarget.y,
+      tz: desiredTarget.z,
       duration,
       ease: "power2.out",
       onUpdate: () => {
+        this.camera.position.set(animationObj.px, animationObj.py, animationObj.pz)
         if ("controls" in this.camera) {
           const controlled = this.camera as THREE.Camera & { controls?: { target: THREE.Vector3; update: () => void } }
-          controlled.controls?.update()
+          if (controlled.controls) {
+            controlled.controls.target.set(animationObj.tx, animationObj.ty, animationObj.tz)
+            controlled.controls.update()
+          }
+        } else {
+          this.camera.lookAt(animationObj.tx, animationObj.ty, animationObj.tz)
         }
       },
-    })
-
-    if ("controls" in this.camera) {
-      const controlled = this.camera as THREE.Camera & { controls?: { target: THREE.Vector3; update: () => void } }
-      gsap.to(controlled.controls?.target ?? { x: 0, y: 0, z: 0 }, {
-        x: desiredTarget.x,
-        y: desiredTarget.y,
-        z: desiredTarget.z,
-        duration,
-        ease: "power2.out",
-        onUpdate: () => controlled.controls?.update(),
-      })
-      return
-    }
-
-    gsap.to({}, {
-      duration,
-      onUpdate: () => this.camera.lookAt(desiredTarget),
     })
   }
 
@@ -642,9 +651,9 @@ export class FleetWorld {
 
     let bestShift = 0
     let bestError = Math.abs(this.measureFocusProjectionError(baseTarget, cameraPosition, 0, desiredNdcY))
-    let step = Math.max(radius * 0.8, 6)
+    let step = Math.max(radius * 1.2, 10)
 
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 12; i++) {
       const candidates = [bestShift - step, bestShift, bestShift + step]
       for (const shift of candidates) {
         const error = Math.abs(this.measureFocusProjectionError(baseTarget, cameraPosition, shift, desiredNdcY))
@@ -656,6 +665,8 @@ export class FleetWorld {
       step *= 0.5
     }
 
+    // Shift along world Y axis is generally safe for tilted RTS cameras.
+    // To be more robust across all angles, we could shift along camera's local Y axis in world space.
     return baseTarget.add(new THREE.Vector3(0, bestShift, 0))
   }
 
@@ -671,6 +682,12 @@ export class FleetWorld {
   }
 
   private projectWorldPoint(point: THREE.Vector3, cameraPosition: THREE.Vector3, lookTarget: THREE.Vector3) {
+    if (this.camera instanceof THREE.PerspectiveCamera) {
+      this.projectionProbe.fov = this.camera.fov
+      this.projectionProbe.aspect = this.camera.aspect
+      this.projectionProbe.updateProjectionMatrix()
+    }
+    
     this.projectionProbe.position.copy(cameraPosition)
     this.projectionProbe.up.copy(this.camera.up)
     this.projectionProbe.lookAt(lookTarget)
@@ -690,8 +707,10 @@ export class FleetWorld {
     if (!panel) return 0
 
     const rect = panel.getBoundingClientRect()
+    // The panel is at the bottom, so usable area is from top to rect.top
     const usableBottom = Math.max(0, rect.top)
     const usableCenterY = usableBottom * 0.5
+    // Screen Y (0 to viewportHeight) to NDC Y (1 to -1)
     return 1 - ((usableCenterY / viewportHeight) * 2)
   }
 
