@@ -622,6 +622,17 @@ export enum Char {
   SpaceShipPack1Carrier,
   SpaceShipPack1Fighter,
 
+  SpaceShipPack2Destroyer01,
+  SpaceShipPack2Destroyer02,
+  SpaceShipPack2Destroyer03,
+  SpaceShipPack2Destroyer04,
+  SpaceShipPack2Destroyer05,
+  SpaceShipPack2LightCruiser01,
+  SpaceShipPack2LightCruiser02,
+  SpaceShipPack2LightCruiser03,
+  SpaceShipPack2LightCruiser04,
+  SpaceShipPack2LightCruiser05,
+
   OceanStarterSubMarine,
   OceanStarterSmallCoral,
   OceanStarterSmallBoat,
