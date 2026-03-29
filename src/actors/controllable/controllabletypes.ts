@@ -1,6 +1,7 @@
 import * as THREE from "three"
 import { ActionDef, IActionComponent } from "@Glibs/types/actiontypes"
 import { StatKey } from "@Glibs/inventory/stat/stattypes"
+import { IActorState } from "../player/states/playerstate"
 
 export type ControllableRole = "ship" | "ally"
 export type ControlSource = "manual" | "ai" | "hybrid"
@@ -24,12 +25,6 @@ export type ActorCommand = {
   payload?: unknown
 }
 
-export interface IControllableState {
-  Init(param?: unknown): void
-  Uninit(): void
-  Update(delta: number, ctx: CommandContext): IControllableState
-}
-
 export type CommandContext = {
   actorId: string
   queue: ActorCommand[]
@@ -44,7 +39,7 @@ export type ControllableProperty = {
   stats?: Partial<Record<StatKey, number>>
   actions?: ActionDef[]
   defaultControlSource?: ControlSource
-  stateFactory: (...params: unknown[]) => IControllableState
+  stateFactory: (...params: unknown[]) => IActorState
 }
 
 export type PolicyContext = {

@@ -8,10 +8,10 @@ import {
   CommandContext,
   ControlSource,
   IControllableRuntime,
-  IControllableState,
   PolicyContext,
 } from "./controllabletypes"
 import { IControlPolicy } from "./policy/controlpolicy"
+import { IActorState } from "../player/states/playerstate"
 
 export class ControllableCtrl implements ILoop, IActionUser {
   LoopId = 0
@@ -27,7 +27,7 @@ export class ControllableCtrl implements ILoop, IActionUser {
     public name: string,
     private runtime: IControllableRuntime,
     private eventCtrl: IEventController,
-    private state: IControllableState,
+    private state: IActorState,
     private policies: Partial<Record<ControlSource, IControlPolicy>>,
     stats: ConstructorParameters<typeof BaseSpec>[0],
     private arbiter: CommandArbiter = ControllableCtrl.defaultArbiter,
@@ -62,7 +62,7 @@ export class ControllableCtrl implements ILoop, IActionUser {
       consume: () => this.commandQueue.shift(),
       peek: () => this.commandQueue[0],
     }
-    this.state = this.state.Update(delta, ctx)
+    this.state = this.state.Update(delta, ctx as unknown as undefined)
   }
 
   applyAction(action: IActionComponent, context?: ActionContext): void {

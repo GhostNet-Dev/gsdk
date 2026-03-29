@@ -1,17 +1,21 @@
-import { ActorCommand, CommandContext, IControllableRuntime, IControllableState } from "../controllabletypes"
+import { IActorState } from "../../player/states/playerstate"
+import { ActorCommand, CommandContext, IControllableRuntime } from "../controllabletypes"
 
-export class IdleControllableState implements IControllableState {
+export class IdleControllableState implements IActorState {
   constructor(private runtime: IControllableRuntime) {}
 
   Init(): void {}
   Uninit(): void {}
 
-  Update(_delta: number, ctx: CommandContext): IControllableState {
-    const next = ctx.peek()
+  Update(_delta: number, ctx?: unknown): IActorState {
+    const commandCtx = ctx as CommandContext | undefined
+    if (!commandCtx) return this
+
+    const next = commandCtx.peek()
     if (!next) return this
 
     this.applyCommand(next)
-    ctx.consume()
+    commandCtx.consume()
     return this
   }
 

@@ -2,52 +2,83 @@ import { ControllableDb } from "../controllabledb"
 import { ControllableDefinition, IControllableRuntime, PolicyContext, ActorCommand } from "../controllabletypes"
 import { IdleControllableState } from "../states/controllablestate"
 import { CommandPlanner } from "../policy/aipolicy"
+import { NewFighterShipState } from "./fightershipstate"
+import { IFighterShipRuntime } from "./fightershipruntime"
 
 const now = () => Date.now()
 
-export const ScoutSpaceshipDefinition: ControllableDefinition = {
-  id: "ship.scout",
-  role: "ship",
-  model: "CharShipScout",
-  defaultControlSource: "hybrid",
-  stats: {
-    hp: 180,
-    mp: 80,
-    stamina: 120,
-    attackRanged: 16,
-    defense: 6,
-    speed: 1.6,
+export const controllableDefs = {
+  ScoutSpaceship: {
+    id: "ship.scout",
+    role: "ship",
+    model: "CharShipScout",
+    defaultControlSource: "hybrid",
+    stats: {
+      hp: 180,
+      mp: 80,
+      stamina: 120,
+      attackRanged: 16,
+      defense: 6,
+      speed: 1.6,
+    },
+    policyMap: {
+      manual: "human",
+      ai: "ship-default-ai",
+    },
+    stateFactory: (runtime: unknown) => new IdleControllableState(runtime as IControllableRuntime),
   },
-  policyMap: {
-    manual: "human",
-    ai: "ship-default-ai",
+  FighterShip: {
+    id: "ship.fighter",
+    role: "ship",
+    model: "SpaceShipPack1Fighter",
+    defaultControlSource: "hybrid",
+    stats: {
+      hp: 160,
+      mp: 60,
+      stamina: 120,
+      attackRanged: 18,
+      defense: 5,
+      speed: 1.9,
+    },
+    policyMap: {
+      manual: "human",
+      ai: "ship-default-ai",
+    },
+    stateFactory: (runtime: unknown) => NewFighterShipState(runtime as IFighterShipRuntime),
   },
-  stateFactory: (runtime: unknown) => new IdleControllableState(runtime as IControllableRuntime),
-}
+  EscortAlly: {
+    id: "ally.escort",
+    role: "ally",
+    model: "CharAllyEscort",
+    defaultControlSource: "hybrid",
+    stats: {
+      hp: 240,
+      mp: 30,
+      stamina: 140,
+      attackMelee: 14,
+      defense: 10,
+      speed: 1.1,
+    },
+    policyMap: {
+      manual: "human",
+      ai: "ally-escort-ai",
+    },
+    stateFactory: (runtime: unknown) => new IdleControllableState(runtime as IControllableRuntime),
+  },
+} satisfies Record<string, ControllableDefinition>
 
-export const EscortAllyDefinition: ControllableDefinition = {
-  id: "ally.escort",
-  role: "ally",
-  model: "CharAllyEscort",
-  defaultControlSource: "hybrid",
-  stats: {
-    hp: 240,
-    mp: 30,
-    stamina: 140,
-    attackMelee: 14,
-    defense: 10,
-    speed: 1.1,
-  },
-  policyMap: {
-    manual: "human",
-    ai: "ally-escort-ai",
-  },
-  stateFactory: (runtime: unknown) => new IdleControllableState(runtime as IControllableRuntime),
-}
+export type SampleControllableDefs = typeof controllableDefs
+export type SampleControllableDefKey = keyof SampleControllableDefs
+export type SampleControllableDef = SampleControllableDefs[SampleControllableDefKey]
+
+export const ScoutSpaceshipDefinition = controllableDefs.ScoutSpaceship
+export const FighterShipDefinition = controllableDefs.FighterShip
+export const EscortAllyDefinition = controllableDefs.EscortAlly
 
 export function registerSampleDefinitions(db: ControllableDb) {
-  db.register(ScoutSpaceshipDefinition)
-  db.register(EscortAllyDefinition)
+  for (const def of Object.values(controllableDefs)) {
+    db.register(def)
+  }
 }
 
 export const defaultShipAiPlanner: CommandPlanner = (_delta: number, ctx: PolicyContext): ActorCommand[] => {
