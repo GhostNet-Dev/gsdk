@@ -17,6 +17,8 @@ import {
 import { FighterShipRuntime } from "@Glibs/actors/controllable/samples/fightershipruntime"
 import { Formation, FleetFormation } from "./formation"
 import { FleetManager } from "./fleetmanager"
+import { FleetOrder, FleetCommandIssuer } from "./fleet"
+import { FleetAimInput, destinationFromAim } from "./directionaim"
 
 type Vector3Like = THREE.Vector3 | [number, number, number] | { x: number, y: number, z: number }
 
@@ -24,6 +26,17 @@ type ShipSpawnOptions = {
   controllableId?: string
   color?: THREE.ColorRepresentation
   speed?: number
+}
+
+export type FleetDirectionalMoveOptions = {
+  distance: number
+  aim: FleetAimInput
+  anchor?: Vector3Like
+  formation?: FleetFormation
+  spacing?: number
+  issuedAt?: number
+  issuer?: FleetCommandIssuer
+  priority?: number
 }
 
 type ShipStatusRingVisual = {
@@ -261,6 +274,25 @@ export class FleetWorld {
     })
   }
 
+  moveFleetByAim(fleetId: string, options: FleetDirectionalMoveOptions) {
+    const anchor = options.anchor
+      ? this.toVector3(options.anchor)
+      : this.getFleetFlagshipPosition(fleetId)
+    if (!anchor) return []
+
+    const destination = destinationFromAim(anchor, options.aim, options.distance)
+    const moveOptions: Omit<FleetOrder, "type" | "point"> = {
+      formation: options.formation,
+      spacing: options.spacing,
+      issuedAt: options.issuedAt,
+      issuer: options.issuer,
+      priority: options.priority,
+      facing: destination.clone().sub(anchor).normalize(),
+    }
+
+    return this.fleetManager.moveFleet(fleetId, destination, moveOptions)
+  }
+
   private get config(): FleetWorldOptions {
     return {
       ...defaultFleetWorldOptions,
@@ -283,6 +315,14 @@ export class FleetWorld {
       },
       fleets: this.options.fleets ?? defaultFleetWorldOptions.fleets,
     }
+  }
+
+  private getFleetFlagshipPosition(fleetId: string) {
+    const summary = this.fleetManager.getFleetSummary(fleetId)
+    if (!summary?.flagshipId) return undefined
+    const runtime = this.shipRuntimes.get(summary.flagshipId)
+    if (!runtime) return undefined
+    return runtime.mesh.getWorldPosition(new THREE.Vector3())
   }
 
   async init() {
