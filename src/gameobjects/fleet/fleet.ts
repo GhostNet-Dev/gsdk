@@ -17,6 +17,8 @@ export type FleetOrder = {
 }
 
 export type FleetConfig = {
+  name?: string
+  color?: THREE.ColorRepresentation
   formation?: FleetFormation
   spacing?: number
 }
@@ -25,15 +27,27 @@ export class Fleet {
   private readonly members = new Set<string>()
   private formation: FleetFormation
   private spacing: number
+  readonly name: string
+  readonly color?: THREE.ColorRepresentation
 
   constructor(
     public readonly id: string,
     memberIds: string[] = [],
     config: FleetConfig = {},
   ) {
+    this.name = config.name ?? id
+    this.color = config.color
     this.formation = config.formation ?? "line"
     this.spacing = config.spacing ?? 6
     memberIds.forEach((memberId) => this.members.add(memberId))
+  }
+
+  getFormation(): FleetFormation {
+    return this.formation
+  }
+
+  getSpacing(): number {
+    return this.spacing
   }
 
   getMembers(): string[] {

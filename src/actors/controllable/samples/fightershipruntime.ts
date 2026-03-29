@@ -14,6 +14,10 @@ export interface IFighterShipRuntime extends IControllableRuntime {
 
 export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   LoopId = 0
+  private hull = 100
+  private readonly maxHull = 100
+  private energy = 100
+  private readonly maxEnergy = 100
   private destination?: THREE.Vector3
   private followTargetId?: string
   private attackTargetId?: string
@@ -67,8 +71,35 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     void payload
   }
 
+  getHull() {
+    return this.hull
+  }
+
+  getMaxHull() {
+    return this.maxHull
+  }
+
+  getHullRatio() {
+    return this.maxHull <= 0 ? 0 : this.hull / this.maxHull
+  }
+
+  getEnergy() {
+    return this.energy
+  }
+
+  getMaxEnergy() {
+    return this.maxEnergy
+  }
+
+  getEnergyRatio() {
+    return this.maxEnergy <= 0 ? 0 : this.energy / this.maxEnergy
+  }
+
   update(delta: number): void {
-    if (this.hold) return
+    if (this.hold) {
+      this.restoreEnergy(delta, 16)
+      return
+    }
 
     if (this.attackTargetId) {
       const target = this.runtimeIndex.get(this.attackTargetId)
@@ -79,8 +110,10 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
 
       const distSq = this.mesh.position.distanceToSquared(target.mesh.position)
       if (distSq > 14 * 14) {
+        this.consumeEnergy(delta, 8)
         this.moveToward(target.mesh.position, delta)
       } else {
+        this.consumeEnergy(delta, 12)
         this.face(target.mesh.position)
       }
       return
@@ -92,14 +125,19 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
         this.followTargetId = undefined
         return
       }
+      this.consumeEnergy(delta, 6)
       this.moveToward(target.mesh.position, delta, 7)
       return
     }
 
     if (this.destination) {
+      this.consumeEnergy(delta, 8)
       this.moveToward(this.destination, delta)
       if (this.hasArrived(this.destination)) this.destination = undefined
+      return
     }
+
+    this.restoreEnergy(delta, 10)
   }
 
   private moveToward(point: THREE.Vector3, delta: number, stopDistance = 0.9) {
@@ -118,5 +156,13 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     this.forward.y = 0
     if (this.forward.lengthSq() <= 0.0001) return
     this.mesh.lookAt(this.mesh.position.clone().add(this.forward.normalize()))
+  }
+
+  private consumeEnergy(delta: number, rate: number) {
+    this.energy = Math.max(0, this.energy - (rate * delta))
+  }
+
+  private restoreEnergy(delta: number, rate: number) {
+    this.energy = Math.min(this.maxEnergy, this.energy + (rate * delta))
   }
 }

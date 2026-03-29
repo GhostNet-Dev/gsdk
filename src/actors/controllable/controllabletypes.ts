@@ -37,6 +37,7 @@ export type ControllableProperty = {
   id: string
   role: ControllableRole
   model: Char
+  scale: number
   stats?: Partial<Record<StatKey, number>>
   actions?: ActionDef[]
   defaultControlSource?: ControlSource

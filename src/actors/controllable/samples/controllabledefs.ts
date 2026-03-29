@@ -14,6 +14,7 @@ export const controllableDefs = {
     role: "ship",
     model: Char.SpaceShipPack1Bomber,
     defaultControlSource: "hybrid",
+    scale: 0.01,
     stats: {
       hp: 180,
       mp: 80,
@@ -33,6 +34,7 @@ export const controllableDefs = {
     role: "ship",
     model: Char.SpaceShipPack1Fighter,
     defaultControlSource: "hybrid",
+    scale: 0.01,
     stats: {
       hp: 160,
       mp: 60,
@@ -52,6 +54,7 @@ export const controllableDefs = {
     role: "ally",
     model: Char.SpaceShipPack1Carrier,
     defaultControlSource: "hybrid",
+    scale: 0.01,
     stats: {
       hp: 240,
       mp: 30,

@@ -3,8 +3,21 @@ import { Controllables } from "@Glibs/actors/controllable/controllables"
 import { Fleet, FleetConfig, FleetOrder } from "./fleet"
 import { FleetFormation } from "./formation"
 
+export type FleetSummary = {
+  id: string
+  name: string
+  color?: THREE.ColorRepresentation
+  formation: FleetFormation
+  spacing: number
+  flagshipId?: string
+  memberIds: string[]
+  memberCount: number
+  selected: boolean
+}
+
 export class FleetManager {
   private readonly fleets = new Map<string, Fleet>()
+  private selectedFleetId?: string
 
   constructor(private readonly controllables: Controllables) {}
 
@@ -30,6 +43,31 @@ export class FleetManager {
 
   listFleets(): Fleet[] {
     return [...this.fleets.values()]
+  }
+
+  listFleetSummaries(): FleetSummary[] {
+    return this.listFleets().map((fleet) => this.toSummary(fleet))
+  }
+
+  getSelectedFleetId() {
+    return this.selectedFleetId
+  }
+
+  getSelectedFleetSummary(): FleetSummary | undefined {
+    if (!this.selectedFleetId) return undefined
+    const fleet = this.fleets.get(this.selectedFleetId)
+    return fleet ? this.toSummary(fleet) : undefined
+  }
+
+  getFleetSummary(fleetId: string): FleetSummary | undefined {
+    const fleet = this.fleets.get(fleetId)
+    return fleet ? this.toSummary(fleet) : undefined
+  }
+
+  selectFleet(fleetId: string) {
+    if (!this.fleets.has(fleetId)) return undefined
+    this.selectedFleetId = fleetId
+    return this.getSelectedFleetSummary()
   }
 
   addMember(fleetId: string, actorId: string) {
@@ -103,5 +141,20 @@ export class FleetManager {
       ...options,
       type: "hold",
     })
+  }
+
+  private toSummary(fleet: Fleet): FleetSummary {
+    const memberIds = fleet.getMembers()
+    return {
+      id: fleet.id,
+      name: fleet.name,
+      color: fleet.color,
+      formation: fleet.getFormation(),
+      spacing: fleet.getSpacing(),
+      flagshipId: memberIds[0],
+      memberIds,
+      memberCount: memberIds.length,
+      selected: fleet.id === this.selectedFleetId,
+    }
   }
 }
