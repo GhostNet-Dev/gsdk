@@ -2,8 +2,9 @@ import { ControllableDb } from "../controllabledb"
 import { ControllableDefinition, IControllableRuntime, PolicyContext, ActorCommand } from "../controllabletypes"
 import { IdleControllableState } from "../states/controllablestate"
 import { CommandPlanner } from "../policy/aipolicy"
-import { NewFighterShipState } from "./fightershipstate"
+import { NewFighterShipState } from "../states/fightershipstate"
 import { IFighterShipRuntime } from "./fightershipruntime"
+import { Char } from "@Glibs/types/assettypes"
 
 const now = () => Date.now()
 
@@ -11,7 +12,7 @@ export const controllableDefs = {
   ScoutSpaceship: {
     id: "ship.scout",
     role: "ship",
-    model: "CharShipScout",
+    model: Char.SpaceShipPack1Bomber,
     defaultControlSource: "hybrid",
     stats: {
       hp: 180,
@@ -30,7 +31,7 @@ export const controllableDefs = {
   FighterShip: {
     id: "ship.fighter",
     role: "ship",
-    model: "SpaceShipPack1Fighter",
+    model: Char.SpaceShipPack1Fighter,
     defaultControlSource: "hybrid",
     stats: {
       hp: 160,
@@ -49,7 +50,7 @@ export const controllableDefs = {
   EscortAlly: {
     id: "ally.escort",
     role: "ally",
-    model: "CharAllyEscort",
+    model: Char.SpaceShipPack1Carrier,
     defaultControlSource: "hybrid",
     stats: {
       hp: 240,

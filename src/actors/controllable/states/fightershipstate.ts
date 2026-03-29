@@ -4,7 +4,7 @@ import {
   ActorCommand,
   CommandContext,
 } from "../controllabletypes"
-import { IFighterShipRuntime } from "./fightershipruntime"
+import { IFighterShipRuntime } from "../samples/fightershipruntime"
 
 type ShipStates = {
   IdleSt: IdleShipState

@@ -2,6 +2,7 @@ import * as THREE from "three"
 import { ActionDef, IActionComponent } from "@Glibs/types/actiontypes"
 import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { IActorState } from "../player/states/playerstate"
+import { Char } from "@Glibs/types/assettypes"
 
 export type ControllableRole = "ship" | "ally"
 export type ControlSource = "manual" | "ai" | "hybrid"
@@ -35,7 +36,7 @@ export type CommandContext = {
 export type ControllableProperty = {
   id: string
   role: ControllableRole
-  model: string
+  model: Char
   stats?: Partial<Record<StatKey, number>>
   actions?: ActionDef[]
   defaultControlSource?: ControlSource
