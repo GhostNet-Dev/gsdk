@@ -3,6 +3,7 @@ import { ILoop } from '../event/ievent';
 import IEventController from '@Glibs/interface/ievent';
 import { EventTypes } from '@Glibs/types/globaltypes';
 import { IPhysicsObject } from '@Glibs/interface/iobject';
+import { LoopType } from '../event/canvas';
 
 export default class DefaultLights extends THREE.DirectionalLight implements ILoop {
     LoopId: number = 0;
@@ -44,7 +45,7 @@ export default class DefaultLights extends THREE.DirectionalLight implements ILo
 
         eventCtrl.RegisterEventListener(EventTypes.CtrlObj, (obj: IPhysicsObject) => {
             this.player = obj
-            this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+            this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this, LoopType.Systems)
         })
         eventCtrl.RegisterEventListener(EventTypes.CtrlObjOff, () => {
             this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)

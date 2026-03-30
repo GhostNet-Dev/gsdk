@@ -366,6 +366,23 @@ export class FleetPanel {
     name.style.wordBreak = "break-word"
     head.appendChild(name)
 
+    const badgeRow = document.createElement("div")
+    badgeRow.style.display = "flex"
+    badgeRow.style.alignItems = "center"
+    badgeRow.style.gap = "4px"
+
+    const modeBadge = document.createElement("span")
+    modeBadge.innerText = this.iconEnergyFocus(ship.energyFocus)
+    modeBadge.title = this.titleEnergyFocus(ship.energyFocus)
+    modeBadge.style.width = "20px"
+    modeBadge.style.height = "20px"
+    modeBadge.style.display = "grid"
+    modeBadge.style.placeItems = "center"
+    modeBadge.style.borderRadius = "999px"
+    modeBadge.style.background = "rgba(30,41,59,0.9)"
+    modeBadge.style.fontSize = "11px"
+    badgeRow.appendChild(modeBadge)
+
     if (ship.isFlagship) {
       const badge = document.createElement("span")
       badge.innerText = "기함"
@@ -376,8 +393,10 @@ export class FleetPanel {
       badge.style.color = "#fcd34d"
       badge.style.fontSize = "10px"
       badge.style.fontWeight = "700"
-      head.appendChild(badge)
+      badgeRow.appendChild(badge)
     }
+
+    head.appendChild(badgeRow)
 
     const energy = document.createElement("div")
     energy.style.display = "grid"
@@ -400,13 +419,8 @@ export class FleetPanel {
     energyFill.style.background = "linear-gradient(90deg, #38bdf8, #93c5fd)"
     energyBar.appendChild(energyFill)
 
-    const focusTag = document.createElement("div")
-    focusTag.innerText = `Focus ${this.labelEnergyFocus(ship.energyFocus)}`
-    focusTag.style.fontSize = "10px"
-    focusTag.style.color = "#94a3b8"
-
     energy.append(energyLabel, energyBar)
-    card.append(head, energy, focusTag)
+    card.append(head, energy)
     card.addEventListener("click", () => {
       this.controller.focusShip(ship.id)
       this.shipDetailPanel.show(fleetId, ship.id)
@@ -415,7 +429,14 @@ export class FleetPanel {
     return card
   }
 
-  private labelEnergyFocus(focus: FleetShipPanelState["energyFocus"]) {
+  private iconEnergyFocus(focus: FleetShipPanelState["energyFocus"]) {
+    if (focus === "attack") return "⚔️"
+    if (focus === "defense") return "🛡️"
+    if (focus === "exploration") return "🔭"
+    return "🚀"
+  }
+
+  private titleEnergyFocus(focus: FleetShipPanelState["energyFocus"]) {
     if (focus === "attack") return "공격"
     if (focus === "defense") return "방어"
     if (focus === "exploration") return "탐색"

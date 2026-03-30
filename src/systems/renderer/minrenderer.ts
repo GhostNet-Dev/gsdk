@@ -3,6 +3,7 @@ import IEventController, { IViewer } from "@Glibs/interface/ievent";
 import { EventTypes } from '@Glibs/types/globaltypes';
 import { ILoop } from '../event/ievent';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { LoopType } from '../event/canvas';
 
 export default class MiniRenderer implements IViewer, ILoop {
   LoopId = 0
@@ -15,7 +16,7 @@ export default class MiniRenderer implements IViewer, ILoop {
     private eventCtrl: IEventController,
     private container: HTMLDivElement
   ) {
-    this.eventCtrl.SendEventMessage(EventTypes.RegisterViewer, this)
+    this.eventCtrl.SendEventMessage(EventTypes.RegisterViewer, this, LoopType.Systems)
     // 렌더러 초기화
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(container.clientWidth, container.clientHeight);

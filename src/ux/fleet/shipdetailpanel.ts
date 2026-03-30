@@ -158,10 +158,10 @@ export class ShipDetailPanel {
   }
 
   private labelEnergyFocus(focus: FleetShipEnergyFocus) {
-    if (focus === "attack") return "공격"
-    if (focus === "defense") return "방어"
-    if (focus === "exploration") return "탐색"
-    return "항행"
+    if (focus === "attack") return "⚔️ 공격"
+    if (focus === "defense") return "🛡️ 방어"
+    if (focus === "exploration") return "🔭 탐색"
+    return "🚀 항행"
   }
 
   private describeEnergyFocus(focus: FleetShipEnergyFocus) {

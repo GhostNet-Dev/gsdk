@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { gsap } from "gsap"
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 import IEventController, { ILoop, IViewer } from "@Glibs/interface/ievent";
-import { Canvas } from "@Glibs/systems/event/canvas";
+import { Canvas, LoopType } from "@Glibs/systems/event/canvas";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { CameraMode, ICameraStrategy } from "./cameratypes";
@@ -47,7 +47,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
 
         this.createCrosshair();
 
-        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this, LoopType.Systems)
         eventCtrl.SendEventMessage(EventTypes.RegisterViewer, this)
         eventCtrl.RegisterEventListener(EventTypes.CtrlObj, (obj: IPhysicsObject, mode = CameraMode.ThirdFollowPerson) => {
             this.lookTarget = true

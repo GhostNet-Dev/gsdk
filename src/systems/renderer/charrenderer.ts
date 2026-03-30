@@ -12,6 +12,7 @@ import { ActionType } from '@Glibs/types/playertypes';
 import { IPhysicsObject } from '@Glibs/interface/iobject';
 import { Npc } from '@Glibs/actors/npc/npc';
 import { InvenFactory } from '@Glibs/inventory/invenfactory';
+import { LoopType } from '../event/canvas';
 
 export default class CharMiniRenderer implements IViewer, ILoop {
     LoopId = 0
@@ -32,7 +33,7 @@ export default class CharMiniRenderer implements IViewer, ILoop {
         private container: HTMLDivElement,
         private inventory: InvenFactory,
     ) {
-        this.eventCtrl.SendEventMessage(EventTypes.RegisterViewer, this)
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterViewer, this, LoopType.Systems)
         // 렌더러 초기화
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(container.clientWidth, container.clientHeight);
