@@ -9,11 +9,16 @@ export type FormationLayoutOptions = {
   facing?: THREE.Vector3
 }
 
+type FormationBasis = {
+  forward: THREE.Vector3
+  right: THREE.Vector3
+  up: THREE.Vector3
+}
+
 export class Formation {
   static layout(kind: FleetFormation, options: FormationLayoutOptions): THREE.Vector3[] {
     const spacing = Math.max(1, options.spacing ?? 6)
-    const forward = Formation.resolveForward(options.facing)
-    const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize()
+    const { forward, right, up } = Formation.resolveBasis(options.facing)
 
     switch (kind) {
       case "column":
@@ -21,7 +26,7 @@ export class Formation {
       case "wedge":
         return Formation.wedge(options.anchor, options.count, spacing, forward, right)
       case "circle":
-        return Formation.circle(options.anchor, options.count, spacing, forward, right)
+        return Formation.circle(options.anchor, options.count, spacing, right, up)
       case "line":
       default:
         return Formation.line(options.anchor, options.count, spacing, right)
@@ -88,8 +93,8 @@ export class Formation {
     anchor: THREE.Vector3,
     count: number,
     spacing: number,
-    forward: THREE.Vector3,
     right: THREE.Vector3,
+    up: THREE.Vector3,
   ) {
     if (count <= 1) return [anchor.clone()]
 
@@ -99,20 +104,31 @@ export class Formation {
     for (let i = 0; i < count; i++) {
       const angle = (i / count) * Math.PI * 2
       const lateral = right.clone().multiplyScalar(Math.cos(angle) * radius)
-      const longitudinal = forward.clone().multiplyScalar(Math.sin(angle) * radius)
-      positions.push(anchor.clone().add(lateral).add(longitudinal))
+      const vertical = up.clone().multiplyScalar(Math.sin(angle) * radius)
+      positions.push(anchor.clone().add(lateral).add(vertical))
     }
 
     return positions
   }
 
-  private static resolveForward(facing?: THREE.Vector3) {
+  private static resolveBasis(facing?: THREE.Vector3): FormationBasis {
     const candidate = facing?.clone()
-    if (!candidate || candidate.lengthSq() === 0) return new THREE.Vector3(0, 0, 1)
+    if (!candidate || candidate.lengthSq() === 0) {
+      return {
+        forward: new THREE.Vector3(0, 0, 1),
+        right: new THREE.Vector3(1, 0, 0),
+        up: new THREE.Vector3(0, 1, 0),
+      }
+    }
 
-    candidate.y = 0
-    if (candidate.lengthSq() === 0) return new THREE.Vector3(0, 0, 1)
+    const forward = candidate.normalize()
+    const worldUp = new THREE.Vector3(0, 1, 0)
+    const fallbackUp = Math.abs(forward.dot(worldUp)) > 0.98
+      ? new THREE.Vector3(1, 0, 0)
+      : worldUp
+    const right = new THREE.Vector3().crossVectors(fallbackUp, forward).normalize()
+    const up = new THREE.Vector3().crossVectors(forward, right).normalize()
 
-    return candidate.normalize()
+    return { forward, right, up }
   }
 }

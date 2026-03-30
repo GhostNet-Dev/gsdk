@@ -1,6 +1,8 @@
 import { FleetFormation } from "@Glibs/gameobjects/fleet/formation"
 import { FleetSummary } from "@Glibs/gameobjects/fleet/fleetmanager"
 
+export type FleetShipEnergyFocus = "attack" | "defense" | "navigation" | "exploration"
+
 export type FleetShipPanelState = {
   id: string
   hull: number
@@ -10,6 +12,8 @@ export type FleetShipPanelState = {
   maxEnergy: number
   energyRatio: number
   selected: boolean
+  isFlagship: boolean
+  energyFocus: FleetShipEnergyFocus
 }
 
 export type FleetPanelController = {
@@ -22,5 +26,5 @@ export type FleetPanelController = {
   focusShip(shipId: string): void
   setFormation(fleetId: string, formation: FleetFormation): void
   setSpacing(fleetId: string, spacing: number): void
-  holdPosition(fleetId: string): unknown
+  setShipEnergyFocus(shipId: string, focus: FleetShipEnergyFocus): void
 }

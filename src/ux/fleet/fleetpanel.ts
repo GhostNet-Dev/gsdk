@@ -2,11 +2,13 @@ import * as THREE from "three"
 import { FleetFormation } from "@Glibs/gameobjects/fleet/formation"
 import { FleetSummary } from "@Glibs/gameobjects/fleet/fleetmanager"
 import { FleetPanelController, FleetShipPanelState } from "./fleetpaneltypes"
+import { ShipDetailPanel } from "./shipdetailpanel"
 
 const formations: FleetFormation[] = ["line", "column", "wedge", "circle"]
 
 export class FleetPanel {
   readonly Dom = document.createElement("div")
+  private readonly shipDetailPanel: ShipDetailPanel
   private readonly listCol = document.createElement("div")
   private readonly detailCol = document.createElement("div")
   private readonly headerEl = document.createElement("div")
@@ -18,8 +20,7 @@ export class FleetPanel {
   private readonly spacingValueEl = document.createElement("span")
   private readonly spacingInput = document.createElement("input")
   private readonly formationRow = document.createElement("div")
-  private readonly actionRow = document.createElement("div")
-  private readonly backBtn = document.createElement("button")
+  private readonly closeBtn = document.createElement("button")
   private refreshTimer?: number
   private mode: "list" | "detail" = "list"
   private detailMode: "ships" | "formation" = "ships"
@@ -29,6 +30,7 @@ export class FleetPanel {
     private readonly controller: FleetPanelController,
     private readonly parent: HTMLElement = document.body,
   ) {
+    this.shipDetailPanel = new ShipDetailPanel(this.controller, this.parent)
     this.setup()
     this.parent.appendChild(this.Dom)
     this.render()
@@ -37,6 +39,7 @@ export class FleetPanel {
 
   dispose() {
     if (this.refreshTimer) window.clearInterval(this.refreshTimer)
+    this.shipDetailPanel.dispose()
     this.Dom.remove()
   }
 
@@ -88,6 +91,27 @@ export class FleetPanel {
     this.titleEl.style.fontWeight = "700"
     this.titleEl.style.letterSpacing = "0.03em"
 
+    this.closeBtn.type = "button"
+    this.closeBtn.innerText = "×"
+    this.closeBtn.setAttribute("aria-label", "Close fleet panel")
+    this.closeBtn.style.width = "34px"
+    this.closeBtn.style.height = "34px"
+    this.closeBtn.style.borderRadius = "999px"
+    this.closeBtn.style.border = "1px solid rgba(148,163,184,0.2)"
+    this.closeBtn.style.background = "rgba(15,23,42,0.82)"
+    this.closeBtn.style.color = "#e2e8f0"
+    this.closeBtn.style.cursor = "pointer"
+    this.closeBtn.style.fontSize = "20px"
+    this.closeBtn.style.lineHeight = "1"
+    this.closeBtn.style.display = "grid"
+    this.closeBtn.style.placeItems = "center"
+    this.closeBtn.addEventListener("click", () => {
+      this.mode = "list"
+      this.inspectFleetId = undefined
+      this.shipDetailPanel.hide()
+      this.render()
+    })
+
     this.metaEl.style.display = "flex"
     this.metaEl.style.flexWrap = "wrap"
     this.metaEl.style.gap = "12px"
@@ -102,8 +126,8 @@ export class FleetPanel {
     this.detailModeRow.style.gap = "8px"
 
     this.shipGrid.style.display = "grid"
-    this.shipGrid.style.gridTemplateColumns = "repeat(auto-fit, minmax(128px, 1fr))"
-    this.shipGrid.style.gap = "10px"
+    this.shipGrid.style.gridTemplateColumns = "repeat(auto-fit, minmax(98px, 132px))"
+    this.shipGrid.style.gap = "8px"
 
     this.formationRow.style.display = "flex"
     this.formationRow.style.flexWrap = "wrap"
@@ -136,35 +160,7 @@ export class FleetPanel {
     this.spacingValueEl.style.color = "#f8fafc"
     spacingRow.appendChild(this.spacingValueEl)
 
-    this.actionRow.style.display = "flex"
-    this.actionRow.style.gap = "8px"
-    this.actionRow.style.flexWrap = "wrap"
-    this.actionRow.style.justifyContent = "flex-end"
-
-    this.backBtn.replaceWith()
-    const backBtn = this.makeActionButton("Back", () => {
-      this.mode = "list"
-      this.inspectFleetId = undefined
-      this.render()
-    }, "neutral")
-    this.backBtn.id = backBtn.id
-    this.backBtn.className = backBtn.className
-    this.backBtn.style.cssText = backBtn.style.cssText
-    this.backBtn.innerText = backBtn.innerText
-    this.backBtn.addEventListener("click", () => {
-      this.mode = "list"
-      this.inspectFleetId = undefined
-      this.render()
-    })
-
-    const holdBtn = this.makeActionButton("Hold", () => {
-      const selected = this.controller.getSelectedFleetSummary()
-      if (!selected) return
-      this.controller.holdPosition(selected.id)
-    }, "neutral")
-    this.actionRow.append(holdBtn, this.backBtn)
-
-    this.headerEl.append(this.titleEl)
+    this.headerEl.append(this.titleEl, this.closeBtn)
     this.detailCol.append(
       this.headerEl,
       this.metaEl,
@@ -173,7 +169,6 @@ export class FleetPanel {
       this.shipGrid,
       this.formationRow,
       spacingRow,
-      this.actionRow,
     )
     this.Dom.append(this.listCol, this.detailCol)
 
@@ -188,6 +183,7 @@ export class FleetPanel {
 
     this.renderFleetList(fleets, this.controller.getSelectedFleetSummary()?.id)
     this.renderDetail(selected)
+    this.shipDetailPanel.render()
     this.listCol.style.display = this.mode === "list" ? "grid" : "none"
     this.detailCol.style.display = this.mode === "detail" ? "grid" : "none"
   }
@@ -253,6 +249,7 @@ export class FleetPanel {
         this.controller.selectFleet(fleet.id)
         this.controller.focusFleet(fleet.id)
         this.inspectFleetId = fleet.id
+        this.shipDetailPanel.hide()
         this.detailMode = "ships"
         this.mode = "detail"
         this.render()
@@ -321,10 +318,12 @@ export class FleetPanel {
   private renderDetailModes() {
     this.detailModeRow.innerHTML = ""
     const shipsBtn = this.makeActionButton("Ships", () => {
+      this.shipDetailPanel.hide()
       this.detailMode = "ships"
       this.render()
     }, this.detailMode === "ships" ? "primary" : "neutral")
     const formationBtn = this.makeActionButton("Formation", () => {
+      this.shipDetailPanel.hide()
       this.detailMode = "formation"
       this.render()
     }, this.detailMode === "formation" ? "primary" : "neutral")
@@ -336,16 +335,16 @@ export class FleetPanel {
     this.shipGrid.innerHTML = ""
 
     ships.forEach((ship) => {
-      this.shipGrid.appendChild(this.makeShipCard(ship))
+      this.shipGrid.appendChild(this.makeShipCard(fleetId, ship))
     })
   }
 
-  private makeShipCard(ship: FleetShipPanelState) {
+  private makeShipCard(fleetId: string, ship: FleetShipPanelState) {
     const card = document.createElement("button")
     card.type = "button"
     card.style.display = "grid"
-    card.style.gap = "8px"
-    card.style.padding = "10px"
+    card.style.gap = "6px"
+    card.style.padding = "8px 9px"
     card.style.borderRadius = "12px"
     card.style.border = ship.selected ? "1px solid rgba(125,211,252,0.65)" : "1px solid rgba(148,163,184,0.16)"
     card.style.background = ship.selected ? "rgba(14,116,144,0.22)" : "rgba(15,23,42,0.56)"
@@ -353,47 +352,44 @@ export class FleetPanel {
     card.style.textAlign = "left"
     card.style.cursor = "pointer"
 
+    const head = document.createElement("div")
+    head.style.display = "flex"
+    head.style.alignItems = "center"
+    head.style.justifyContent = "space-between"
+    head.style.gap = "6px"
+
     const name = document.createElement("div")
     name.innerText = ship.id
-    name.style.fontSize = "13px"
+    name.style.fontSize = "12px"
     name.style.fontWeight = "700"
+    name.style.lineHeight = "1.2"
+    name.style.wordBreak = "break-word"
+    head.appendChild(name)
 
-    const health = document.createElement("div")
-    health.style.display = "grid"
-    health.style.gap = "6px"
-
-    const label = document.createElement("div")
-    label.innerText = `Hull ${Math.round(ship.hull)}/${Math.round(ship.maxHull)}`
-    label.style.fontSize = "12px"
-    label.style.color = "#cbd5e1"
-
-    const bar = document.createElement("div")
-    bar.style.height = "8px"
-    bar.style.borderRadius = "999px"
-    bar.style.background = "rgba(51,65,85,0.9)"
-    bar.style.overflow = "hidden"
-
-    const fill = document.createElement("div")
-    fill.style.width = `${Math.max(0, Math.min(100, ship.hullRatio * 100))}%`
-    fill.style.height = "100%"
-    fill.style.background = ship.hullRatio > 0.65
-      ? "linear-gradient(90deg, #22c55e, #86efac)"
-      : ship.hullRatio > 0.35
-        ? "linear-gradient(90deg, #f59e0b, #fcd34d)"
-        : "linear-gradient(90deg, #ef4444, #fca5a5)"
-    bar.appendChild(fill)
+    if (ship.isFlagship) {
+      const badge = document.createElement("span")
+      badge.innerText = "기함"
+      badge.style.padding = "2px 6px"
+      badge.style.borderRadius = "999px"
+      badge.style.background = "rgba(245, 158, 11, 0.18)"
+      badge.style.border = "1px solid rgba(245, 158, 11, 0.4)"
+      badge.style.color = "#fcd34d"
+      badge.style.fontSize = "10px"
+      badge.style.fontWeight = "700"
+      head.appendChild(badge)
+    }
 
     const energy = document.createElement("div")
     energy.style.display = "grid"
-    energy.style.gap = "6px"
+    energy.style.gap = "4px"
 
     const energyLabel = document.createElement("div")
     energyLabel.innerText = `Energy ${Math.round(ship.energy)}/${Math.round(ship.maxEnergy)}`
-    energyLabel.style.fontSize = "12px"
+    energyLabel.style.fontSize = "11px"
     energyLabel.style.color = "#93c5fd"
 
     const energyBar = document.createElement("div")
-    energyBar.style.height = "8px"
+    energyBar.style.height = "6px"
     energyBar.style.borderRadius = "999px"
     energyBar.style.background = "rgba(30,41,59,0.95)"
     energyBar.style.overflow = "hidden"
@@ -404,13 +400,26 @@ export class FleetPanel {
     energyFill.style.background = "linear-gradient(90deg, #38bdf8, #93c5fd)"
     energyBar.appendChild(energyFill)
 
+    const focusTag = document.createElement("div")
+    focusTag.innerText = `Focus ${this.labelEnergyFocus(ship.energyFocus)}`
+    focusTag.style.fontSize = "10px"
+    focusTag.style.color = "#94a3b8"
+
     energy.append(energyLabel, energyBar)
-    card.append(name, health, energy)
+    card.append(head, energy, focusTag)
     card.addEventListener("click", () => {
       this.controller.focusShip(ship.id)
+      this.shipDetailPanel.show(fleetId, ship.id)
       this.render()
     })
     return card
+  }
+
+  private labelEnergyFocus(focus: FleetShipPanelState["energyFocus"]) {
+    if (focus === "attack") return "공격"
+    if (focus === "defense") return "방어"
+    if (focus === "exploration") return "탐색"
+    return "항행"
   }
 
   private makeActionButton(label: string, onClick: () => void, tone: "neutral" | "primary" = "neutral") {

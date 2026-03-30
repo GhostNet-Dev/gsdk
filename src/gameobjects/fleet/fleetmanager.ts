@@ -64,6 +64,13 @@ export class FleetManager {
     return fleet ? this.toSummary(fleet) : undefined
   }
 
+  findFleetIdByMember(actorId: string) {
+    for (const [fleetId, fleet] of this.fleets) {
+      if (fleet.hasMember(actorId)) return fleetId
+    }
+    return undefined
+  }
+
   selectFleet(fleetId: string) {
     if (!this.fleets.has(fleetId)) return undefined
     this.selectedFleetId = fleetId

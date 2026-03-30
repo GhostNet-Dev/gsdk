@@ -142,7 +142,6 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
 
   private moveToward(point: THREE.Vector3, delta: number, stopDistance = 0.9) {
     this.desired.copy(point).sub(this.mesh.position)
-    this.desired.y = 0
 
     if (this.desired.lengthSq() <= stopDistance * stopDistance) return
 
@@ -153,7 +152,6 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
 
   private face(point: THREE.Vector3) {
     this.forward.copy(point).sub(this.mesh.position)
-    this.forward.y = 0
     if (this.forward.lengthSq() <= 0.0001) return
     this.mesh.lookAt(this.mesh.position.clone().add(this.forward.normalize()))
   }
