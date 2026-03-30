@@ -10,6 +10,7 @@ export type FleetOrder = {
   issuer?: FleetCommandIssuer
   priority?: number
   point?: THREE.Vector3
+  direction?: THREE.Vector3
   targetId?: string
   formation?: FleetFormation
   spacing?: number
@@ -92,7 +93,7 @@ export class Fleet {
 
     switch (order.type) {
       case "move":
-        if (!order.point) return []
+        if (!order.point && !order.direction) return []
         return this.moveCommands(members, order.point, issuedAt, issuer, priority, order)
       case "attack":
         if (!order.targetId) return []
@@ -128,23 +129,28 @@ export class Fleet {
 
   private moveCommands(
     members: string[],
-    anchor: THREE.Vector3,
+    anchor: THREE.Vector3 | undefined,
     issuedAt: number,
     issuer: FleetCommandIssuer,
     priority: number | undefined,
     order: FleetOrder,
   ): ActorCommand[] {
-    const positions = Formation.layout(order.formation ?? this.formation, {
-      anchor,
-      count: members.length,
-      spacing: order.spacing ?? this.spacing,
-      facing: order.facing,
-    })
+    const positions = anchor
+      ? Formation.layout(order.formation ?? this.formation, {
+          anchor,
+          count: members.length,
+          spacing: order.spacing ?? this.spacing,
+          facing: order.facing,
+        })
+      : []
 
     return members.map((actorId, index) => ({
       type: "move",
       actorId,
-      point: positions[index]?.clone() ?? anchor.clone(),
+      point: positions[index]?.clone(),
+      payload: order.direction
+        ? { direction: order.direction.clone() }
+        : undefined,
       issuedAt,
       issuer,
       priority,

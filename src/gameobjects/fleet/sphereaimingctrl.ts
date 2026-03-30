@@ -3,6 +3,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Line2 } from 'three/examples/jsm/lines/Line2.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
+import IEventController, { ILoop } from '@Glibs/interface/ievent';
+import { EventTypes } from '@Glibs/types/globaltypes';
+import { LoopType } from '@Glibs/systems/event/canvas';
 
 export interface AimingControllerOptions {
     maxRange?: number;
@@ -12,13 +15,8 @@ export interface AimingControllerOptions {
     onAimEnd?: () => void;
 }
 
-export class SphereAimingController {
-    private scene: THREE.Scene;
-    private camera: THREE.PerspectiveCamera;
-    private domElement: HTMLElement;
-    private spaceship: THREE.Object3D;
-    private controls?: OrbitControls;
-
+export class SphereAimingController implements ILoop {
+  LoopId: number = 0;
     // Settings
     private maxRange: number;
     private lineWidth: number;
@@ -53,19 +51,14 @@ export class SphereAimingController {
     private tmpPlaneNormal = new THREE.Vector3();
 
     constructor(
-        scene: THREE.Scene,
-        camera: THREE.PerspectiveCamera,
-        domElement: HTMLElement,
-        spaceship: THREE.Object3D,
-        controls?: OrbitControls,
+      eventCtrl: IEventController,
+       private scene: THREE.Scene,
+       private camera: THREE.PerspectiveCamera,
+       private domElement: HTMLElement,
+       private spaceship: THREE.Object3D,
+       private controls?: OrbitControls,
         options?: AimingControllerOptions
     ) {
-        this.scene = scene;
-        this.camera = camera;
-        this.domElement = domElement;
-        this.spaceship = spaceship;
-        this.controls = controls;
-
         this.maxRange = options?.maxRange ?? 60;
         this.lineWidth = options?.lineWidth ?? 9.0;
         this.onAimStart = options?.onAimStart;
@@ -78,6 +71,7 @@ export class SphereAimingController {
 
         this.buildVisuals();
         this.bindEvents();
+        eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this, LoopType.Systems)
     }
 
     // ------------------------------------------------------------------------
@@ -114,6 +108,17 @@ export class SphereAimingController {
     /** 현재 목표 방향 벡터 반환 */
     public getTargetDirection(out: THREE.Vector3 = new THREE.Vector3()): THREE.Vector3 {
         return this.rangeGroup.getWorldDirection(out).normalize();
+    }
+
+    /** 저장된 조준 방향을 다시 반영합니다. */
+    public setTargetDirection(direction: THREE.Vector3): void {
+        if (direction.lengthSq() <= 0.0001) return;
+        this.rangeGroup.position.copy(this.spaceship.position);
+        this.tmpBestHit
+            .copy(this.spaceship.position)
+            .addScaledVector(direction.clone().normalize(), this.maxRange);
+        this.rangeGroup.lookAt(this.tmpBestHit);
+        this.updateAimVisualByDirection();
     }
 
     public setVisible(visible: boolean): void {

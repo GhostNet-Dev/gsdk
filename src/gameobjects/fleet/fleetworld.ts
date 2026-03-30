@@ -20,6 +20,7 @@ import { Formation, FleetFormation } from "./formation"
 import { FleetManager } from "./fleetmanager"
 import { SphereAimingController } from "./sphereaimingctrl"
 import { FleetShipEnergyFocus } from "@Glibs/ux/fleet/fleetpaneltypes"
+import { FleetOrder } from "./fleet"
 
 type Vector3Like = THREE.Vector3 | [number, number, number] | { x: number, y: number, z: number }
 
@@ -111,6 +112,8 @@ export type FleetWorldInteractionOptions = {
   controls?: OrbitControls
   enableShipSelection?: boolean
   aimMoveDistance?: number
+  orderSink?: (fleetId: string, order: FleetOrder) => void
+  orderSource?: (fleetId: string) => FleetOrder | undefined
 }
 
 const defaultFleetWorldOptions: FleetWorldOptions = {
@@ -201,10 +204,6 @@ export class FleetWorld {
   private readonly fleetIdsByShipId = new Map<string, string>()
   private readonly tmpAimDirection = new THREE.Vector3()
   private readonly tmpAimTarget = new THREE.Vector3()
-  private readonly shipAimOrientationOffset = new THREE.Quaternion().setFromAxisAngle(
-    new THREE.Vector3(0, 1, 0),
-    Math.PI / 2,
-  )
   private readonly interactionDom: HTMLElement
   private readonly orbitControls?: OrbitControls
   private selectedShipId?: string
@@ -256,6 +255,14 @@ export class FleetWorld {
 
   get manager() {
     return this.fleetManager
+  }
+
+  setOrderSink(orderSink?: (fleetId: string, order: FleetOrder) => void) {
+    this.options.orderSink = orderSink
+  }
+
+  setOrderSource(orderSource?: (fleetId: string) => FleetOrder | undefined) {
+    this.options.orderSource = orderSource
   }
 
   focusFleet(fleetId: string) {
@@ -367,7 +374,6 @@ export class FleetWorld {
       LoopId: 0,
       update: (delta: number) => {
         this.updateShipStatusVisuals()
-        this.aimingController?.update(delta)
       },
     })
     this.fleetRoot.clear()
@@ -581,6 +587,7 @@ export class FleetWorld {
     this.aimingShipId = shipId
     this.aimingFleetId = fleetId
     this.aimingController = new SphereAimingController(
+      this.eventCtrl,
       this.scene,
       this.camera,
       this.interactionDom,
@@ -589,16 +596,66 @@ export class FleetWorld {
       {
         maxRange: 30,
         lineWidth: 1.5,
+        onAimChange: () => this.syncAimMovePlan(),
         onAimEnd: () => this.commitAimMove(),
       },
     )
-    this.aimingController.rangeGroup.quaternion
-      .copy(runtime.mesh.quaternion)
-      .multiply(this.shipAimOrientationOffset)
+    this.aimingController.rangeGroup.quaternion.copy(runtime.mesh.quaternion)
+    this.restorePlannedAim(fleetId, runtime.mesh.position)
     this.aimingController.setVisible(true)
   }
 
+  private restorePlannedAim(fleetId: string, shipPosition: THREE.Vector3) {
+    const plannedOrder = this.options.orderSource?.(fleetId)
+    if (!plannedOrder || plannedOrder.type !== "move") return
+
+    if (plannedOrder.direction && plannedOrder.direction.lengthSq() > 0.0001) {
+      this.aimingController?.setTargetDirection(plannedOrder.direction)
+      return
+    }
+
+    if (plannedOrder.facing && plannedOrder.facing.lengthSq() > 0.0001) {
+      this.aimingController?.setTargetDirection(plannedOrder.facing)
+      return
+    }
+
+    if (!plannedOrder.point) return
+
+    this.tmpAimDirection.copy(plannedOrder.point).sub(shipPosition)
+    if (this.tmpAimDirection.lengthSq() <= 0.0001) return
+    this.aimingController?.setTargetDirection(this.tmpAimDirection)
+  }
+
   private commitAimMove() {
+    const order = this.createAimMoveOrder()
+    if (!order || !this.aimingFleetId) return
+
+    console.log("[FleetWorld] commit aim move", this.aimingFleetId, {
+      point: order.point?.toArray?.(),
+      direction: order.direction?.toArray?.(),
+    })
+    if (this.options.orderSink) {
+      this.options.orderSink(this.aimingFleetId, order)
+      return
+    }
+
+    this.fleetManager.issueOrder(this.aimingFleetId, order)
+  }
+
+  private syncAimMovePlan() {
+    if (!this.options.orderSink || !this.aimingFleetId) return
+
+    const order = this.createAimMoveOrder()
+    if (!order) return
+
+    console.log("[FleetWorld] sync aim move", this.aimingFleetId, {
+      point: order.point?.toArray?.(),
+      direction: order.direction?.toArray?.(),
+    })
+    this.options.orderSink(this.aimingFleetId, order)
+  }
+
+  private createAimMoveOrder(): FleetOrder | undefined {
     if (!this.aimingController || !this.aimingFleetId || !this.aimingShipId) return
 
     const runtime = this.shipRuntimes.get(this.aimingShipId)
@@ -613,12 +670,15 @@ export class FleetWorld {
       .copy(runtime.mesh.position)
       .addScaledVector(direction.normalize(), distance)
 
-    this.fleetManager.moveFleet(this.aimingFleetId, this.tmpAimTarget.clone(), {
+    return {
+      type: "move",
       issuer: "human",
+      point: this.tmpAimTarget.clone(),
+      direction: direction.clone(),
       formation: summary.formation,
       spacing: summary.spacing,
       facing: direction.clone(),
-    })
+    }
   }
 
   private disposeAimingController() {

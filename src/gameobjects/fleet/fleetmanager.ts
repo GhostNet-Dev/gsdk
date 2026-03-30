@@ -101,10 +101,17 @@ export class FleetManager {
     this.requireFleet(fleetId).setSpacing(spacing)
   }
 
-  issueOrder(fleetId: string, order: FleetOrder) {
-    const commands = this.requireFleet(fleetId).toCommands(order)
+  buildOrderCommands(fleetId: string, order: FleetOrder) {
+    return this.requireFleet(fleetId).toCommands(order)
+  }
+
+  issueCommands(commands: ReturnType<Fleet["toCommands"]>) {
     commands.forEach((command) => this.controllables.issue(command))
     return commands
+  }
+
+  issueOrder(fleetId: string, order: FleetOrder) {
+    return this.issueCommands(this.buildOrderCommands(fleetId, order))
   }
 
   moveFleet(

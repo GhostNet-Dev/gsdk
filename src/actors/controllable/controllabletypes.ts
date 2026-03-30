@@ -53,6 +53,7 @@ export type PolicyContext = {
 export interface IControllableRuntime {
   id: string
   moveTo?(point: THREE.Vector3): void
+  moveAlong?(direction: THREE.Vector3): void
   attackTarget?(targetId: string): void
   holdPosition?(): void
   followTarget?(targetId: string): void

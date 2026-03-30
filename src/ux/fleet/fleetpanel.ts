@@ -1,5 +1,6 @@
 import * as THREE from "three"
 import { FleetFormation } from "@Glibs/gameobjects/fleet/formation"
+import { FleetOrder } from "@Glibs/gameobjects/fleet/fleet"
 import { FleetSummary } from "@Glibs/gameobjects/fleet/fleetmanager"
 import { FleetPanelController, FleetShipPanelState } from "./fleetpaneltypes"
 import { ShipDetailPanel } from "./shipdetailpanel"
@@ -14,6 +15,10 @@ export class FleetPanel {
   private readonly headerEl = document.createElement("div")
   private readonly titleEl = document.createElement("div")
   private readonly metaEl = document.createElement("div")
+  private readonly battleRow = document.createElement("div")
+  private readonly battlePhaseEl = document.createElement("div")
+  private readonly battleActionsEl = document.createElement("div")
+  private readonly plannedOrderEl = document.createElement("div")
   private readonly membersEl = document.createElement("div")
   private readonly detailModeRow = document.createElement("div")
   private readonly shipGrid = document.createElement("div")
@@ -118,6 +123,23 @@ export class FleetPanel {
     this.metaEl.style.fontSize = "13px"
     this.metaEl.style.color = "#94a3b8"
 
+    this.battleRow.style.display = "grid"
+    this.battleRow.style.gridTemplateColumns = "1fr auto"
+    this.battleRow.style.alignItems = "center"
+    this.battleRow.style.gap = "10px"
+
+    this.battlePhaseEl.style.fontSize = "12px"
+    this.battlePhaseEl.style.color = "#cbd5e1"
+
+    this.battleActionsEl.style.display = "flex"
+    this.battleActionsEl.style.flexWrap = "wrap"
+    this.battleActionsEl.style.justifyContent = "flex-end"
+    this.battleActionsEl.style.gap = "8px"
+
+    this.plannedOrderEl.style.fontSize = "12px"
+    this.plannedOrderEl.style.color = "#93c5fd"
+    this.plannedOrderEl.style.minHeight = "18px"
+
     this.membersEl.style.fontSize = "13px"
     this.membersEl.style.color = "#cbd5e1"
     this.membersEl.style.minHeight = "18px"
@@ -164,12 +186,15 @@ export class FleetPanel {
     this.detailCol.append(
       this.headerEl,
       this.metaEl,
+      this.battleRow,
+      this.plannedOrderEl,
       this.detailModeRow,
       this.membersEl,
       this.shipGrid,
       this.formationRow,
       spacingRow,
     )
+    this.battleRow.append(this.battlePhaseEl, this.battleActionsEl)
     this.Dom.append(this.listCol, this.detailCol)
 
     this.applyStyle()
@@ -264,6 +289,9 @@ export class FleetPanel {
       this.titleEl.innerText = "No Fleet"
       this.headerEl.style.display = "none"
       this.metaEl.innerHTML = ""
+      this.battlePhaseEl.innerText = ""
+      this.battleActionsEl.innerHTML = ""
+      this.plannedOrderEl.innerText = ""
       this.membersEl.innerText = "No fleets available."
       this.formationRow.innerHTML = ""
       this.spacingInput.disabled = true
@@ -286,6 +314,7 @@ export class FleetPanel {
     this.spacingInput.value = `${Math.round(fleet.spacing)}`
     this.spacingValueEl.innerText = `${Math.round(fleet.spacing)}`
 
+    this.renderBattleControls(fleet)
     this.renderDetailModes()
     this.renderShipGrid(fleet.id)
 
@@ -307,6 +336,44 @@ export class FleetPanel {
     this.shipGrid.style.display = isFormationView ? "none" : "grid"
     this.formationRow.style.display = isFormationView ? "flex" : "none"
     this.spacingInput.parentElement!.style.display = isFormationView ? "grid" : "none"
+  }
+
+  private renderBattleControls(fleet: FleetSummary) {
+    const snapshot = this.controller.getBattlePhaseSnapshot()
+    const plannedOrder = this.controller.getPlannedOrder(fleet.id)
+    const phaseLabel = snapshot.phase === "planning"
+      ? `Planning · pending ${snapshot.pendingOrderCount}`
+      : `Executing · ${snapshot.remaining.toFixed(1)}s left`
+
+    this.battlePhaseEl.innerText = phaseLabel
+    this.plannedOrderEl.innerText = plannedOrder
+      ? `Queued: ${this.describeOrder(plannedOrder)}`
+      : "Queued: none"
+
+    this.battleActionsEl.innerHTML = ""
+
+    const holdBtn = this.makeActionButton("Plan Hold", () => {
+      this.controller.planHold(fleet.id)
+      this.render()
+    })
+    holdBtn.disabled = snapshot.phase !== "planning"
+    holdBtn.style.opacity = holdBtn.disabled ? "0.45" : "1"
+    holdBtn.style.cursor = holdBtn.disabled ? "default" : "pointer"
+
+    const clearBtn = this.makeActionButton("Clear Plans", () => {
+      this.controller.clearPlans()
+      this.render()
+    })
+
+    const executeBtn = this.makeActionButton("Execute 10s", () => {
+      this.controller.commitPlans()
+      this.render()
+    }, "primary")
+    executeBtn.disabled = snapshot.phase !== "planning" || snapshot.pendingOrderCount === 0
+    executeBtn.style.opacity = executeBtn.disabled ? "0.45" : "1"
+    executeBtn.style.cursor = executeBtn.disabled ? "default" : "pointer"
+
+    this.battleActionsEl.append(holdBtn, clearBtn, executeBtn)
   }
 
   private appendMeta(text: string) {
@@ -463,6 +530,21 @@ export class FleetPanel {
     btn.style.letterSpacing = "0.02em"
     btn.addEventListener("click", onClick)
     return btn
+  }
+
+  private describeOrder(order: FleetOrder) {
+    switch (order.type) {
+      case "move":
+        if (!order.point) return "Move"
+        return `Move (${order.point.x.toFixed(0)}, ${order.point.z.toFixed(0)})`
+      case "attack":
+        return `Attack ${order.targetId ?? "target"}`
+      case "follow":
+        return `Follow ${order.targetId ?? "target"}`
+      case "hold":
+      default:
+        return "Hold Position"
+    }
   }
 
   private applyStyle() {

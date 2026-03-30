@@ -1,4 +1,6 @@
 import { FleetFormation } from "@Glibs/gameobjects/fleet/formation"
+import { BattlePhaseSnapshot } from "@Glibs/gameobjects/fleet/battlephasecontroller"
+import { FleetOrder } from "@Glibs/gameobjects/fleet/fleet"
 import { FleetSummary } from "@Glibs/gameobjects/fleet/fleetmanager"
 
 export type FleetShipEnergyFocus = "attack" | "defense" | "navigation" | "exploration"
@@ -21,10 +23,15 @@ export type FleetPanelController = {
   getFleetSummary(fleetId: string): FleetSummary | undefined
   getSelectedFleetSummary(): FleetSummary | undefined
   getFleetShips(fleetId: string): FleetShipPanelState[]
+  getBattlePhaseSnapshot(): BattlePhaseSnapshot
+  getPlannedOrder(fleetId: string): FleetOrder | undefined
   selectFleet(fleetId: string): FleetSummary | undefined
   focusFleet(fleetId: string): void
   focusShip(shipId: string): void
   setFormation(fleetId: string, formation: FleetFormation): void
   setSpacing(fleetId: string, spacing: number): void
   setShipEnergyFocus(shipId: string, focus: FleetShipEnergyFocus): void
+  planHold(fleetId: string): boolean
+  commitPlans(): boolean
+  clearPlans(): void
 }

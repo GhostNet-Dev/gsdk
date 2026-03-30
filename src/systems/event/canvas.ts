@@ -67,7 +67,9 @@ export class Canvas {
         const gamePlayDelta = Math.min(systemDelta * this.timeScale, 1)
 
         this.updateLoop(LoopType.Systems, systemDelta)
-        this.updateLoop(LoopType.GamePlay, gamePlayDelta)
+        if (gamePlayDelta > 0) {
+            this.updateLoop(LoopType.GamePlay, gamePlayDelta)
+        }
     }
 
     resize() {

@@ -53,6 +53,7 @@ class SpaceShipPack1Fab extends AssetModel {
     })
     const scale = 1
     meshs.scale.set(scale, scale, scale)
+    meshs.rotation.y = -Math.PI / 2
   }
 }
 
@@ -70,4 +71,3 @@ export class SpaceShipPack1FighterFab extends SpaceShipPack1Fab implements IAsse
   get Id() { return Char.SpaceShipPack1Fighter }
   constructor(loader: Loader) { super(loader, "assets/space/spaceship/pack1/fighter.fbx") }
 }
-

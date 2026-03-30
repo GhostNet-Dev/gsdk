@@ -4,6 +4,7 @@ import { IControllableRuntime } from "../controllabletypes"
 
 export interface IFighterShipRuntime extends IControllableRuntime {
   moveTo(point: THREE.Vector3): void
+  moveAlong(direction: THREE.Vector3): void
   attackTarget(targetId: string): void
   holdPosition(): void
   followTarget(targetId: string): void
@@ -19,6 +20,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private energy = 100
   private readonly maxEnergy = 100
   private destination?: THREE.Vector3
+  private moveDirection?: THREE.Vector3
   private followTargetId?: string
   private attackTargetId?: string
   private hold = false
@@ -33,7 +35,19 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   ) {}
 
   moveTo(point: THREE.Vector3): void {
+    console.log("[FighterShipRuntime] moveTo", this.id, point.toArray())
     this.destination = point.clone()
+    this.moveDirection = undefined
+    this.followTargetId = undefined
+    this.attackTargetId = undefined
+    this.hold = false
+  }
+
+  moveAlong(direction: THREE.Vector3): void {
+    if (direction.lengthSq() <= 0.0001) return
+    console.log("[FighterShipRuntime] moveAlong", this.id, direction.toArray())
+    this.moveDirection = direction.clone().normalize()
+    this.destination = undefined
     this.followTargetId = undefined
     this.attackTargetId = undefined
     this.hold = false
@@ -47,6 +61,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
 
   holdPosition(): void {
     this.destination = undefined
+    this.moveDirection = undefined
     this.followTargetId = undefined
     this.attackTargetId = undefined
     this.hold = true
@@ -134,6 +149,13 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
       this.consumeEnergy(delta, 8)
       this.moveToward(this.destination, delta)
       if (this.hasArrived(this.destination)) this.destination = undefined
+      return
+    }
+
+    if (this.moveDirection) {
+      this.consumeEnergy(delta, 8)
+      this.mesh.position.addScaledVector(this.moveDirection, this.moveSpeed * delta)
+      this.face(this.mesh.position.clone().add(this.moveDirection))
       return
     }
 
