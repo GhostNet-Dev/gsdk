@@ -395,19 +395,19 @@ export class SphereAimingController implements ILoop {
     // ------------------------------------------------------------------------
 
     private bindEvents(): void {
-        this.domElement.addEventListener('pointerdown', this.onPointerDown);
-        this.domElement.addEventListener('pointermove', this.onPointerMove);
-        this.domElement.addEventListener('pointerup', this.onPointerUp);
-        this.domElement.addEventListener('pointercancel', this.onPointerCancel);
-        this.domElement.addEventListener('lostpointercapture', this.onLostPointerCapture);
+        this.domElement.addEventListener('pointerdown', this.onPointerDown, true);
+        this.domElement.addEventListener('pointermove', this.onPointerMove, true);
+        this.domElement.addEventListener('pointerup', this.onPointerUp, true);
+        this.domElement.addEventListener('pointercancel', this.onPointerCancel, true);
+        this.domElement.addEventListener('lostpointercapture', this.onLostPointerCapture, true);
     }
 
     private unbindEvents(): void {
-        this.domElement.removeEventListener('pointerdown', this.onPointerDown);
-        this.domElement.removeEventListener('pointermove', this.onPointerMove);
-        this.domElement.removeEventListener('pointerup', this.onPointerUp);
-        this.domElement.removeEventListener('pointercancel', this.onPointerCancel);
-        this.domElement.removeEventListener('lostpointercapture', this.onLostPointerCapture);
+        this.domElement.removeEventListener('pointerdown', this.onPointerDown, true);
+        this.domElement.removeEventListener('pointermove', this.onPointerMove, true);
+        this.domElement.removeEventListener('pointerup', this.onPointerUp, true);
+        this.domElement.removeEventListener('pointercancel', this.onPointerCancel, true);
+        this.domElement.removeEventListener('lostpointercapture', this.onLostPointerCapture, true);
     }
 
     private updateRaycaster(event: PointerEvent): void {
@@ -425,8 +425,14 @@ export class SphereAimingController implements ILoop {
 
         const handleHits = this.raycaster.intersectObjects([this.aimHandle, this.aimHitBox], true);
         if (handleHits.length > 0) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
             this.isDraggingHandle = true;
-            this.didDisableControls = false;
+            if (!this.didDisableControls) {
+                this.didDisableControls = true;
+                if (this.controls) this.controls.enabled = false;
+                if (this.onAimStart) this.onAimStart();
+            }
             this.domElement.setPointerCapture?.(event.pointerId);
             document.body.style.cursor = 'grab';
             return;
@@ -434,6 +440,8 @@ export class SphereAimingController implements ILoop {
 
         const lineHits = this.raycaster.intersectObjects([this.horizontalCircle, this.verticalCircle], true);
         if (lineHits.length > 0) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
             this.rangeGroup.lookAt(lineHits[0].point);
             this.updateAimVisualByDirection();
             if (this.onAimStart) this.onAimStart();
@@ -447,11 +455,8 @@ export class SphereAimingController implements ILoop {
 
     private onPointerMove = (event: PointerEvent) => {
         if (!this.isDraggingHandle) return;
-if (!this.didDisableControls) {
-            this.didDisableControls = true;
-            if (this.controls) this.controls.enabled = false;
-            if (this.onAimStart) this.onAimStart();
-        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
         document.body.style.cursor = 'grabbing';
 
         this.updateRaycaster(event);
@@ -484,10 +489,18 @@ if (!this.didDisableControls) {
     };
 
     private onPointerUp = (event: PointerEvent) => {
+        if (this.isDraggingHandle) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }
         this.finishDraggingHandle(event.pointerId);
     };
 
     private onPointerCancel = (event: PointerEvent) => {
+        if (this.isDraggingHandle) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }
         this.finishDraggingHandle(event.pointerId);
     };
 
