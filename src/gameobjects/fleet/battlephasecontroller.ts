@@ -147,10 +147,8 @@ export class BattlePhaseController implements ILoop {
       duration: this.executionWindowSec,
     })
     this.setPhase("resolving")
-    this.eventCtrl.SendEventMessage(EventTypes.TimeCtrl, 0)
     this.elapsed = this.executionWindowSec
-    this.setPhase("planning")
-    this.elapsed = 0
+    this.resetToPlanning()
   }
 
   private setPhase(phase: BattlePhase) {

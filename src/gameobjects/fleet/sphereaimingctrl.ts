@@ -52,7 +52,7 @@ export class SphereAimingController implements ILoop {
     private tmpPlaneNormal = new THREE.Vector3();
 
     constructor(
-      eventCtrl: IEventController,
+      private readonly eventCtrl: IEventController,
        private scene: THREE.Scene,
        private camera: THREE.PerspectiveCamera,
        private domElement: HTMLElement,
@@ -98,8 +98,9 @@ export class SphereAimingController implements ILoop {
     public dispose(): void {
         this.isDraggingHandle = false;
         if (this.didDisableControls && this.controls) this.controls.enabled = true;
-        this.didDisableControls = false;
+                this.didDisableControls = false;
         this.unbindEvents();
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
         this.scene.remove(this.rangeGroup);
         // 필요시 geometry, material dispose 추가 구현
     }
@@ -397,12 +398,16 @@ export class SphereAimingController implements ILoop {
         this.domElement.addEventListener('pointerdown', this.onPointerDown);
         this.domElement.addEventListener('pointermove', this.onPointerMove);
         this.domElement.addEventListener('pointerup', this.onPointerUp);
+        this.domElement.addEventListener('pointercancel', this.onPointerCancel);
+        this.domElement.addEventListener('lostpointercapture', this.onLostPointerCapture);
     }
 
     private unbindEvents(): void {
         this.domElement.removeEventListener('pointerdown', this.onPointerDown);
         this.domElement.removeEventListener('pointermove', this.onPointerMove);
         this.domElement.removeEventListener('pointerup', this.onPointerUp);
+        this.domElement.removeEventListener('pointercancel', this.onPointerCancel);
+        this.domElement.removeEventListener('lostpointercapture', this.onLostPointerCapture);
     }
 
     private updateRaycaster(event: PointerEvent): void {
@@ -422,6 +427,7 @@ export class SphereAimingController implements ILoop {
         if (handleHits.length > 0) {
             this.isDraggingHandle = true;
             this.didDisableControls = false;
+            this.domElement.setPointerCapture?.(event.pointerId);
             document.body.style.cursor = 'grab';
             return;
         }
@@ -441,7 +447,7 @@ export class SphereAimingController implements ILoop {
 
     private onPointerMove = (event: PointerEvent) => {
         if (!this.isDraggingHandle) return;
-        if (!this.didDisableControls) {
+if (!this.didDisableControls) {
             this.didDisableControls = true;
             if (this.controls) this.controls.enabled = false;
             if (this.onAimStart) this.onAimStart();
@@ -478,12 +484,27 @@ export class SphereAimingController implements ILoop {
     };
 
     private onPointerUp = (event: PointerEvent) => {
-        if (this.isDraggingHandle) {
-            this.isDraggingHandle = false;
-            if (this.didDisableControls && this.controls) this.controls.enabled = true;
-            this.didDisableControls = false;
-            document.body.style.cursor = 'default';
-            if (this.onAimEnd) this.onAimEnd();
-        }
+        this.finishDraggingHandle(event.pointerId);
     };
+
+    private onPointerCancel = (event: PointerEvent) => {
+        this.finishDraggingHandle(event.pointerId);
+    };
+
+    private onLostPointerCapture = (event: PointerEvent) => {
+        this.finishDraggingHandle(event.pointerId, false);
+    };
+
+    private finishDraggingHandle(pointerId?: number, releaseCapture: boolean = true) {
+        if (!this.isDraggingHandle) return;
+
+        this.isDraggingHandle = false;
+        if (releaseCapture && pointerId !== undefined && this.domElement.hasPointerCapture?.(pointerId)) {
+            this.domElement.releasePointerCapture(pointerId);
+        }
+        if (this.didDisableControls && this.controls) this.controls.enabled = true;
+        this.didDisableControls = false;
+        document.body.style.cursor = 'default';
+        if (this.onAimEnd) this.onAimEnd();
+    }
 }

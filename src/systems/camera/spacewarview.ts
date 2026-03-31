@@ -34,6 +34,7 @@ export default class SpaceWarCameraStrategy implements ICameraStrategy {
     uninit() {
         this.isOrbiting = false;
         this.cooldownRemaining = 0;
+        this.controls.update()
     }
 
     orbitStart(): void {

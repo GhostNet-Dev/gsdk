@@ -667,11 +667,11 @@ export class FleetWorld {
   }
 
   private bindInteraction() {
-    this.interactionDom.addEventListener("pointerdown", this.onPointerDown)
+    this.interactionDom.addEventListener("pointerdown", this.onPointerDown, true)
   }
 
   private unbindInteraction() {
-    this.interactionDom.removeEventListener("pointerdown", this.onPointerDown)
+    this.interactionDom.removeEventListener("pointerdown", this.onPointerDown, true)
   }
 
   private readonly onPointerDown = (event: PointerEvent) => {
@@ -681,6 +681,7 @@ export class FleetWorld {
     const shipId = this.pickShipId(event)
     if (!shipId) return
 
+    event.stopImmediatePropagation()
     this.selectShipAndFleet(shipId)
   }
 
