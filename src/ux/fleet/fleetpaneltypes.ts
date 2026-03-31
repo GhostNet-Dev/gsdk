@@ -22,6 +22,7 @@ export type FleetPanelController = {
   listFleetSummaries(): FleetSummary[]
   getFleetSummary(fleetId: string): FleetSummary | undefined
   getSelectedFleetSummary(): FleetSummary | undefined
+  canControlFleet(fleetId: string): boolean
   getFleetShips(fleetId: string): FleetShipPanelState[]
   getBattlePhaseSnapshot(): BattlePhaseSnapshot
   getPlannedOrder(fleetId: string): FleetOrder | undefined
@@ -33,5 +34,6 @@ export type FleetPanelController = {
   setShipEnergyFocus(shipId: string, focus: FleetShipEnergyFocus): void
   planHold(fleetId: string): boolean
   commitPlans(): boolean
+  stopExecution(): boolean
   clearPlans(): void
 }

@@ -39,6 +39,7 @@ export class SphereAimingController implements ILoop {
     private raycaster = new THREE.Raycaster();
     private mouse = new THREE.Vector2();
     private isDraggingHandle = false;
+    private didDisableControls = false;
 
     // Temp Variables for Math (GC 최적화)
     private tmpForwardDir = new THREE.Vector3();
@@ -95,6 +96,9 @@ export class SphereAimingController implements ILoop {
 
     /** 모듈 파기 시 메모리를 해제합니다. */
     public dispose(): void {
+        this.isDraggingHandle = false;
+        if (this.didDisableControls && this.controls) this.controls.enabled = true;
+        this.didDisableControls = false;
         this.unbindEvents();
         this.scene.remove(this.rangeGroup);
         // 필요시 geometry, material dispose 추가 구현
@@ -417,9 +421,8 @@ export class SphereAimingController implements ILoop {
         const handleHits = this.raycaster.intersectObjects([this.aimHandle, this.aimHitBox], true);
         if (handleHits.length > 0) {
             this.isDraggingHandle = true;
-            if (this.controls) this.controls.enabled = false;
-            document.body.style.cursor = 'grabbing';
-            if (this.onAimStart) this.onAimStart();
+            this.didDisableControls = false;
+            document.body.style.cursor = 'grab';
             return;
         }
 
@@ -438,6 +441,12 @@ export class SphereAimingController implements ILoop {
 
     private onPointerMove = (event: PointerEvent) => {
         if (!this.isDraggingHandle) return;
+        if (!this.didDisableControls) {
+            this.didDisableControls = true;
+            if (this.controls) this.controls.enabled = false;
+            if (this.onAimStart) this.onAimStart();
+        }
+        document.body.style.cursor = 'grabbing';
 
         this.updateRaycaster(event);
 
@@ -471,7 +480,8 @@ export class SphereAimingController implements ILoop {
     private onPointerUp = (event: PointerEvent) => {
         if (this.isDraggingHandle) {
             this.isDraggingHandle = false;
-            if (this.controls) this.controls.enabled = true;
+            if (this.didDisableControls && this.controls) this.controls.enabled = true;
+            this.didDisableControls = false;
             document.body.style.cursor = 'default';
             if (this.onAimEnd) this.onAimEnd();
         }

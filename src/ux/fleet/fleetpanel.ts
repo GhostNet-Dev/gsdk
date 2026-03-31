@@ -9,6 +9,8 @@ const formations: FleetFormation[] = ["line", "column", "wedge", "circle"]
 
 export class FleetPanel {
   readonly Dom = document.createElement("div")
+  private readonly topRightControls = document.createElement("div")
+  private readonly phaseActionBtn = document.createElement("button")
   private readonly shipDetailPanel: ShipDetailPanel
   private readonly listCol = document.createElement("div")
   private readonly detailCol = document.createElement("div")
@@ -45,10 +47,36 @@ export class FleetPanel {
   dispose() {
     if (this.refreshTimer) window.clearInterval(this.refreshTimer)
     this.shipDetailPanel.dispose()
+    this.topRightControls.remove()
     this.Dom.remove()
   }
 
   private setup() {
+    this.topRightControls.style.position = "absolute"
+    this.topRightControls.style.top = "18px"
+    this.topRightControls.style.right = "18px"
+    this.topRightControls.style.zIndex = "1200"
+    this.topRightControls.style.display = "flex"
+    this.topRightControls.style.alignItems = "center"
+    this.topRightControls.style.justifyContent = "center"
+    this.topRightControls.style.pointerEvents = "auto"
+
+    this.phaseActionBtn.type = "button"
+    this.phaseActionBtn.style.width = "56px"
+    this.phaseActionBtn.style.height = "56px"
+    this.phaseActionBtn.style.display = "grid"
+    this.phaseActionBtn.style.placeItems = "center"
+    this.phaseActionBtn.style.borderRadius = "999px"
+    this.phaseActionBtn.style.border = "1px solid rgba(148,163,184,0.24)"
+    this.phaseActionBtn.style.background = "linear-gradient(180deg, rgba(8,12,22,0.96), rgba(6,10,18,0.88))"
+    this.phaseActionBtn.style.boxShadow = "0 18px 40px rgba(0,0,0,0.28)"
+    this.phaseActionBtn.style.color = "#f8fafc"
+    this.phaseActionBtn.style.fontSize = "24px"
+    this.phaseActionBtn.style.cursor = "pointer"
+    this.phaseActionBtn.style.backdropFilter = "blur(10px)"
+    this.topRightControls.appendChild(this.phaseActionBtn)
+    this.parent.appendChild(this.topRightControls)
+
     this.Dom.id = "fleet-command-panel"
     this.Dom.style.position = "absolute"
     this.Dom.style.left = "50%"
@@ -201,13 +229,16 @@ export class FleetPanel {
   }
 
   private render() {
-    const fleets = this.controller.listFleetSummaries()
+    const fleets = this.controller.listFleetSummaries().filter((fleet) => this.controller.canControlFleet(fleet.id))
     const selected = this.inspectFleetId
       ? this.controller.getFleetSummary(this.inspectFleetId)
       : this.controller.getSelectedFleetSummary() ?? fleets[0]
+    const visibleSelected = selected && this.controller.canControlFleet(selected.id) ? selected : fleets[0]
+    const snapshot = this.controller.getBattlePhaseSnapshot()
 
     this.renderFleetList(fleets, this.controller.getSelectedFleetSummary()?.id)
-    this.renderDetail(selected)
+    this.renderDetail(visibleSelected)
+    this.renderGlobalPhaseAction(snapshot)
     this.shipDetailPanel.render()
     this.listCol.style.display = this.mode === "list" ? "grid" : "none"
     this.detailCol.style.display = this.mode === "detail" ? "grid" : "none"
@@ -226,8 +257,12 @@ export class FleetPanel {
       card.style.minHeight = "78px"
       card.style.padding = "12px"
       card.style.borderRadius = "16px"
-      card.style.border = fleet.id === selectedId ? "1px solid rgba(125,211,252,0.9)" : "1px solid rgba(148,163,184,0.15)"
-      card.style.background = fleet.id === selectedId ? "rgba(14,116,144,0.24)" : "rgba(15,23,42,0.55)"
+      card.style.border = fleet.id === selectedId
+        ? "1px solid rgba(125,211,252,0.9)"
+        : "1px solid rgba(148,163,184,0.15)"
+      card.style.background = fleet.id === selectedId
+        ? "rgba(14,116,144,0.24)"
+        : "rgba(15,23,42,0.55)"
       card.style.color = "#f8fafc"
       card.style.cursor = "pointer"
       card.style.textAlign = "left"
@@ -303,6 +338,8 @@ export class FleetPanel {
     this.titleEl.innerText = fleet.name
     this.metaEl.innerHTML = ""
     this.appendMeta(`ID ${fleet.id}`)
+    this.appendMeta(`Team ${fleet.teamId}`)
+    this.appendMeta(fleet.controller === "human" ? "Player Controlled" : "AI Controlled")
     this.appendMeta(`${fleet.memberCount} ships`)
     this.appendMeta(`Formation ${fleet.formation}`)
     if (fleet.flagshipId) this.appendMeta(`Flagship ${fleet.flagshipId}`)
@@ -310,7 +347,8 @@ export class FleetPanel {
       ? "Ship Status"
       : "Formation Control"
 
-    this.spacingInput.disabled = false
+    const canControlFleet = this.controller.canControlFleet(fleet.id)
+    this.spacingInput.disabled = !canControlFleet
     this.spacingInput.value = `${Math.round(fleet.spacing)}`
     this.spacingValueEl.innerText = `${Math.round(fleet.spacing)}`
 
@@ -324,6 +362,9 @@ export class FleetPanel {
         this.controller.setFormation(fleet.id, formation)
         this.render()
       })
+      btn.disabled = !canControlFleet
+      btn.style.opacity = btn.disabled ? "0.45" : "1"
+      btn.style.cursor = btn.disabled ? "default" : "pointer"
       if (formation === fleet.formation) {
         btn.style.background = "rgba(125,211,252,0.2)"
         btn.style.borderColor = "rgba(125,211,252,0.6)"
@@ -341,6 +382,7 @@ export class FleetPanel {
   private renderBattleControls(fleet: FleetSummary) {
     const snapshot = this.controller.getBattlePhaseSnapshot()
     const plannedOrder = this.controller.getPlannedOrder(fleet.id)
+    const canControlFleet = this.controller.canControlFleet(fleet.id)
     const phaseLabel = snapshot.phase === "planning"
       ? `Planning · pending ${snapshot.pendingOrderCount}`
       : `Executing · ${snapshot.remaining.toFixed(1)}s left`
@@ -356,7 +398,7 @@ export class FleetPanel {
       this.controller.planHold(fleet.id)
       this.render()
     })
-    holdBtn.disabled = snapshot.phase !== "planning"
+    holdBtn.disabled = snapshot.phase !== "planning" || !canControlFleet
     holdBtn.style.opacity = holdBtn.disabled ? "0.45" : "1"
     holdBtn.style.cursor = holdBtn.disabled ? "default" : "pointer"
 
@@ -365,15 +407,49 @@ export class FleetPanel {
       this.render()
     })
 
-    const executeBtn = this.makeActionButton("Execute 10s", () => {
+    this.battleActionsEl.append(holdBtn, clearBtn)
+    if (!canControlFleet) {
+      this.plannedOrderEl.innerText = plannedOrder
+        ? `AI queued: ${this.describeOrder(plannedOrder)}`
+        : "AI queued: auto-planned on execute"
+    }
+  }
+
+  private renderGlobalPhaseAction(snapshot: ReturnType<FleetPanelController["getBattlePhaseSnapshot"]>) {
+    this.phaseActionBtn.replaceChildren()
+
+    const icon = document.createElement("span")
+    icon.setAttribute("aria-hidden", "true")
+    icon.style.transform = snapshot.phase === "executing" ? "none" : "translateX(2px)"
+    icon.textContent = snapshot.phase === "executing" ? "■" : "▶"
+    this.phaseActionBtn.appendChild(icon)
+
+    if (snapshot.phase === "executing") {
+      this.phaseActionBtn.setAttribute("aria-label", "Stop execution")
+      this.phaseActionBtn.title = "Stop"
+      this.phaseActionBtn.onclick = () => {
+        this.controller.stopExecution()
+        this.render()
+      }
+      this.phaseActionBtn.disabled = false
+      this.phaseActionBtn.style.opacity = "1"
+      this.phaseActionBtn.style.cursor = "pointer"
+      this.phaseActionBtn.style.color = "#fecaca"
+      this.phaseActionBtn.style.borderColor = "rgba(248,113,113,0.42)"
+      return
+    }
+
+    this.phaseActionBtn.setAttribute("aria-label", "Execute plans")
+    this.phaseActionBtn.title = "Execute"
+    this.phaseActionBtn.onclick = () => {
       this.controller.commitPlans()
       this.render()
-    }, "primary")
-    executeBtn.disabled = snapshot.phase !== "planning" || snapshot.pendingOrderCount === 0
-    executeBtn.style.opacity = executeBtn.disabled ? "0.45" : "1"
-    executeBtn.style.cursor = executeBtn.disabled ? "default" : "pointer"
-
-    this.battleActionsEl.append(holdBtn, clearBtn, executeBtn)
+    }
+    this.phaseActionBtn.disabled = snapshot.pendingOrderCount === 0
+    this.phaseActionBtn.style.opacity = this.phaseActionBtn.disabled ? "0.45" : "1"
+    this.phaseActionBtn.style.cursor = this.phaseActionBtn.disabled ? "default" : "pointer"
+    this.phaseActionBtn.style.color = "#bfdbfe"
+    this.phaseActionBtn.style.borderColor = "rgba(96,165,250,0.42)"
   }
 
   private appendMeta(text: string) {

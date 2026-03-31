@@ -1,12 +1,14 @@
 import * as THREE from "three"
 import { Controllables } from "@Glibs/actors/controllable/controllables"
-import { Fleet, FleetConfig, FleetOrder } from "./fleet"
+import { Fleet, FleetConfig, FleetControllerType, FleetOrder } from "./fleet"
 import { FleetFormation } from "./formation"
 
 export type FleetSummary = {
   id: string
   name: string
   color?: THREE.ColorRepresentation
+  teamId: string
+  controller: FleetControllerType
   formation: FleetFormation
   spacing: number
   flagshipId?: string
@@ -163,6 +165,8 @@ export class FleetManager {
       id: fleet.id,
       name: fleet.name,
       color: fleet.color,
+      teamId: fleet.teamId,
+      controller: fleet.controller,
       formation: fleet.getFormation(),
       spacing: fleet.getSpacing(),
       flagshipId: memberIds[0],

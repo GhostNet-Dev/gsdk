@@ -5,7 +5,7 @@ import IEventController, { ILoop, IViewer } from "@Glibs/interface/ievent";
 import { Canvas, LoopType } from "@Glibs/systems/event/canvas";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
-import { CameraMode, ICameraStrategy } from "./cameratypes";
+import { CameraMode, ICameraStrategy, ICameraTrackTarget } from "./cameratypes";
 import TopViewCameraStrategy from "./topview";
 import ThirdPersonCameraStrategy from "./thirdperson";
 import ThirdPersonFollowCameraStrategy from "./followcam";
@@ -14,6 +14,7 @@ import FreeCameraStrategy from "./freeview";
 import CinematicCameraStrategy from "./cinemaview";
 import AimThirdPersonCameraStrategy from "./aimview";
 import GridViewCameraStrategy from "./gridview";
+import SpaceWarCameraStrategy from "./spacewarview";
 import { AttackOption } from "@Glibs/types/playertypes";
 
 export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
@@ -26,6 +27,8 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     private mode: CameraMode = CameraMode.Free
     private previousMode: CameraMode = CameraMode.Free
     private crosshair?: THREE.Group;
+    private trackTargetResolver?: () => ICameraTrackTarget | undefined
+    private lastDeltaSec = 0
     private preAimSnapshot?: {
         mode: CameraMode
         position: THREE.Vector3
@@ -76,6 +79,9 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         eventCtrl.RegisterEventListener(EventTypes.CameraMode, (mode: CameraMode) => {
             this.setMode(mode)
         })
+        eventCtrl.RegisterEventListener(EventTypes.CameraTrackTarget, (resolver?: () => ICameraTrackTarget | undefined) => {
+            this.trackTargetResolver = resolver
+        })
         eventCtrl.RegisterEventListener(EventTypes.AimOverlay, (enabled: boolean) => {
             this.toggleAimOverlay(enabled)
         })
@@ -106,6 +112,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         ], this.controls));
         this.strategies.set(CameraMode.AimThirdPerson, new AimThirdPersonCameraStrategy(this.controls, this));
         this.strategies.set(CameraMode.Grid, new GridViewCameraStrategy(this.controls));
+        this.strategies.set(CameraMode.SpaceWar, new SpaceWarCameraStrategy(this.controls, this));
         // 여기에 다른 전략도 추가하세요
         this.strategy = this.strategies.get(this.mode)!;
         this.strategy.init?.(this);
@@ -268,7 +275,16 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         this.updateProjectionMatrix()
     }
 
-    update() {
+    getTrackTarget() {
+        return this.trackTargetResolver?.()
+    }
+
+    getLastDeltaSec() {
+        return this.lastDeltaSec
+    }
+
+    update(delta = 0) {
+        this.lastDeltaSec = delta
         this.strategy.update(this, this.player)
     }
 }

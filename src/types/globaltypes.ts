@@ -35,6 +35,7 @@ export enum EventTypes {
     CtrlObjOff = "ctrlObjOff",
     OrbitControlsOnOff = "orbitcontrols",
     CameraMode = "cameramode",
+    CameraTrackTarget = "cameratracktarget",
     AimOverlay = "aimoverlay",
 
     // bloom효과를 제거해야하는 객체를 등록

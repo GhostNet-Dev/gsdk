@@ -3,6 +3,7 @@ import { ActorCommand } from "@Glibs/actors/controllable/controllabletypes"
 import { FleetFormation, Formation } from "./formation"
 
 export type FleetCommandIssuer = "human" | "ai" | "script"
+export type FleetControllerType = FleetCommandIssuer
 
 export type FleetOrder = {
   type: "move" | "attack" | "hold" | "follow"
@@ -20,6 +21,8 @@ export type FleetOrder = {
 export type FleetConfig = {
   name?: string
   color?: THREE.ColorRepresentation
+  teamId?: string
+  controller?: FleetControllerType
   formation?: FleetFormation
   spacing?: number
 }
@@ -30,6 +33,8 @@ export class Fleet {
   private spacing: number
   readonly name: string
   readonly color?: THREE.ColorRepresentation
+  readonly teamId: string
+  readonly controller: FleetControllerType
 
   constructor(
     public readonly id: string,
@@ -38,6 +43,8 @@ export class Fleet {
   ) {
     this.name = config.name ?? id
     this.color = config.color
+    this.teamId = config.teamId ?? id
+    this.controller = config.controller ?? "human"
     this.formation = config.formation ?? "line"
     this.spacing = config.spacing ?? 6
     memberIds.forEach((memberId) => this.members.add(memberId))

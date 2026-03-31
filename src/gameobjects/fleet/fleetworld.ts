@@ -20,7 +20,8 @@ import { Formation, FleetFormation } from "./formation"
 import { FleetManager } from "./fleetmanager"
 import { SphereAimingController } from "./sphereaimingctrl"
 import { FleetShipEnergyFocus } from "@Glibs/ux/fleet/fleetpaneltypes"
-import { FleetOrder } from "./fleet"
+import { FleetControllerType, FleetOrder } from "./fleet"
+import { ICameraTrackTarget } from "@Glibs/systems/camera/cameratypes"
 
 type Vector3Like = THREE.Vector3 | [number, number, number] | { x: number, y: number, z: number }
 
@@ -65,6 +66,8 @@ export type FleetWorldCameraOptions = {
 export type FleetWorldFleetOptions = {
   id: string
   name?: string
+  teamId?: string
+  controller?: FleetControllerType
   shipPrefix?: string
   shipCount: number
   controllableId: string
@@ -114,6 +117,42 @@ export type FleetWorldInteractionOptions = {
   aimMoveDistance?: number
   orderSink?: (fleetId: string, order: FleetOrder) => void
   orderSource?: (fleetId: string) => FleetOrder | undefined
+}
+
+export type FleetBattleShipSnapshot = {
+  id: string
+  fleetId: string
+  teamId: string
+  controller: FleetControllerType
+  position: THREE.Vector3
+  hull: number
+  maxHull: number
+  hullRatio: number
+  energy: number
+  maxEnergy: number
+  energyRatio: number
+  operational: boolean
+  isFlagship: boolean
+}
+
+export type FleetBattleFleetSnapshot = {
+  id: string
+  name: string
+  teamId: string
+  controller: FleetControllerType
+  formation: FleetFormation
+  spacing: number
+  flagshipId?: string
+  memberIds: string[]
+  memberCount: number
+  operationalShipCount: number
+  center: THREE.Vector3
+  ships: FleetBattleShipSnapshot[]
+}
+
+export type FleetBattleSnapshot = {
+  fleets: FleetBattleFleetSnapshot[]
+  ships: FleetBattleShipSnapshot[]
 }
 
 const defaultFleetWorldOptions: FleetWorldOptions = {
@@ -204,12 +243,17 @@ export class FleetWorld {
   private readonly fleetIdsByShipId = new Map<string, string>()
   private readonly tmpAimDirection = new THREE.Vector3()
   private readonly tmpAimTarget = new THREE.Vector3()
+  private readonly tmpTrackPosition = new THREE.Vector3()
+  private readonly tmpTrackLook = new THREE.Vector3()
   private readonly interactionDom: HTMLElement
   private readonly orbitControls?: OrbitControls
   private selectedShipId?: string
   private aimingController?: SphereAimingController
   private aimingFleetId?: string
   private aimingShipId?: string
+  private planningModeActive = true
+  private readonly shipTrackTarget: ICameraTrackTarget
+  private readonly fleetTrackTarget: ICameraTrackTarget
   private bootstrapped = false
 
   constructor(
@@ -225,11 +269,28 @@ export class FleetWorld {
       (name: string) => this.policyRegistry.get(name),
     )
     this.fleetManager = new FleetManager(this.controllables)
+    this.shipTrackTarget = {
+      getTrackPosition: (out = new THREE.Vector3()) => {
+        const runtime = this.selectedShipId ? this.shipRuntimes.get(this.selectedShipId) : undefined
+        return runtime ? runtime.mesh.getWorldPosition(out) : out.set(0, 0, 0)
+      },
+      getTrackLookTarget: (out = new THREE.Vector3()) => {
+        const runtime = this.selectedShipId ? this.shipRuntimes.get(this.selectedShipId) : undefined
+        return runtime ? runtime.mesh.getWorldPosition(out) : out.set(0, 0, 0)
+      },
+      getTrackRadius: () => this.selectedShipId ? (this.shipFootprints.get(this.selectedShipId) ?? 8) : 8,
+      getTrackKind: () => "ship",
+    }
+    this.fleetTrackTarget = {
+      getTrackPosition: (out = new THREE.Vector3()) => this.resolveSelectedFleetTrackPosition(out),
+      getTrackLookTarget: (out = new THREE.Vector3()) => this.resolveSelectedFleetTrackPosition(out),
+      getTrackRadius: () => this.resolveSelectedFleetTrackRadius(),
+      getTrackKind: () => "fleet",
+    }
     this.taskObjs.push({
       LoopId: 0,
-      update: (delta: number) => {
+      update: () => {
         this.updateShipStatusVisuals()
-        this.aimingController?.update(delta)
       },
     })
     this.interactionDom = this.options.interactionDom ?? document.body
@@ -257,6 +318,30 @@ export class FleetWorld {
     return this.fleetManager
   }
 
+  canControlFleet(fleetId: string) {
+    return this.fleetManager.getFleetSummary(fleetId)?.controller === "human"
+  }
+
+  setPlanningModeActive(active: boolean) {
+    this.planningModeActive = active
+    if (!active) {
+      this.disposeAimingController()
+    }
+  }
+
+  getCameraTrackTarget(): ICameraTrackTarget | undefined {
+    if (this.selectedShipId) {
+      const fleetId = this.fleetIdsByShipId.get(this.selectedShipId) ?? this.fleetManager.findFleetIdByMember(this.selectedShipId)
+      if (fleetId && this.canControlFleet(fleetId) && this.shipRuntimes.has(this.selectedShipId)) {
+        return this.shipTrackTarget
+      }
+    }
+
+    const selectedFleetId = this.fleetManager.getSelectedFleetId()
+    if (!selectedFleetId || !this.canControlFleet(selectedFleetId)) return undefined
+    return this.fleetTrackTarget
+  }
+
   setOrderSink(orderSink?: (fleetId: string, order: FleetOrder) => void) {
     this.options.orderSink = orderSink
   }
@@ -277,13 +362,13 @@ export class FleetWorld {
   focusShip(shipId: string) {
     const runtime = this.shipRuntimes.get(shipId)
     if (!runtime) return
+    const fleetId = this.fleetIdsByShipId.get(shipId) ?? this.fleetManager.findFleetIdByMember(shipId)
+    if (!fleetId || !this.canControlFleet(fleetId)) return
+
     this.selectedShipId = shipId
     this.focusRuntime(runtime, 0.45)
-    const fleetId = this.fleetIdsByShipId.get(shipId) ?? this.fleetManager.findFleetIdByMember(shipId)
-    if (fleetId) {
-      this.fleetManager.selectFleet(fleetId)
-      this.activateAimingForShip(shipId, fleetId)
-    }
+    this.fleetManager.selectFleet(fleetId)
+    this.activateAimingForShip(shipId, fleetId)
   }
 
   getFleetShips(fleetId: string) {
@@ -305,6 +390,56 @@ export class FleetWorld {
         energyFocus: this.shipEnergyFocuses.get(shipId) ?? "navigation",
       }
     })
+  }
+
+  getBattleSnapshot(): FleetBattleSnapshot {
+    const fleets = this.fleetManager.listFleetSummaries().map((fleet) => {
+      const ships = fleet.memberIds.map((shipId) => {
+        const runtime = this.shipRuntimes.get(shipId)
+        const position = runtime?.mesh.position.clone() ?? new THREE.Vector3()
+        const hull = runtime?.getHull() ?? 0
+        const maxHull = runtime?.getMaxHull() ?? 100
+        const energy = runtime?.getEnergy() ?? 0
+        const maxEnergy = runtime?.getMaxEnergy() ?? 100
+
+        return {
+          id: shipId,
+          fleetId: fleet.id,
+          teamId: fleet.teamId,
+          controller: fleet.controller,
+          position,
+          hull,
+          maxHull,
+          hullRatio: maxHull <= 0 ? 0 : hull / maxHull,
+          energy,
+          maxEnergy,
+          energyRatio: maxEnergy <= 0 ? 0 : energy / maxEnergy,
+          operational: hull > 0,
+          isFlagship: shipId === fleet.flagshipId,
+        }
+      })
+      const operationalShipCount = ships.filter((ship) => ship.operational).length
+
+      return {
+        id: fleet.id,
+        name: fleet.name,
+        teamId: fleet.teamId,
+        controller: fleet.controller,
+        formation: fleet.formation,
+        spacing: fleet.spacing,
+        flagshipId: fleet.flagshipId,
+        memberIds: [...fleet.memberIds],
+        memberCount: fleet.memberCount,
+        operationalShipCount,
+        center: this.resolveFleetCenter(ships),
+        ships,
+      }
+    })
+
+    return {
+      fleets,
+      ships: fleets.flatMap((fleet) => fleet.ships),
+    }
   }
 
   setShipEnergyFocus(shipId: string, focus: FleetShipEnergyFocus) {
@@ -372,7 +507,7 @@ export class FleetWorld {
     this.taskObjs.length = 0
     this.taskObjs.push({
       LoopId: 0,
-      update: (delta: number) => {
+      update: () => {
         this.updateShipStatusVisuals()
       },
     })
@@ -482,6 +617,8 @@ export class FleetWorld {
       this.fleetManager.createFleet(fleet.id, memberIds, {
         name: fleet.name ?? fleet.id,
         color: fleet.color,
+        teamId: fleet.teamId ?? fleet.id,
+        controller: fleet.controller ?? "human",
         formation: fleet.formation,
         spacing,
       })
@@ -571,17 +708,21 @@ export class FleetWorld {
 
   private selectShipAndFleet(shipId: string) {
     const fleetId = this.fleetIdsByShipId.get(shipId) ?? this.fleetManager.findFleetIdByMember(shipId)
-    if (!fleetId) return
+    if (!fleetId || !this.canControlFleet(fleetId)) return
 
     this.fleetManager.selectFleet(fleetId)
     this.selectedShipId = shipId
     this.focusShip(shipId)
-    this.activateAimingForShip(shipId, fleetId)
   }
 
   private activateAimingForShip(shipId: string, fleetId: string) {
     const runtime = this.shipRuntimes.get(shipId)
-    if (!runtime || !(this.camera instanceof THREE.PerspectiveCamera)) return
+    if (
+      !runtime ||
+      !this.planningModeActive ||
+      !(this.camera instanceof THREE.PerspectiveCamera) ||
+      !this.canControlFleet(fleetId)
+    ) return
 
     this.disposeAimingController()
     this.aimingShipId = shipId
@@ -660,7 +801,7 @@ export class FleetWorld {
 
     const runtime = this.shipRuntimes.get(this.aimingShipId)
     const summary = this.fleetManager.getFleetSummary(this.aimingFleetId)
-    if (!runtime || !summary) return
+    if (!runtime || !summary || !this.canControlFleet(this.aimingFleetId)) return
 
     const distance = this.options.aimMoveDistance ?? Math.max(summary.spacing * 2.5, 30)
     const direction = this.aimingController.getTargetDirection(this.tmpAimDirection)
@@ -753,6 +894,18 @@ export class FleetWorld {
     }, 0)
 
     return Math.max(this.config.minSpacing, largest * this.config.spacingMultiplier)
+  }
+
+  private resolveFleetCenter(ships: FleetBattleShipSnapshot[]) {
+    const activeShips = ships.filter((ship) => ship.operational)
+    const source = activeShips.length > 0 ? activeShips : ships
+    if (source.length === 0) return new THREE.Vector3()
+
+    const center = new THREE.Vector3()
+    source.forEach((ship) => {
+      center.add(ship.position)
+    })
+    return center.multiplyScalar(1 / source.length)
   }
 
   private layoutSpawnPositions(
@@ -905,6 +1058,14 @@ export class FleetWorld {
     const lookTarget = baseTarget.clone().add(new THREE.Vector3(0, targetYShift, 0))
     const projected = this.projectWorldPoint(baseTarget, cameraPosition, lookTarget)
     return projected.y - desiredNdcY
+  }
+
+  private getCameraTarget() {
+    if ("controls" in this.camera) {
+      const controlled = this.camera as THREE.Camera & { controls?: { target: THREE.Vector3 } }
+      if (controlled.controls) return controlled.controls.target.clone()
+    }
+    return new THREE.Vector3(0, 0, 0)
   }
 
   private projectWorldPoint(point: THREE.Vector3, cameraPosition: THREE.Vector3, lookTarget: THREE.Vector3) {
@@ -1080,12 +1241,41 @@ export class FleetWorld {
     ring.geometry = geometry
   }
 
-  private getCameraTarget() {
-    if ("controls" in this.camera) {
-      const controlled = this.camera as THREE.Camera & { controls?: { target: THREE.Vector3 } }
-      if (controlled.controls) return controlled.controls.target.clone()
-    }
-    return new THREE.Vector3(0, 0, 0)
+  private resolveSelectedFleetTrackPosition(out: THREE.Vector3) {
+    const selectedFleetId = this.fleetManager.getSelectedFleetId()
+    if (!selectedFleetId || !this.canControlFleet(selectedFleetId)) return out.set(0, 0, 0)
+
+    const summary = this.fleetManager.getFleetSummary(selectedFleetId)
+    if (!summary || summary.memberIds.length === 0) return out.set(0, 0, 0)
+
+    out.set(0, 0, 0)
+    let count = 0
+    summary.memberIds.forEach((memberId) => {
+      const runtime = this.shipRuntimes.get(memberId)
+      if (!runtime) return
+      runtime.mesh.getWorldPosition(this.tmpTrackPosition)
+      out.add(this.tmpTrackPosition)
+      count++
+    })
+    return count > 0 ? out.multiplyScalar(1 / count) : out.set(0, 0, 0)
+  }
+
+  private resolveSelectedFleetTrackRadius() {
+    const selectedFleetId = this.fleetManager.getSelectedFleetId()
+    if (!selectedFleetId || !this.canControlFleet(selectedFleetId)) return this.config.camera.minRadius
+
+    const summary = this.fleetManager.getFleetSummary(selectedFleetId)
+    if (!summary || summary.memberIds.length === 0) return this.config.camera.minRadius
+
+    const center = this.resolveSelectedFleetTrackPosition(this.tmpTrackLook)
+    let maxDistSq = 0
+    summary.memberIds.forEach((memberId) => {
+      const runtime = this.shipRuntimes.get(memberId)
+      if (!runtime) return
+      runtime.mesh.getWorldPosition(this.tmpTrackPosition)
+      maxDistSq = Math.max(maxDistSq, center.distanceToSquared(this.tmpTrackPosition))
+    })
+    return Math.max(this.config.camera.minRadius, Math.sqrt(maxDistSq) * 2)
   }
 
   private makeShipMesh(color: THREE.ColorRepresentation) {

@@ -18,12 +18,17 @@ export type BattlePhaseSnapshot = {
   pendingOrderCount: number
 }
 
+export type BattlePlanningHook = () => void
+export type BattlePhaseChangeListener = (phase: BattlePhase) => void
+
 export class BattlePhaseController implements ILoop {
   LoopId = 0
 
   private phase: BattlePhase = "planning"
   private elapsed = 0
   private readonly plannedOrders = new Map<string, FleetOrder>()
+  private readonly planningHooks = new Set<BattlePlanningHook>()
+  private readonly phaseListeners = new Set<BattlePhaseChangeListener>()
 
   constructor(
     private readonly eventCtrl: IEventController,
@@ -75,8 +80,31 @@ export class BattlePhaseController implements ILoop {
     this.plannedOrders.delete(fleetId)
   }
 
+  registerPlanningHook(hook: BattlePlanningHook) {
+    this.planningHooks.add(hook)
+    return () => {
+      this.planningHooks.delete(hook)
+    }
+  }
+
+  onPhaseChanged(listener: BattlePhaseChangeListener) {
+    this.phaseListeners.add(listener)
+    return () => {
+      this.phaseListeners.delete(listener)
+    }
+  }
+
   commitPlans() {
-    if (!this.canAcceptOrders() || this.plannedOrders.size === 0) return false
+    if (!this.canAcceptOrders()) return false
+
+    this.planningHooks.forEach((hook) => {
+      try {
+        hook()
+      } catch (error) {
+        console.error("[BattlePhase] planning hook failed", error)
+      }
+    })
+    if (this.plannedOrders.size === 0) return false
 
     for (const [fleetId, order] of this.plannedOrders) {
       console.log("[BattlePhase] commit", fleetId, {
@@ -90,15 +118,22 @@ export class BattlePhaseController implements ILoop {
 
     this.plannedOrders.clear()
     this.elapsed = 0
-    this.phase = "executing"
+    this.setPhase("executing")
     this.eventCtrl.SendEventMessage(EventTypes.TimeCtrl, 1)
     return true
   }
 
   resetToPlanning() {
     this.elapsed = 0
-    this.phase = "planning"
+    this.setPhase("planning")
     this.eventCtrl.SendEventMessage(EventTypes.TimeCtrl, 0)
+  }
+
+  stopExecution() {
+    if (this.phase !== "executing") return false
+    this.clearPlans()
+    this.resetToPlanning()
+    return true
   }
 
   update(delta: number): void {
@@ -111,10 +146,22 @@ export class BattlePhaseController implements ILoop {
       elapsed: this.elapsed,
       duration: this.executionWindowSec,
     })
-    this.phase = "resolving"
+    this.setPhase("resolving")
     this.eventCtrl.SendEventMessage(EventTypes.TimeCtrl, 0)
     this.elapsed = this.executionWindowSec
-    this.phase = "planning"
+    this.setPhase("planning")
     this.elapsed = 0
+  }
+
+  private setPhase(phase: BattlePhase) {
+    if (this.phase === phase) return
+    this.phase = phase
+    this.phaseListeners.forEach((listener) => {
+      try {
+        listener(phase)
+      } catch (error) {
+        console.error("[BattlePhase] phase listener failed", error)
+      }
+    })
   }
 }

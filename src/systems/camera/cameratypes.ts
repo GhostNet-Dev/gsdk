@@ -1,4 +1,5 @@
 import { IPhysicsObject } from "@Glibs/interface/iobject";
+import * as THREE from "three";
 
 export enum CameraMode {
     TopView,
@@ -9,7 +10,17 @@ export enum CameraMode {
     Cinematic,
     AimThirdPerson,
     Grid,
+    SpaceWar,
     Restore
+}
+
+export type CameraTrackTargetKind = "ship" | "fleet" | "point"
+
+export interface ICameraTrackTarget {
+    getTrackPosition(out?: THREE.Vector3): THREE.Vector3
+    getTrackLookTarget?(out?: THREE.Vector3): THREE.Vector3
+    getTrackRadius?(): number
+    getTrackKind?(): CameraTrackTargetKind
 }
 
 export interface ICameraStrategy {
