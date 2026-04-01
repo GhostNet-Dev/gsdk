@@ -1,7 +1,8 @@
 import * as THREE from "three"
 import { gsap } from "gsap"
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js"
+import { IOrbitControlsAccess } from "@Glibs/systems/camera/orbitbroker"
 import IEventController, { ILoop } from "@Glibs/interface/ievent"
+import { EventTypes } from "@Glibs/types/globaltypes"
 import { Loader } from "@Glibs/loader/loader"
 import { Char } from "@Glibs/loader/assettypes"
 import { ControllableDb } from "@Glibs/actors/controllable/controllabledb"
@@ -22,6 +23,8 @@ import { SphereAimingController } from "./sphereaimingctrl"
 import { FleetShipEnergyFocus } from "@Glibs/ux/fleet/fleetpaneltypes"
 import { FleetControllerType, FleetOrder } from "./fleet"
 import { ICameraTrackTarget } from "@Glibs/systems/camera/cameratypes"
+import { ProjectileMsg } from "@Glibs/actors/projectile/projectile"
+import { AttackOption } from "@Glibs/types/playertypes"
 
 type Vector3Like = THREE.Vector3 | [number, number, number] | { x: number, y: number, z: number }
 
@@ -112,11 +115,14 @@ export type FleetWorldOptions = {
 
 export type FleetWorldInteractionOptions = {
   interactionDom?: HTMLElement
-  controls?: OrbitControls
+  controls?: IOrbitControlsAccess
   enableShipSelection?: boolean
   aimMoveDistance?: number
   orderSink?: (fleetId: string, order: FleetOrder) => void
   orderSource?: (fleetId: string) => FleetOrder | undefined
+  projectileEmitter?: (msg: ProjectileMsg) => void
+  registerProjectileTarget?: (obj: THREE.Object3D) => void
+  deregisterProjectileTarget?: (obj: THREE.Object3D) => void
 }
 
 export type FleetBattleShipSnapshot = {
@@ -245,8 +251,10 @@ export class FleetWorld {
   private readonly tmpAimTarget = new THREE.Vector3()
   private readonly tmpTrackPosition = new THREE.Vector3()
   private readonly tmpTrackLook = new THREE.Vector3()
+  private readonly tmpStatusQuaternion = new THREE.Quaternion()
   private readonly interactionDom: HTMLElement
-  private readonly orbitControls?: OrbitControls
+  private readonly orbitControls?: IOrbitControlsAccess
+  private readonly shipAttackListeners = new Map<string, (opts: AttackOption[]) => void>()
   private selectedShipId?: string
   private aimingController?: SphereAimingController
   private aimingFleetId?: string
@@ -255,6 +263,8 @@ export class FleetWorld {
   private readonly shipTrackTarget: ICameraTrackTarget
   private readonly fleetTrackTarget: ICameraTrackTarget
   private bootstrapped = false
+  private activeFocusTween: gsap.core.Tween | null = null
+  private unsubscribeInteraction?: () => void
 
   constructor(
     private readonly loader: Loader,
@@ -484,9 +494,17 @@ export class FleetWorld {
     if (this.config.debug.enabled) {
       window.addEventListener("keydown", this.onDebugKeyDown)
     }
+    this.unsubscribeInteraction = this.orbitControls?.onUserInteractionStart(() => {
+      this.activeFocusTween?.kill()
+      this.activeFocusTween = null
+    })
   }
 
   dispose() {
+    this.activeFocusTween?.kill()
+    this.activeFocusTween = null
+    this.unsubscribeInteraction?.()
+    this.unsubscribeInteraction = undefined
     this.unbindInteraction()
     this.disposeAimingController()
     if (this.config.debug.enabled) {
@@ -498,6 +516,14 @@ export class FleetWorld {
     })
     this.controllableIds.clear()
 
+    this.shipMeshes.forEach((mesh, shipId) => {
+      this.options.deregisterProjectileTarget?.(mesh)
+      const attackListener = this.shipAttackListeners.get(shipId)
+      if (attackListener) {
+        this.eventCtrl.DeregisterEventListener(EventTypes.Attack + shipId, attackListener)
+      }
+    })
+    this.shipAttackListeners.clear()
     this.shipRuntimes.clear()
     this.shipMeshes.clear()
     this.fleetIdsByShipId.clear()
@@ -528,13 +554,14 @@ export class FleetWorld {
     mesh.name = id
     this.tagShipMesh(mesh, id)
     this.shipMeshes.set(id, mesh)
+    this.options.registerProjectileTarget?.(mesh)
     this.fleetRoot.add(mesh)
 
     const footprint = this.measureShipFootprint(mesh)
     this.shipFootprints.set(id, footprint)
-    console.log(
-      `[FleetWorld] spawn ${id} at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}) footprint=${footprint.toFixed(2)}`,
-    )
+    // console.log(
+    //   `[FleetWorld] spawn ${id} at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}) footprint=${footprint.toFixed(2)}`,
+    // )
 
     const runtime = new FighterShipRuntime(id, mesh, this.shipRuntimes, options.speed ?? 18)
     this.shipRuntimes.set(id, runtime)
@@ -557,10 +584,7 @@ export class FleetWorld {
     const initialTarget = this.toVector3(this.config.camera.initialTarget)
     this.camera.position.copy(initialPosition)
     this.camera.lookAt(initialTarget)
-    if ("controls" in this.camera) {
-      const controlled = this.camera as THREE.Camera & { controls?: { target: THREE.Vector3 } }
-      controlled.controls?.target.copy(initialTarget)
-    }
+    this.orbitControls?.setTarget(initialTarget)
 
     if (this.config.grid.enabled) {
       const grid = new THREE.GridHelper(
@@ -624,9 +648,29 @@ export class FleetWorld {
       })
       memberIds.forEach((memberId) => {
         this.fleetIdsByShipId.set(memberId, fleet.id)
+        const runtime = this.shipRuntimes.get(memberId)
+        const mesh = this.shipMeshes.get(memberId)
+        const ctrl = this.controllables.get(memberId)
+        runtime?.configureCombat({
+          eventEmitter: this.options.projectileEmitter,
+          ownerSpec: ctrl?.baseSpec,
+          teamId: fleet.teamId ?? fleet.id,
+          findNearestEnemy: (sourceId, maxDistance) => this.findNearestEnemyRuntime(sourceId, maxDistance),
+        })
+        if (mesh) {
+          mesh.userData.teamId = fleet.teamId ?? fleet.id
+        }
+        if (runtime) {
+          const onAttack = (opts: AttackOption[] = []) => {
+            const totalDamage = opts.reduce((sum, opt) => sum + Math.max(0, opt.damage ?? 0), 0)
+            runtime.receiveDamage(totalDamage)
+          }
+          this.shipAttackListeners.set(memberId, onAttack)
+          this.eventCtrl.RegisterEventListener(EventTypes.Attack + memberId, onAttack)
+        }
       })
       allMembers.push(...memberIds)
-      console.log(`[FleetWorld] ${fleet.id} spacing=${spacing.toFixed(2)} count=${fleet.shipCount}`)
+      // console.log(`[FleetWorld] ${fleet.id} spacing=${spacing.toFixed(2)} count=${fleet.shipCount}`)
     }
 
     if (this.config.fleets[0]) {
@@ -681,6 +725,7 @@ export class FleetWorld {
     const shipId = this.pickShipId(event)
     if (!shipId) return
 
+    console.debug(`[FleetWorld] pointerdown 차단 (shipId=${shipId})`)
     event.stopImmediatePropagation()
     this.selectShipAndFleet(shipId)
   }
@@ -772,10 +817,10 @@ export class FleetWorld {
     const order = this.createAimMoveOrder()
     if (!order || !this.aimingFleetId) return
 
-    console.log("[FleetWorld] commit aim move", this.aimingFleetId, {
-      point: order.point?.toArray?.(),
-      direction: order.direction?.toArray?.(),
-    })
+    // console.log("[FleetWorld] commit aim move", this.aimingFleetId, {
+    //   point: order.point?.toArray?.(),
+    //   direction: order.direction?.toArray?.(),
+    // })
     if (this.options.orderSink) {
       this.options.orderSink(this.aimingFleetId, order)
       return
@@ -790,10 +835,6 @@ export class FleetWorld {
     const order = this.createAimMoveOrder()
     if (!order) return
 
-    console.log("[FleetWorld] sync aim move", this.aimingFleetId, {
-      point: order.point?.toArray?.(),
-      direction: order.direction?.toArray?.(),
-    })
     this.options.orderSink(this.aimingFleetId, order)
   }
 
@@ -837,7 +878,7 @@ export class FleetWorld {
       this.tintShipMesh(mesh, color)
       return this.normalizeShipMesh(mesh)
     } catch (error) {
-      console.warn(`[FleetWorld] failed to load ship model ${String(modelId)}. using fallback mesh.`, error)
+      // console.warn(`[FleetWorld] failed to load ship model ${String(modelId)}. using fallback mesh.`, error)
       return this.makeShipMesh(color)
     }
   }
@@ -944,10 +985,9 @@ export class FleetWorld {
     this.camera.position.set(target.x, height, target.z + distance)
     this.camera.lookAt(target)
 
-    if ("controls" in this.camera) {
-      const controlled = this.camera as THREE.Camera & { controls?: { target: THREE.Vector3; update: () => void } }
-      controlled.controls?.target.copy(target)
-      controlled.controls?.update()
+    if (this.orbitControls) {
+      this.orbitControls.setTarget(target)
+      this.orbitControls.update()
     }
   }
 
@@ -1000,7 +1040,8 @@ export class FleetWorld {
       tz: currentTarget.z,
     }
 
-    gsap.to(animationObj, {
+    this.activeFocusTween?.kill()
+    this.activeFocusTween = gsap.to(animationObj, {
       px: desiredPosition.x,
       py: desiredPosition.y,
       pz: desiredPosition.z,
@@ -1011,16 +1052,14 @@ export class FleetWorld {
       ease: "power2.out",
       onUpdate: () => {
         this.camera.position.set(animationObj.px, animationObj.py, animationObj.pz)
-        if ("controls" in this.camera) {
-          const controlled = this.camera as THREE.Camera & { controls?: { target: THREE.Vector3; update: () => void } }
-          if (controlled.controls) {
-            controlled.controls.target.set(animationObj.tx, animationObj.ty, animationObj.tz)
-            controlled.controls.update()
-          }
+        if (this.orbitControls) {
+          this.orbitControls.setTargetXYZ(animationObj.tx, animationObj.ty, animationObj.tz)
+          this.orbitControls.update()
         } else {
           this.camera.lookAt(animationObj.tx, animationObj.ty, animationObj.tz)
         }
       },
+      onComplete: () => { this.activeFocusTween = null },
     })
   }
 
@@ -1062,11 +1101,7 @@ export class FleetWorld {
   }
 
   private getCameraTarget() {
-    if ("controls" in this.camera) {
-      const controlled = this.camera as THREE.Camera & { controls?: { target: THREE.Vector3 } }
-      if (controlled.controls) return controlled.controls.target.clone()
-    }
-    return new THREE.Vector3(0, 0, 0)
+    return this.orbitControls?.getTarget() ?? new THREE.Vector3(0, 0, 0)
   }
 
   private projectWorldPoint(point: THREE.Vector3, cameraPosition: THREE.Vector3, lookTarget: THREE.Vector3) {
@@ -1106,6 +1141,10 @@ export class FleetWorld {
     this.shipStatusVisuals.forEach((visual, shipId) => {
       const runtime = this.shipRuntimes.get(shipId)
       if (!runtime) return
+
+      visual.group.quaternion.copy(
+        this.tmpStatusQuaternion.copy(runtime.mesh.quaternion).invert(),
+      )
 
       const hullRatio = runtime.getHullRatio()
       if (Math.abs(hullRatio - visual.lastHullRatio) > 0.001) {
@@ -1242,6 +1281,33 @@ export class FleetWorld {
     ring.geometry = geometry
   }
 
+  private findNearestEnemyRuntime(sourceId: string, maxDistance: number) {
+    const sourceRuntime = this.shipRuntimes.get(sourceId)
+    const sourceFleetId = this.fleetIdsByShipId.get(sourceId) ?? this.fleetManager.findFleetIdByMember(sourceId)
+    const sourceTeamId = sourceFleetId ? this.fleetManager.getFleetSummary(sourceFleetId)?.teamId : undefined
+    if (!sourceRuntime || !sourceTeamId) return undefined
+
+    let nearest: FighterShipRuntime | undefined
+    let nearestDistSq = maxDistance * maxDistance
+
+    this.shipRuntimes.forEach((candidate, candidateId) => {
+      if (candidateId === sourceId) return
+
+      const candidateFleetId = this.fleetIdsByShipId.get(candidateId) ?? this.fleetManager.findFleetIdByMember(candidateId)
+      const candidateSummary = candidateFleetId ? this.fleetManager.getFleetSummary(candidateFleetId) : undefined
+      if (!candidateSummary || candidateSummary.teamId === sourceTeamId) return
+      if (candidate.getHull() <= 0) return
+
+      const distSq = sourceRuntime.mesh.position.distanceToSquared(candidate.mesh.position)
+      if (distSq >= nearestDistSq) return
+
+      nearestDistSq = distSq
+      nearest = candidate
+    })
+
+    return nearest
+  }
+
   private resolveSelectedFleetTrackPosition(out: THREE.Vector3) {
     const selectedFleetId = this.fleetManager.getSelectedFleetId()
     if (!selectedFleetId || !this.canControlFleet(selectedFleetId)) return out.set(0, 0, 0)
@@ -1309,10 +1375,10 @@ export class FleetWorld {
     return new THREE.Vector3(value.x, value.y, value.z)
   }
 
-  private resolveCameraControls() {
-    if (!("controls" in this.camera)) return undefined
-    const controlled = this.camera as THREE.Camera & { controls?: OrbitControls }
-    return controlled.controls
+  private resolveCameraControls(): IOrbitControlsAccess | undefined {
+    if (!("getControlsAccess" in this.camera)) return undefined
+    const cam = this.camera as { getControlsAccess?: () => IOrbitControlsAccess }
+    return cam.getControlsAccess?.()
   }
 
   private tagShipMesh(root: THREE.Object3D, shipId: string) {

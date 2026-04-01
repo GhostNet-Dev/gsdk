@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { ICameraStrategy } from "./cameratypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { OrbitControlsBroker, OrbitControlsHandle } from "./orbitbroker";
 
 export default class ThirdPersonCameraStrategy implements ICameraStrategy {
     private offset = new THREE.Vector3(10, 15, 10)
@@ -11,80 +11,69 @@ export default class ThirdPersonCameraStrategy implements ICameraStrategy {
     target = new THREE.Vector3()
     private followDistance = 6;
     lerpFactor = 0.5
+    private handle: OrbitControlsHandle | null = null;
 
     constructor(
-        private controls: OrbitControls,
         private camera: THREE.Camera,
-        /** 충돌 감지할 장애물 설정 */
         private obstacles: THREE.Object3D[],
-    ) {
-        this.init();
+    ) {}
+
+    init(_camera: THREE.PerspectiveCamera, broker: OrbitControlsBroker) {
+        this.handle = broker.acquire("ThirdPersonCameraStrategy");
+        const ctrl = this.handle.controls;
+        ctrl.enableZoom = true;
+        ctrl.enableRotate = true;
+        ctrl.enablePan = false;
+        ctrl.enableDamping = true;
+        ctrl.minDistance = 2.0;
+        ctrl.maxDistance = 20.0;
+        ctrl.maxPolarAngle = Math.PI - 0.1;
     }
 
-    init() {
-        this.controls.enableZoom = true;
-        this.controls.enableRotate = true;
-        this.controls.enablePan = false;
-        this.controls.enableDamping = true;
-        this.controls.minDistance = 2.0;
-        this.controls.maxDistance = 20.0;
-        this.controls.maxPolarAngle = Math.PI - 0.1;
+    uninit(_camera: THREE.PerspectiveCamera) {
+        if (!this.handle?.isValid) return;
+        const ctrl = this.handle.controls;
+        ctrl.minDistance = 0;
+        ctrl.maxDistance = Infinity;
+        ctrl.maxPolarAngle = Math.PI;
     }
 
-    uninit() {
-        this.controls.minDistance = 0;
-        this.controls.maxDistance = Infinity;
-        this.controls.maxPolarAngle = Math.PI;
-    }
     orbitStart(): void {
-        this.isFreeView = true
+        this.isFreeView = true;
     }
+
     orbitEnd(): void {
-        // 🎯 사용자 시점에서 거리, 높이 계산
-        const camToTarget = new THREE.Vector3().subVectors(this.camera.position, this.controls.target);
+        if (!this.handle?.isValid) return;
+        const ctrl = this.handle.controls;
+        const camToTarget = new THREE.Vector3().subVectors(this.camera.position, ctrl.target);
         this.offset.copy(camToTarget);
-        this.isFreeView = false
+        this.isFreeView = false;
     }
 
     update(camera: THREE.Camera, player?: IPhysicsObject) {
-        if (!player) return;
+        if (!player || !this.handle?.isValid) return;
+        const ctrl = this.handle.controls;
 
-        this.controls.target.copy(player.CenterPos);
-        this.controls.update();
+        ctrl.target.copy(player.CenterPos);
+        ctrl.update();
 
         if (this.isFreeView) {
-            this.offset.subVectors(this.camera.position, this.controls.target);
+            this.offset.subVectors(this.camera.position, ctrl.target);
         }
 
-        // OrbitControls 또는 자동 위치 계산
         const intendedCameraPos = this.isFreeView
             ? this.camera.position.clone()
             : player.CenterPos.clone().add(this.offset);
 
-        // ✅ Raycaster로 충돌 감지
-        // const direction = intendedCameraPos.clone().sub(player.CenterPos).normalize();
-        // this.raycaster.set(player.CenterPos, direction);
-        // this.raycaster.far = player.CenterPos.distanceTo(intendedCameraPos);
-
-        // const hits = this.raycaster.intersectObjects(this.obstacles, true);
-        // if (hits.length > 0) {
-        //     this.targetPosition.copy(hits[0].point);
-        // } else {
         this.targetPosition.copy(intendedCameraPos);
-        // }
 
-        // ✅ 카메라 위치 적용 (보간 or 직접)
         if (this.isFreeView) {
-            // 유저가 직접 조작하는 중에는 충돌 보정만 적용 (즉시 위치)
             camera.position.copy(this.targetPosition);
         } else {
-            // TPS 모드에서는 부드럽게 따라가도록
             camera.position.lerp(this.targetPosition, this.lerpFactor);
         }
 
-        // ✅ 바라보는 타겟은 항상 플레이어 기준
         this.target.lerp(player.CenterPos, this.lerpFactor);
         camera.lookAt(this.target);
     }
-
 }

@@ -6,6 +6,7 @@ import { Canvas, LoopType } from "@Glibs/systems/event/canvas";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { CameraMode, ICameraStrategy, ICameraTrackTarget } from "./cameratypes";
+import { IOrbitControlsAccess, OrbitControlsBroker, OrbitControlsLogger } from "./orbitbroker";
 import TopViewCameraStrategy from "./topview";
 import ThirdPersonCameraStrategy from "./thirdperson";
 import ThirdPersonFollowCameraStrategy from "./followcam";
@@ -19,7 +20,9 @@ import { AttackOption } from "@Glibs/types/playertypes";
 
 export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     LoopId = 0
+    /** 외부 시스템(fleet, galaxy 등)의 하위 호환성을 위해 public 유지 */
     controls: OrbitControls
+    private broker: OrbitControlsBroker
 
     targetObjs: THREE.Object3D[] = []
     private strategy: ICameraStrategy
@@ -29,6 +32,8 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     private crosshair?: THREE.Group;
     private trackTargetResolver?: () => ICameraTrackTarget | undefined
     private lastDeltaSec = 0
+    private readonly interactionStartCallbacks = new Set<() => void>()
+    private orbitOverlayEl!: HTMLDivElement
     private preAimSnapshot?: {
         mode: CameraMode
         position: THREE.Vector3
@@ -62,6 +67,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
             this.setMode(CameraMode.Free)
         })
         eventCtrl.RegisterEventListener(EventTypes.OrbitControlsOnOff, (onOff: boolean) => {
+            // controls는 public이므로 직접 접근 (전략 소유권과 무관한 긴급 override)
             this.controls.enabled = onOff
         })
         eventCtrl.RegisterEventListener(EventTypes.RegisterLandPhysic, (obj: THREE.Object3D) => {
@@ -89,38 +95,55 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         this.lookTarget = lookTarget
         if (lookTarget) this.lookAt(player!.Pos)
 
-        this.controls = new OrbitControls(this, dom)
+        // OrbitControls용 투명 오버레이 div — canvas 대신 사용하여
+        // FleetPanel 등 UI 오버레이가 있어도 배경 드래그 이벤트를 수신할 수 있게 함
+        this.orbitOverlayEl = document.createElement('div')
+        this.orbitOverlayEl.style.cssText = 'position:fixed;inset:0;z-index:0;touch-action:none;'
+        document.body.appendChild(this.orbitOverlayEl)
+
+        this.controls = new OrbitControls(this, this.orbitOverlayEl)
+        this.broker = new OrbitControlsBroker(this.controls)
+
+        // 진단: 오버레이에 capture 리스너 — 이벤트가 도달하는지 확인
+        this.orbitOverlayEl.addEventListener('pointerdown', () => {
+            console.debug(`[Camera] overlay pointerdown 도달 (controls.enabled=${this.controls.enabled})`)
+        }, true)
+
         // 🖱️ 드래그 감지
         this.controls.addEventListener("start", () => {
+            console.debug(`[OrbitControls] ▶ start 이벤트 수신 (enabled=${this.controls.enabled})`)
             this.strategy?.orbitStart?.()
+            this.interactionStartCallbacks.forEach(cb => cb())
         });
 
         // 드래그 종료 후 offset 저장
         this.controls.addEventListener("end", () => {
+            console.debug(`[OrbitControls] ▶ end 이벤트 수신`)
             this.strategy?.orbitEnd?.()
         });
-        // 전략 초기화
-        this.strategies.set(CameraMode.TopView, new TopViewCameraStrategy(this.controls));
-        this.strategies.set(CameraMode.ThirdPerson, new ThirdPersonCameraStrategy(this.controls, this, this.targetObjs));
-        this.strategies.set(CameraMode.ThirdFollowPerson, new ThirdPersonFollowCameraStrategy(this.controls, this, this.targetObjs));
-        this.strategies.set(CameraMode.FirstPerson, new FirstPersonCameraStrategy(this.controls));
-        this.strategies.set(CameraMode.Free, new FreeCameraStrategy(this.controls));
+
+        // 전략 초기화 (controls를 생성자에서 제거 — broker를 통해 init에서 받음)
+        this.strategies.set(CameraMode.TopView, new TopViewCameraStrategy());
+        this.strategies.set(CameraMode.ThirdPerson, new ThirdPersonCameraStrategy(this, this.targetObjs));
+        this.strategies.set(CameraMode.ThirdFollowPerson, new ThirdPersonFollowCameraStrategy(this, this.targetObjs));
+        this.strategies.set(CameraMode.FirstPerson, new FirstPersonCameraStrategy());
+        this.strategies.set(CameraMode.Free, new FreeCameraStrategy());
         this.strategies.set(CameraMode.Cinematic, new CinematicCameraStrategy([
             new THREE.Vector3(0, 10, 20),
             new THREE.Vector3(10, 10, 0),
             new THREE.Vector3(0, 5, -10)
-        ], this.controls));
-        this.strategies.set(CameraMode.AimThirdPerson, new AimThirdPersonCameraStrategy(this.controls, this));
-        this.strategies.set(CameraMode.Grid, new GridViewCameraStrategy(this.controls));
-        this.strategies.set(CameraMode.SpaceWar, new SpaceWarCameraStrategy(this.controls, this));
-        // 여기에 다른 전략도 추가하세요
+        ]));
+        this.strategies.set(CameraMode.AimThirdPerson, new AimThirdPersonCameraStrategy(this));
+        this.strategies.set(CameraMode.Grid, new GridViewCameraStrategy());
+        this.strategies.set(CameraMode.SpaceWar, new SpaceWarCameraStrategy(this));
+
+        // 초기 전략 활성화
         this.strategy = this.strategies.get(this.mode)!;
-        this.strategy.init?.(this);
+        this.strategy.init?.(this, this.broker);
     }
 
     private createCrosshair() {
         const group = new THREE.Group();
-        // Line은 1px로 고정되므로 가장 밝은 노란색과 1.0의 불투명도를 사용합니다.
         const mat = new THREE.LineBasicMaterial({
             color: 0xffff00,
             depthTest: false,
@@ -129,7 +152,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
             opacity: 1.0
         });
 
-        const size = 0.5; // 월드 단위 크기 (나중에 거리별로 스케일 조절됨)
+        const size = 0.5;
         const gap = 0.2;
 
         const hPoints = [
@@ -149,7 +172,6 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         group.add(hLine, vLine);
         group.visible = false;
 
-        // 렌더링 우선순위 최상위
         group.renderOrder = 100000;
         group.traverse(obj => obj.frustumCulled = false);
 
@@ -157,30 +179,20 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         this.crosshair = group;
     }
 
-    /**
-     * 가늠자를 월드 좌표에 배치하고 카메라를 바라보게 합니다.
-     * 거리에 상관없이 화면상 크기를 일정하게 유지합니다.
-     */
     public setCrosshairWorldPosition(worldPos: THREE.Vector3) {
         if (!this.crosshair) return;
 
-        // 1. 카메라 로컬 좌표계로 변환하여 배치
         const localPos = this.worldToLocal(worldPos.clone());
         this.crosshair.position.copy(localPos);
 
-        // 2. 거리 기반 스케일 조정 (원근감에 의한 크기 변화 상쇄)
-        // localPos.z는 카메라로부터의 거리(음수)입니다.
         const distance = Math.max(0.1, Math.abs(localPos.z));
-        const baseScale = 0.025; // 화면상 크기 조절용 상수
+        const baseScale = 0.025;
         this.crosshair.scale.setScalar(distance * baseScale);
-
-        // 3. 항상 카메라 평면과 평행하게 정렬 (부모가 카메라라 이미 정렬됨)
     }
 
     private toggleAimOverlay(enabled: boolean) {
         if (this.crosshair) {
             this.crosshair.visible = enabled;
-            // 활성화될 때 기본 위치(전방 10m)로 초기화
             if (enabled) {
                 const forward = new THREE.Vector3(0, 0, -10);
                 this.crosshair.position.copy(forward);
@@ -212,6 +224,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
 
         updateShake();
     }
+
     cameraPushIn(target: THREE.Object3D, dist = 1.0, duration = 0.15) {
         const dir = new THREE.Vector3()
         this.getWorldDirection(dir)
@@ -234,13 +247,13 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
             }
         })
     }
+
     setMode(mode: CameraMode) {
         if (mode === CameraMode.Restore) {
             mode = this.previousMode;
         }
 
         if (!this.strategies.has(mode)) return
-        // ✅ 방어 코드 추가: 현재 카메라 모드와 변경하려는 모드가 같으면 초기화를 무시합니다.
         if (this.mode === mode) return;
 
         const prevMode = this.mode
@@ -255,11 +268,13 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
             }
         }
 
+        // 1. 구 전략 정리 (이 시점에서 구 전략의 handle은 아직 유효)
         this.strategy?.uninit?.(this);
 
+        // 2. 신 전략으로 교체 → broker.acquire()가 구 handle 무효화 후 신 handle 발급
         this.mode = mode
         this.strategy = this.strategies.get(mode)!
-        this.strategy.init?.(this)
+        this.strategy.init?.(this, this.broker)
 
         if (
             prevMode === CameraMode.AimThirdPerson &&
@@ -273,6 +288,39 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     resize(width: number, height: number) {
         this.aspect = width / height
         this.updateProjectionMatrix()
+    }
+
+    /**
+     * Fleet, Galaxy 등 외부 시스템이 OrbitControls를 안전하게 조작하기 위한 접근자.
+     * 반환된 객체를 통해서만 controls를 조작해야 합니다.
+     */
+    getControlsAccess(): IOrbitControlsAccess {
+        return {
+            setTarget: (pos) => {
+                OrbitControlsLogger.logAccess("setTarget", `${pos.x.toFixed(1)}, ${pos.y.toFixed(1)}, ${pos.z.toFixed(1)}`)
+                this.controls.target.copy(pos)
+            },
+            setTargetXYZ: (x, y, z) => {
+                OrbitControlsLogger.logAccess("setTargetXYZ", `${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)}`)
+                this.controls.target.set(x, y, z)
+            },
+            getTarget: () => {
+                OrbitControlsLogger.logAccess("getTarget")
+                return this.controls.target.clone()
+            },
+            setEnabled: (v) => {
+                OrbitControlsLogger.logAccess("setEnabled", String(v))
+                this.controls.enabled = v
+            },
+            update: () => {
+                OrbitControlsLogger.logAccess("update")
+                this.controls.update()
+            },
+            onUserInteractionStart: (callback) => {
+                this.interactionStartCallbacks.add(callback)
+                return () => this.interactionStartCallbacks.delete(callback)
+            },
+        }
     }
 
     getTrackTarget() {

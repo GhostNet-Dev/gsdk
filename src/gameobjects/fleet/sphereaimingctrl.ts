@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { IOrbitControlsAccess } from '@Glibs/systems/camera/orbitbroker';
 import { Line2 } from 'three/examples/jsm/lines/Line2.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';
@@ -57,7 +57,7 @@ export class SphereAimingController implements ILoop {
        private camera: THREE.PerspectiveCamera,
        private domElement: HTMLElement,
        private spaceship: THREE.Object3D,
-       private controls?: OrbitControls,
+       private controls?: IOrbitControlsAccess,
         options?: AimingControllerOptions
     ) {
         this.maxRange = options?.maxRange ?? 60;
@@ -97,7 +97,7 @@ export class SphereAimingController implements ILoop {
     /** 모듈 파기 시 메모리를 해제합니다. */
     public dispose(): void {
         this.isDraggingHandle = false;
-        if (this.didDisableControls && this.controls) this.controls.enabled = true;
+        if (this.didDisableControls && this.controls) this.controls.setEnabled(true);
                 this.didDisableControls = false;
         this.unbindEvents();
         this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
@@ -421,16 +421,18 @@ export class SphereAimingController implements ILoop {
         if (event.button !== 0 && event.pointerType === 'mouse') return;
         if ((event.target as HTMLElement).closest('.lil-gui')) return;
 
+        console.debug(`[SphereAiming] onPointerDown 진입`)
         this.updateRaycaster(event);
 
         const handleHits = this.raycaster.intersectObjects([this.aimHandle, this.aimHitBox], true);
         if (handleHits.length > 0) {
+            console.debug(`[SphereAiming] aimHandle 히트 → OrbitControls 차단 + setEnabled(false)`)
             event.preventDefault();
             event.stopImmediatePropagation();
             this.isDraggingHandle = true;
             if (!this.didDisableControls) {
                 this.didDisableControls = true;
-                if (this.controls) this.controls.enabled = false;
+                if (this.controls) this.controls.setEnabled(false);
                 if (this.onAimStart) this.onAimStart();
             }
             this.domElement.setPointerCapture?.(event.pointerId);
@@ -440,8 +442,8 @@ export class SphereAimingController implements ILoop {
 
         const lineHits = this.raycaster.intersectObjects([this.horizontalCircle, this.verticalCircle], true);
         if (lineHits.length > 0) {
+            console.debug(`[SphereAiming] circle 히트 → OrbitControls 통과 허용`)
             event.preventDefault();
-            event.stopImmediatePropagation();
             this.rangeGroup.lookAt(lineHits[0].point);
             this.updateAimVisualByDirection();
             if (this.onAimStart) this.onAimStart();
@@ -515,7 +517,7 @@ export class SphereAimingController implements ILoop {
         if (releaseCapture && pointerId !== undefined && this.domElement.hasPointerCapture?.(pointerId)) {
             this.domElement.releasePointerCapture(pointerId);
         }
-        if (this.didDisableControls && this.controls) this.controls.enabled = true;
+        if (this.didDisableControls && this.controls) this.controls.setEnabled(true);
         this.didDisableControls = false;
         document.body.style.cursor = 'default';
         if (this.onAimEnd) this.onAimEnd();

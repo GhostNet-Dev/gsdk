@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { ICameraStrategy, ICameraTrackTarget } from "./cameratypes";
 import { Camera } from "./camera";
+import { OrbitControlsBroker, OrbitControlsHandle } from "./orbitbroker";
 
 export default class SpaceWarCameraStrategy implements ICameraStrategy {
     private isOrbiting = false;
@@ -14,27 +14,27 @@ export default class SpaceWarCameraStrategy implements ICameraStrategy {
     private readonly tmpTarget = new THREE.Vector3();
     private readonly tmpLookTarget = new THREE.Vector3();
     private readonly tmpDelta = new THREE.Vector3();
+    private handle: OrbitControlsHandle | null = null;
 
-    constructor(
-        private readonly controls: OrbitControls,
-        private readonly owner: Camera,
-    ) {}
+    constructor(private readonly owner: Camera) {}
 
-    init() {
-        this.controls.enabled = true;
-        this.controls.enableZoom = true;
-        this.controls.enableRotate = true;
-        this.controls.enablePan = true;
-        this.controls.enableDamping = true;
-        this.controls.screenSpacePanning = false;
-        this.controls.maxPolarAngle = Math.PI * 0.49;
-        this.controls.minPolarAngle = Math.PI * 0.1;
+    init(_camera: THREE.PerspectiveCamera, broker: OrbitControlsBroker) {
+        this.handle = broker.acquire("SpaceWarCameraStrategy");
+        const ctrl = this.handle.controls;
+        ctrl.enabled = true;
+        ctrl.enableZoom = true;
+        ctrl.enableRotate = true;
+        ctrl.enablePan = true;
+        ctrl.enableDamping = true;
+        ctrl.screenSpacePanning = false;
+        ctrl.maxPolarAngle = Math.PI * 0.49;
+        ctrl.minPolarAngle = Math.PI * 0.1;
     }
 
     uninit() {
         this.isOrbiting = false;
         this.cooldownRemaining = 0;
-        this.controls.update()
+        if (this.handle?.isValid) this.handle.controls.update();
     }
 
     orbitStart(): void {
@@ -48,9 +48,12 @@ export default class SpaceWarCameraStrategy implements ICameraStrategy {
     }
 
     update(camera: THREE.Camera): void {
+        if (!this.handle?.isValid) return;
+        const ctrl = this.handle.controls;
+
         const trackTarget = this.owner.getTrackTarget();
         if (!trackTarget) {
-            this.controls.update();
+            ctrl.update();
             return;
         }
 
@@ -60,7 +63,7 @@ export default class SpaceWarCameraStrategy implements ICameraStrategy {
         }
 
         if (this.isOrbiting) {
-            this.controls.update();
+            ctrl.update();
             return;
         }
 
@@ -68,12 +71,12 @@ export default class SpaceWarCameraStrategy implements ICameraStrategy {
         const followScale = this.cooldownRemaining > 0 ? this.orbitRecoveryScale : 1;
         const smoothing = (1 - Math.exp(-Math.max(0, deltaSec) * followRate)) * followScale;
         if (smoothing <= 0.0001) {
-            this.controls.update();
+            ctrl.update();
             return;
         }
 
         trackTarget.getTrackPosition(this.tmpTarget);
-        const currentTarget = this.controls.target;
+        const currentTarget = ctrl.target;
         this.tmpDelta.copy(this.tmpTarget).sub(currentTarget);
 
         if (this.tmpDelta.lengthSq() > 0.0001) {
@@ -87,7 +90,7 @@ export default class SpaceWarCameraStrategy implements ICameraStrategy {
             currentTarget.lerp(this.tmpLookTarget, smoothing * 0.6);
         }
 
-        this.controls.update();
+        ctrl.update();
     }
 
     private resolveFollowRate(trackTarget: ICameraTrackTarget) {

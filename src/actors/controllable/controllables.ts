@@ -15,6 +15,10 @@ export class Controllables {
     this.actors.delete(actorId)
   }
 
+  get(actorId: string) {
+    return this.actors.get(actorId)
+  }
+
   select(actorId: string, append = false) {
     if (!append) this.selected.clear()
     this.selected.add(actorId)

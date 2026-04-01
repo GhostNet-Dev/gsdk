@@ -1,20 +1,16 @@
 import * as THREE from "three";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { ICameraStrategy } from "./cameratypes";
+import { OrbitControlsBroker, OrbitControlsHandle } from "./orbitbroker";
 
 export default class FirstPersonCameraStrategy implements ICameraStrategy {
-    offset = new THREE.Vector3(0, 1.6, 0); // 눈높이
+    offset = new THREE.Vector3(0, 1.6, 0);
     lerpFactor = 0.2;
+    private handle: OrbitControlsHandle | null = null;
 
-    constructor(private controls?: OrbitControls) {
-        this.init();
-    }
-
-    init() {
-        if (this.controls) {
-            this.controls.enabled = false;
-        }
+    init(_camera: THREE.PerspectiveCamera, broker: OrbitControlsBroker) {
+        this.handle = broker.acquire("FirstPersonCameraStrategy");
+        this.handle.controls.enabled = false;
     }
 
     update(camera: THREE.Camera, player?: IPhysicsObject) {

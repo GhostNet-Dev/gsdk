@@ -1,5 +1,6 @@
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import * as THREE from "three";
+import { OrbitControlsBroker } from "@Glibs/systems/camera/orbitbroker";
 
 export enum CameraMode {
     TopView,
@@ -24,7 +25,8 @@ export interface ICameraTrackTarget {
 }
 
 export interface ICameraStrategy {
-    init?(camera: THREE.PerspectiveCamera): void
+    /** broker.acquire()로 핸들을 발급받아 OrbitControls를 초기화합니다 */
+    init?(camera: THREE.PerspectiveCamera, broker: OrbitControlsBroker): void
     uninit?(camera: THREE.PerspectiveCamera): void
     update(camera: THREE.Camera, player?: IPhysicsObject): void
     orbitStart?(): void

@@ -94,7 +94,7 @@ export class FleetPanel {
     this.Dom.style.backdropFilter = "blur(10px)"
     this.Dom.style.boxShadow = "0 20px 60px rgba(0,0,0,0.35)"
     this.Dom.style.zIndex = "1100"
-    this.Dom.style.pointerEvents = "auto"
+    this.Dom.style.pointerEvents = "none"
     this.Dom.style.color = "#e2e8f0"
     this.Dom.style.fontFamily = "\"Trebuchet MS\", \"Segoe UI\", sans-serif"
 
@@ -629,6 +629,10 @@ export class FleetPanel {
     const style = document.createElement("style")
     style.id = "fleet-command-panel-style"
     style.textContent = `
+      #fleet-command-panel button,
+      #fleet-command-panel input {
+        pointer-events: auto;
+      }
       #fleet-command-panel button:hover {
         filter: brightness(1.08);
       }

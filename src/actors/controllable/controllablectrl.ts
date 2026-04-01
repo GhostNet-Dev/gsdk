@@ -50,12 +50,12 @@ export class ControllableCtrl implements ILoop, IActionUser {
 
   enqueue(command: ActorCommand) {
     this.commandQueue.push(command)
-    console.log("[ControllableCtrl] enqueue", this.runtime.id, {
-      type: command.type,
-      point: command.point?.toArray?.(),
-      payload: command.payload,
-      queueSize: this.commandQueue.length,
-    })
+    // console.log("[ControllableCtrl] enqueue", this.runtime.id, {
+    //   type: command.type,
+    //   point: command.point?.toArray?.(),
+    //   payload: command.payload,
+    //   queueSize: this.commandQueue.length,
+    // })
     if (command.issuer === "human") this.lastHumanCommandAt = command.issuedAt
   }
 
