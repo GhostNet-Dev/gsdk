@@ -104,21 +104,12 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         this.controls = new OrbitControls(this, this.orbitOverlayEl)
         this.broker = new OrbitControlsBroker(this.controls)
 
-        // 진단: 오버레이에 capture 리스너 — 이벤트가 도달하는지 확인
-        this.orbitOverlayEl.addEventListener('pointerdown', () => {
-            console.debug(`[Camera] overlay pointerdown 도달 (controls.enabled=${this.controls.enabled})`)
-        }, true)
-
-        // 🖱️ 드래그 감지
         this.controls.addEventListener("start", () => {
-            console.debug(`[OrbitControls] ▶ start 이벤트 수신 (enabled=${this.controls.enabled})`)
             this.strategy?.orbitStart?.()
             this.interactionStartCallbacks.forEach(cb => cb())
         });
 
-        // 드래그 종료 후 offset 저장
         this.controls.addEventListener("end", () => {
-            console.debug(`[OrbitControls] ▶ end 이벤트 수신`)
             this.strategy?.orbitEnd?.()
         });
 

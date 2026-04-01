@@ -41,7 +41,6 @@ export default class TransformCtrl {
 
         // TransformControls 조작 시 OrbitControls 비활성화
         this.transformControls.addEventListener('dragging-changed', (event) => {
-            console.debug(`[TransfCtrl] dragging-changed → controls.enabled = ${!event.value}`)
             camera.controls.enabled = !event.value;
         });
 

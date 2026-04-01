@@ -5,7 +5,6 @@ import * as THREE from "three";
 
 export default class FreeCameraStrategy implements ICameraStrategy {
     private handle: OrbitControlsHandle | null = null;
-    private lastEnabledState: boolean | null = null;
 
     init(_camera: THREE.PerspectiveCamera, broker: OrbitControlsBroker) {
         this.handle = broker.acquire("FreeCameraStrategy");
@@ -24,10 +23,6 @@ export default class FreeCameraStrategy implements ICameraStrategy {
     update(_camera: THREE.Camera, _player?: IPhysicsObject) {
         if (!this.handle?.isValid) return;
         const ctrl = this.handle.controls;
-        if (ctrl.enabled !== this.lastEnabledState) {
-            console.debug(`[FreeCameraStrategy] controls.enabled 변경: ${this.lastEnabledState} → ${ctrl.enabled}`)
-            this.lastEnabledState = ctrl.enabled;
-        }
         if (ctrl.enabled) ctrl.update();
     }
 }

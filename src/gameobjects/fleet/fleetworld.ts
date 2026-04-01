@@ -725,7 +725,6 @@ export class FleetWorld {
     const shipId = this.pickShipId(event)
     if (!shipId) return
 
-    console.debug(`[FleetWorld] pointerdown 차단 (shipId=${shipId})`)
     event.stopImmediatePropagation()
     this.selectShipAndFleet(shipId)
   }

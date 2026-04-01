@@ -421,12 +421,10 @@ export class SphereAimingController implements ILoop {
         if (event.button !== 0 && event.pointerType === 'mouse') return;
         if ((event.target as HTMLElement).closest('.lil-gui')) return;
 
-        console.debug(`[SphereAiming] onPointerDown 진입`)
         this.updateRaycaster(event);
 
         const handleHits = this.raycaster.intersectObjects([this.aimHandle, this.aimHitBox], true);
         if (handleHits.length > 0) {
-            console.debug(`[SphereAiming] aimHandle 히트 → OrbitControls 차단 + setEnabled(false)`)
             event.preventDefault();
             event.stopImmediatePropagation();
             this.isDraggingHandle = true;
@@ -442,7 +440,6 @@ export class SphereAimingController implements ILoop {
 
         const lineHits = this.raycaster.intersectObjects([this.horizontalCircle, this.verticalCircle], true);
         if (lineHits.length > 0) {
-            console.debug(`[SphereAiming] circle 히트 → OrbitControls 통과 허용`)
             event.preventDefault();
             this.rangeGroup.lookAt(lineHits[0].point);
             this.updateAimVisualByDirection();

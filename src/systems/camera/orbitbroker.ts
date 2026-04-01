@@ -19,10 +19,10 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
  */
 export class OrbitControlsLogger {
     /** 로깅 전체 활성화 여부 */
-    static enabled = true
+    static enabled = false
 
     /** update() 호출도 출력할지 여부 (매 프레임 발생하므로 기본 비활성화) */
-    static logUpdates = true
+    static logUpdates = false
 
     static logAcquire(ownerTag: string, prevOwnerTag?: string): void {
         if (!this.enabled) return
