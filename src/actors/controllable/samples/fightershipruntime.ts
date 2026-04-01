@@ -4,6 +4,8 @@ import { IControllableRuntime } from "../controllabletypes"
 import { MonsterId } from "@Glibs/types/monstertypes"
 import { ProjectileMsg } from "@Glibs/actors/projectile/projectile"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
+import { StatKey } from "@Glibs/inventory/stat/stattypes"
+import { ShipProjectileDef } from "../controllabletypes"
 
 export interface IFighterShipRuntime extends IControllableRuntime {
   moveTo(point: THREE.Vector3): void
@@ -39,21 +41,26 @@ export type FighterShipCombatOptions = {
 
 export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   LoopId = 0
-  private hull = 100
-  private readonly maxHull = 100
-  private energy = 100
-  private readonly maxEnergy = 100
+  private hull: number
+  private readonly maxHull: number
+  private energy: number
+  private readonly maxEnergy: number
+  private readonly moveSpeed: number
+  private readonly attackRange: number
   private navigationIntent: NavigationIntent = { type: "idle" }
   private combatIntent: CombatIntent = { type: "idle" }
   private readonly forward = new THREE.Vector3()
   private readonly desired = new THREE.Vector3()
-  private readonly attackRange = 14
-  private readonly projectileId = MonsterId.WarhamerTracer
-  private readonly muzzleOffset = new THREE.Vector3(0, 0.4, 2.2)
+  private readonly projectileId: MonsterId
+  private readonly muzzleOffset: THREE.Vector3
+  private readonly hitscan: boolean
+  private readonly tracerLife: number
+  private readonly tracerRange?: number
+  private readonly useRaycast: boolean
   private readonly tmpMuzzleWorld = new THREE.Vector3()
   private readonly tmpShootDirection = new THREE.Vector3()
   private fireCooldownRemaining = 0
-  private readonly fireCooldownSec = 0.45
+  private readonly fireCooldownSec: number
   private projectileEmitter?: (msg: ProjectileMsg) => void
   private ownerSpec?: BaseSpec
   private teamId?: string
@@ -63,8 +70,25 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     public readonly id: string,
     readonly mesh: THREE.Object3D,
     private readonly runtimeIndex: Map<string, FighterShipRuntime>,
-    private readonly moveSpeed = 18,
-  ) {}
+    stats: Partial<Record<StatKey, number>> = {},
+    projectile: ShipProjectileDef = { id: MonsterId.WarhamerTracer },
+  ) {
+    this.maxHull = stats.hp ?? 100
+    this.hull = this.maxHull
+    this.maxEnergy = stats.stamina ?? 100
+    this.energy = this.maxEnergy
+    this.attackRange = stats.attackRanged ?? 14
+    this.moveSpeed = (stats.speed ?? 1.8) * 10
+
+    this.projectileId = projectile.id
+    const mo = projectile.muzzleOffset ?? { x: 0, y: 0.4, z: 2.2 }
+    this.muzzleOffset = new THREE.Vector3(mo.x, mo.y, mo.z)
+    this.hitscan = projectile.hitscan ?? true
+    this.tracerLife = projectile.tracerLife ?? 0.18
+    this.tracerRange = projectile.tracerRange
+    this.useRaycast = projectile.useRaycast ?? true
+    this.fireCooldownSec = projectile.fireCooldownSec ?? 0.45
+  }
 
   moveTo(point: THREE.Vector3): void {
     // console.log("[FighterShipRuntime] moveTo", this.id, point.toArray())
@@ -241,9 +265,10 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
       src: this.tmpMuzzleWorld.clone(),
       dir: this.tmpShootDirection.clone(),
       range: this.attackRange,
-      hitscan: true,
-      tracerLife: 0.18,
-      useRaycast: true,
+      hitscan: this.hitscan,
+      tracerLife: this.tracerLife,
+      tracerRange: this.tracerRange,
+      useRaycast: this.useRaycast,
     })
     this.fireCooldownRemaining = this.fireCooldownSec
   }

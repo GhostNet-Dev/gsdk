@@ -563,7 +563,10 @@ export class FleetWorld {
     //   `[FleetWorld] spawn ${id} at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}) footprint=${footprint.toFixed(2)}`,
     // )
 
-    const runtime = new FighterShipRuntime(id, mesh, this.shipRuntimes, options.speed ?? 18)
+    const statsWithOverride = options.speed !== undefined
+      ? { ...def.stats, speed: options.speed / 10 }
+      : def.stats ?? {}
+    const runtime = new FighterShipRuntime(id, mesh, this.shipRuntimes, statsWithOverride, def.projectile)
     this.shipRuntimes.set(id, runtime)
     this.shipEnergyFocuses.set(id, "navigation")
     this.taskObjs.push(runtime)

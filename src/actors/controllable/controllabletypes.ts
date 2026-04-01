@@ -3,6 +3,17 @@ import { ActionDef, IActionComponent } from "@Glibs/types/actiontypes"
 import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { IActorState } from "../player/states/playerstate"
 import { Char } from "@Glibs/types/assettypes"
+import { MonsterId } from "@Glibs/types/monstertypes"
+
+export type ShipProjectileDef = {
+  id: MonsterId
+  hitscan?: boolean
+  tracerLife?: number
+  tracerRange?: number
+  useRaycast?: boolean
+  muzzleOffset?: { x: number; y: number; z: number }
+  fireCooldownSec?: number
+}
 
 export type ControllableRole = "ship" | "ally"
 export type ControlSource = "manual" | "ai" | "hybrid"
@@ -39,6 +50,7 @@ export type ControllableProperty = {
   model: Char
   scale: number
   stats?: Partial<Record<StatKey, number>>
+  projectile?: ShipProjectileDef
   actions?: ActionDef[]
   defaultControlSource?: ControlSource
   stateFactory: (...params: unknown[]) => IActorState

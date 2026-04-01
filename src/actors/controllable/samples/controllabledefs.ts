@@ -5,6 +5,7 @@ import { CommandPlanner } from "../policy/aipolicy"
 import { NewFighterShipState } from "../states/fightershipstate"
 import { IFighterShipRuntime } from "./fightershipruntime"
 import { Char } from "@Glibs/types/assettypes"
+import { MonsterId } from "@Glibs/types/monstertypes"
 
 const now = () => Date.now()
 
@@ -19,9 +20,17 @@ export const controllableDefs = {
       hp: 180,
       mp: 80,
       stamina: 120,
-      attackRanged: 16,
+      attackRanged: 50,
       defense: 6,
       speed: 1.6,
+    },
+    projectile: {
+      id: MonsterId.WarhamerTracer,
+      hitscan: true,
+      tracerLife: 1.18,
+      useRaycast: true,
+      muzzleOffset: { x: 0, y: 0.4, z: 2.2 },
+      fireCooldownSec: 0.55,
     },
     policyMap: {
       manual: "human",
@@ -39,9 +48,17 @@ export const controllableDefs = {
       hp: 160,
       mp: 60,
       stamina: 120,
-      attackRanged: 18,
+      attackRanged: 80,
       defense: 5,
       speed: 1.9,
+    },
+    projectile: {
+      id: MonsterId.WarhamerTracer,
+      hitscan: true,
+      tracerLife: 0.18,
+      useRaycast: true,
+      muzzleOffset: { x: 0, y: 0.4, z: 2.2 },
+      fireCooldownSec: 0.45,
     },
     policyMap: {
       manual: "human",
@@ -62,6 +79,12 @@ export const controllableDefs = {
       attackMelee: 14,
       defense: 10,
       speed: 1.1,
+    },
+    projectile: {
+      id: MonsterId.DefaultBullet,
+      hitscan: false,
+      muzzleOffset: { x: 0, y: 0.4, z: 2.2 },
+      fireCooldownSec: 0.8,
     },
     policyMap: {
       manual: "human",
