@@ -66,22 +66,6 @@ export class Fleet {
     return this.members.has(actorId)
   }
 
-  addMember(actorId: string) {
-    this.members.add(actorId)
-  }
-
-  addMembers(actorIds: string[]) {
-    actorIds.forEach((actorId) => this.members.add(actorId))
-  }
-
-  removeMember(actorId: string) {
-    this.members.delete(actorId)
-  }
-
-  clearMembers() {
-    this.members.clear()
-  }
-
   setFormation(formation: FleetFormation) {
     this.formation = formation
   }

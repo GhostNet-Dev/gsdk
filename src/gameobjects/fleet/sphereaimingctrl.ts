@@ -80,18 +80,8 @@ export class SphereAimingController implements ILoop {
     // ------------------------------------------------------------------------
 
     /** 매 프레임 호출하여 조준 UI가 우주선을 따라가도록 업데이트합니다. */
-    public update(delta: number): void {
+    public update(_delta: number): void {
         this.rangeGroup.position.copy(this.spaceship.position);
-    }
-
-    /** 화면 크기가 변경될 때 조준선 굵기를 재계산합니다. */
-    public resize(): void {
-        const { innerWidth, innerHeight } = window;
-        this.rangeGroup.traverse((obj) => {
-            if ((obj as any).material && (obj as any).material.isLineMaterial) {
-                ((obj as any).material as LineMaterial).resolution.set(innerWidth, innerHeight);
-            }
-        });
     }
 
     /** 모듈 파기 시 메모리를 해제합니다. */
@@ -103,11 +93,6 @@ export class SphereAimingController implements ILoop {
         this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
         this.scene.remove(this.rangeGroup);
         // 필요시 geometry, material dispose 추가 구현
-    }
-
-    /** 현재 목표 방향 (Quaternion) 반환 */
-    public getTargetQuaternion(): THREE.Quaternion {
-        return this.rangeGroup.quaternion.clone();
     }
 
     /** 현재 목표 방향 벡터 반환 */

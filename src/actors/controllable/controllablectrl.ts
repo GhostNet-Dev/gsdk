@@ -41,7 +41,7 @@ export class ControllableCtrl implements ILoop, IActionUser {
   }
 
   get objs() {
-    return undefined
+    return this.runtime.objs
   }
 
   setControlSource(source: ControlSource) {

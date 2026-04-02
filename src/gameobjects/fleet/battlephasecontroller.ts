@@ -3,12 +3,7 @@ import { EventTypes } from "@Glibs/types/globaltypes"
 import { FleetManager } from "./fleetmanager"
 import { FleetOrder } from "./fleet"
 
-export type BattlePhase = "planning" | "executing" | "resolving"
-
-export type PlannedFleetOrder = {
-  fleetId: string
-  order: FleetOrder
-}
+export type BattlePhase = "planning" | "executing"
 
 export type BattlePhaseSnapshot = {
   phase: BattlePhase
@@ -18,7 +13,6 @@ export type BattlePhaseSnapshot = {
   pendingOrderCount: number
 }
 
-export type BattlePlanningHook = () => void
 export type BattlePhaseChangeListener = (phase: BattlePhase) => void
 
 export class BattlePhaseController implements ILoop {
@@ -27,7 +21,6 @@ export class BattlePhaseController implements ILoop {
   private phase: BattlePhase = "planning"
   private elapsed = 0
   private readonly plannedOrders = new Map<string, FleetOrder>()
-  private readonly planningHooks = new Set<BattlePlanningHook>()
   private readonly phaseListeners = new Set<BattlePhaseChangeListener>()
 
   constructor(
@@ -45,13 +38,6 @@ export class BattlePhaseController implements ILoop {
       duration: this.executionWindowSec,
       pendingOrderCount: this.plannedOrders.size,
     }
-  }
-
-  listPlannedOrders(): PlannedFleetOrder[] {
-    return [...this.plannedOrders.entries()].map(([fleetId, order]) => ({
-      fleetId,
-      order,
-    }))
   }
 
   getPlannedOrder(fleetId: string): FleetOrder | undefined {
@@ -76,17 +62,6 @@ export class BattlePhaseController implements ILoop {
     this.plannedOrders.clear()
   }
 
-  clearFleetPlan(fleetId: string) {
-    this.plannedOrders.delete(fleetId)
-  }
-
-  registerPlanningHook(hook: BattlePlanningHook) {
-    this.planningHooks.add(hook)
-    return () => {
-      this.planningHooks.delete(hook)
-    }
-  }
-
   onPhaseChanged(listener: BattlePhaseChangeListener) {
     this.phaseListeners.add(listener)
     return () => {
@@ -96,14 +71,6 @@ export class BattlePhaseController implements ILoop {
 
   commitPlans() {
     if (!this.canAcceptOrders()) return false
-
-    this.planningHooks.forEach((hook) => {
-      try {
-        hook()
-      } catch (error) {
-        console.error("[BattlePhase] planning hook failed", error)
-      }
-    })
     if (this.plannedOrders.size === 0) return false
 
     for (const [fleetId, order] of this.plannedOrders) {
@@ -146,8 +113,6 @@ export class BattlePhaseController implements ILoop {
       elapsed: this.elapsed,
       duration: this.executionWindowSec,
     })
-    this.setPhase("resolving")
-    this.elapsed = this.executionWindowSec
     this.resetToPlanning()
   }
 

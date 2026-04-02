@@ -541,10 +541,6 @@ export class FleetWorld {
     this.bootstrapped = false
   }
 
-  createFleet(id: string, memberIds: string[], formation: FleetFormation = "line", spacing = 8) {
-    return this.fleetManager.createFleet(id, memberIds, { formation, spacing })
-  }
-
   async spawnShip(id: string, position: THREE.Vector3, options: ShipSpawnOptions = {}) {
     const controllableId = options.controllableId ?? "ship.fighter"
     const def = this.controllableDb.get(controllableId)

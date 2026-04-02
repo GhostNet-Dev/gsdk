@@ -14,7 +14,6 @@ export type FleetSummary = {
   flagshipId?: string
   memberIds: string[]
   memberCount: number
-  selected: boolean
 }
 
 export class FleetManager {
@@ -29,18 +28,10 @@ export class FleetManager {
     return fleet
   }
 
-  getFleet(id: string): Fleet | undefined {
-    return this.fleets.get(id)
-  }
-
   requireFleet(id: string): Fleet {
     const fleet = this.fleets.get(id)
     if (!fleet) throw new Error(`unknown fleet id: ${id}`)
     return fleet
-  }
-
-  deleteFleet(id: string) {
-    this.fleets.delete(id)
   }
 
   listFleets(): Fleet[] {
@@ -79,22 +70,6 @@ export class FleetManager {
     return this.getSelectedFleetSummary()
   }
 
-  addMember(fleetId: string, actorId: string) {
-    this.requireFleet(fleetId).addMember(actorId)
-  }
-
-  addMembers(fleetId: string, actorIds: string[]) {
-    this.requireFleet(fleetId).addMembers(actorIds)
-  }
-
-  removeMember(fleetId: string, actorId: string) {
-    this.requireFleet(fleetId).removeMember(actorId)
-  }
-
-  clearFleet(fleetId: string) {
-    this.requireFleet(fleetId).clearMembers()
-  }
-
   setFormation(fleetId: string, formation: FleetFormation) {
     this.requireFleet(fleetId).setFormation(formation)
   }
@@ -103,17 +78,10 @@ export class FleetManager {
     this.requireFleet(fleetId).setSpacing(spacing)
   }
 
-  buildOrderCommands(fleetId: string, order: FleetOrder) {
-    return this.requireFleet(fleetId).toCommands(order)
-  }
-
-  issueCommands(commands: ReturnType<Fleet["toCommands"]>) {
+  issueOrder(fleetId: string, order: FleetOrder) {
+    const commands = this.requireFleet(fleetId).toCommands(order)
     commands.forEach((command) => this.controllables.issue(command))
     return commands
-  }
-
-  issueOrder(fleetId: string, order: FleetOrder) {
-    return this.issueCommands(this.buildOrderCommands(fleetId, order))
   }
 
   moveFleet(
@@ -140,18 +108,6 @@ export class FleetManager {
     })
   }
 
-  followTarget(
-    fleetId: string,
-    targetId: string,
-    options: Omit<FleetOrder, "type" | "targetId"> = {},
-  ) {
-    return this.issueOrder(fleetId, {
-      ...options,
-      type: "follow",
-      targetId,
-    })
-  }
-
   holdPosition(fleetId: string, options: Omit<FleetOrder, "type"> = {}) {
     return this.issueOrder(fleetId, {
       ...options,
@@ -172,7 +128,6 @@ export class FleetManager {
       flagshipId: memberIds[0],
       memberIds,
       memberCount: memberIds.length,
-      selected: fleet.id === this.selectedFleetId,
     }
   }
 }

@@ -38,18 +38,19 @@ class FighterShipCoordinatorState implements IActorState {
   private applyCommand(command: ActorCommand) {
     switch (command.type) {
       case "move":
+        const direction = (command.payload as { direction?: THREE.Vector3 } | undefined)?.direction
         // console.log("[FighterShipState] move command", this.runtime.id, {
         //   point: command.point?.toArray?.(),
         //   direction: (command.payload as { direction?: THREE.Vector3 } | undefined)?.direction?.toArray?.(),
         // })
         this.navigationState = "move"
         if (command.point) {
-          this.runtime.moveTo(command.point)
+          this.runtime.moveTo(command.point, direction)
           return
         }
 
-        if ((command.payload as { direction?: THREE.Vector3 } | undefined)?.direction) {
-          this.runtime.moveAlong((command.payload as { direction?: THREE.Vector3 }).direction!)
+        if (direction) {
+          this.runtime.moveAlong(direction)
         }
         return
       case "attack":

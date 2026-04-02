@@ -8,7 +8,7 @@ import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { ShipProjectileDef } from "../controllabletypes"
 
 export interface IFighterShipRuntime extends IControllableRuntime {
-  moveTo(point: THREE.Vector3): void
+  moveTo(point: THREE.Vector3, continueDirection?: THREE.Vector3): void
   moveAlong(direction: THREE.Vector3): void
   attackTarget(targetId: string): void
   holdPosition(): void
@@ -24,7 +24,7 @@ export interface IFighterShipRuntime extends IControllableRuntime {
 type NavigationIntent =
   | { type: "idle" }
   | { type: "hold" }
-  | { type: "move"; destination: THREE.Vector3 }
+  | { type: "move"; destination: THREE.Vector3; continueDirection?: THREE.Vector3 }
   | { type: "moveAlong"; direction: THREE.Vector3 }
   | { type: "follow"; targetId: string }
 
@@ -41,6 +41,7 @@ export type FighterShipCombatOptions = {
 
 export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   LoopId = 0
+  get objs() { return this.mesh }
   private hull: number
   private readonly maxHull: number
   private energy: number
@@ -90,11 +91,12 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     this.fireCooldownSec = projectile.fireCooldownSec ?? 0.45
   }
 
-  moveTo(point: THREE.Vector3): void {
+  moveTo(point: THREE.Vector3, continueDirection?: THREE.Vector3): void {
     // console.log("[FighterShipRuntime] moveTo", this.id, point.toArray())
     this.navigationIntent = {
       type: "move",
       destination: point.clone(),
+      continueDirection: continueDirection?.clone().normalize(),
     }
   }
 
@@ -202,7 +204,14 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
         this.consumeEnergy(delta, 8)
         this.moveToward(this.navigationIntent.destination, delta)
         if (this.hasArrived(this.navigationIntent.destination)) {
-          this.navigationIntent = { type: "idle" }
+          if (this.navigationIntent.continueDirection && this.navigationIntent.continueDirection.lengthSq() > 0.0001) {
+            this.navigationIntent = {
+              type: "moveAlong",
+              direction: this.navigationIntent.continueDirection.clone(),
+            }
+          } else {
+            this.navigationIntent = { type: "idle" }
+          }
         }
         return true
       case "moveAlong":
@@ -226,12 +235,6 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
       this.consumeEnergy(delta, 12)
       this.face(target.mesh.position)
       this.fireAtTarget(target)
-      return true
-    }
-
-    if (this.navigationIntent.type === "idle") {
-      this.consumeEnergy(delta, 8)
-      this.moveToward(target.mesh.position, delta)
       return true
     }
 
