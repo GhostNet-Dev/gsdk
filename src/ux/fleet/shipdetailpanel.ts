@@ -4,49 +4,51 @@ const energyFocuses: FleetShipEnergyFocus[] = ["attack", "defense", "navigation"
 
 export class ShipDetailPanel {
   readonly Dom = document.createElement("div")
-  private readonly headerEl = document.createElement("div")
   private readonly titleEl = document.createElement("div")
-  private readonly closeBtn = document.createElement("button")
   private readonly bodyEl = document.createElement("div")
   private readonly optionsEl = document.createElement("div")
   private readonly descEl = document.createElement("div")
+  private floatingMenuEl?: HTMLElement
+  private closeFloatingMenuListener?: (event: PointerEvent) => void
   private fleetId?: string
   private shipId?: string
+  private energyMenuOpen = false
 
   constructor(
     private readonly controller: FleetPanelController,
-    private readonly parent: HTMLElement = document.body,
   ) {
     this.setup()
-    this.parent.appendChild(this.Dom)
   }
 
   dispose() {
+    this.closeFloatingMenu()
     this.Dom.remove()
   }
 
   show(fleetId: string, shipId: string) {
     this.fleetId = fleetId
     this.shipId = shipId
-    this.Dom.style.display = "grid"
     this.render()
   }
 
   hide() {
     this.fleetId = undefined
     this.shipId = undefined
-    this.Dom.style.display = "none"
+    this.energyMenuOpen = false
+    this.closeFloatingMenu()
+    this.renderEmpty()
   }
 
   render() {
+    this.closeFloatingMenu()
     if (!this.fleetId || !this.shipId) {
-      this.hide()
+      this.renderEmpty()
       return
     }
 
     const ship = this.controller.getFleetShips(this.fleetId).find((item) => item.id === this.shipId)
     if (!ship) {
-      this.hide()
+      this.renderEmpty()
       return
     }
 
@@ -54,46 +56,21 @@ export class ShipDetailPanel {
   }
 
   private setup() {
-    this.Dom.style.position = "absolute"
-    this.Dom.style.right = "18px"
-    this.Dom.style.bottom = "18px"
-    this.Dom.style.width = "min(360px, calc(100vw - 24px))"
-    this.Dom.style.display = "none"
+    this.Dom.style.display = "grid"
+    this.Dom.style.gridTemplateRows = "auto auto auto auto"
     this.Dom.style.gap = "12px"
-    this.Dom.style.padding = "14px"
-    this.Dom.style.borderRadius = "18px"
-    this.Dom.style.border = "1px solid rgba(148,163,184,0.22)"
-    this.Dom.style.background = "linear-gradient(180deg, rgba(8,12,22,0.96), rgba(6,10,18,0.9))"
-    this.Dom.style.backdropFilter = "blur(10px)"
-    this.Dom.style.boxShadow = "0 20px 60px rgba(0,0,0,0.35)"
-    this.Dom.style.zIndex = "1110"
+    this.Dom.style.height = "100%"
+    this.Dom.style.padding = "18px"
+    this.Dom.style.borderRadius = "16px"
+    this.Dom.style.border = "1px solid rgba(148,163,184,0.12)"
+    this.Dom.style.background = "rgba(15,23,42,0.48)"
     this.Dom.style.pointerEvents = "auto"
     this.Dom.style.color = "#e2e8f0"
     this.Dom.style.fontFamily = "\"Trebuchet MS\", \"Segoe UI\", sans-serif"
 
-    this.headerEl.style.display = "flex"
-    this.headerEl.style.alignItems = "center"
-    this.headerEl.style.justifyContent = "space-between"
-    this.headerEl.style.gap = "12px"
-
     this.titleEl.style.fontSize = "18px"
     this.titleEl.style.fontWeight = "700"
     this.titleEl.style.letterSpacing = "0.03em"
-
-    this.closeBtn.type = "button"
-    this.closeBtn.innerText = "×"
-    this.closeBtn.setAttribute("aria-label", "Close ship detail panel")
-    this.closeBtn.style.width = "34px"
-    this.closeBtn.style.height = "34px"
-    this.closeBtn.style.borderRadius = "999px"
-    this.closeBtn.style.border = "1px solid rgba(148,163,184,0.2)"
-    this.closeBtn.style.background = "rgba(15,23,42,0.82)"
-    this.closeBtn.style.color = "#e2e8f0"
-    this.closeBtn.style.cursor = "pointer"
-    this.closeBtn.style.fontSize = "20px"
-    this.closeBtn.style.display = "grid"
-    this.closeBtn.style.placeItems = "center"
-    this.closeBtn.addEventListener("click", () => this.hide())
 
     this.bodyEl.style.display = "grid"
     this.bodyEl.style.gap = "10px"
@@ -101,15 +78,14 @@ export class ShipDetailPanel {
     this.bodyEl.style.color = "#cbd5e1"
 
     this.optionsEl.style.display = "grid"
-    this.optionsEl.style.gridTemplateColumns = "repeat(2, minmax(0, 1fr))"
     this.optionsEl.style.gap = "8px"
 
     this.descEl.style.fontSize = "12px"
     this.descEl.style.lineHeight = "1.5"
     this.descEl.style.color = "#94a3b8"
 
-    this.headerEl.append(this.titleEl, this.closeBtn)
-    this.Dom.append(this.headerEl, this.bodyEl, this.optionsEl, this.descEl)
+    this.Dom.append(this.titleEl, this.bodyEl, this.optionsEl, this.descEl)
+    this.renderEmpty()
   }
 
   private renderShip(ship: FleetShipPanelState) {
@@ -119,22 +95,42 @@ export class ShipDetailPanel {
 
     const energy = document.createElement("div")
     energy.innerText = `에너지 ${Math.round(ship.energy)}/${Math.round(ship.maxEnergy)}`
+    this.bodyEl.append(energy)
 
-    const status = document.createElement("div")
-    status.innerText = `현재 집중 ${this.labelEnergyFocus(ship.energyFocus)}`
-    status.style.color = "#93c5fd"
-
-    this.bodyEl.append(energy, status)
-
-    energyFocuses.forEach((focus) => {
-      const btn = this.makeActionButton(this.labelEnergyFocus(focus), () => {
-        this.controller.setShipEnergyFocus(ship.id, focus)
+    this.optionsEl.appendChild(this.makePopupSelect(
+      this.shortLabelEnergyFocus(ship.energyFocus),
+      energyFocuses.map((focus) => ({
+        label: this.labelEnergyFocus(focus),
+        active: ship.energyFocus === focus,
+        onSelect: () => {
+          this.energyMenuOpen = false
+          this.controller.setShipEnergyFocus(ship.id, focus)
+          this.render()
+        },
+      })),
+      this.energyMenuOpen,
+      () => {
+        this.energyMenuOpen = !this.energyMenuOpen
         this.render()
-      }, ship.energyFocus === focus)
-      this.optionsEl.appendChild(btn)
-    })
+      },
+    ))
 
     this.descEl.innerText = this.describeEnergyFocus(ship.energyFocus)
+  }
+
+  private renderEmpty() {
+    this.titleEl.innerText = "함선 상세"
+    this.bodyEl.innerHTML = ""
+    this.optionsEl.innerHTML = ""
+
+    const empty = document.createElement("div")
+    empty.innerText = "함선을 선택하면 이 영역에서 상세 정보와 에너지 집중 설정을 바로 조정할 수 있습니다."
+    empty.style.lineHeight = "1.6"
+    empty.style.color = "#94a3b8"
+    empty.style.padding = "8px 0"
+    this.bodyEl.appendChild(empty)
+
+    this.descEl.innerText = "오른쪽 슬라이드에서 선택된 함선 상태가 유지됩니다."
   }
 
   private makeActionButton(label: string, onClick: () => void, active: boolean) {
@@ -157,11 +153,93 @@ export class ShipDetailPanel {
     return btn
   }
 
+  private makePopupSelect(
+    label: string,
+    items: Array<{ label: string, active: boolean, onSelect: () => void }>,
+    open: boolean,
+    onToggle: () => void,
+  ) {
+    const wrap = document.createElement("div")
+    wrap.style.display = "grid"
+    wrap.style.gap = "8px"
+
+    const trigger = this.makeActionButton(label, onToggle, open)
+    trigger.style.width = "100%"
+    trigger.style.textAlign = "left"
+
+    if (open) {
+      window.requestAnimationFrame(() => {
+        if (!trigger.isConnected) return
+        this.openFloatingMenu(trigger, items)
+      })
+    }
+
+    wrap.appendChild(trigger)
+
+    return wrap
+  }
+
+  private openFloatingMenu(
+    trigger: HTMLElement,
+    items: Array<{ label: string, active: boolean, onSelect: () => void }>,
+  ) {
+    this.closeFloatingMenu()
+
+    const rect = trigger.getBoundingClientRect()
+    const menu = document.createElement("div")
+    menu.style.position = "fixed"
+    menu.style.left = `${rect.left}px`
+    menu.style.top = `${Math.max(12, rect.top - 12)}px`
+    menu.style.transform = "translateY(-100%)"
+    menu.style.minWidth = `${rect.width}px`
+    menu.style.display = "grid"
+    menu.style.gap = "6px"
+    menu.style.padding = "8px"
+    menu.style.borderRadius = "12px"
+    menu.style.border = "1px solid rgba(148,163,184,0.18)"
+    menu.style.background = "rgba(2,6,23,0.96)"
+    menu.style.boxShadow = "0 18px 40px rgba(0,0,0,0.28)"
+    menu.style.zIndex = "1500"
+
+    items.forEach((item) => {
+      menu.appendChild(this.makeActionButton(item.label, item.onSelect, item.active))
+    })
+
+    menu.addEventListener("pointerdown", (event) => event.stopPropagation())
+    document.body.appendChild(menu)
+    this.floatingMenuEl = menu
+
+    this.closeFloatingMenuListener = (event: PointerEvent) => {
+      const target = event.target as Node | null
+      if (target && (menu.contains(target) || trigger.contains(target))) return
+      this.energyMenuOpen = false
+      this.closeFloatingMenu()
+      this.render()
+    }
+    window.addEventListener("pointerdown", this.closeFloatingMenuListener)
+  }
+
+  private closeFloatingMenu() {
+    if (this.closeFloatingMenuListener) {
+      window.removeEventListener("pointerdown", this.closeFloatingMenuListener)
+      this.closeFloatingMenuListener = undefined
+    }
+    this.floatingMenuEl?.remove()
+    this.floatingMenuEl = undefined
+  }
+
   private labelEnergyFocus(focus: FleetShipEnergyFocus) {
     if (focus === "attack") return "⚔️ 공격"
     if (focus === "defense") return "🛡️ 방어"
     if (focus === "exploration") return "🔭 탐색"
     return "🚀 항행"
+  }
+
+  private shortLabelEnergyFocus(focus: FleetShipEnergyFocus) {
+    if (focus === "attack") return "공격"
+    if (focus === "defense") return "방어"
+    if (focus === "exploration") return "탐색"
+    return "항행"
   }
 
   private describeEnergyFocus(focus: FleetShipEnergyFocus) {

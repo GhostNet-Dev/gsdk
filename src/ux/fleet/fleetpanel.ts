@@ -16,6 +16,10 @@ export class FleetPanel {
   private readonly listCol = document.createElement("div")
   private readonly detailCol = document.createElement("div")
   private readonly headerEl = document.createElement("div")
+  private readonly titleBtn = document.createElement("button")
+  private readonly titleStateEl = document.createElement("span")
+  private readonly headerActionsEl = document.createElement("div")
+  private readonly settingsBtn = document.createElement("button")
   private readonly titleEl = document.createElement("div")
   private readonly metaEl = document.createElement("div")
   private readonly battleRow = document.createElement("div")
@@ -23,23 +27,42 @@ export class FleetPanel {
   private readonly battleActionsEl = document.createElement("div")
   private readonly plannedOrderEl = document.createElement("div")
   private readonly membersEl = document.createElement("div")
-  private readonly detailModeRow = document.createElement("div")
+  private readonly detailViewport = document.createElement("div")
+  private readonly detailTrack = document.createElement("div")
+  private readonly settingsPanel = document.createElement("div")
+  private readonly overviewPanel = document.createElement("div")
+  private readonly shipPanel = document.createElement("div")
   private readonly shipGrid = document.createElement("div")
   private readonly spacingValueEl = document.createElement("span")
   private readonly spacingInput = document.createElement("input")
+  private readonly settingsControlRow = document.createElement("div")
   private readonly formationRow = document.createElement("div")
   private readonly moveModeRow = document.createElement("div")
+  private readonly planRow = document.createElement("div")
+  private readonly settingsSummaryEl = document.createElement("div")
   private readonly closeBtn = document.createElement("button")
+  private floatingMenuEl?: HTMLElement
+  private closeFloatingMenuListener?: (event: PointerEvent) => void
   private refreshTimer?: number
   private mode: "list" | "detail" = "list"
-  private detailMode: "ships" | "formation" = "ships"
+  private detailSlide: "settings" | "overview" | "ship" = "overview"
   private inspectFleetId?: string
+  private selectedShipId?: string
+  private formationMenuOpen = false
+  private moveModeMenuOpen = false
+  private planMenuOpen = false
+  private dragPointerId?: number
+  private dragStartX = 0
+  private dragStartY = 0
+  private dragDeltaX = 0
+  private dragTracking = false
+  private isDraggingSlide = false
 
   constructor(
     private readonly controller: FleetPanelController,
     private readonly parent: HTMLElement = document.body,
   ) {
-    this.shipDetailPanel = new ShipDetailPanel(this.controller, this.parent)
+    this.shipDetailPanel = new ShipDetailPanel(this.controller)
     this.setup()
     this.parent.appendChild(this.Dom)
     this.render()
@@ -48,6 +71,7 @@ export class FleetPanel {
 
   dispose() {
     if (this.refreshTimer) window.clearInterval(this.refreshTimer)
+    this.closeFloatingMenu()
     this.shipDetailPanel.dispose()
     this.topRightControls.remove()
     this.Dom.remove()
@@ -96,7 +120,7 @@ export class FleetPanel {
     this.Dom.style.backdropFilter = "blur(10px)"
     this.Dom.style.boxShadow = "0 20px 60px rgba(0,0,0,0.35)"
     this.Dom.style.zIndex = "1100"
-    this.Dom.style.pointerEvents = "none"
+    this.Dom.style.pointerEvents = "auto"
     this.Dom.style.color = "#e2e8f0"
     this.Dom.style.fontFamily = "\"Trebuchet MS\", \"Segoe UI\", sans-serif"
 
@@ -110,7 +134,7 @@ export class FleetPanel {
     this.listCol.style.paddingBottom = "2px"
 
     this.detailCol.style.display = "grid"
-    this.detailCol.style.gridTemplateRows = "auto auto auto auto"
+    this.detailCol.style.gridTemplateRows = "auto auto 1fr"
     this.detailCol.style.gap = "10px"
     this.detailCol.style.padding = "8px 10px"
     this.detailCol.style.borderRadius = "14px"
@@ -122,9 +146,54 @@ export class FleetPanel {
     this.headerEl.style.justifyContent = "space-between"
     this.headerEl.style.gap = "12px"
 
-    this.titleEl.style.fontSize = "20px"
-    this.titleEl.style.fontWeight = "700"
-    this.titleEl.style.letterSpacing = "0.03em"
+    this.titleEl.style.display = "flex"
+    this.titleEl.style.alignItems = "center"
+    this.titleEl.style.gap = "8px"
+    this.titleEl.style.minWidth = "0"
+
+    this.titleBtn.type = "button"
+    this.titleBtn.style.border = "0"
+    this.titleBtn.style.padding = "0"
+    this.titleBtn.style.background = "transparent"
+    this.titleBtn.style.color = "#f8fafc"
+    this.titleBtn.style.cursor = "pointer"
+    this.titleBtn.style.fontSize = "20px"
+    this.titleBtn.style.fontWeight = "700"
+    this.titleBtn.style.letterSpacing = "0.03em"
+    this.titleBtn.style.whiteSpace = "nowrap"
+    this.titleBtn.addEventListener("click", () => {
+      this.detailSlide = "overview"
+      this.render()
+    })
+
+    this.titleStateEl.style.fontSize = "16px"
+    this.titleStateEl.style.color = "#94a3b8"
+    this.titleStateEl.style.whiteSpace = "nowrap"
+    this.titleStateEl.style.overflow = "hidden"
+    this.titleStateEl.style.textOverflow = "ellipsis"
+
+    this.headerActionsEl.style.display = "flex"
+    this.headerActionsEl.style.alignItems = "center"
+    this.headerActionsEl.style.gap = "8px"
+
+    this.settingsBtn.type = "button"
+    this.settingsBtn.innerText = "⚙"
+    this.settingsBtn.setAttribute("aria-label", "Fleet settings")
+    this.settingsBtn.style.width = "34px"
+    this.settingsBtn.style.height = "34px"
+    this.settingsBtn.style.borderRadius = "999px"
+    this.settingsBtn.style.border = "1px solid rgba(148,163,184,0.2)"
+    this.settingsBtn.style.background = "rgba(15,23,42,0.82)"
+    this.settingsBtn.style.color = "#e2e8f0"
+    this.settingsBtn.style.cursor = "pointer"
+    this.settingsBtn.style.fontSize = "16px"
+    this.settingsBtn.style.lineHeight = "1"
+    this.settingsBtn.style.display = "grid"
+    this.settingsBtn.style.placeItems = "center"
+    this.settingsBtn.addEventListener("click", () => {
+      this.detailSlide = this.detailSlide === "settings" ? "overview" : "settings"
+      this.render()
+    })
 
     this.closeBtn.type = "button"
     this.closeBtn.innerText = "×"
@@ -143,6 +212,8 @@ export class FleetPanel {
     this.closeBtn.addEventListener("click", () => {
       this.mode = "list"
       this.inspectFleetId = undefined
+      this.selectedShipId = undefined
+      this.detailSlide = "overview"
       this.shipDetailPanel.hide()
       this.render()
     })
@@ -154,40 +225,84 @@ export class FleetPanel {
     this.metaEl.style.color = "#94a3b8"
 
     this.battleRow.style.display = "grid"
-    this.battleRow.style.gridTemplateColumns = "1fr auto"
+    this.battleRow.style.gridTemplateColumns = "1fr"
     this.battleRow.style.alignItems = "center"
     this.battleRow.style.gap = "10px"
 
     this.battlePhaseEl.style.fontSize = "12px"
     this.battlePhaseEl.style.color = "#cbd5e1"
+    this.battlePhaseEl.style.minHeight = "0"
 
     this.battleActionsEl.style.display = "flex"
     this.battleActionsEl.style.flexWrap = "wrap"
     this.battleActionsEl.style.justifyContent = "flex-end"
     this.battleActionsEl.style.gap = "8px"
+    this.battleActionsEl.style.minHeight = "0"
 
     this.plannedOrderEl.style.fontSize = "12px"
     this.plannedOrderEl.style.color = "#93c5fd"
-    this.plannedOrderEl.style.minHeight = "18px"
+    this.plannedOrderEl.style.minHeight = "0"
 
     this.membersEl.style.fontSize = "13px"
     this.membersEl.style.color = "#cbd5e1"
-    this.membersEl.style.minHeight = "18px"
+    this.membersEl.style.minHeight = "0"
 
-    this.detailModeRow.style.display = "flex"
-    this.detailModeRow.style.gap = "8px"
+    this.detailViewport.style.position = "relative"
+    this.detailViewport.style.overflow = "hidden"
+    this.detailViewport.style.borderRadius = "14px"
+    this.detailViewport.style.border = "1px solid rgba(148,163,184,0.12)"
+    this.detailViewport.style.background = "rgba(2,6,23,0.24)"
+    this.detailViewport.style.minHeight = "0"
+    this.detailViewport.style.height = "100%"
+    this.detailViewport.style.touchAction = "pan-y"
+    this.detailViewport.style.cursor = "grab"
+
+    this.detailTrack.style.display = "flex"
+    this.detailTrack.style.width = "300%"
+    this.detailTrack.style.height = "100%"
+    this.detailTrack.style.transition = "transform 220ms ease"
+
+    this.settingsPanel.style.flex = "0 0 33.3333%"
+    this.settingsPanel.style.minWidth = "0"
+    this.settingsPanel.style.display = "grid"
+    this.settingsPanel.style.alignContent = "start"
+    this.settingsPanel.style.gap = "12px"
+    this.settingsPanel.style.padding = "14px"
+
+    this.overviewPanel.style.flex = "0 0 33.3333%"
+    this.overviewPanel.style.minWidth = "0"
+    this.overviewPanel.style.display = "grid"
+    this.overviewPanel.style.alignContent = "start"
+    this.overviewPanel.style.gap = "12px"
+    this.overviewPanel.style.padding = "14px"
+
+    this.shipPanel.style.flex = "0 0 33.3333%"
+    this.shipPanel.style.minWidth = "0"
+    this.shipPanel.style.height = "100%"
+    this.shipPanel.style.padding = "14px"
 
     this.shipGrid.style.display = "grid"
     this.shipGrid.style.gridTemplateColumns = "repeat(auto-fit, minmax(98px, 132px))"
     this.shipGrid.style.gap = "8px"
+    this.shipGrid.style.alignContent = "start"
+
+    this.settingsSummaryEl.style.fontSize = "13px"
+    this.settingsSummaryEl.style.lineHeight = "1.5"
+    this.settingsSummaryEl.style.color = "#cbd5e1"
+    this.settingsSummaryEl.style.display = "none"
 
     this.formationRow.style.display = "flex"
-    this.formationRow.style.flexWrap = "wrap"
-    this.formationRow.style.gap = "8px"
+    this.formationRow.style.minWidth = "0"
 
     this.moveModeRow.style.display = "flex"
-    this.moveModeRow.style.flexWrap = "wrap"
-    this.moveModeRow.style.gap = "8px"
+    this.moveModeRow.style.minWidth = "0"
+
+    this.settingsControlRow.style.display = "grid"
+    this.settingsControlRow.style.gridTemplateColumns = "minmax(0, 1fr) minmax(0, 1fr)"
+    this.settingsControlRow.style.gap = "10px"
+
+    this.planRow.style.display = "flex"
+    this.planRow.style.minWidth = "0"
 
     const spacingRow = document.createElement("label")
     spacingRow.style.display = "grid"
@@ -203,10 +318,10 @@ export class FleetPanel {
     this.spacingInput.max = "160"
     this.spacingInput.step = "1"
     this.spacingInput.addEventListener("input", () => {
-      const selected = this.controller.getSelectedFleetSummary()
-      if (!selected) return
+      const fleetId = this.inspectFleetId ?? this.controller.getSelectedFleetSummary()?.id
+      if (!fleetId) return
       const spacing = Number(this.spacingInput.value)
-      this.controller.setSpacing(selected.id, spacing)
+      this.controller.setSpacing(fleetId, spacing)
       this.spacingValueEl.innerText = `${spacing}`
       this.render()
     })
@@ -216,26 +331,39 @@ export class FleetPanel {
     this.spacingValueEl.style.color = "#f8fafc"
     spacingRow.appendChild(this.spacingValueEl)
 
-    this.headerEl.append(this.titleEl, this.closeBtn)
+    this.titleEl.append(this.titleBtn, this.titleStateEl)
+    this.headerActionsEl.append(this.settingsBtn, this.closeBtn)
+    this.headerEl.append(this.titleEl, this.headerActionsEl)
+    this.overviewPanel.append(
+      this.battleRow,
+      this.plannedOrderEl,
+      this.membersEl,
+      this.shipGrid,
+    )
+    this.settingsPanel.append(
+      this.settingsSummaryEl,
+      this.settingsControlRow,
+      this.planRow,
+      spacingRow,
+    )
+    this.shipPanel.append(this.shipDetailPanel.Dom)
+    this.detailTrack.append(this.settingsPanel, this.overviewPanel, this.shipPanel)
+    this.detailViewport.append(this.detailTrack)
     this.detailCol.append(
       this.headerEl,
       this.metaEl,
-      this.battleRow,
-      this.plannedOrderEl,
-      this.detailModeRow,
-      this.membersEl,
-      this.shipGrid,
-      this.formationRow,
-      this.moveModeRow,
-      spacingRow,
+      this.detailViewport,
     )
     this.battleRow.append(this.battlePhaseEl, this.battleActionsEl)
     this.Dom.append(this.listCol, this.detailCol)
 
+    this.bindPanelEventShield()
+    this.bindSlideDrag()
     this.applyStyle()
   }
 
   private render() {
+    this.closeFloatingMenu()
     const fleets = this.controller.listFleetSummaries().filter((fleet) => this.controller.canControlFleet(fleet.id))
     const selected = this.inspectFleetId
       ? this.controller.getFleetSummary(this.inspectFleetId)
@@ -316,8 +444,9 @@ export class FleetPanel {
         this.controller.selectFleet(fleet.id)
         this.controller.focusFleet(fleet.id)
         this.inspectFleetId = fleet.id
+        this.selectedShipId = undefined
         this.shipDetailPanel.hide()
-        this.detailMode = "ships"
+        this.detailSlide = "overview"
         this.mode = "detail"
         this.render()
       })
@@ -328,33 +457,37 @@ export class FleetPanel {
 
   private renderDetail(fleet?: FleetSummary) {
     if (!fleet) {
-      this.titleEl.innerText = "No Fleet"
+      this.titleBtn.innerText = "No Fleet"
+      this.titleStateEl.innerText = ""
       this.headerEl.style.display = "none"
       this.metaEl.innerHTML = ""
       this.battlePhaseEl.innerText = ""
       this.battleActionsEl.innerHTML = ""
       this.plannedOrderEl.innerText = ""
       this.membersEl.innerText = "No fleets available."
+      this.settingsControlRow.innerHTML = ""
       this.formationRow.innerHTML = ""
       this.moveModeRow.innerHTML = ""
+      this.planRow.innerHTML = ""
       this.spacingInput.disabled = true
       this.spacingValueEl.innerText = "-"
+      this.selectedShipId = undefined
+      this.shipDetailPanel.hide()
+      this.detailTrack.style.transform = "translateX(-33.3333%)"
       return
     }
 
     this.headerEl.style.display = "flex"
-    this.titleEl.innerText = fleet.name
+    this.titleBtn.innerText = fleet.name
+    this.titleStateEl.innerText = `> ${this.currentSlideLabel()}`
+    this.settingsBtn.style.borderColor = this.detailSlide === "settings"
+      ? "rgba(125,211,252,0.6)"
+      : "rgba(148,163,184,0.2)"
+    this.settingsBtn.style.background = this.detailSlide === "settings"
+      ? "linear-gradient(180deg, rgba(14,165,233,0.28), rgba(3,105,161,0.26))"
+      : "rgba(15,23,42,0.82)"
     this.metaEl.innerHTML = ""
-    this.appendMeta(`ID ${fleet.id}`)
-    this.appendMeta(`Team ${fleet.teamId}`)
-    this.appendMeta(fleet.controller === "human" ? "Player Controlled" : "AI Controlled")
-    this.appendMeta(`${fleet.memberCount} ships`)
-    this.appendMeta(`Formation ${fleet.formation}`)
-    this.appendMeta(this.describeMoveMode(fleet.moveMode))
-    if (fleet.flagshipId) this.appendMeta(`Flagship ${fleet.flagshipId}`)
-    this.membersEl.innerText = this.detailMode === "ships"
-      ? "Ship Status"
-      : "Formation Control"
+    this.membersEl.innerText = ""
 
     const canControlFleet = this.controller.canControlFleet(fleet.id)
     this.spacingInput.disabled = !canControlFleet
@@ -362,49 +495,93 @@ export class FleetPanel {
     this.spacingValueEl.innerText = `${Math.round(fleet.spacing)}`
 
     this.renderBattleControls(fleet)
-    this.renderDetailModes()
     this.renderShipGrid(fleet.id)
 
     this.formationRow.innerHTML = ""
-    formations.forEach((formation) => {
-      const btn = this.makeActionButton(formation, () => {
-        this.controller.setFormation(fleet.id, formation)
+    this.formationRow.appendChild(this.makeLabeledPopupSelect(
+      "Formation",
+      fleet.formation,
+      formations.map((formation) => ({
+        label: formation,
+        active: formation === fleet.formation,
+        onSelect: () => {
+          this.formationMenuOpen = false
+          this.controller.setFormation(fleet.id, formation)
+          this.render()
+        },
+      })),
+      this.formationMenuOpen,
+      () => {
+        if (!canControlFleet) return
+        this.formationMenuOpen = !this.formationMenuOpen
+        this.moveModeMenuOpen = false
+        this.planMenuOpen = false
         this.render()
-      })
-      btn.disabled = !canControlFleet
-      btn.style.opacity = btn.disabled ? "0.45" : "1"
-      btn.style.cursor = btn.disabled ? "default" : "pointer"
-      if (formation === fleet.formation) {
-        btn.style.background = "rgba(125,211,252,0.2)"
-        btn.style.borderColor = "rgba(125,211,252,0.6)"
-        btn.style.color = "#e0f2fe"
-      }
-      this.formationRow.appendChild(btn)
-    })
+      },
+      !canControlFleet,
+    ))
 
     this.moveModeRow.innerHTML = ""
-    moveModes.forEach((moveMode) => {
-      const label = this.moveModeLabel(moveMode)
-      const btn = this.makeActionButton(label, () => {
-        this.controller.setMoveMode(fleet.id, moveMode)
+    this.moveModeRow.appendChild(this.makeLabeledPopupSelect(
+      "Move Mode",
+      this.moveModeLabel(fleet.moveMode),
+      moveModes.map((moveMode) => ({
+        label: this.moveModeLabel(moveMode),
+        active: moveMode === fleet.moveMode,
+        onSelect: () => {
+          this.moveModeMenuOpen = false
+          this.controller.setMoveMode(fleet.id, moveMode)
+          this.render()
+        },
+      })),
+      this.moveModeMenuOpen,
+      () => {
+        if (!canControlFleet) return
+        this.moveModeMenuOpen = !this.moveModeMenuOpen
+        this.formationMenuOpen = false
+        this.planMenuOpen = false
         this.render()
-      })
-      btn.disabled = !canControlFleet
-      btn.style.opacity = btn.disabled ? "0.45" : "1"
-      btn.style.cursor = btn.disabled ? "default" : "pointer"
-      if (moveMode === fleet.moveMode) {
-        btn.style.background = "rgba(125,211,252,0.2)"
-        btn.style.borderColor = "rgba(125,211,252,0.6)"
-        btn.style.color = "#e0f2fe"
-      }
-      this.moveModeRow.appendChild(btn)
-    })
+      },
+      !canControlFleet,
+    ))
 
-    const isFormationView = this.detailMode === "formation"
-    this.shipGrid.style.display = isFormationView ? "none" : "grid"
-    this.formationRow.style.display = isFormationView ? "flex" : "none"
-    this.moveModeRow.style.display = isFormationView ? "flex" : "none"
-    this.spacingInput.parentElement!.style.display = isFormationView ? "grid" : "none"
+    this.settingsControlRow.innerHTML = ""
+    this.settingsControlRow.append(this.formationRow, this.moveModeRow)
+
+    this.planRow.innerHTML = ""
+    this.planRow.appendChild(this.makeLabeledPopupSelect(
+      "Plans",
+      "작전 관리",
+      [
+        {
+          label: "Plan Hold",
+          active: false,
+          onSelect: () => {
+            this.planMenuOpen = false
+            this.controller.planHold(fleet.id)
+            this.render()
+          },
+        },
+        {
+          label: "Clear Plans",
+          active: false,
+          onSelect: () => {
+            this.planMenuOpen = false
+            this.controller.clearPlans()
+            this.render()
+          },
+        },
+      ],
+      this.planMenuOpen,
+      () => {
+        this.planMenuOpen = !this.planMenuOpen
+        this.formationMenuOpen = false
+        this.moveModeMenuOpen = false
+        this.render()
+      },
+      !canControlFleet,
+    ))
+    this.syncSlidePosition(fleet.id)
   }
 
   private renderBattleControls(fleet: FleetSummary) {
@@ -412,34 +589,15 @@ export class FleetPanel {
     const plannedOrder = this.controller.getPlannedOrder(fleet.id)
     const canControlFleet = this.controller.canControlFleet(fleet.id)
     const phaseLabel = snapshot.phase === "planning"
-      ? `Planning · pending ${snapshot.pendingOrderCount}`
+      ? ""
       : `Executing · ${snapshot.remaining.toFixed(1)}s left`
 
     this.battlePhaseEl.innerText = phaseLabel
-    this.plannedOrderEl.innerText = plannedOrder
-      ? `Queued: ${this.describeOrder(plannedOrder)}`
-      : "Queued: none"
+    this.plannedOrderEl.innerText = ""
 
     this.battleActionsEl.innerHTML = ""
-
-    const holdBtn = this.makeActionButton("Plan Hold", () => {
-      this.controller.planHold(fleet.id)
-      this.render()
-    })
-    holdBtn.disabled = snapshot.phase !== "planning" || !canControlFleet
-    holdBtn.style.opacity = holdBtn.disabled ? "0.45" : "1"
-    holdBtn.style.cursor = holdBtn.disabled ? "default" : "pointer"
-
-    const clearBtn = this.makeActionButton("Clear Plans", () => {
-      this.controller.clearPlans()
-      this.render()
-    })
-
-    this.battleActionsEl.append(holdBtn, clearBtn)
     if (!canControlFleet) {
-      this.plannedOrderEl.innerText = plannedOrder
-        ? `AI queued: ${this.describeOrder(plannedOrder)}`
-        : "AI queued: auto-planned on execute"
+      this.plannedOrderEl.innerText = ""
     }
   }
 
@@ -478,27 +636,6 @@ export class FleetPanel {
     this.phaseActionBtn.style.cursor = this.phaseActionBtn.disabled ? "default" : "pointer"
     this.phaseActionBtn.style.color = "#bfdbfe"
     this.phaseActionBtn.style.borderColor = "rgba(96,165,250,0.42)"
-  }
-
-  private appendMeta(text: string) {
-    const item = document.createElement("span")
-    item.innerText = text
-    this.metaEl.appendChild(item)
-  }
-
-  private renderDetailModes() {
-    this.detailModeRow.innerHTML = ""
-    const shipsBtn = this.makeActionButton("Ships", () => {
-      this.shipDetailPanel.hide()
-      this.detailMode = "ships"
-      this.render()
-    }, this.detailMode === "ships" ? "primary" : "neutral")
-    const formationBtn = this.makeActionButton("Formation", () => {
-      this.shipDetailPanel.hide()
-      this.detailMode = "formation"
-      this.render()
-    }, this.detailMode === "formation" ? "primary" : "neutral")
-    this.detailModeRow.append(shipsBtn, formationBtn)
   }
 
   private renderShipGrid(fleetId: string) {
@@ -594,10 +731,142 @@ export class FleetPanel {
     card.append(head, energy)
     card.addEventListener("click", () => {
       this.controller.focusShip(ship.id)
+      this.selectedShipId = ship.id
+      this.detailSlide = "ship"
       this.shipDetailPanel.show(fleetId, ship.id)
       this.render()
     })
     return card
+  }
+
+  private syncSlidePosition(fleetId: string) {
+    if (this.detailSlide === "ship") {
+      const selectedShip = this.selectedShipId
+        ? this.controller.getFleetShips(fleetId).find((ship) => ship.id === this.selectedShipId)
+        : undefined
+      if (!selectedShip) {
+        this.selectedShipId = undefined
+        this.shipDetailPanel.hide()
+        this.detailSlide = "overview"
+      } else {
+        this.shipDetailPanel.show(fleetId, selectedShip.id)
+      }
+    }
+
+    if (this.detailSlide !== "ship") {
+      this.shipDetailPanel.render()
+    }
+
+    if (!this.isDraggingSlide) {
+      this.detailTrack.style.transition = "transform 220ms ease"
+      this.detailTrack.style.transform = `translateX(${this.slideOffsetPercent(this.detailSlide)}%)`
+    }
+  }
+
+  private currentSlideLabel() {
+    if (this.detailSlide === "settings") return "함대 설정"
+    if (this.detailSlide === "ship") return this.selectedShipId ?? "함선 상세"
+    return "함대 상세"
+  }
+
+  private bindSlideDrag() {
+    this.detailViewport.addEventListener("pointerdown", (event) => {
+      if (this.mode !== "detail") return
+      const target = event.target as HTMLElement | null
+      if (target?.closest("input")) return
+      this.dragPointerId = event.pointerId
+      this.dragStartX = event.clientX
+      this.dragStartY = event.clientY
+      this.dragDeltaX = 0
+      this.dragTracking = true
+      this.isDraggingSlide = false
+    })
+
+    this.detailViewport.addEventListener("pointermove", (event) => {
+      if (!this.dragTracking || event.pointerId !== this.dragPointerId) return
+      const deltaX = event.clientX - this.dragStartX
+      const deltaY = event.clientY - this.dragStartY
+      if (!this.isDraggingSlide) {
+        if (Math.abs(deltaX) < 10) return
+        if (Math.abs(deltaY) > Math.abs(deltaX) * 1.2) {
+          this.dragTracking = false
+          this.dragPointerId = undefined
+          return
+        }
+        this.isDraggingSlide = true
+        this.detailTrack.style.transition = "none"
+        this.detailViewport.style.cursor = "grabbing"
+        this.detailViewport.setPointerCapture(event.pointerId)
+      }
+      event.stopPropagation()
+      event.preventDefault()
+      this.dragDeltaX = deltaX
+      const width = this.detailViewport.clientWidth || 1
+      const deltaPercent = (this.dragDeltaX / width) * 33.3333
+      const next = this.slideOffsetPercent(this.detailSlide) + deltaPercent
+      this.detailTrack.style.transform = `translateX(${next}%)`
+    })
+
+    const finishDrag = (event: PointerEvent) => {
+      if (event.pointerId !== this.dragPointerId) return
+      if (!this.isDraggingSlide) {
+        this.dragTracking = false
+        this.dragPointerId = undefined
+        this.dragDeltaX = 0
+        return
+      }
+      event.stopPropagation()
+      event.preventDefault()
+      if (this.detailViewport.hasPointerCapture(event.pointerId)) {
+        this.detailViewport.releasePointerCapture(event.pointerId)
+      }
+      const width = this.detailViewport.clientWidth || 1
+      const threshold = Math.min(120, width * 0.18)
+      if (Math.abs(this.dragDeltaX) > threshold) {
+        this.shiftSlide(this.dragDeltaX < 0 ? 1 : -1)
+      }
+      this.dragTracking = false
+      this.isDraggingSlide = false
+      this.dragPointerId = undefined
+      this.dragDeltaX = 0
+      this.detailViewport.style.cursor = "grab"
+      this.detailTrack.style.transition = "transform 220ms ease"
+      this.render()
+    }
+
+    this.detailViewport.addEventListener("pointerup", finishDrag)
+    this.detailViewport.addEventListener("pointercancel", finishDrag)
+  }
+
+  private bindPanelEventShield() {
+    const stop = (event: Event) => {
+      event.stopPropagation()
+    }
+
+    this.Dom.addEventListener("pointerdown", stop)
+    this.Dom.addEventListener("pointermove", stop)
+    this.Dom.addEventListener("pointerup", stop)
+    this.Dom.addEventListener("pointercancel", stop)
+    this.Dom.addEventListener("click", stop)
+    this.Dom.addEventListener("wheel", stop)
+    this.Dom.addEventListener("mousedown", stop)
+    this.Dom.addEventListener("mouseup", stop)
+  }
+
+  private shiftSlide(direction: -1 | 1) {
+    const slides: Array<FleetPanel["detailSlide"]> = ["settings", "overview", "ship"]
+    const currentIndex = slides.indexOf(this.detailSlide)
+    let nextIndex = Math.max(0, Math.min(slides.length - 1, currentIndex + direction))
+    if (slides[nextIndex] === "ship" && !this.selectedShipId) {
+      nextIndex = direction > 0 ? Math.max(0, nextIndex - 1) : Math.min(slides.length - 1, nextIndex + 1)
+    }
+    this.detailSlide = slides[nextIndex]
+  }
+
+  private slideOffsetPercent(slide: FleetPanel["detailSlide"]) {
+    if (slide === "settings") return 0
+    if (slide === "ship") return -66.6667
+    return -33.3333
   }
 
   private iconEnergyFocus(focus: FleetShipPanelState["energyFocus"]) {
@@ -634,6 +903,97 @@ export class FleetPanel {
     btn.style.letterSpacing = "0.02em"
     btn.addEventListener("click", onClick)
     return btn
+  }
+
+  private makeLabeledPopupSelect(
+    title: string,
+    value: string,
+    items: Array<{ label: string, active: boolean, onSelect: () => void }>,
+    open: boolean,
+    onToggle: () => void,
+    disabled: boolean,
+  ) {
+    const wrap = document.createElement("div")
+    wrap.style.display = "grid"
+    wrap.style.gap = "6px"
+
+    const label = document.createElement("div")
+    label.innerText = title
+    label.style.fontSize = "11px"
+    label.style.textTransform = "uppercase"
+    label.style.letterSpacing = "0.08em"
+    label.style.color = "#94a3b8"
+
+    const trigger = this.makeActionButton(value, onToggle, open ? "primary" : "neutral")
+    trigger.disabled = disabled
+    trigger.style.opacity = disabled ? "0.45" : "1"
+    trigger.style.cursor = disabled ? "default" : "pointer"
+    trigger.style.textAlign = "left"
+    trigger.style.width = "100%"
+
+    wrap.append(label)
+
+    if (open && !disabled) {
+      window.requestAnimationFrame(() => {
+        if (!trigger.isConnected) return
+        this.openFloatingMenu(trigger, items)
+      })
+    }
+
+    wrap.appendChild(trigger)
+
+    return wrap
+  }
+
+  private openFloatingMenu(
+    trigger: HTMLElement,
+    items: Array<{ label: string, active: boolean, onSelect: () => void }>,
+  ) {
+    this.closeFloatingMenu()
+
+    const rect = trigger.getBoundingClientRect()
+    const menu = document.createElement("div")
+    menu.style.position = "fixed"
+    menu.style.left = `${rect.left}px`
+    menu.style.top = `${Math.max(12, rect.top - 12)}px`
+    menu.style.transform = "translateY(-100%)"
+    menu.style.minWidth = `${rect.width}px`
+    menu.style.display = "grid"
+    menu.style.gap = "6px"
+    menu.style.padding = "8px"
+    menu.style.borderRadius = "12px"
+    menu.style.border = "1px solid rgba(148,163,184,0.18)"
+    menu.style.background = "rgba(2,6,23,0.96)"
+    menu.style.boxShadow = "0 18px 40px rgba(0,0,0,0.28)"
+    menu.style.zIndex = "1500"
+
+    items.forEach((item) => {
+      menu.appendChild(this.makeActionButton(item.label, item.onSelect, item.active ? "primary" : "neutral"))
+    })
+
+    menu.addEventListener("pointerdown", (event) => event.stopPropagation())
+    document.body.appendChild(menu)
+    this.floatingMenuEl = menu
+
+    this.closeFloatingMenuListener = (event: PointerEvent) => {
+      const target = event.target as Node | null
+      if (target && (menu.contains(target) || trigger.contains(target))) return
+      this.formationMenuOpen = false
+      this.moveModeMenuOpen = false
+      this.planMenuOpen = false
+      this.closeFloatingMenu()
+      this.render()
+    }
+    window.addEventListener("pointerdown", this.closeFloatingMenuListener)
+  }
+
+  private closeFloatingMenu() {
+    if (this.closeFloatingMenuListener) {
+      window.removeEventListener("pointerdown", this.closeFloatingMenuListener)
+      this.closeFloatingMenuListener = undefined
+    }
+    this.floatingMenuEl?.remove()
+    this.floatingMenuEl = undefined
   }
 
   private describeOrder(order: FleetOrder) {
