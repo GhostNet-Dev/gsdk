@@ -4,6 +4,7 @@ import { IdleControllableState } from "../states/controllablestate"
 import { CommandPlanner } from "../policy/aipolicy"
 import { NewFighterShipState } from "../states/fightershipstate"
 import { IFighterShipRuntime } from "./fightershipruntime"
+import { shipWeaponDefs } from "./shipweapondefs"
 import { Char } from "@Glibs/types/assettypes"
 import { MonsterId } from "@Glibs/types/monstertypes"
 
@@ -20,18 +21,12 @@ export const controllableDefs = {
       hp: 180,
       mp: 80,
       stamina: 120,
-      attackRanged: 50,
+      attackRanged: 10,
+      attackRange: 36,
       defense: 6,
       speed: 1.6,
     },
-    projectile: {
-      id: MonsterId.WarhamerTracer,
-      hitscan: true,
-      tracerLife: 1.18,
-      useRaycast: true,
-      muzzleOffset: { x: 0, y: 0.4, z: 2.2 },
-      fireCooldownSec: 0.55,
-    },
+    weapons: [shipWeaponDefs.ScoutLaser],
     policyMap: {
       manual: "human",
       ai: "ship-default-ai",
@@ -48,18 +43,12 @@ export const controllableDefs = {
       hp: 160,
       mp: 60,
       stamina: 120,
-      attackRanged: 80,
+      attackRanged: 10,
+      attackRange: 42,
       defense: 5,
       speed: 1.9,
     },
-    projectile: {
-      id: MonsterId.WarhamerTracer,
-      hitscan: true,
-      tracerLife: 0.18,
-      useRaycast: true,
-      muzzleOffset: { x: 0, y: 0.4, z: 2.2 },
-      fireCooldownSec: 0.45,
-    },
+    weapons: [shipWeaponDefs.FighterAutocannon],
     policyMap: {
       manual: "human",
       ai: "ship-default-ai",
@@ -77,15 +66,11 @@ export const controllableDefs = {
       mp: 30,
       stamina: 140,
       attackMelee: 14,
+      attackRange: 10,
       defense: 10,
       speed: 1.1,
     },
-    projectile: {
-      id: MonsterId.DefaultBullet,
-      hitscan: false,
-      muzzleOffset: { x: 0, y: 0.4, z: 2.2 },
-      fireCooldownSec: 0.8,
-    },
+    weapons: [shipWeaponDefs.AllySupportGun],
     policyMap: {
       manual: "human",
       ai: "ally-escort-ai",

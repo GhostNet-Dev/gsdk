@@ -12,7 +12,7 @@ export type StatKey =
 
   // 보조 스탯
   | 'movementSpeed' | 'castingSpeed'
-  | 'projectileSpeed'
+  | 'projectileSpeed' | 'turnSpeed'
   | 'goldBonus' | 'expBonus' | 'itemDropRate'
   | 'threatLevel' | 'stealth'
 
@@ -66,6 +66,7 @@ export const StatDescriptions: Record<StatKey, string> = {
   movementSpeed: '이동 속도',
   castingSpeed: '시전 속도',
   projectileSpeed: '투사체 속도 배율',
+  turnSpeed: '선회 속도: 초당 회전 가능한 라디안',
   goldBonus: '골드 획득량 증가율',
   expBonus: '경험치 획득량 증가율',
   itemDropRate: '아이템 드랍 확률 증가',
@@ -151,6 +152,7 @@ export const StatApplyMode: Record<StatKey, ModifierType> = {
   movementSpeed: 'mul',
   castingSpeed: 'mul',
   projectileSpeed: 'add',
+  turnSpeed: 'mul',
   goldBonus: 'mul',
   expBonus: 'mul',
   itemDropRate: 'mul',

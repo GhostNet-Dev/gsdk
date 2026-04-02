@@ -1,6 +1,6 @@
 import * as THREE from "three"
 import { Controllables } from "@Glibs/actors/controllable/controllables"
-import { Fleet, FleetConfig, FleetControllerType, FleetOrder } from "./fleet"
+import { Fleet, FleetConfig, FleetControllerType, FleetMoveMode, FleetOrder } from "./fleet"
 import { FleetFormation } from "./formation"
 
 export type FleetSummary = {
@@ -11,6 +11,7 @@ export type FleetSummary = {
   controller: FleetControllerType
   formation: FleetFormation
   spacing: number
+  moveMode: FleetMoveMode
   flagshipId?: string
   memberIds: string[]
   memberCount: number
@@ -78,6 +79,10 @@ export class FleetManager {
     this.requireFleet(fleetId).setSpacing(spacing)
   }
 
+  setMoveMode(fleetId: string, moveMode: FleetMoveMode) {
+    this.requireFleet(fleetId).setMoveMode(moveMode)
+  }
+
   issueOrder(fleetId: string, order: FleetOrder) {
     const commands = this.requireFleet(fleetId).toCommands(order)
     commands.forEach((command) => this.controllables.issue(command))
@@ -125,6 +130,7 @@ export class FleetManager {
       controller: fleet.controller,
       formation: fleet.getFormation(),
       spacing: fleet.getSpacing(),
+      moveMode: fleet.getMoveMode(),
       flagshipId: memberIds[0],
       memberIds,
       memberCount: memberIds.length,

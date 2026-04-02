@@ -1,11 +1,12 @@
 import * as THREE from "three"
 import { FleetFormation } from "@Glibs/gameobjects/fleet/formation"
-import { FleetOrder } from "@Glibs/gameobjects/fleet/fleet"
+import { FleetMoveMode, FleetOrder } from "@Glibs/gameobjects/fleet/fleet"
 import { FleetSummary } from "@Glibs/gameobjects/fleet/fleetmanager"
 import { FleetPanelController, FleetShipPanelState } from "./fleetpaneltypes"
 import { ShipDetailPanel } from "./shipdetailpanel"
 
 const formations: FleetFormation[] = ["line", "column", "wedge", "circle"]
+const moveModes: FleetMoveMode[] = ["formation", "flagship-follow", "flagship-formation"]
 
 export class FleetPanel {
   readonly Dom = document.createElement("div")
@@ -27,6 +28,7 @@ export class FleetPanel {
   private readonly spacingValueEl = document.createElement("span")
   private readonly spacingInput = document.createElement("input")
   private readonly formationRow = document.createElement("div")
+  private readonly moveModeRow = document.createElement("div")
   private readonly closeBtn = document.createElement("button")
   private refreshTimer?: number
   private mode: "list" | "detail" = "list"
@@ -183,6 +185,10 @@ export class FleetPanel {
     this.formationRow.style.flexWrap = "wrap"
     this.formationRow.style.gap = "8px"
 
+    this.moveModeRow.style.display = "flex"
+    this.moveModeRow.style.flexWrap = "wrap"
+    this.moveModeRow.style.gap = "8px"
+
     const spacingRow = document.createElement("label")
     spacingRow.style.display = "grid"
     spacingRow.style.gridTemplateColumns = "80px 1fr auto"
@@ -220,6 +226,7 @@ export class FleetPanel {
       this.membersEl,
       this.shipGrid,
       this.formationRow,
+      this.moveModeRow,
       spacingRow,
     )
     this.battleRow.append(this.battlePhaseEl, this.battleActionsEl)
@@ -329,6 +336,7 @@ export class FleetPanel {
       this.plannedOrderEl.innerText = ""
       this.membersEl.innerText = "No fleets available."
       this.formationRow.innerHTML = ""
+      this.moveModeRow.innerHTML = ""
       this.spacingInput.disabled = true
       this.spacingValueEl.innerText = "-"
       return
@@ -342,6 +350,7 @@ export class FleetPanel {
     this.appendMeta(fleet.controller === "human" ? "Player Controlled" : "AI Controlled")
     this.appendMeta(`${fleet.memberCount} ships`)
     this.appendMeta(`Formation ${fleet.formation}`)
+    this.appendMeta(this.describeMoveMode(fleet.moveMode))
     if (fleet.flagshipId) this.appendMeta(`Flagship ${fleet.flagshipId}`)
     this.membersEl.innerText = this.detailMode === "ships"
       ? "Ship Status"
@@ -373,9 +382,28 @@ export class FleetPanel {
       this.formationRow.appendChild(btn)
     })
 
+    this.moveModeRow.innerHTML = ""
+    moveModes.forEach((moveMode) => {
+      const label = this.moveModeLabel(moveMode)
+      const btn = this.makeActionButton(label, () => {
+        this.controller.setMoveMode(fleet.id, moveMode)
+        this.render()
+      })
+      btn.disabled = !canControlFleet
+      btn.style.opacity = btn.disabled ? "0.45" : "1"
+      btn.style.cursor = btn.disabled ? "default" : "pointer"
+      if (moveMode === fleet.moveMode) {
+        btn.style.background = "rgba(125,211,252,0.2)"
+        btn.style.borderColor = "rgba(125,211,252,0.6)"
+        btn.style.color = "#e0f2fe"
+      }
+      this.moveModeRow.appendChild(btn)
+    })
+
     const isFormationView = this.detailMode === "formation"
     this.shipGrid.style.display = isFormationView ? "none" : "grid"
     this.formationRow.style.display = isFormationView ? "flex" : "none"
+    this.moveModeRow.style.display = isFormationView ? "flex" : "none"
     this.spacingInput.parentElement!.style.display = isFormationView ? "grid" : "none"
   }
 
@@ -621,6 +649,18 @@ export class FleetPanel {
       default:
         return "Hold Position"
     }
+  }
+
+  private moveModeLabel(moveMode: FleetMoveMode) {
+    if (moveMode === "flagship-follow") return "Flagship Follow"
+    if (moveMode === "flagship-formation") return "Flagship Formation"
+    return "Formation"
+  }
+
+  private describeMoveMode(moveMode: FleetMoveMode) {
+    if (moveMode === "flagship-follow") return "Move Flagship Follow"
+    if (moveMode === "flagship-formation") return "Move Flagship Formation"
+    return "Move Formation"
   }
 
   private applyStyle() {

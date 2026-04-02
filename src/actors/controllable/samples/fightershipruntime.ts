@@ -10,27 +10,52 @@ import { ShipProjectileDef } from "../controllabletypes"
 export interface IFighterShipRuntime extends IControllableRuntime {
   moveTo(point: THREE.Vector3, continueDirection?: THREE.Vector3): void
   moveAlong(direction: THREE.Vector3): void
-  attackTarget(targetId: string): void
+  attackTarget(targetId: string, payload?: unknown): void
   holdPosition(): void
-  followTarget(targetId: string): void
+  followTarget(targetId: string, payload?: unknown): void
   hasArrived(point: THREE.Vector3): boolean
   canAttackTarget(targetId: string): boolean
   useSkill?(skillId: string, payload?: unknown): void
   configureCombat(options: FighterShipCombatOptions): void
   receiveDamage(amount: number): void
   getTeamId(): string | undefined
+  getFormationReference(out?: THREE.Vector3): THREE.Vector3
+}
+
+export enum NavigationType {
+  Idle = "idle",
+  Hold = "hold",
+  Move = "move",
+  MoveAlong = "moveAlong",
+  Follow = "follow",
+}
+
+export enum CombatType {
+  Idle = "idle",
+  Attack = "attack",
+}
+
+export enum EngagementType {
+  Idle = "idle",
+  PursueTarget = "pursue-target",
+  FollowShip = "follow-ship",
 }
 
 type NavigationIntent =
-  | { type: "idle" }
-  | { type: "hold" }
-  | { type: "move"; destination: THREE.Vector3; continueDirection?: THREE.Vector3 }
-  | { type: "moveAlong"; direction: THREE.Vector3 }
-  | { type: "follow"; targetId: string }
+  | { type: NavigationType.Idle }
+  | { type: NavigationType.Hold }
+  | { type: NavigationType.Move; destination: THREE.Vector3; continueDirection?: THREE.Vector3 }
+  | { type: NavigationType.MoveAlong; direction: THREE.Vector3 }
+  | { type: NavigationType.Follow; targetId: string; offset?: THREE.Vector3; stopDistance?: number }
 
 type CombatIntent =
-  | { type: "idle" }
-  | { type: "attack"; targetId: string }
+  | { type: CombatType.Idle }
+  | { type: CombatType.Attack; targetId: string }
+
+type EngagementIntent =
+  | { type: EngagementType.Idle }
+  | { type: EngagementType.PursueTarget; targetId: string; stopDistance: number }
+  | { type: EngagementType.FollowShip; targetId: string; offset?: THREE.Vector3; stopDistance: number }
 
 export type FighterShipCombatOptions = {
   eventEmitter?: (msg: ProjectileMsg) => void
@@ -48,53 +73,51 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private readonly maxEnergy: number
   private readonly moveSpeed: number
   private readonly attackRange: number
-  private navigationIntent: NavigationIntent = { type: "idle" }
-  private combatIntent: CombatIntent = { type: "idle" }
+  private readonly turnSpeed: number
+  private navigationIntent: NavigationIntent = { type: NavigationType.Idle }
+  private combatIntent: CombatIntent = { type: CombatType.Idle }
+  private engagementIntent: EngagementIntent = { type: EngagementType.Idle }
   private readonly forward = new THREE.Vector3()
   private readonly desired = new THREE.Vector3()
-  private readonly projectileId: MonsterId
-  private readonly muzzleOffset: THREE.Vector3
-  private readonly hitscan: boolean
-  private readonly tracerLife: number
-  private readonly tracerRange?: number
-  private readonly useRaycast: boolean
+  private readonly lateral = new THREE.Vector3()
+  private readonly vertical = new THREE.Vector3()
+  private readonly followTargetPoint = new THREE.Vector3()
+  private readonly formationReference = new THREE.Vector3(0, 0, 1)
+  private readonly weapons: ShipProjectileDef[]
+  private weaponCooldowns: number[]
   private readonly tmpMuzzleWorld = new THREE.Vector3()
   private readonly tmpShootDirection = new THREE.Vector3()
-  private fireCooldownRemaining = 0
-  private readonly fireCooldownSec: number
   private projectileEmitter?: (msg: ProjectileMsg) => void
   private ownerSpec?: BaseSpec
   private teamId?: string
   private findNearestEnemy?: (sourceId: string, maxDistance: number) => FighterShipRuntime | undefined
+  private lastLoggedNavigationState = NavigationType.Idle as string
+  private lastLoggedEngagementState = EngagementType.Idle as string
+  private lastLoggedCombatState = CombatType.Idle as string
 
   constructor(
     public readonly id: string,
     readonly mesh: THREE.Object3D,
     private readonly runtimeIndex: Map<string, FighterShipRuntime>,
     stats: Partial<Record<StatKey, number>> = {},
-    projectile: ShipProjectileDef = { id: MonsterId.WarhamerTracer },
+    weapons: ShipProjectileDef[] = [{ id: MonsterId.WarhamerTracer }],
   ) {
     this.maxHull = stats.hp ?? 100
     this.hull = this.maxHull
     this.maxEnergy = stats.stamina ?? 100
     this.energy = this.maxEnergy
-    this.attackRange = stats.attackRanged ?? 14
+    this.attackRange = stats.attackRange ?? 14
     this.moveSpeed = (stats.speed ?? 1.8) * 10
+    this.turnSpeed = stats.turnSpeed ?? 1.5
 
-    this.projectileId = projectile.id
-    const mo = projectile.muzzleOffset ?? { x: 0, y: 0.4, z: 2.2 }
-    this.muzzleOffset = new THREE.Vector3(mo.x, mo.y, mo.z)
-    this.hitscan = projectile.hitscan ?? true
-    this.tracerLife = projectile.tracerLife ?? 0.18
-    this.tracerRange = projectile.tracerRange
-    this.useRaycast = projectile.useRaycast ?? true
-    this.fireCooldownSec = projectile.fireCooldownSec ?? 0.45
+    this.weapons = weapons
+    this.weaponCooldowns = weapons.map(() => 0)
   }
 
   moveTo(point: THREE.Vector3, continueDirection?: THREE.Vector3): void {
     // console.log("[FighterShipRuntime] moveTo", this.id, point.toArray())
     this.navigationIntent = {
-      type: "move",
+      type: NavigationType.Move,
       destination: point.clone(),
       continueDirection: continueDirection?.clone().normalize(),
     }
@@ -104,16 +127,50 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     if (direction.lengthSq() <= 0.0001) return
     // console.log("[FighterShipRuntime] moveAlong", this.id, direction.toArray())
     this.navigationIntent = {
-      type: "moveAlong",
+      type: NavigationType.MoveAlong,
       direction: direction.clone().normalize(),
     }
   }
 
-  attackTarget(targetId: string): void {
+  attackTarget(targetId: string, payload?: unknown): void {
     this.combatIntent = {
-      type: "attack",
+      type: CombatType.Attack,
       targetId,
     }
+    const engagement = (payload as {
+      engagement?: {
+        type: EngagementType.PursueTarget | EngagementType.FollowShip
+        targetId: string
+        offset?: THREE.Vector3
+        stopDistance?: number
+      }
+    } | undefined)?.engagement
+    if (!engagement) return
+
+    if (engagement.type === EngagementType.PursueTarget) {
+      this.engagementIntent = {
+        type: EngagementType.PursueTarget,
+        targetId: engagement.targetId,
+        stopDistance: engagement.stopDistance ?? Math.max(4, this.attackRange * 0.75),
+      }
+      return
+    }
+
+    this.engagementIntent = {
+      type: EngagementType.FollowShip,
+      targetId: engagement.targetId,
+      offset: engagement.offset?.clone(),
+      stopDistance: engagement.stopDistance ?? Math.max(2, this.attackRange * 0.45),
+    }
+
+    console.log("[FighterShipRuntime] attackTarget", {
+      id: this.id,
+      teamId: this.teamId,
+      targetId,
+      navigation: this.navigationIntent.type,
+      engagement: this.describeEngagementIntent(),
+      payload,
+    })
   }
 
   configureCombat(options: FighterShipCombatOptions): void {
@@ -125,13 +182,24 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   holdPosition(): void {
-    this.navigationIntent = { type: "hold" }
+    this.navigationIntent = { type: NavigationType.Hold }
+    this.engagementIntent = { type: EngagementType.Idle }
+    console.log("[FighterShipRuntime] holdPosition", {
+      id: this.id,
+      teamId: this.teamId,
+      combat: this.combatIntent.type,
+      engagement: this.describeEngagementIntent(),
+      stack: new Error().stack?.split("\n").slice(1, 4),
+    })
   }
 
-  followTarget(targetId: string): void {
+  followTarget(targetId: string, payload?: unknown): void {
+    const followPayload = payload as { offset?: THREE.Vector3; stopDistance?: number } | undefined
     this.navigationIntent = {
-      type: "follow",
+      type: NavigationType.Follow,
       targetId,
+      offset: followPayload?.offset?.clone(),
+      stopDistance: followPayload?.stopDistance,
     }
   }
 
@@ -145,6 +213,22 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
 
   getTeamId() {
     return this.teamId
+  }
+
+  getFormationReference(out: THREE.Vector3 = new THREE.Vector3()) {
+    if (this.navigationIntent.type === NavigationType.MoveAlong) {
+      return out.copy(this.navigationIntent.direction)
+    }
+    if (this.navigationIntent.type === NavigationType.Move && this.navigationIntent.continueDirection) {
+      return out.copy(this.navigationIntent.continueDirection)
+    }
+
+    this.forward.set(0, 0, 1).applyQuaternion(this.mesh.quaternion)
+    if (this.forward.lengthSq() <= 0.0001) {
+      return out.copy(this.formationReference)
+    }
+    this.formationReference.copy(this.forward.normalize())
+    return out.copy(this.formationReference)
   }
 
   useSkill(skillId: string, payload?: unknown): void {
@@ -177,7 +261,10 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   update(delta: number): void {
-    this.fireCooldownRemaining = Math.max(0, this.fireCooldownRemaining - delta)
+    this.logIntentTransitions()
+    for (let i = 0; i < this.weaponCooldowns.length; i++) {
+      this.weaponCooldowns[i] = Math.max(0, this.weaponCooldowns[i] - delta)
+    }
     const navigationActive = this.updateNavigation(delta)
     const engaged = this.updateCombat(delta)
 
@@ -187,41 +274,61 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
 
   private updateNavigation(delta: number) {
     switch (this.navigationIntent.type) {
-      case "hold":
+      case NavigationType.Hold:
+        if (this.engagementIntent.type !== EngagementType.Idle) {
+          console.log("[FighterShipRuntime] hold blocks engagement", {
+            id: this.id,
+            teamId: this.teamId,
+            engagement: this.describeEngagementIntent(),
+            combat: this.combatIntent.type,
+          })
+        }
         this.restoreEnergy(delta, 16)
         return false
-      case "follow": {
+      case NavigationType.Follow: {
         const target = this.runtimeIndex.get(this.navigationIntent.targetId)
         if (!target) {
-          this.navigationIntent = { type: "idle" }
+          this.navigationIntent = { type: NavigationType.Idle }
           return false
         }
-        this.consumeEnergy(delta, 6)
-        this.moveToward(target.mesh.position, delta, 7)
+        this.followTargetPoint.copy(target.mesh.position)
+        if (this.navigationIntent.offset && this.navigationIntent.offset.lengthSq() > 0.0001) {
+          target.getFormationReference(this.forward)
+          this.lateral.crossVectors(new THREE.Vector3(0, 1, 0), this.forward)
+          if (this.lateral.lengthSq() <= 0.0001) {
+            this.lateral.set(1, 0, 0)
+          } else {
+            this.lateral.normalize()
+          }
+          this.vertical.crossVectors(this.forward, this.lateral).normalize()
+          this.followTargetPoint
+            .addScaledVector(this.lateral, this.navigationIntent.offset.x)
+            .addScaledVector(this.vertical, this.navigationIntent.offset.y)
+            .addScaledVector(this.forward, this.navigationIntent.offset.z)
+        }
+        this.moveToward(this.followTargetPoint, delta, this.navigationIntent.stopDistance ?? 7)
         return true
       }
-      case "move":
-        this.consumeEnergy(delta, 8)
+      case NavigationType.Move:
         this.moveToward(this.navigationIntent.destination, delta)
         if (this.hasArrived(this.navigationIntent.destination)) {
           if (this.navigationIntent.continueDirection && this.navigationIntent.continueDirection.lengthSq() > 0.0001) {
             this.navigationIntent = {
-              type: "moveAlong",
+              type: NavigationType.MoveAlong,
               direction: this.navigationIntent.continueDirection.clone(),
             }
           } else {
-            this.navigationIntent = { type: "idle" }
+            this.navigationIntent = { type: NavigationType.Idle }
           }
         }
         return true
-      case "moveAlong":
-        this.consumeEnergy(delta, 8)
+      case NavigationType.MoveAlong:
         this.mesh.position.addScaledVector(this.navigationIntent.direction, this.moveSpeed * delta)
-        this.face(this.mesh.position.clone().add(this.navigationIntent.direction))
+        this.face(this.mesh.position.clone().add(this.navigationIntent.direction), delta)
         return true
-      case "idle":
+      case NavigationType.Idle:
       default:
-        return false
+        return this.updateEngagementNavigation(delta)
     }
   }
 
@@ -232,8 +339,13 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     const distSq = this.mesh.position.distanceToSquared(target.mesh.position)
     const inRange = distSq <= this.attackRange * this.attackRange
     if (inRange) {
-      this.consumeEnergy(delta, 12)
-      this.face(target.mesh.position)
+      let totalCost = 0
+      for (const weapon of this.weapons) {
+        totalCost += weapon.energyCostPerSec ?? 12
+      }
+      this.consumeEnergy(delta, totalCost)
+      // Removed face() to prevent ship rotation during attack as requested.
+      // The ship should use its guns without turning the whole vessel.
       this.fireAtTarget(target)
       return true
     }
@@ -242,10 +354,10 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   private resolveCombatTarget() {
-    if (this.combatIntent.type === "attack") {
+    if (this.combatIntent.type === CombatType.Attack) {
       const designated = this.runtimeIndex.get(this.combatIntent.targetId)
       if (designated) return designated
-      this.combatIntent = { type: "idle" }
+      this.combatIntent = { type: CombatType.Idle }
     }
 
     return this.findNearestEnemy?.(this.id, this.attackRange)
@@ -253,34 +365,149 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
 
   private fireAtTarget(target: FighterShipRuntime) {
     if (!this.projectileEmitter || !this.ownerSpec) return
-    if (this.fireCooldownRemaining > 0) return
     if (this.energy <= 1) return
 
-    this.tmpMuzzleWorld.copy(this.muzzleOffset).applyQuaternion(this.mesh.quaternion).add(this.mesh.position)
-    this.tmpShootDirection.copy(target.mesh.position).sub(this.tmpMuzzleWorld)
-    if (this.tmpShootDirection.lengthSq() <= 0.0001) return
-    this.tmpShootDirection.normalize()
+    for (let i = 0; i < this.weapons.length; i++) {
+      const weapon = this.weapons[i]
+      if (this.weaponCooldowns[i] > 0) continue
 
-    this.projectileEmitter({
-      id: this.projectileId,
-      ownerSpec: this.ownerSpec,
-      damage: this.ownerSpec.Damage,
-      src: this.tmpMuzzleWorld.clone(),
-      dir: this.tmpShootDirection.clone(),
-      range: this.attackRange,
-      hitscan: this.hitscan,
-      tracerLife: this.tracerLife,
-      tracerRange: this.tracerRange,
-      useRaycast: this.useRaycast,
-    })
-    this.fireCooldownRemaining = this.fireCooldownSec
+      const muzzleOffset = weapon.muzzleOffset ?? { x: 0, y: 0.4, z: 2.2 }
+      this.tmpMuzzleWorld.copy(muzzleOffset as THREE.Vector3).applyQuaternion(this.mesh.quaternion).add(this.mesh.position)
+      this.tmpShootDirection.copy(target.mesh.position).sub(this.tmpMuzzleWorld)
+      if (this.tmpShootDirection.lengthSq() <= 0.0001) continue
+      this.tmpShootDirection.normalize()
+
+      this.projectileEmitter({
+        id: weapon.id,
+        ownerSpec: this.ownerSpec,
+        damage: this.ownerSpec.Damage,
+        src: this.tmpMuzzleWorld.clone(),
+        dir: this.tmpShootDirection.clone(),
+        range: this.attackRange,
+        hitscan: weapon.hitscan ?? true,
+        tracerLife: weapon.tracerLife ?? 0.18,
+        tracerRange: weapon.tracerRange,
+        useRaycast: weapon.useRaycast ?? true,
+      })
+      this.weaponCooldowns[i] = weapon.fireCooldownSec ?? 0.45
+    }
   }
 
   receiveDamage(amount: number): void {
     this.hull = Math.max(0, this.hull - Math.max(0, amount))
     if (this.hull <= 0) {
-      this.navigationIntent = { type: "hold" }
-      this.combatIntent = { type: "idle" }
+      this.navigationIntent = { type: NavigationType.Hold }
+      this.combatIntent = { type: CombatType.Idle }
+      this.engagementIntent = { type: EngagementType.Idle }
+    }
+  }
+
+  private updateEngagementNavigation(delta: number) {
+    switch (this.engagementIntent.type) {
+      case EngagementType.PursueTarget: {
+        const target = this.runtimeIndex.get(this.engagementIntent.targetId)
+        if (!target) {
+          console.log("[FighterShipRuntime] pursue-target missing target", {
+            id: this.id,
+            teamId: this.teamId,
+            targetId: this.engagementIntent.targetId,
+          })
+          this.engagementIntent = { type: EngagementType.Idle }
+          return false
+        }
+        console.log("[FighterShipRuntime] pursue-target move", {
+          id: this.id,
+          teamId: this.teamId,
+          targetId: target.id,
+          stopDistance: this.engagementIntent.stopDistance,
+          distSq: this.mesh.position.distanceToSquared(target.mesh.position),
+        })
+        this.moveToward(target.mesh.position, delta, this.engagementIntent.stopDistance)
+        return true
+      }
+      case EngagementType.FollowShip: {
+        const target = this.runtimeIndex.get(this.engagementIntent.targetId)
+        if (!target) {
+          console.log("[FighterShipRuntime] follow-ship missing target", {
+            id: this.id,
+            teamId: this.teamId,
+            targetId: this.engagementIntent.targetId,
+          })
+          this.engagementIntent = { type: EngagementType.Idle }
+          return false
+        }
+        console.log("[FighterShipRuntime] follow-ship move", {
+          id: this.id,
+          teamId: this.teamId,
+          targetId: target.id,
+          stopDistance: this.engagementIntent.stopDistance,
+          hasOffset: Boolean(this.engagementIntent.offset),
+        })
+        this.followTargetPoint.copy(target.mesh.position)
+        if (this.engagementIntent.offset && this.engagementIntent.offset.lengthSq() > 0.0001) {
+          target.getFormationReference(this.forward)
+          this.lateral.crossVectors(new THREE.Vector3(0, 1, 0), this.forward)
+          if (this.lateral.lengthSq() <= 0.0001) {
+            this.lateral.set(1, 0, 0)
+          } else {
+            this.lateral.normalize()
+          }
+          this.vertical.crossVectors(this.forward, this.lateral).normalize()
+          this.followTargetPoint
+            .addScaledVector(this.lateral, this.engagementIntent.offset.x)
+            .addScaledVector(this.vertical, this.engagementIntent.offset.y)
+            .addScaledVector(this.forward, this.engagementIntent.offset.z)
+        }
+        this.moveToward(this.followTargetPoint, delta, this.engagementIntent.stopDistance)
+        return true
+      }
+      case EngagementType.Idle:
+      default:
+        return false
+    }
+  }
+
+  private logIntentTransitions() {
+    const navigationState = this.navigationIntent.type
+    if (navigationState !== this.lastLoggedNavigationState) {
+      this.lastLoggedNavigationState = navigationState
+      console.log("[FighterShipRuntime] navigation state", {
+        id: this.id,
+        teamId: this.teamId,
+        navigation: navigationState,
+      })
+    }
+
+    const combatState = this.combatIntent.type
+    if (combatState !== this.lastLoggedCombatState) {
+      this.lastLoggedCombatState = combatState
+      console.log("[FighterShipRuntime] combat state", {
+        id: this.id,
+        teamId: this.teamId,
+        combat: combatState,
+      })
+    }
+
+    const engagementState = this.describeEngagementIntent()
+    if (engagementState !== this.lastLoggedEngagementState) {
+      this.lastLoggedEngagementState = engagementState
+      console.log("[FighterShipRuntime] engagement state", {
+        id: this.id,
+        teamId: this.teamId,
+        engagement: engagementState,
+      })
+    }
+  }
+
+  private describeEngagementIntent() {
+    switch (this.engagementIntent.type) {
+      case EngagementType.PursueTarget:
+        return `pursue:${this.engagementIntent.targetId}`
+      case EngagementType.FollowShip:
+        return `follow:${this.engagementIntent.targetId}`
+      case EngagementType.Idle:
+      default:
+        return "idle"
     }
   }
 
@@ -289,15 +516,27 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
 
     if (this.desired.lengthSq() <= stopDistance * stopDistance) return
 
-    this.desired.normalize()
-    this.mesh.position.addScaledVector(this.desired, this.moveSpeed * delta)
-    this.face(point)
+    // 1. 목표 지점을 향해 부드럽게 기수를 돌림
+    this.face(point, delta)
+
+    // 2. 이동은 목표 지점(desired)이 아닌 함선의 현재 정면(forward) 방향으로 수행
+    // 이를 통해 선회하는 곡선 경로가 만들어짐
+    this.forward.set(0, 0, 1).applyQuaternion(this.mesh.quaternion)
+    this.mesh.position.addScaledVector(this.forward, this.moveSpeed * delta)
   }
 
-  private face(point: THREE.Vector3) {
-    this.forward.copy(point).sub(this.mesh.position)
+  private face(point: THREE.Vector3, delta: number) {
+    this.forward.copy(point).sub(this.mesh.position).normalize()
     if (this.forward.lengthSq() <= 0.0001) return
-    this.mesh.lookAt(this.mesh.position.clone().add(this.forward.normalize()))
+
+    // 목표 방향으로의 회전값 계산 (Z축이 정면인 경우)
+    const targetQuaternion = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 0, 1),
+      this.forward
+    )
+
+    // 초당 turnSpeed 라디안만큼 목표 회전값으로 선형 보간 회전
+    this.mesh.quaternion.rotateTowards(targetQuaternion, this.turnSpeed * delta)
   }
 
   private consumeEnergy(delta: number, rate: number) {

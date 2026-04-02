@@ -13,6 +13,8 @@ export type ShipProjectileDef = {
   useRaycast?: boolean
   muzzleOffset?: { x: number; y: number; z: number }
   fireCooldownSec?: number
+  turnSpeed?: number
+  energyCostPerSec?: number
 }
 
 export type ControllableRole = "ship" | "ally"
@@ -50,7 +52,7 @@ export type ControllableProperty = {
   model: Char
   scale: number
   stats?: Partial<Record<StatKey, number>>
-  projectile?: ShipProjectileDef
+  weapons?: ShipProjectileDef[]
   actions?: ActionDef[]
   defaultControlSource?: ControlSource
   stateFactory: (...params: unknown[]) => IActorState
@@ -67,9 +69,9 @@ export interface IControllableRuntime {
   objs?: THREE.Object3D
   moveTo?(point: THREE.Vector3, continueDirection?: THREE.Vector3): void
   moveAlong?(direction: THREE.Vector3): void
-  attackTarget?(targetId: string): void
+  attackTarget?(targetId: string, payload?: unknown): void
   holdPosition?(): void
-  followTarget?(targetId: string): void
+  followTarget?(targetId: string, payload?: unknown): void
   useSkill?(skillId: string, payload?: unknown): void
 }
 

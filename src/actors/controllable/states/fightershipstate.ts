@@ -56,12 +56,12 @@ class FighterShipCoordinatorState implements IActorState {
       case "attack":
         if (!command.targetId) return
         this.combatState = "attack"
-        this.runtime.attackTarget(command.targetId)
+        this.runtime.attackTarget(command.targetId, command.payload)
         return
       case "follow":
         if (!command.targetId) return
         this.navigationState = "follow"
-        this.runtime.followTarget(command.targetId)
+        this.runtime.followTarget(command.targetId, command.payload)
         return
       case "hold":
         this.navigationState = "hold"

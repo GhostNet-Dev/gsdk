@@ -148,6 +148,7 @@ export type FleetBattleFleetSnapshot = {
   controller: FleetControllerType
   formation: FleetFormation
   spacing: number
+  moveMode: import("./fleet").FleetMoveMode
   flagshipId?: string
   memberIds: string[]
   memberCount: number
@@ -437,6 +438,7 @@ export class FleetWorld {
         controller: fleet.controller,
         formation: fleet.formation,
         spacing: fleet.spacing,
+        moveMode: fleet.moveMode,
         flagshipId: fleet.flagshipId,
         memberIds: [...fleet.memberIds],
         memberCount: fleet.memberCount,
@@ -562,7 +564,7 @@ export class FleetWorld {
     const statsWithOverride = options.speed !== undefined
       ? { ...def.stats, speed: options.speed / 10 }
       : def.stats ?? {}
-    const runtime = new FighterShipRuntime(id, mesh, this.shipRuntimes, statsWithOverride, def.projectile)
+    const runtime = new FighterShipRuntime(id, mesh, this.shipRuntimes, statsWithOverride, def.weapons)
     this.shipRuntimes.set(id, runtime)
     this.shipEnergyFocuses.set(id, "navigation")
     this.taskObjs.push(runtime)
@@ -779,8 +781,8 @@ export class FleetWorld {
       runtime.mesh,
       this.orbitControls,
       {
-        maxRange: 30,
-        lineWidth: 1.5,
+        maxRange: 20,
+        lineWidth: 3.5,
         onAimChange: () => this.syncAimMovePlan(),
         onAimEnd: () => this.commitAimMove(),
       },

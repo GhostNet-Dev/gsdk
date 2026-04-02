@@ -25,13 +25,13 @@ export class IdleControllableState implements IActorState {
         if (command.point) this.runtime.moveTo?.(command.point)
         return
       case "attack":
-        if (command.targetId) this.runtime.attackTarget?.(command.targetId)
+        if (command.targetId) this.runtime.attackTarget?.(command.targetId, command.payload)
         return
       case "hold":
         this.runtime.holdPosition?.()
         return
       case "follow":
-        if (command.targetId) this.runtime.followTarget?.(command.targetId)
+        if (command.targetId) this.runtime.followTarget?.(command.targetId, command.payload)
         return
       case "useSkill":
         if (typeof command.payload === "string") {
