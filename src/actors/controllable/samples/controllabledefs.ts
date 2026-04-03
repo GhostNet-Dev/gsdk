@@ -24,7 +24,7 @@ export const controllableDefs = {
       attackRanged: 10,
       attackRange: 36,
       defense: 6,
-      speed: 1.6,
+      speed: 1.,
     },
     weapons: [shipWeaponDefs.ScoutLaser],
     policyMap: {
@@ -46,7 +46,7 @@ export const controllableDefs = {
       attackRanged: 10,
       attackRange: 42,
       defense: 5,
-      speed: 1.9,
+      speed: 1.2,
     },
     weapons: [shipWeaponDefs.FighterAutocannon],
     policyMap: {
@@ -68,7 +68,7 @@ export const controllableDefs = {
       attackMelee: 14,
       attackRange: 10,
       defense: 10,
-      speed: 1.1,
+      speed: .5,
     },
     weapons: [shipWeaponDefs.AllySupportGun],
     policyMap: {

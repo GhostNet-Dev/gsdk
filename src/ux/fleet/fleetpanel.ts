@@ -304,7 +304,7 @@ export class FleetPanel {
     this.moveModeRow.style.minWidth = "0"
 
     this.settingsControlRow.style.display = "grid"
-    this.settingsControlRow.style.gridTemplateColumns = "repeat(3, minmax(0, 1fr))"
+    this.settingsControlRow.style.gridTemplateColumns = "repeat(auto-fit, minmax(92px, 1fr))"
     this.settingsControlRow.style.gap = "10px"
 
     this.planRow.style.display = "flex"
@@ -495,6 +495,7 @@ export class FleetPanel {
     this.membersEl.innerText = ""
 
     const canControlFleet = this.controller.canControlFleet(fleet.id)
+    const plannedOrder = this.controller.getPlannedOrder(fleet.id)
     this.spacingInput.disabled = !canControlFleet
     this.spacingInput.value = `${Math.round(fleet.spacing)}`
     this.spacingValueEl.innerText = `${Math.round(fleet.spacing)}`
@@ -553,11 +554,11 @@ export class FleetPanel {
     this.planRow.innerHTML = ""
     this.planRow.appendChild(this.makeLabeledPopupSelect(
       "Plans",
-      "작전 관리",
+      this.planButtonLabel(plannedOrder),
       [
         {
           label: "Plan Hold",
-          active: false,
+          active: plannedOrder?.type === FleetOrderType.Hold,
           onSelect: () => {
             this.planMenuOpen = false
             this.controller.planHold(fleet.id)
@@ -1030,6 +1031,15 @@ export class FleetPanel {
     return "Formation"
   }
 
+  private planButtonLabel(order?: FleetOrder) {
+    if (!order) return "No Plan"
+    if (order.type === FleetOrderType.Hold) return "Hold Position"
+    if (order.type === FleetOrderType.Move) return "Move"
+    if (order.type === FleetOrderType.Attack) return "Attack"
+    if (order.type === FleetOrderType.Follow) return "Follow"
+    return "Plan"
+  }
+
   private describeMoveMode(moveMode: FleetMoveMode) {
     if (moveMode === FleetMoveMode.FlagshipFollow) return "Move Flagship Follow"
     if (moveMode === FleetMoveMode.FlagshipFormation) return "Move Flagship Formation"
@@ -1062,16 +1072,6 @@ export class FleetPanel {
         }
         #fleet-command-panel > div:first-child {
           grid-auto-columns: minmax(200px, 220px) !important;
-        }
-      }
-      @media (max-width: 980px) {
-        #fleet-command-panel .fleet-settings-control-row {
-          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        }
-      }
-      @media (max-width: 640px) {
-        #fleet-command-panel .fleet-settings-control-row {
-          grid-template-columns: minmax(0, 1fr) !important;
         }
       }
     `
