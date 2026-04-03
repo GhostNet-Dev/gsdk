@@ -10,6 +10,14 @@ export class ActionRegistry {
     this.builders.set(type, builder)
   }
 
+  static has(type: string) {
+    return this.builders.has(type)
+  }
+
+  static listTypes() {
+    return Array.from(this.builders.keys())
+  }
+
   static create(def: ActionDef): IActionComponent {
     const builder = this.builders.get(def.type)
     if (!builder) throw new Error(`Unknown action type: ${def.type}`)
