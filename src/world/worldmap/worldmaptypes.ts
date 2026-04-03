@@ -36,6 +36,7 @@ export enum MapEntryType {
     Beach = "Beach",
     DungeonMapObject = "DungeonMapObject",
     DeepSpaceMegaRingSystem = "DeepSpaceMegaRingSystem",
+    SpaceWarSky = "SpaceWarSky",
     GalaxySkybox = "GalaxySkybox",
     GalaxyPlanetNetwork = "GalaxyPlanetNetwork",
     SteppedTerrain = "SteppedTerrain",
@@ -133,4 +134,3 @@ export interface IWorldMapObject {
     Save?(): any
     Load?(data: any, callback?: Function): void
 }
-

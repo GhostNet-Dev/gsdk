@@ -27,6 +27,7 @@ import { InstancedVegetation } from '../fluffynature/massstatic';
 import { Beach } from '../ocean/beach';
 import { DungeonMapObject } from '../dungeon/dungeonbuilder';
 import { DeepSpaceMegaRingSystem } from '../sky/space';
+import { SpaceWarSky } from '../sky/spacewarsky';
 import { GalaxySkybox } from '../sky/galaxybox';
 import { GalaxyPlanetNetwork } from '../galaxy/galaxyplanetnetwork';
 import SteppedTerrain from '../ground/steppedterrain';
@@ -64,6 +65,7 @@ export default class WorldMap {
         Beach: Beach,
         DungeonMapObject: DungeonMapObject,
         DeepSpaceMegaRingSystem: DeepSpaceMegaRingSystem,
+        SpaceWarSky: SpaceWarSky,
         GalaxySkybox: GalaxySkybox,
         GalaxyPlanetNetwork: GalaxyPlanetNetwork,
         SteppedTerrain: SteppedTerrain
@@ -89,6 +91,7 @@ export default class WorldMap {
         Beach: { scene: this.scene, eventCtrl: this.eventCtrl },
         DungeonMapObject: {  },
         DeepSpaceMegaRingSystem: { eventCtrl: this.eventCtrl, scene: this.scene },
+        SpaceWarSky: { eventCtrl: this.eventCtrl, scene: this.scene, camera: this.camera },
         GalaxySkybox: { scene: this.scene },
         GalaxyPlanetNetwork: { ctx: { 
             scene: this.scene, 

@@ -296,6 +296,7 @@ export class FleetPanel {
     this.settingsSummaryEl.style.color = "#cbd5e1"
     this.settingsSummaryEl.style.display = "none"
 
+    this.settingsControlRow.className = "fleet-settings-control-row"
     this.formationRow.style.display = "flex"
     this.formationRow.style.minWidth = "0"
 
@@ -303,7 +304,7 @@ export class FleetPanel {
     this.moveModeRow.style.minWidth = "0"
 
     this.settingsControlRow.style.display = "grid"
-    this.settingsControlRow.style.gridTemplateColumns = "minmax(0, 1fr) minmax(0, 1fr)"
+    this.settingsControlRow.style.gridTemplateColumns = "repeat(3, minmax(0, 1fr))"
     this.settingsControlRow.style.gap = "10px"
 
     this.planRow.style.display = "flex"
@@ -348,7 +349,6 @@ export class FleetPanel {
     this.settingsPanel.append(
       this.settingsSummaryEl,
       this.settingsControlRow,
-      this.planRow,
       spacingRow,
     )
     this.shipPanel.append(this.shipDetailPanel.Dom)
@@ -550,9 +550,6 @@ export class FleetPanel {
       !canControlFleet,
     ))
 
-    this.settingsControlRow.innerHTML = ""
-    this.settingsControlRow.append(this.formationRow, this.moveModeRow)
-
     this.planRow.innerHTML = ""
     this.planRow.appendChild(this.makeLabeledPopupSelect(
       "Plans",
@@ -586,6 +583,9 @@ export class FleetPanel {
       },
       !canControlFleet,
     ))
+
+    this.settingsControlRow.innerHTML = ""
+    this.settingsControlRow.append(this.formationRow, this.moveModeRow, this.planRow)
     this.syncSlidePosition(fleet.id)
   }
 
@@ -921,6 +921,7 @@ export class FleetPanel {
     const wrap = document.createElement("div")
     wrap.style.display = "grid"
     wrap.style.gap = "6px"
+    wrap.style.minWidth = "0"
 
     const label = document.createElement("div")
     label.innerText = title
@@ -928,13 +929,20 @@ export class FleetPanel {
     label.style.textTransform = "uppercase"
     label.style.letterSpacing = "0.08em"
     label.style.color = "#94a3b8"
+    label.style.whiteSpace = "nowrap"
+    label.style.overflow = "hidden"
+    label.style.textOverflow = "ellipsis"
 
     const trigger = this.makeActionButton(value, onToggle, open ? "primary" : "neutral")
     trigger.disabled = disabled
     trigger.style.opacity = disabled ? "0.45" : "1"
     trigger.style.cursor = disabled ? "default" : "pointer"
     trigger.style.textAlign = "left"
+    trigger.style.minWidth = "0"
     trigger.style.width = "100%"
+    trigger.style.whiteSpace = "nowrap"
+    trigger.style.overflow = "hidden"
+    trigger.style.textOverflow = "ellipsis"
 
     wrap.append(label)
 
@@ -1054,6 +1062,16 @@ export class FleetPanel {
         }
         #fleet-command-panel > div:first-child {
           grid-auto-columns: minmax(200px, 220px) !important;
+        }
+      }
+      @media (max-width: 980px) {
+        #fleet-command-panel .fleet-settings-control-row {
+          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        }
+      }
+      @media (max-width: 640px) {
+        #fleet-command-panel .fleet-settings-control-row {
+          grid-template-columns: minmax(0, 1fr) !important;
         }
       }
     `
