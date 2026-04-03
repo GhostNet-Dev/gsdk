@@ -1,12 +1,17 @@
 import * as THREE from "three"
 import { FleetFormation } from "@Glibs/gameobjects/fleet/formation"
-import { FleetMoveMode, FleetOrder } from "@Glibs/gameobjects/fleet/fleet"
+import { FleetMoveMode, FleetOrder, FleetOrderType } from "@Glibs/gameobjects/fleet/fleet"
 import { FleetSummary } from "@Glibs/gameobjects/fleet/fleetmanager"
+import { BattlePhase } from "@Glibs/gameobjects/fleet/battlephasecontroller"
 import { FleetPanelController, FleetShipPanelState } from "./fleetpaneltypes"
 import { ShipDetailPanel } from "./shipdetailpanel"
 
 const formations: FleetFormation[] = ["line", "column", "wedge", "circle"]
-const moveModes: FleetMoveMode[] = ["formation", "flagship-follow", "flagship-formation"]
+const moveModes: FleetMoveMode[] = [
+  FleetMoveMode.Formation,
+  FleetMoveMode.FlagshipFollow,
+  FleetMoveMode.FlagshipFormation,
+]
 
 export class FleetPanel {
   readonly Dom = document.createElement("div")
@@ -588,7 +593,7 @@ export class FleetPanel {
     const snapshot = this.controller.getBattlePhaseSnapshot()
     const plannedOrder = this.controller.getPlannedOrder(fleet.id)
     const canControlFleet = this.controller.canControlFleet(fleet.id)
-    const phaseLabel = snapshot.phase === "planning"
+    const phaseLabel = snapshot.phase === BattlePhase.Planning
       ? ""
       : `Executing · ${snapshot.remaining.toFixed(1)}s left`
 
@@ -606,11 +611,11 @@ export class FleetPanel {
 
     const icon = document.createElement("span")
     icon.setAttribute("aria-hidden", "true")
-    icon.style.transform = snapshot.phase === "executing" ? "none" : "translateX(2px)"
-    icon.textContent = snapshot.phase === "executing" ? "■" : "▶"
+    icon.style.transform = snapshot.phase === BattlePhase.Executing ? "none" : "translateX(2px)"
+    icon.textContent = snapshot.phase === BattlePhase.Executing ? "■" : "▶"
     this.phaseActionBtn.appendChild(icon)
 
-    if (snapshot.phase === "executing") {
+    if (snapshot.phase === BattlePhase.Executing) {
       this.phaseActionBtn.setAttribute("aria-label", "Stop execution")
       this.phaseActionBtn.title = "Stop"
       this.phaseActionBtn.onclick = () => {
@@ -998,28 +1003,28 @@ export class FleetPanel {
 
   private describeOrder(order: FleetOrder) {
     switch (order.type) {
-      case "move":
+      case FleetOrderType.Move:
         if (!order.point) return "Move"
         return `Move (${order.point.x.toFixed(0)}, ${order.point.z.toFixed(0)})`
-      case "attack":
+      case FleetOrderType.Attack:
         return `Attack ${order.targetId ?? "target"}`
-      case "follow":
+      case FleetOrderType.Follow:
         return `Follow ${order.targetId ?? "target"}`
-      case "hold":
+      case FleetOrderType.Hold:
       default:
         return "Hold Position"
     }
   }
 
   private moveModeLabel(moveMode: FleetMoveMode) {
-    if (moveMode === "flagship-follow") return "Flagship Follow"
-    if (moveMode === "flagship-formation") return "Flagship Formation"
+    if (moveMode === FleetMoveMode.FlagshipFollow) return "Flagship Follow"
+    if (moveMode === FleetMoveMode.FlagshipFormation) return "Flagship Formation"
     return "Formation"
   }
 
   private describeMoveMode(moveMode: FleetMoveMode) {
-    if (moveMode === "flagship-follow") return "Move Flagship Follow"
-    if (moveMode === "flagship-formation") return "Move Flagship Formation"
+    if (moveMode === FleetMoveMode.FlagshipFollow) return "Move Flagship Follow"
+    if (moveMode === FleetMoveMode.FlagshipFormation) return "Move Flagship Formation"
     return "Move Formation"
   }
 

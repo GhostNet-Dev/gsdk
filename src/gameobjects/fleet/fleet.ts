@@ -2,12 +2,27 @@ import * as THREE from "three"
 import { ActorCommand } from "@Glibs/actors/controllable/controllabletypes"
 import { FleetFormation, Formation } from "./formation"
 
-export type FleetCommandIssuer = "human" | "ai" | "script"
+export enum FleetCommandIssuer {
+  Human = "human",
+  AI = "ai",
+  Script = "script"
+}
 export type FleetControllerType = FleetCommandIssuer
-export type FleetMoveMode = "formation" | "flagship-follow" | "flagship-formation"
+export enum FleetMoveMode {
+  Formation = "formation",
+  FlagshipFollow = "flagship-follow",
+  FlagshipFormation = "flagship-formation"
+}
+
+export enum FleetOrderType {
+  Move = "move",
+  Attack = "attack",
+  Hold = "hold",
+  Follow = "follow"
+}
 
 export type FleetOrder = {
-  type: "move" | "attack" | "hold" | "follow"
+  type: FleetOrderType
   issuedAt?: number
   issuer?: FleetCommandIssuer
   priority?: number
@@ -48,10 +63,10 @@ export class Fleet {
     this.name = config.name ?? id
     this.color = config.color
     this.teamId = config.teamId ?? id
-    this.controller = config.controller ?? "human"
+    this.controller = config.controller ?? FleetCommandIssuer.Human
     this.formation = config.formation ?? "line"
     this.spacing = config.spacing ?? 6
-    this.moveMode = config.moveMode ?? "formation"
+    this.moveMode = config.moveMode ?? FleetMoveMode.Formation
     memberIds.forEach((memberId) => this.members.add(memberId))
   }
 
@@ -92,17 +107,17 @@ export class Fleet {
     if (members.length === 0) return []
 
     const issuedAt = order.issuedAt ?? Date.now()
-    const issuer = order.issuer ?? "human"
+    const issuer = order.issuer ?? FleetCommandIssuer.Human
     const priority = order.priority
 
     switch (order.type) {
-      case "move":
+      case FleetOrderType.Move:
         if (!order.point && !order.direction) return []
         return this.moveCommands(members, order.point, issuedAt, issuer, priority, order)
-      case "attack":
+      case FleetOrderType.Attack:
         if (!order.targetId) return []
         return this.attackCommands(members, issuedAt, issuer, priority, order)
-      case "follow":
+      case FleetOrderType.Follow:
         if (!order.targetId) return []
         return members.map((actorId) => ({
           type: "follow",
@@ -112,7 +127,7 @@ export class Fleet {
           issuer,
           priority,
         }))
-      case "hold":
+      case FleetOrderType.Hold:
       default:
         return members.map((actorId) => ({
           type: "hold",
@@ -133,10 +148,10 @@ export class Fleet {
     order: FleetOrder,
   ): ActorCommand[] {
     const moveMode = order.moveMode ?? this.moveMode
-    if (moveMode === "flagship-follow") {
+    if (moveMode === FleetMoveMode.FlagshipFollow) {
       return this.flagshipFollowMoveCommands(members, anchor, issuedAt, issuer, priority, order)
     }
-    if (moveMode === "flagship-formation") {
+    if (moveMode === FleetMoveMode.FlagshipFormation) {
       return this.flagshipFormationMoveCommands(members, anchor, issuedAt, issuer, priority, order)
     }
 
@@ -258,7 +273,7 @@ export class Fleet {
   ): ActorCommand[] {
     const targetId = order.targetId
     if (!targetId) return []
-    if (issuer !== "ai") {
+    if (issuer !== FleetCommandIssuer.AI) {
       return members.map((actorId) => ({
         type: "attack" as const,
         actorId,
@@ -284,7 +299,7 @@ export class Fleet {
 
     if (!flagshipId) return []
 
-    if (moveMode === "flagship-follow") {
+    if (moveMode === FleetMoveMode.FlagshipFollow) {
       return members.map((actorId) => ({
         type: "attack" as const,
         actorId,
@@ -310,7 +325,7 @@ export class Fleet {
       }))
     }
 
-    if (moveMode === "flagship-formation" || moveMode === "formation") {
+    if (moveMode === FleetMoveMode.FlagshipFormation || moveMode === FleetMoveMode.Formation) {
       const localAnchor = new THREE.Vector3()
       const localPositions = Formation.layout(order.formation ?? this.formation, {
         anchor: localAnchor,

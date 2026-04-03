@@ -1,9 +1,12 @@
 import IEventController, { ILoop } from "@Glibs/interface/ievent"
 import { EventTypes } from "@Glibs/types/globaltypes"
 import { FleetManager } from "./fleetmanager"
-import { FleetOrder } from "./fleet"
+import { FleetOrder, FleetCommandIssuer } from "./fleet"
 
-export type BattlePhase = "planning" | "executing"
+export enum BattlePhase {
+  Planning = "planning",
+  Executing = "executing"
+}
 
 export type BattlePhaseSnapshot = {
   phase: BattlePhase
@@ -18,7 +21,7 @@ export type BattlePhaseChangeListener = (phase: BattlePhase) => void
 export class BattlePhaseController implements ILoop {
   LoopId = 0
 
-  private phase: BattlePhase = "planning"
+  private phase: BattlePhase = BattlePhase.Planning
   private elapsed = 0
   private readonly plannedOrders = new Map<string, FleetOrder>()
   private readonly phaseListeners = new Set<BattlePhaseChangeListener>()
@@ -45,7 +48,7 @@ export class BattlePhaseController implements ILoop {
   }
 
   canAcceptOrders() {
-    return this.phase === "planning"
+    return this.phase === BattlePhase.Planning
   }
 
   queueFleetOrder(fleetId: string, order: FleetOrder) {
@@ -53,7 +56,7 @@ export class BattlePhaseController implements ILoop {
     this.plannedOrders.set(fleetId, {
       ...order,
       issuedAt: order.issuedAt ?? Date.now(),
-      issuer: order.issuer ?? "human",
+      issuer: order.issuer ?? FleetCommandIssuer.Human,
     })
     return true
   }
@@ -83,28 +86,26 @@ export class BattlePhaseController implements ILoop {
       this.fleetManager.issueOrder(fleetId, order)
     }
 
-    this.plannedOrders.clear()
     this.elapsed = 0
-    this.setPhase("executing")
+    this.setPhase(BattlePhase.Executing)
     this.eventCtrl.SendEventMessage(EventTypes.TimeCtrl, 1)
     return true
   }
 
   resetToPlanning() {
     this.elapsed = 0
-    this.setPhase("planning")
+    this.setPhase(BattlePhase.Planning)
     this.eventCtrl.SendEventMessage(EventTypes.TimeCtrl, 0)
   }
 
   stopExecution() {
-    if (this.phase !== "executing") return false
-    this.clearPlans()
+    if (this.phase !== BattlePhase.Executing) return false
     this.resetToPlanning()
     return true
   }
 
   update(delta: number): void {
-    if (this.phase !== "executing") return
+    if (this.phase !== BattlePhase.Executing) return
 
     this.elapsed += delta
     if (this.elapsed < this.executionWindowSec) return

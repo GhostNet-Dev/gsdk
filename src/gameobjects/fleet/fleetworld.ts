@@ -21,10 +21,12 @@ import { Formation, FleetFormation } from "./formation"
 import { FleetManager } from "./fleetmanager"
 import { SphereAimingController } from "./sphereaimingctrl"
 import { FleetShipEnergyFocus } from "@Glibs/ux/fleet/fleetpaneltypes"
-import { FleetControllerType, FleetOrder } from "./fleet"
+import { FleetControllerType, FleetOrder, FleetOrderType, FleetCommandIssuer, FleetMoveMode } from "./fleet"
 import { ICameraTrackTarget } from "@Glibs/systems/camera/cameratypes"
 import { ProjectileMsg } from "@Glibs/actors/projectile/projectile"
 import { AttackOption } from "@Glibs/types/playertypes"
+import { ActionRegistry } from "@Glibs/actions/actionregistry"
+import { ActionDef, IActionComponent } from "@Glibs/types/actiontypes"
 
 type Vector3Like = THREE.Vector3 | [number, number, number] | { x: number, y: number, z: number }
 
@@ -123,6 +125,7 @@ export type FleetWorldInteractionOptions = {
   projectileEmitter?: (msg: ProjectileMsg) => void
   registerProjectileTarget?: (obj: THREE.Object3D) => void
   deregisterProjectileTarget?: (obj: THREE.Object3D) => void
+  onBattleEnd?: (result: "win" | "loss") => void
 }
 
 export type FleetBattleShipSnapshot = {
@@ -247,6 +250,7 @@ export class FleetWorld {
   private readonly interactionRaycaster = new THREE.Raycaster()
   private readonly interactionPointer = new THREE.Vector2()
   private readonly shipMeshes = new Map<string, THREE.Object3D>()
+  private readonly activeSurfaceFlames = new Map<string, IActionComponent>()
   private readonly fleetIdsByShipId = new Map<string, string>()
   private readonly tmpAimDirection = new THREE.Vector3()
   private readonly tmpAimTarget = new THREE.Vector3()
@@ -264,6 +268,7 @@ export class FleetWorld {
   private readonly shipTrackTarget: ICameraTrackTarget
   private readonly fleetTrackTarget: ICameraTrackTarget
   private bootstrapped = false
+  private battleEnded = false
   private activeFocusTween: gsap.core.Tween | null = null
   private unsubscribeInteraction?: () => void
 
@@ -330,7 +335,7 @@ export class FleetWorld {
   }
 
   canControlFleet(fleetId: string) {
-    return this.fleetManager.getFleetSummary(fleetId)?.controller === "human"
+    return this.fleetManager.getFleetSummary(fleetId)?.controller === FleetCommandIssuer.Human
   }
 
   setPlanningModeActive(active: boolean) {
@@ -513,6 +518,14 @@ export class FleetWorld {
       window.removeEventListener("keydown", this.onDebugKeyDown)
     }
 
+    this.activeSurfaceFlames.forEach((action, shipId) => {
+      const ctrl = this.controllables.get(shipId)
+      if (ctrl && action.deactivate) {
+        action.deactivate(ctrl)
+      }
+    })
+    this.activeSurfaceFlames.clear()
+
     this.controllableIds.forEach((actorId) => {
       this.controllables.unregister(actorId)
     })
@@ -643,7 +656,7 @@ export class FleetWorld {
         name: fleet.name ?? fleet.id,
         color: fleet.color,
         teamId: fleet.teamId ?? fleet.id,
-        controller: fleet.controller ?? "human",
+        controller: fleet.controller ?? FleetCommandIssuer.Human,
         formation: fleet.formation,
         spacing,
       })
@@ -688,7 +701,7 @@ export class FleetWorld {
       this.fleetManager.moveFleet("alpha", new THREE.Vector3(-10, 0, -32), {
         formation: "wedge",
         facing: new THREE.Vector3(1, 0, 1),
-        issuer: "script",
+        issuer: FleetCommandIssuer.Script,
       })
     }
 
@@ -696,18 +709,18 @@ export class FleetWorld {
       this.fleetManager.moveFleet("beta", new THREE.Vector3(12, 0, 30), {
         formation: "line",
         facing: new THREE.Vector3(-1, 0, -0.4),
-        issuer: "script",
+        issuer: FleetCommandIssuer.Script,
       })
     }
 
     if (event.code === "Digit3") {
-      this.fleetManager.attackTarget("alpha", "beta-2", { issuer: "script" })
-      this.fleetManager.attackTarget("beta", "alpha-2", { issuer: "script" })
+      this.fleetManager.attackTarget("alpha", "beta-2", { issuer: FleetCommandIssuer.Script })
+      this.fleetManager.attackTarget("beta", "alpha-2", { issuer: FleetCommandIssuer.Script })
     }
 
     if (event.code === "Digit4") {
-      this.fleetManager.holdPosition("alpha", { issuer: "script" })
-      this.fleetManager.holdPosition("beta", { issuer: "script" })
+      this.fleetManager.holdPosition("alpha", { issuer: FleetCommandIssuer.Script })
+      this.fleetManager.holdPosition("beta", { issuer: FleetCommandIssuer.Script })
     }
   }
 
@@ -794,7 +807,7 @@ export class FleetWorld {
 
   private restorePlannedAim(fleetId: string, shipPosition: THREE.Vector3) {
     const plannedOrder = this.options.orderSource?.(fleetId)
-    if (!plannedOrder || plannedOrder.type !== "move") return
+    if (!plannedOrder || plannedOrder.type !== FleetOrderType.Move) return
 
     if (plannedOrder.direction && plannedOrder.direction.lengthSq() > 0.0001) {
       this.aimingController?.setTargetDirection(plannedOrder.direction)
@@ -854,8 +867,8 @@ export class FleetWorld {
       .addScaledVector(direction.normalize(), distance)
 
     return {
-      type: "move",
-      issuer: "human",
+      type: FleetOrderType.Move,
+      issuer: FleetCommandIssuer.Human,
       point: this.tmpAimTarget.clone(),
       direction: direction.clone(),
       formation: summary.formation,
@@ -1138,9 +1151,26 @@ export class FleetWorld {
   }
 
   private updateShipStatusVisuals() {
+    let playerShipsTotal = 0
+    let playerShipsAlive = 0
+    let enemyShipsTotal = 0
+    let enemyShipsAlive = 0
+
     this.shipStatusVisuals.forEach((visual, shipId) => {
       const runtime = this.shipRuntimes.get(shipId)
       if (!runtime) return
+
+      const fleetId = this.fleetIdsByShipId.get(shipId)
+      const fleet = fleetId ? this.fleetManager.getFleetSummary(fleetId) : undefined
+      const isPlayer = fleet?.teamId === "player"
+
+      if (isPlayer) {
+        playerShipsTotal++
+        if (runtime.getHull() > 0) playerShipsAlive++
+      } else if (fleet) {
+        enemyShipsTotal++
+        if (runtime.getHull() > 0) enemyShipsAlive++
+      }
 
       visual.group.quaternion.copy(
         this.tmpStatusQuaternion.copy(runtime.mesh.quaternion).invert(),
@@ -1154,6 +1184,36 @@ export class FleetWorld {
           visual.hpOuterRadius,
           hullRatio,
         )
+
+        const material = visual.hpRing.material as THREE.MeshBasicMaterial
+        if (hullRatio < 0.2) {
+          material.color.set(0xef4444)
+          if (!this.activeSurfaceFlames.has(shipId)) {
+            try {
+              const ctrl = this.controllables.get(shipId)
+              if (ctrl) {
+                const action = ActionRegistry.create({ type: "damageburning" } as ActionDef)
+                if (action.activate) {
+                  action.activate(ctrl)
+                }
+                this.activeSurfaceFlames.set(shipId, action)
+              }
+            } catch (e) {
+              console.warn(`[FleetWorld] Failed to trigger damageburning for ${shipId}`, e)
+            }
+          }
+        } else {
+          material.color.set(this.config.statusRings.hpColor)
+          const action = this.activeSurfaceFlames.get(shipId)
+          if (action) {
+            const ctrl = this.controllables.get(shipId)
+            if (ctrl && action.deactivate) {
+              action.deactivate(ctrl)
+            }
+            this.activeSurfaceFlames.delete(shipId)
+          }
+        }
+
         visual.lastHullRatio = hullRatio
       }
 
@@ -1168,6 +1228,16 @@ export class FleetWorld {
         visual.lastEnergyRatio = energyRatio
       }
     })
+
+    if (!this.battleEnded && playerShipsTotal > 0 && enemyShipsTotal > 0) {
+      if (playerShipsAlive === 0) {
+        this.battleEnded = true
+        this.options.onBattleEnd?.("loss")
+      } else if (enemyShipsAlive === 0) {
+        this.battleEnded = true
+        this.options.onBattleEnd?.("win")
+      }
+    }
   }
 
   private attachShipStatusVisual(id: string, mesh: THREE.Object3D, footprint: number) {

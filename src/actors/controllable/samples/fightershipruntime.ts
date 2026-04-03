@@ -28,17 +28,20 @@ export enum NavigationType {
   Move = "move",
   MoveAlong = "moveAlong",
   Follow = "follow",
+  Dead = "dead",
 }
 
 export enum CombatType {
   Idle = "idle",
   Attack = "attack",
+  Dead = "dead",
 }
 
 export enum EngagementType {
   Idle = "idle",
   PursueTarget = "pursue-target",
   FollowShip = "follow-ship",
+  Dead = "dead",
 }
 
 type NavigationIntent =
@@ -47,15 +50,18 @@ type NavigationIntent =
   | { type: NavigationType.Move; destination: THREE.Vector3; continueDirection?: THREE.Vector3 }
   | { type: NavigationType.MoveAlong; direction: THREE.Vector3 }
   | { type: NavigationType.Follow; targetId: string; offset?: THREE.Vector3; stopDistance?: number }
+  | { type: NavigationType.Dead }
 
 type CombatIntent =
   | { type: CombatType.Idle }
   | { type: CombatType.Attack; targetId: string }
+  | { type: CombatType.Dead }
 
 type EngagementIntent =
   | { type: EngagementType.Idle }
   | { type: EngagementType.PursueTarget; targetId: string; stopDistance: number }
   | { type: EngagementType.FollowShip; targetId: string; offset?: THREE.Vector3; stopDistance: number }
+  | { type: EngagementType.Dead }
 
 export type FighterShipCombatOptions = {
   eventEmitter?: (msg: ProjectileMsg) => void
@@ -115,6 +121,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   moveTo(point: THREE.Vector3, continueDirection?: THREE.Vector3): void {
+    if (this.hull <= 0) return
     // console.log("[FighterShipRuntime] moveTo", this.id, point.toArray())
     this.navigationIntent = {
       type: NavigationType.Move,
@@ -124,6 +131,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   moveAlong(direction: THREE.Vector3): void {
+    if (this.hull <= 0) return
     if (direction.lengthSq() <= 0.0001) return
     // console.log("[FighterShipRuntime] moveAlong", this.id, direction.toArray())
     this.navigationIntent = {
@@ -133,6 +141,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   attackTarget(targetId: string, payload?: unknown): void {
+    if (this.hull <= 0) return
     this.combatIntent = {
       type: CombatType.Attack,
       targetId,
@@ -182,6 +191,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   holdPosition(): void {
+    if (this.hull <= 0) return
     this.navigationIntent = { type: NavigationType.Hold }
     this.engagementIntent = { type: EngagementType.Idle }
     console.log("[FighterShipRuntime] holdPosition", {
@@ -194,6 +204,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   followTarget(targetId: string, payload?: unknown): void {
+    if (this.hull <= 0) return
     const followPayload = payload as { offset?: THREE.Vector3; stopDistance?: number } | undefined
     this.navigationIntent = {
       type: NavigationType.Follow,
@@ -261,6 +272,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   update(delta: number): void {
+    if (this.hull <= 0) return
     this.logIntentTransitions()
     for (let i = 0; i < this.weaponCooldowns.length; i++) {
       this.weaponCooldowns[i] = Math.max(0, this.weaponCooldowns[i] - delta)
@@ -275,7 +287,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private updateNavigation(delta: number) {
     switch (this.navigationIntent.type) {
       case NavigationType.Hold:
-        if (this.engagementIntent.type !== EngagementType.Idle) {
+        if (this.engagementIntent.type !== EngagementType.Idle && this.engagementIntent.type !== EngagementType.Dead) {
           console.log("[FighterShipRuntime] hold blocks engagement", {
             id: this.id,
             teamId: this.teamId,
@@ -326,6 +338,8 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
         this.mesh.position.addScaledVector(this.navigationIntent.direction, this.moveSpeed * delta)
         this.face(this.mesh.position.clone().add(this.navigationIntent.direction), delta)
         return true
+      case NavigationType.Dead:
+        return false
       case NavigationType.Idle:
       default:
         return this.updateEngagementNavigation(delta)
@@ -333,6 +347,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   private updateCombat(delta: number) {
+    if (this.combatIntent.type === CombatType.Dead) return false
     const target = this.resolveCombatTarget()
     if (!target) return false
 
@@ -394,11 +409,13 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   receiveDamage(amount: number): void {
+    if (this.hull <= 0) return
+
     this.hull = Math.max(0, this.hull - Math.max(0, amount))
     if (this.hull <= 0) {
-      this.navigationIntent = { type: NavigationType.Hold }
-      this.combatIntent = { type: CombatType.Idle }
-      this.engagementIntent = { type: EngagementType.Idle }
+      this.navigationIntent = { type: NavigationType.Dead }
+      this.combatIntent = { type: CombatType.Dead }
+      this.engagementIntent = { type: EngagementType.Dead }
     }
   }
 
@@ -461,6 +478,8 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
         this.moveToward(this.followTargetPoint, delta, this.engagementIntent.stopDistance)
         return true
       }
+      case EngagementType.Dead:
+        return false
       case EngagementType.Idle:
       default:
         return false
@@ -505,6 +524,8 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
         return `pursue:${this.engagementIntent.targetId}`
       case EngagementType.FollowShip:
         return `follow:${this.engagementIntent.targetId}`
+      case EngagementType.Dead:
+        return "dead"
       case EngagementType.Idle:
       default:
         return "idle"

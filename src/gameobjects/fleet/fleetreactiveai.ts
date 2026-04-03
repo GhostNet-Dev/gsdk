@@ -1,6 +1,6 @@
 import * as THREE from "three"
 import { ILoop } from "@Glibs/interface/ievent"
-import { FleetOrder } from "./fleet"
+import { FleetOrder, FleetOrderType, FleetCommandIssuer } from "./fleet"
 import {
   FleetBattleFleetSnapshot,
   FleetBattleShipSnapshot,
@@ -38,7 +38,7 @@ export class FleetReactiveAiController implements ILoop {
 
     const snapshot = this.world.getBattleSnapshot()
     snapshot.fleets
-      .filter((fleet) => fleet.controller === "ai" && fleet.operationalShipCount > 0)
+      .filter((fleet) => fleet.controller === FleetCommandIssuer.AI && fleet.operationalShipCount > 0)
       .forEach((fleet) => {
         const order = this.planner({
           fleet,
@@ -50,7 +50,7 @@ export class FleetReactiveAiController implements ILoop {
 
         const nextOrder: FleetOrder = {
           ...order,
-          issuer: "ai",
+          issuer: FleetCommandIssuer.AI,
           issuedAt: Date.now(),
         }
         const nextKey = serializeOrder(nextOrder)
@@ -78,7 +78,7 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
       enemyCount: enemies.length,
       operationalShipCount: fleet.operationalShipCount,
     })
-    return { type: "hold", priority: 2 }
+    return { type: FleetOrderType.Hold, priority: 2 }
   }
 
   const primaryEnemy = [...enemies]
@@ -87,7 +87,7 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
       const rightDist = fleet.center.distanceToSquared(right.center)
       return leftDist - rightDist
     })[0]
-  if (!primaryEnemy) return { type: "hold", priority: 2 }
+  if (!primaryEnemy) return { type: FleetOrderType.Hold, priority: 2 }
 
   const averageHullRatio = averageRatio(fleet.ships, (ship) => ship.hullRatio)
   const averageEnergyRatio = averageRatio(fleet.ships, (ship) => ship.energyRatio)
@@ -104,7 +104,7 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
       enemyDistance,
       targetShipId: targetShip?.id,
     })
-    return { type: "hold", priority: 3 }
+    return { type: FleetOrderType.Hold, priority: 3 }
   }
 
   if (averageHullRatio < 0.35 && enemyDistance < 40) {
@@ -120,7 +120,7 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
       targetShipId: targetShip?.id,
     })
     return {
-      type: "move",
+      type: FleetOrderType.Move,
       priority: 18,
       point: fleet.center.clone().addScaledVector(retreatDirection, 30),
       direction: retreatDirection,
@@ -145,7 +145,7 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
       targetShipId: targetShip?.id,
     })
     return {
-      type: "move",
+      type: FleetOrderType.Move,
       priority: 12,
       point: primaryEnemy.center.clone().addScaledVector(approachDirection, -stagingDistance),
       direction: approachDirection,
@@ -165,7 +165,7 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
       targetShipId: targetShip.id,
     })
     return {
-      type: "attack",
+      type: FleetOrderType.Attack,
       priority: 20,
       targetId: targetShip.id,
     }
@@ -178,7 +178,7 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
     averageHullRatio,
     enemyDistance,
   })
-  return { type: "hold", priority: 2 }
+  return { type: FleetOrderType.Hold, priority: 2 }
 }
 
 function averageRatio(

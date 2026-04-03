@@ -1,6 +1,13 @@
 import * as THREE from "three"
 import { Controllables } from "@Glibs/actors/controllable/controllables"
-import { Fleet, FleetConfig, FleetControllerType, FleetMoveMode, FleetOrder } from "./fleet"
+import {
+  Fleet,
+  FleetConfig,
+  FleetControllerType,
+  FleetMoveMode,
+  FleetOrder,
+  FleetOrderType,
+} from "./fleet"
 import { FleetFormation } from "./formation"
 
 export type FleetSummary = {
@@ -96,7 +103,7 @@ export class FleetManager {
   ) {
     return this.issueOrder(fleetId, {
       ...options,
-      type: "move",
+      type: FleetOrderType.Move,
       point,
     })
   }
@@ -108,7 +115,7 @@ export class FleetManager {
   ) {
     return this.issueOrder(fleetId, {
       ...options,
-      type: "attack",
+      type: FleetOrderType.Attack,
       targetId,
     })
   }
@@ -116,7 +123,7 @@ export class FleetManager {
   holdPosition(fleetId: string, options: Omit<FleetOrder, "type"> = {}) {
     return this.issueOrder(fleetId, {
       ...options,
-      type: "hold",
+      type: FleetOrderType.Hold,
     })
   }
 
