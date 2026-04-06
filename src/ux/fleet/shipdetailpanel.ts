@@ -13,6 +13,7 @@ export class ShipDetailPanel {
   private fleetId?: string
   private shipId?: string
   private energyMenuOpen = false
+  private weaponMenuOpen = false
 
   constructor(
     private readonly controller: FleetPanelController,
@@ -35,6 +36,7 @@ export class ShipDetailPanel {
     this.fleetId = undefined
     this.shipId = undefined
     this.energyMenuOpen = false
+    this.weaponMenuOpen = false
     this.closeFloatingMenu()
     this.renderEmpty()
   }
@@ -78,6 +80,7 @@ export class ShipDetailPanel {
     this.bodyEl.style.color = "#cbd5e1"
 
     this.optionsEl.style.display = "grid"
+    this.optionsEl.style.gridTemplateColumns = "1fr 1fr"
     this.optionsEl.style.gap = "8px"
 
     this.descEl.style.fontSize = "12px"
@@ -111,9 +114,32 @@ export class ShipDetailPanel {
       this.energyMenuOpen,
       () => {
         this.energyMenuOpen = !this.energyMenuOpen
+        this.weaponMenuOpen = false
         this.render()
       },
     ))
+
+    if (ship.availableWeapons.length > 0) {
+      const currentWeapon = ship.availableWeapons.find(w => w.id === ship.weaponId)
+      this.optionsEl.appendChild(this.makePopupSelect(
+        currentWeapon?.label || "무기 선택",
+        ship.availableWeapons.map((weapon) => ({
+          label: weapon.label,
+          active: ship.weaponId === weapon.id,
+          onSelect: () => {
+            this.weaponMenuOpen = false
+            this.controller.setShipWeapon(ship.id, weapon.id)
+            this.render()
+          },
+        })),
+        this.weaponMenuOpen,
+        () => {
+          this.weaponMenuOpen = !this.weaponMenuOpen
+          this.energyMenuOpen = false
+          this.render()
+        },
+      ))
+    }
 
     this.descEl.innerText = this.describeEnergyFocus(ship.energyFocus)
   }
@@ -150,6 +176,7 @@ export class ShipDetailPanel {
     btn.style.fontWeight = "700"
     btn.style.letterSpacing = "0.02em"
     btn.addEventListener("click", onClick)
+    btn.addEventListener("pointerdown", (e) => e.stopPropagation())
     return btn
   }
 
@@ -213,6 +240,7 @@ export class ShipDetailPanel {
       const target = event.target as Node | null
       if (target && (menu.contains(target) || trigger.contains(target))) return
       this.energyMenuOpen = false
+      this.weaponMenuOpen = false
       this.closeFloatingMenu()
       this.render()
     }

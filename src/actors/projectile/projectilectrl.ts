@@ -110,7 +110,7 @@ export class ProjectileCtrl implements IActionUser {
     this.damage = damage;
     this.moving = 0;
     this.creatorSpec = spec;
-    this.attackDist = Math.max(0.5, spec.AttackRange);
+    this.attackDist = Math.max(0.5, this.baseSpec.AttackRange);
 
     // hitscan 파라미터
     this.isHitscan = !!opt?.hitscan;
@@ -374,9 +374,19 @@ export class ProjectileCtrl implements IActionUser {
     const ownerObj = this.creatorSpec?.Owner?.objs as unknown as THREE.Object3D | undefined;
     if (!ownerObj) return false;
 
+    // 이름 기반 비교 (빈 문자열 제외)
+    if (target.name !== "" && target.name === ownerObj.name) {
+      return true;
+    }
+
     let current: THREE.Object3D | null = target;
     while (current) {
-      if (current === ownerObj) return true;
+      if (current === ownerObj) {
+        return true;
+      }
+      if (current.name !== "" && current.name === ownerObj.name) {
+        return true;
+      }
       current = current.parent;
     }
 

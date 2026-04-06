@@ -93,6 +93,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private weaponCooldowns: number[]
   private readonly tmpMuzzleWorld = new THREE.Vector3()
   private readonly tmpShootDirection = new THREE.Vector3()
+  private readonly raycaster = new THREE.Raycaster()
   private projectileEmitter?: (msg: ProjectileMsg) => void
   private ownerSpec?: BaseSpec
   private teamId?: string
@@ -113,11 +114,11 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     this.maxEnergy = stats.stamina ?? 100
     this.energy = this.maxEnergy
     this.attackRange = stats.attackRange ?? 14
-    this.moveSpeed = (stats.speed ?? 1.8) * 10
+    this.moveSpeed = stats.speed ?? 18
     this.turnSpeed = stats.turnSpeed ?? 1.5
 
-    this.weapons = weapons
-    this.weaponCooldowns = weapons.map(() => 0)
+    this.weapons = [...weapons]
+    this.weaponCooldowns = this.weapons.map(() => 0)
   }
 
   moveTo(point: THREE.Vector3, continueDirection?: THREE.Vector3): void {
@@ -271,6 +272,12 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     return this.maxEnergy <= 0 ? 0 : this.energy / this.maxEnergy
   }
 
+  setWeapon(weapon: ShipProjectileDef) {
+    this.weapons.length = 0
+    this.weapons.push(weapon)
+    this.weaponCooldowns = [0]
+  }
+
   update(delta: number): void {
     if (this.hull <= 0) return
     this.logIntentTransitions()
@@ -351,8 +358,9 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     const target = this.resolveCombatTarget()
     if (!target) return false
 
+    const weaponRange = this.weapons[0]?.range ?? this.attackRange
     const distSq = this.mesh.position.distanceToSquared(target.mesh.position)
-    const inRange = distSq <= this.attackRange * this.attackRange
+    const inRange = distSq <= weaponRange * weaponRange
     if (inRange) {
       let totalCost = 0
       for (const weapon of this.weapons) {
@@ -382,6 +390,11 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     if (!this.projectileEmitter || !this.ownerSpec) return
     if (this.energy <= 1) return
 
+    if (!this.isFiringLaneClear(target)) {
+      // console.log(`[FighterShipRuntime] Firing lane blocked for ${this.id}. Skipping fire.`);
+      return
+    }
+
     for (let i = 0; i < this.weapons.length; i++) {
       const weapon = this.weapons[i]
       if (this.weaponCooldowns[i] > 0) continue
@@ -398,7 +411,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
         damage: this.ownerSpec.Damage,
         src: this.tmpMuzzleWorld.clone(),
         dir: this.tmpShootDirection.clone(),
-        range: this.attackRange,
+        range: weapon.range ?? this.attackRange,
         hitscan: weapon.hitscan ?? true,
         tracerLife: weapon.tracerLife ?? 0.18,
         tracerRange: weapon.tracerRange,
@@ -406,6 +419,52 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
       })
       this.weaponCooldowns[i] = weapon.fireCooldownSec ?? 0.45
     }
+  }
+
+  private isFiringLaneClear(target: FighterShipRuntime): boolean {
+    const weapon = this.weapons[0]
+    if (!weapon) return true
+
+    const muzzleOffset = weapon.muzzleOffset ?? { x: 0, y: 0.4, z: 2.2 }
+    this.tmpMuzzleWorld
+      .copy(muzzleOffset as THREE.Vector3)
+      .applyQuaternion(this.mesh.quaternion)
+      .add(this.mesh.position)
+
+    this.tmpShootDirection.copy(target.mesh.position).sub(this.tmpMuzzleWorld)
+    const distToTarget = this.tmpShootDirection.length()
+    if (distToTarget <= 0.0001) return true
+    this.tmpShootDirection.normalize()
+
+    this.raycaster.set(this.tmpMuzzleWorld, this.tmpShootDirection)
+    this.raycaster.far = distToTarget
+
+    // Check against all ships in the runtime index except self
+    const ships: THREE.Object3D[] = []
+    this.runtimeIndex.forEach((r) => {
+      if (r !== this) {
+        ships.push(r.mesh)
+      }
+    })
+
+    const intersects = this.raycaster.intersectObjects(ships, true)
+
+    for (const intersect of intersects) {
+      let obj: THREE.Object3D | null = intersect.object
+      let hitShip: FighterShipRuntime | undefined
+      while (obj) {
+        hitShip = this.runtimeIndex.get(obj.name)
+        if (hitShip) break
+        obj = obj.parent
+      }
+
+      if (hitShip && hitShip.getTeamId() === this.getTeamId()) {
+        // teammate is in the way
+        return false
+      }
+    }
+
+    return true
   }
 
   receiveDamage(amount: number): void {

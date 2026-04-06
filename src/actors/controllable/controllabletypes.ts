@@ -7,6 +7,8 @@ import { MonsterId } from "@Glibs/types/monstertypes"
 
 export type ShipProjectileDef = {
   id: MonsterId
+  name?: string
+  range?: number
   hitscan?: boolean
   tracerLife?: number
   tracerRange?: number

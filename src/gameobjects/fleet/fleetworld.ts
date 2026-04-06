@@ -15,6 +15,7 @@ import {
   defaultEscortAiPlanner,
   defaultShipAiPlanner,
   registerSampleDefinitions,
+  controllableDefs,
 } from "@Glibs/actors/controllable/samples/controllabledefs"
 import { FighterShipRuntime } from "@Glibs/actors/controllable/samples/fightershipruntime"
 import { Formation, FleetFormation } from "./formation"
@@ -240,6 +241,8 @@ export class FleetWorld {
   private readonly shipFootprints = new Map<string, number>()
   private readonly shipStatusVisuals = new Map<string, ShipStatusRingVisual>()
   private readonly shipEnergyFocuses = new Map<string, FleetShipEnergyFocus>()
+  private readonly shipWeaponIds = new Map<string, string>()
+  private readonly shipControllableIds = new Map<string, string>()
   private readonly controllableIds = new Set<string>()
   private readonly taskObjs: ILoop[] = []
   private readonly fleetRoot = new THREE.Group()
@@ -366,13 +369,29 @@ export class FleetWorld {
     this.options.orderSource = orderSource
   }
 
-  focusFleet(fleetId: string) {
+  focusFleet(fleetId: string, duration: number = 0.6) {
     const summary = this.fleetManager.getFleetSummary(fleetId)
     if (!summary) return
 
     this.selectedShipId = undefined
     this.disposeAimingController()
-    this.focusFleetMembers(summary.memberIds, 0.6)
+    this.focusFleetMembers(summary.memberIds, duration)
+  }
+
+  focusAllFleets(duration: number = 0.8) {
+    const meshes = Array.from(this.shipRuntimes.values())
+      .map((runtime) => runtime.mesh)
+      .filter((mesh): mesh is THREE.Object3D => Boolean(mesh))
+
+    if (meshes.length === 0) return
+
+    const bounds = new THREE.Box3()
+    meshes.forEach((mesh) => bounds.expandByObject(mesh))
+
+    const center = bounds.getCenter(new THREE.Vector3())
+    const size = bounds.getSize(new THREE.Vector3())
+    const radius = Math.max(size.x, size.z, this.config.camera.minRadius)
+    this.focusPoint(center, radius, duration)
   }
 
   focusShip(shipId: string) {
@@ -393,6 +412,19 @@ export class FleetWorld {
 
     return summary.memberIds.map((shipId) => {
       const runtime = this.shipRuntimes.get(shipId)
+      const controllableId = this.shipControllableIds.get(shipId) ?? "ship.fighter"
+      
+      let availableWeapons: { id: string, label: string }[] = []
+      const def = Object.values(controllableDefs).find(d => d.id === controllableId)
+      if (def && def.weapons) {
+        availableWeapons = def.weapons.map(w => ({
+          id: w.id,
+          label: w.name || w.id
+        }))
+      }
+
+      const currentWeaponId = this.shipWeaponIds.get(shipId) ?? (availableWeapons[0]?.id || "unknown")
+
       return {
         id: shipId,
         hull: runtime?.getHull() ?? 0,
@@ -404,6 +436,8 @@ export class FleetWorld {
         selected: shipId === this.selectedShipId,
         isFlagship: shipId === summary.flagshipId,
         energyFocus: this.shipEnergyFocuses.get(shipId) ?? "navigation",
+        weaponId: currentWeaponId,
+        availableWeapons,
       }
     })
   }
@@ -462,6 +496,21 @@ export class FleetWorld {
   setShipEnergyFocus(shipId: string, focus: FleetShipEnergyFocus) {
     if (!this.shipRuntimes.has(shipId)) return
     this.shipEnergyFocuses.set(shipId, focus)
+  }
+
+  setShipWeapon(shipId: string, weaponId: string) {
+    const runtime = this.shipRuntimes.get(shipId)
+    if (!runtime) return
+
+    const controllableId = this.shipControllableIds.get(shipId) ?? "ship.fighter"
+    const def = Object.values(controllableDefs).find(d => d.id === controllableId)
+    if (!def || !def.weapons) return
+
+    const weapon = def.weapons.find(w => w.id === weaponId)
+    if (weapon) {
+      runtime.setWeapon(weapon)
+      this.shipWeaponIds.set(shipId, weaponId)
+    }
   }
 
   private get config(): FleetWorldOptions {
@@ -579,6 +628,7 @@ export class FleetWorld {
       : def.stats ?? {}
     const runtime = new FighterShipRuntime(id, mesh, this.shipRuntimes, statsWithOverride, def.weapons)
     this.shipRuntimes.set(id, runtime)
+    this.shipControllableIds.set(id, controllableId)
     this.shipEnergyFocuses.set(id, "navigation")
     this.taskObjs.push(runtime)
     this.attachShipStatusVisual(id, mesh, footprint)
@@ -643,12 +693,15 @@ export class FleetWorld {
       lead.mesh.position.copy(positions[0] ?? anchor)
 
       const memberIds = [lead.runtime.id]
+      lead.mesh.lookAt(lead.mesh.position.clone().add(facing))
+
       for (let i = 1; i < fleet.shipCount; i++) {
         const spawned = await this.spawnShip(`${prefix}-${i + 1}`, positions[i] ?? anchor, {
           controllableId: fleet.controllableId,
           color: fleet.color,
           speed: fleet.speed,
         })
+        spawned.mesh.lookAt(spawned.mesh.position.clone().add(facing))
         memberIds.push(spawned.runtime.id)
       }
 
@@ -1011,7 +1064,7 @@ export class FleetWorld {
     this.focusPoint(target, radius, duration)
   }
 
-  private focusFleetMembers(memberIds: string[], duration: number) {
+  focusFleetMembers(memberIds: string[], duration: number = 0.6) {
     const meshes = memberIds
       .map((id) => this.shipRuntimes.get(id)?.mesh)
       .filter((mesh): mesh is THREE.Object3D => Boolean(mesh))

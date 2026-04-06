@@ -16,6 +16,8 @@ export type FleetShipPanelState = {
   selected: boolean
   isFlagship: boolean
   energyFocus: FleetShipEnergyFocus
+  weaponId: string
+  availableWeapons: { id: string, label: string }[]
 }
 
 export type FleetPanelController = {
@@ -33,6 +35,7 @@ export type FleetPanelController = {
   setSpacing(fleetId: string, spacing: number): void
   setMoveMode(fleetId: string, moveMode: FleetMoveMode): void
   setShipEnergyFocus(shipId: string, focus: FleetShipEnergyFocus): void
+  setShipWeapon(shipId: string, weaponId: string): void
   planHold(fleetId: string): boolean
   commitPlans(): boolean
   stopExecution(): boolean
