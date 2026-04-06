@@ -9,6 +9,7 @@ import { StatKey } from "@Glibs/types/stattypes";
 import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
 import { VirtualActorFactory } from "../battle/virtualactorfab";
 import { MonsterId } from "@Glibs/types/monstertypes";
+import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
 
 export class ProjectileCtrl implements IActionUser {
   raycast = new THREE.Raycaster();
@@ -38,7 +39,7 @@ export class ProjectileCtrl implements IActionUser {
 
   constructor(
     private projectile: IProjectileModel,
-    private targetList: THREE.Object3D[],
+    private targetRegistry: TargetRegistrySystem,
     private physicList: THREE.Object3D[],
     private eventCtrl: IEventController,
     private range: number,
@@ -156,7 +157,8 @@ export class ProjectileCtrl implements IActionUser {
     }
 
     if (this.homingActive) {
-      if (!this.homingTarget || !this.targetList.includes(this.homingTarget)) {
+      const hostileTargets = this.getHostileTargets()
+      if (!this.homingTarget || !hostileTargets.includes(this.homingTarget)) {
         this.homingTarget = this.findHomingTarget();
       }
 
@@ -207,7 +209,7 @@ export class ProjectileCtrl implements IActionUser {
     const obj = this.getClosestHit(
       this.prevPosition,
       this.position,
-      this.targetList,
+      this.getCollisionTargets(),
       this.attackDist
     );
 
@@ -223,7 +225,7 @@ export class ProjectileCtrl implements IActionUser {
       const normal = (obj as any).normal ?? new THREE.Vector3().subVectors(obj.hitPoint, obj.target.position).normalize();
       this.projectile.hit?.(obj.hitPoint, normal);
 
-      if (this.targetList.includes(obj.target)) {
+      if (this.getCollisionTargets().includes(obj.target)) {
         this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [v]);
       }
       return true;
@@ -240,7 +242,7 @@ export class ProjectileCtrl implements IActionUser {
 
     const hit = this.useRaycast
       ? this.getRaycastHit()
-      : this.getClosestHit(this.prevPosition, this.position, this.targetList, this.attackDist);
+      : this.getClosestHit(this.prevPosition, this.position, this.getCollisionTargets(), this.attackDist);
 
     if (!hit) return;
 
@@ -259,7 +261,7 @@ export class ProjectileCtrl implements IActionUser {
     const normal = (hit as any).normal ?? new THREE.Vector3().subVectors(hit.hitPoint, hit.target.position).normalize();
     this.projectile.hit?.(hit.hitPoint, normal);
 
-    if (this.targetList.includes(hit.target)) {
+    if (this.getCollisionTargets().includes(hit.target)) {
       this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [v]);
     }
   }
@@ -272,7 +274,7 @@ export class ProjectileCtrl implements IActionUser {
 
     let closest: { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number; normal?: THREE.Vector3 } | null = null;
 
-    const checkList = [...this.targetList, ...this.physicList];
+    const checkList = [...this.getCollisionTargets(), ...this.physicList];
 
     for (const target of checkList) {
       if (this.isOwnerOrSelfTarget(target)) continue;
@@ -313,7 +315,7 @@ export class ProjectileCtrl implements IActionUser {
   // (기존 코드 유지) 필요 시 라인 히트용
   getLineHit() {
     const msgs = new Map();
-    this.targetList.forEach((obj) => {
+    this.getCollisionTargets().forEach((obj) => {
       const isHit = this.segmentIntersectsSphere(
         this.prevPosition,
         this.position,
@@ -397,7 +399,7 @@ export class ProjectileCtrl implements IActionUser {
     let nearest: THREE.Object3D | null = null;
     let nearestDist = Number.POSITIVE_INFINITY;
 
-    for (const target of this.targetList) {
+    for (const target of this.getHostileTargets()) {
       if (this.isOwnerOrSelfTarget(target)) continue;
 
       const dist = this.position.distanceTo(target.position);
@@ -461,5 +463,27 @@ export class ProjectileCtrl implements IActionUser {
     }
 
     return closest;
+  }
+
+  private getCollisionTargets() {
+    return this.targetRegistry.getObjects({
+      aliveOnly: true,
+      targetableOnly: true,
+      collidableOnly: true,
+    })
+  }
+
+  private getHostileTargets() {
+    const ownerObj = this.creatorSpec?.Owner?.objs as THREE.Object3D | undefined
+    const ownerRecord = ownerObj ? this.targetRegistry.getByObject(ownerObj) : undefined
+    if (!ownerRecord?.teamId) {
+      return this.getCollisionTargets()
+    }
+
+    return this.targetRegistry.getObjectsForTeam(ownerRecord.teamId, "enemy", {
+      aliveOnly: true,
+      targetableOnly: true,
+      collidableOnly: true,
+    })
   }
 }

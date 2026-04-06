@@ -97,6 +97,11 @@ export enum EventTypes {
     PlayMode = "playmode",
     PlayerStatus = "playerstatus",
     Projectile = "Projectile",
+    RegisterTarget = "registertarget",
+    DeregisterTarget = "deregistertarget",
+    UpdateTargetState = "updatetargetstate",
+    UpdateTargetObject = "updatetargetobject",
+    RegisterTargetSystem = "registertargetsystem",
     JoypadOn = "joypadon",
     JoypadOff = "joypadoff",
 

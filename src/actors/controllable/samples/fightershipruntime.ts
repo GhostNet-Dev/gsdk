@@ -69,6 +69,7 @@ export type FighterShipCombatOptions = {
   ownerSpec?: BaseSpec
   teamId?: string
   findNearestEnemy?: (sourceId: string, maxDistance: number) => FighterShipRuntime | undefined
+  onDestroyed?: (shipId: string) => void
   onWeaponSwitchStart?: (shipId: string, weapon: ShipProjectileDef, duration: number) => void
   onWeaponSwitchEnd?: (shipId: string, weapon?: ShipProjectileDef, completed?: boolean) => void
   autoWeaponSwitchEnabled?: boolean
@@ -107,6 +108,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private ownerSpec?: BaseSpec
   private teamId?: string
   private findNearestEnemy?: (sourceId: string, maxDistance: number) => FighterShipRuntime | undefined
+  private onDestroyed?: (shipId: string) => void
   private onWeaponSwitchStart?: (shipId: string, weapon: ShipProjectileDef, duration: number) => void
   private onWeaponSwitchEnd?: (shipId: string, weapon?: ShipProjectileDef, completed?: boolean) => void
   private autoWeaponSwitchEnabled = false
@@ -210,6 +212,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     if (this.ownerSpec) this.ownerSpec.lastUsedWeaponMode = "ranged"
     this.teamId = options.teamId
     this.findNearestEnemy = options.findNearestEnemy
+    this.onDestroyed = options.onDestroyed
     this.onWeaponSwitchStart = options.onWeaponSwitchStart
     this.onWeaponSwitchEnd = options.onWeaponSwitchEnd
     this.autoWeaponSwitchEnabled = options.autoWeaponSwitchEnabled ?? false
@@ -429,7 +432,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private resolveCombatTarget() {
     if (this.combatIntent.type === CombatType.Attack) {
       const designated = this.runtimeIndex.get(this.combatIntent.targetId)
-      if (designated) return designated
+      if (designated && designated.getHull() > 0) return designated
       this.combatIntent = { type: CombatType.Idle }
     }
 
@@ -525,6 +528,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
       this.navigationIntent = { type: NavigationType.Dead }
       this.combatIntent = { type: CombatType.Dead }
       this.engagementIntent = { type: EngagementType.Dead }
+      this.onDestroyed?.(this.id)
     }
   }
 

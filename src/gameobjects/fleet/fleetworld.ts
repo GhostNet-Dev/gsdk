@@ -584,6 +584,7 @@ export class FleetWorld {
 
     this.shipMeshes.forEach((mesh, shipId) => {
       this.options.deregisterProjectileTarget?.(mesh)
+      this.eventCtrl.SendEventMessage(EventTypes.DeregisterTarget, shipId)
       const attackListener = this.shipAttackListeners.get(shipId)
       if (attackListener) {
         this.eventCtrl.DeregisterEventListener(EventTypes.Attack + shipId, attackListener)
@@ -735,6 +736,14 @@ export class FleetWorld {
           ownerSpec: ctrl?.baseSpec,
           teamId: fleet.teamId ?? fleet.id,
           findNearestEnemy: (sourceId, maxDistance) => this.findNearestEnemyRuntime(sourceId, maxDistance),
+          onDestroyed: (shipId) => {
+            this.eventCtrl.SendEventMessage(EventTypes.UpdateTargetState, {
+              id: shipId,
+              alive: false,
+              targetable: false,
+              collidable: false,
+            })
+          },
           autoWeaponSwitchEnabled: (fleet.controller ?? FleetCommandIssuer.Human) === FleetCommandIssuer.AI,
           onWeaponSwitchStart: (shipId, weapon, duration) => {
             void weapon
@@ -749,6 +758,16 @@ export class FleetWorld {
         })
         if (mesh) {
           mesh.userData.teamId = fleet.teamId ?? fleet.id
+          this.eventCtrl.SendEventMessage(EventTypes.RegisterTarget, {
+            id: memberId,
+            object: mesh,
+            teamId: fleet.teamId ?? fleet.id,
+            fleetId: fleet.id,
+            kind: "ship",
+            alive: true,
+            targetable: true,
+            collidable: true,
+          })
         }
         if (runtime) {
           const onAttack = (opts: AttackOption[] = []) => {

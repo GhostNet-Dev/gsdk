@@ -16,6 +16,7 @@ import { Loader } from "@Glibs/loader/loader";
 import { Char } from "@Glibs/types/assettypes";
 import { StreakTracerModel } from "./streaktracer";
 import { EnergyHomingModel } from "./energyhoming";
+import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
 
 export interface IProjectileModel {
   get Meshs():
@@ -75,7 +76,7 @@ export class Projectile implements ILoop {
   constructor(
     private eventCtrl: IEventController,
     private game: THREE.Scene,
-    private targetList: THREE.Object3D[],
+    private targetRegistry: TargetRegistrySystem,
     private loader?: Loader,
     private camera?: THREE.Camera
   ) {
@@ -235,7 +236,7 @@ export class Projectile implements ILoop {
     if (!set) {
       const model = this.GetModel(id);
       const stat = StatFactory.getDefaultStats(id);
-      const ctrl = new ProjectileCtrl(model, this.targetList, this.physicList, this.eventCtrl, msg.range, stat, id);
+      const ctrl = new ProjectileCtrl(model, this.targetRegistry, this.physicList, this.eventCtrl, msg.range, stat, id);
 
       set = { model, ctrl, releasing: false, initializing: false };
       pool.push(set);
