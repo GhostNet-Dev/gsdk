@@ -64,7 +64,7 @@ export class EnergyHomingModel implements IProjectileModel {
   private readonly trail: THREE.Points;
   private readonly clock = new THREE.Clock();
 
-  private readonly maxTrail = 32;
+  private readonly maxTrail = 16;
   private readonly trailPositions = new Float32Array(this.maxTrail * 3);
   private readonly trailColors = new Float32Array(this.maxTrail * 4);
   private readonly history: THREE.Vector3[] = [];
@@ -83,7 +83,7 @@ export class EnergyHomingModel implements IProjectileModel {
 
   constructor() {
     this.head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.16, 14, 14),
+      new THREE.SphereGeometry(0.35, 14, 14),
       new THREE.MeshBasicMaterial({
         color: 0x88ffff,
         transparent: true,
@@ -98,7 +98,7 @@ export class EnergyHomingModel implements IProjectileModel {
     this.trailGeometry.setAttribute("color", new THREE.BufferAttribute(this.trailColors, 4));
 
     this.trailMaterial = new THREE.PointsMaterial({
-      size: 0.22,
+      size: 0.45,
       sizeAttenuation: true,
       vertexColors: true,
       transparent: true,
@@ -152,7 +152,7 @@ export class EnergyHomingModel implements IProjectileModel {
     const n = normal?.clone().normalize() ?? new THREE.Vector3(0, 1, 0);
 
     const ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.1, 0.55, 24),
+      new THREE.RingGeometry(0.2, 1.0, 24),
       new THREE.MeshBasicMaterial({
         color: 0x66ddff,
         transparent: true,
