@@ -1,6 +1,6 @@
 import * as THREE from "three"
 import { ILoop } from "@Glibs/interface/ievent"
-import { FleetOrder, FleetOrderType, FleetCommandIssuer } from "./fleet"
+import { FleetOrder, FleetOrderType, FleetCommandIssuer, FleetWeaponDoctrine } from "./fleet"
 import {
   FleetBattleFleetSnapshot,
   FleetBattleShipSnapshot,
@@ -94,6 +94,7 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
   const toEnemy = primaryEnemy.center.clone().sub(fleet.center)
   const enemyDistance = toEnemy.length()
   const targetShip = selectPriorityTarget(primaryEnemy.ships)
+  const weaponDoctrine = selectWeaponDoctrine(enemyDistance, averageHullRatio)
 
   if (averageEnergyRatio < 0.12) {
     console.log("[FleetReactiveAI] planner branch", {
@@ -127,6 +128,7 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
       facing: retreatDirection.clone(),
       formation: "column",
       spacing: fleet.spacing,
+      weaponDoctrine,
     }
   }
 
@@ -152,6 +154,7 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
       facing: approachDirection.clone(),
       formation: enemyDistance > 54 ? "wedge" : fleet.formation,
       spacing: fleet.spacing,
+      weaponDoctrine,
     }
   }
 
@@ -168,6 +171,7 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
       type: FleetOrderType.Attack,
       priority: 20,
       targetId: targetShip.id,
+      weaponDoctrine,
     }
   }
 
@@ -198,6 +202,16 @@ function selectPriorityTarget(ships: FleetBattleShipSnapshot[]) {
     })[0]
 }
 
+function selectWeaponDoctrine(enemyDistance: number, averageHullRatio: number): FleetWeaponDoctrine {
+  if (averageHullRatio < 0.4) {
+    return "long-range"
+  }
+  if (enemyDistance < 55) {
+    return "close-assault"
+  }
+  return "balanced"
+}
+
 function serializeOrder(order: FleetOrder) {
   return JSON.stringify({
     type: order.type,
@@ -207,6 +221,7 @@ function serializeOrder(order: FleetOrder) {
     facing: roundVec(order.facing),
     formation: order.formation ?? null,
     spacing: order.spacing ?? null,
+    weaponDoctrine: order.weaponDoctrine ?? null,
     priority: order.priority ?? null,
   })
 }

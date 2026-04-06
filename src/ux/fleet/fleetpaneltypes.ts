@@ -17,6 +17,7 @@ export type FleetShipPanelState = {
   isFlagship: boolean
   energyFocus: FleetShipEnergyFocus
   weaponId: string
+  isWeaponSwitching: boolean
   availableWeapons: { id: string, label: string }[]
 }
 

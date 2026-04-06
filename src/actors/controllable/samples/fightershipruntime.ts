@@ -6,6 +6,7 @@ import { ProjectileMsg } from "@Glibs/actors/projectile/projectile"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
 import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { ShipProjectileDef } from "../controllabletypes"
+import { FleetWeaponDoctrine } from "@Glibs/gameobjects/fleet/fleet"
 
 export interface IFighterShipRuntime extends IControllableRuntime {
   moveTo(point: THREE.Vector3, continueDirection?: THREE.Vector3): void
@@ -68,6 +69,9 @@ export type FighterShipCombatOptions = {
   ownerSpec?: BaseSpec
   teamId?: string
   findNearestEnemy?: (sourceId: string, maxDistance: number) => FighterShipRuntime | undefined
+  onWeaponSwitchStart?: (shipId: string, weapon: ShipProjectileDef, duration: number) => void
+  onWeaponSwitchEnd?: (shipId: string, weapon?: ShipProjectileDef, completed?: boolean) => void
+  autoWeaponSwitchEnabled?: boolean
 }
 
 export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
@@ -89,8 +93,13 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private readonly vertical = new THREE.Vector3()
   private readonly followTargetPoint = new THREE.Vector3()
   private readonly formationReference = new THREE.Vector3(0, 0, 1)
-  private readonly weapons: ShipProjectileDef[]
-  private weaponCooldowns: number[]
+  private readonly availableWeapons: ShipProjectileDef[]
+  private equippedWeapon?: ShipProjectileDef
+  private equippedWeaponCooldown = 0
+  private switching = false
+  private switchElapsed = 0
+  private readonly switchDuration: number
+  private pendingWeapon?: ShipProjectileDef
   private readonly tmpMuzzleWorld = new THREE.Vector3()
   private readonly tmpShootDirection = new THREE.Vector3()
   private readonly raycaster = new THREE.Raycaster()
@@ -98,6 +107,10 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private ownerSpec?: BaseSpec
   private teamId?: string
   private findNearestEnemy?: (sourceId: string, maxDistance: number) => FighterShipRuntime | undefined
+  private onWeaponSwitchStart?: (shipId: string, weapon: ShipProjectileDef, duration: number) => void
+  private onWeaponSwitchEnd?: (shipId: string, weapon?: ShipProjectileDef, completed?: boolean) => void
+  private autoWeaponSwitchEnabled = false
+  private weaponDoctrine: FleetWeaponDoctrine = "balanced"
   private lastLoggedNavigationState = NavigationType.Idle as string
   private lastLoggedEngagementState = EngagementType.Idle as string
   private lastLoggedCombatState = CombatType.Idle as string
@@ -108,6 +121,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     private readonly runtimeIndex: Map<string, FighterShipRuntime>,
     stats: Partial<Record<StatKey, number>> = {},
     weapons: ShipProjectileDef[] = [{ id: MonsterId.WarhamerTracer }],
+    weaponSwitchDurationSec = 0,
   ) {
     this.maxHull = stats.hp ?? 100
     this.hull = this.maxHull
@@ -117,8 +131,9 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     this.moveSpeed = stats.speed ?? 18
     this.turnSpeed = stats.turnSpeed ?? 1.5
 
-    this.weapons = [...weapons]
-    this.weaponCooldowns = this.weapons.map(() => 0)
+    this.availableWeapons = [...weapons]
+    this.equippedWeapon = this.availableWeapons[0]
+    this.switchDuration = Math.max(0, weaponSwitchDurationSec)
   }
 
   moveTo(point: THREE.Vector3, continueDirection?: THREE.Vector3): void {
@@ -154,7 +169,13 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
         offset?: THREE.Vector3
         stopDistance?: number
       }
+      weaponDoctrine?: FleetWeaponDoctrine
     } | undefined)?.engagement
+    const weaponDoctrine = (payload as { weaponDoctrine?: FleetWeaponDoctrine } | undefined)?.weaponDoctrine
+      ?? (payload as { engagement?: { weaponDoctrine?: FleetWeaponDoctrine } } | undefined)?.engagement?.weaponDoctrine
+    if (weaponDoctrine) {
+      this.weaponDoctrine = weaponDoctrine
+    }
     if (!engagement) return
 
     if (engagement.type === EngagementType.PursueTarget) {
@@ -189,6 +210,9 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     if (this.ownerSpec) this.ownerSpec.lastUsedWeaponMode = "ranged"
     this.teamId = options.teamId
     this.findNearestEnemy = options.findNearestEnemy
+    this.onWeaponSwitchStart = options.onWeaponSwitchStart
+    this.onWeaponSwitchEnd = options.onWeaponSwitchEnd
+    this.autoWeaponSwitchEnabled = options.autoWeaponSwitchEnabled ?? false
   }
 
   holdPosition(): void {
@@ -273,17 +297,35 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   setWeapon(weapon: ShipProjectileDef) {
-    this.weapons.length = 0
-    this.weapons.push(weapon)
-    this.weaponCooldowns = [0]
+    const matchedWeapon = this.availableWeapons.find((candidate) => candidate.id === weapon.id)
+    if (!matchedWeapon) return
+    if (this.switching && this.pendingWeapon?.id === matchedWeapon.id) return
+    if (!this.switching && this.equippedWeapon?.id === matchedWeapon.id) return
+
+    if (this.switchDuration <= 0) {
+      this.completeWeaponSwitch(matchedWeapon, true)
+      return
+    }
+
+    this.pendingWeapon = matchedWeapon
+    this.switching = true
+    this.switchElapsed = 0
+    this.onWeaponSwitchStart?.(this.id, matchedWeapon, this.switchDuration)
+  }
+
+  getEquippedWeaponId() {
+    return this.equippedWeapon?.id
+  }
+
+  isWeaponSwitching() {
+    return this.switching
   }
 
   update(delta: number): void {
     if (this.hull <= 0) return
     this.logIntentTransitions()
-    for (let i = 0; i < this.weaponCooldowns.length; i++) {
-      this.weaponCooldowns[i] = Math.max(0, this.weaponCooldowns[i] - delta)
-    }
+    this.equippedWeaponCooldown = Math.max(0, this.equippedWeaponCooldown - delta)
+    this.updateWeaponSwitch(delta)
     const navigationActive = this.updateNavigation(delta)
     const engaged = this.updateCombat(delta)
 
@@ -358,15 +400,23 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     const target = this.resolveCombatTarget()
     if (!target) return false
 
-    const weaponRange = this.weapons[0]?.range ?? this.attackRange
+    if (this.autoWeaponSwitchEnabled) {
+      const desiredWeapon = this.selectDesiredWeapon(target)
+      if (desiredWeapon && desiredWeapon.id !== this.equippedWeapon?.id && !this.switching) {
+        this.setWeapon(desiredWeapon)
+      }
+    }
+
+    if (this.switching) {
+      return true
+    }
+
+    const weaponRange = this.equippedWeapon?.range ?? this.attackRange
     const distSq = this.mesh.position.distanceToSquared(target.mesh.position)
     const inRange = distSq <= weaponRange * weaponRange
     if (inRange) {
-      let totalCost = 0
-      for (const weapon of this.weapons) {
-        totalCost += weapon.energyCostPerSec ?? 12
-      }
-      this.consumeEnergy(delta, totalCost)
+      const energyCost = this.equippedWeapon?.energyCostPerSec ?? 12
+      this.consumeEnergy(delta, energyCost)
       // Removed face() to prevent ship rotation during attack as requested.
       // The ship should use its guns without turning the whole vessel.
       this.fireAtTarget(target)
@@ -389,40 +439,39 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private fireAtTarget(target: FighterShipRuntime) {
     if (!this.projectileEmitter || !this.ownerSpec) return
     if (this.energy <= 1) return
+    const weapon = this.equippedWeapon
+    if (!weapon || this.switching) return
 
     if (!this.isFiringLaneClear(target)) {
       // console.log(`[FighterShipRuntime] Firing lane blocked for ${this.id}. Skipping fire.`);
       return
     }
 
-    for (let i = 0; i < this.weapons.length; i++) {
-      const weapon = this.weapons[i]
-      if (this.weaponCooldowns[i] > 0) continue
+    if (this.equippedWeaponCooldown > 0) return
 
-      const muzzleOffset = weapon.muzzleOffset ?? { x: 0, y: 0.4, z: 2.2 }
-      this.tmpMuzzleWorld.copy(muzzleOffset as THREE.Vector3).applyQuaternion(this.mesh.quaternion).add(this.mesh.position)
-      this.tmpShootDirection.copy(target.mesh.position).sub(this.tmpMuzzleWorld)
-      if (this.tmpShootDirection.lengthSq() <= 0.0001) continue
-      this.tmpShootDirection.normalize()
+    const muzzleOffset = weapon.muzzleOffset ?? { x: 0, y: 0.4, z: 2.2 }
+    this.tmpMuzzleWorld.copy(muzzleOffset as THREE.Vector3).applyQuaternion(this.mesh.quaternion).add(this.mesh.position)
+    this.tmpShootDirection.copy(target.mesh.position).sub(this.tmpMuzzleWorld)
+    if (this.tmpShootDirection.lengthSq() <= 0.0001) return
+    this.tmpShootDirection.normalize()
 
-      this.projectileEmitter({
-        id: weapon.id,
-        ownerSpec: this.ownerSpec,
-        damage: this.ownerSpec.Damage,
-        src: this.tmpMuzzleWorld.clone(),
-        dir: this.tmpShootDirection.clone(),
-        range: weapon.range ?? this.attackRange,
-        hitscan: weapon.hitscan ?? true,
-        tracerLife: weapon.tracerLife ?? 0.18,
-        tracerRange: weapon.tracerRange,
-        useRaycast: weapon.useRaycast ?? true,
-      })
-      this.weaponCooldowns[i] = weapon.fireCooldownSec ?? 0.45
-    }
+    this.projectileEmitter({
+      id: weapon.id,
+      ownerSpec: this.ownerSpec,
+      damage: this.ownerSpec.Damage * (weapon.damageMultiplier ?? 1),
+      src: this.tmpMuzzleWorld.clone(),
+      dir: this.tmpShootDirection.clone(),
+      range: weapon.range ?? this.attackRange,
+      hitscan: weapon.hitscan ?? true,
+      tracerLife: weapon.tracerLife ?? 0.18,
+      tracerRange: weapon.tracerRange,
+      useRaycast: weapon.useRaycast ?? true,
+    })
+    this.equippedWeaponCooldown = weapon.fireCooldownSec ?? 0.45
   }
 
   private isFiringLaneClear(target: FighterShipRuntime): boolean {
-    const weapon = this.weapons[0]
+    const weapon = this.equippedWeapon
     if (!weapon) return true
 
     const muzzleOffset = weapon.muzzleOffset ?? { x: 0, y: 0.4, z: 2.2 }
@@ -472,6 +521,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
 
     this.hull = Math.max(0, this.hull - Math.max(0, amount))
     if (this.hull <= 0) {
+      this.cancelWeaponSwitch()
       this.navigationIntent = { type: NavigationType.Dead }
       this.combatIntent = { type: CombatType.Dead }
       this.engagementIntent = { type: EngagementType.Dead }
@@ -588,6 +638,63 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
       case EngagementType.Idle:
       default:
         return "idle"
+    }
+  }
+
+  private updateWeaponSwitch(delta: number) {
+    if (!this.switching) return
+
+    this.switchElapsed = Math.min(this.switchDuration, this.switchElapsed + Math.max(delta, 0))
+    if (this.switchElapsed < this.switchDuration) return
+
+    this.completeWeaponSwitch(this.pendingWeapon, true)
+  }
+
+  private completeWeaponSwitch(weapon?: ShipProjectileDef, completed = false) {
+    if (weapon) {
+      this.equippedWeapon = weapon
+      this.equippedWeaponCooldown = 0
+    }
+    this.pendingWeapon = undefined
+    this.switching = false
+    this.switchElapsed = 0
+    this.onWeaponSwitchEnd?.(this.id, weapon ?? this.equippedWeapon, completed)
+  }
+
+  private cancelWeaponSwitch() {
+    if (!this.switching) return
+    this.completeWeaponSwitch(undefined, false)
+  }
+
+  private selectDesiredWeapon(target: FighterShipRuntime) {
+    if (this.availableWeapons.length === 0) return undefined
+
+    const distance = this.mesh.position.distanceTo(target.mesh.position)
+    const inRangeWeapons = this.availableWeapons.filter((weapon) => distance <= (weapon.range ?? this.attackRange))
+    if (inRangeWeapons.length > 0) {
+      return [...inRangeWeapons].sort((left, right) => this.getWeaponScore(right) - this.getWeaponScore(left))[0]
+    }
+
+    return [...this.availableWeapons].sort((left, right) => {
+      const leftRange = left.range ?? this.attackRange
+      const rightRange = right.range ?? this.attackRange
+      return rightRange - leftRange
+    })[0]
+  }
+
+  private getWeaponScore(weapon: ShipProjectileDef) {
+    const cooldown = Math.max(weapon.fireCooldownSec ?? 0.45, 0.05)
+    const damageMultiplier = weapon.damageMultiplier ?? 1
+    const range = weapon.range ?? this.attackRange
+    const baseScore = damageMultiplier / cooldown
+    switch (this.weaponDoctrine) {
+      case "long-range":
+        return baseScore + (range * 0.01)
+      case "close-assault":
+        return baseScore - (range * 0.005)
+      case "balanced":
+      default:
+        return baseScore
     }
   }
 

@@ -28,6 +28,7 @@ import { ProjectileMsg } from "@Glibs/actors/projectile/projectile"
 import { AttackOption } from "@Glibs/types/playertypes"
 import { ActionRegistry } from "@Glibs/actions/actionregistry"
 import { ActionDef, IActionComponent } from "@Glibs/types/actiontypes"
+import { CircularProgressBar } from "@Glibs/ux/progress/circularprogressbar"
 
 type Vector3Like = THREE.Vector3 | [number, number, number] | { x: number, y: number, z: number }
 
@@ -240,6 +241,7 @@ export class FleetWorld {
   private readonly shipRuntimes = new Map<string, FighterShipRuntime>()
   private readonly shipFootprints = new Map<string, number>()
   private readonly shipStatusVisuals = new Map<string, ShipStatusRingVisual>()
+  private readonly shipWeaponSwitchBars = new Map<string, CircularProgressBar>()
   private readonly shipEnergyFocuses = new Map<string, FleetShipEnergyFocus>()
   private readonly shipWeaponIds = new Map<string, string>()
   private readonly shipControllableIds = new Map<string, string>()
@@ -423,7 +425,7 @@ export class FleetWorld {
         }))
       }
 
-      const currentWeaponId = this.shipWeaponIds.get(shipId) ?? (availableWeapons[0]?.id || "unknown")
+      const currentWeaponId = runtime?.getEquippedWeaponId() ?? this.shipWeaponIds.get(shipId) ?? (availableWeapons[0]?.id || "unknown")
 
       return {
         id: shipId,
@@ -438,6 +440,7 @@ export class FleetWorld {
         energyFocus: this.shipEnergyFocuses.get(shipId) ?? "navigation",
         weaponId: currentWeaponId,
         availableWeapons,
+        isWeaponSwitching: runtime?.isWeaponSwitching() ?? false,
       }
     })
   }
@@ -509,7 +512,6 @@ export class FleetWorld {
     const weapon = def.weapons.find(w => w.id === weaponId)
     if (weapon) {
       runtime.setWeapon(weapon)
-      this.shipWeaponIds.set(shipId, weaponId)
     }
   }
 
@@ -588,6 +590,8 @@ export class FleetWorld {
       }
     })
     this.shipAttackListeners.clear()
+    this.shipWeaponSwitchBars.forEach((bar) => bar.destroy())
+    this.shipWeaponSwitchBars.clear()
     this.shipRuntimes.clear()
     this.shipMeshes.clear()
     this.fleetIdsByShipId.clear()
@@ -626,10 +630,18 @@ export class FleetWorld {
     const statsWithOverride = options.speed !== undefined
       ? { ...def.stats, speed: options.speed / 10 }
       : def.stats ?? {}
-    const runtime = new FighterShipRuntime(id, mesh, this.shipRuntimes, statsWithOverride, def.weapons)
+    const runtime = new FighterShipRuntime(
+      id,
+      mesh,
+      this.shipRuntimes,
+      statsWithOverride,
+      def.weapons,
+      def.weaponSwitchDurationSec ?? 0,
+    )
     this.shipRuntimes.set(id, runtime)
     this.shipControllableIds.set(id, controllableId)
     this.shipEnergyFocuses.set(id, "navigation")
+    this.shipWeaponIds.set(id, def.weapons?.[0]?.id ?? "unknown")
     this.taskObjs.push(runtime)
     this.attachShipStatusVisual(id, mesh, footprint)
 
@@ -723,6 +735,17 @@ export class FleetWorld {
           ownerSpec: ctrl?.baseSpec,
           teamId: fleet.teamId ?? fleet.id,
           findNearestEnemy: (sourceId, maxDistance) => this.findNearestEnemyRuntime(sourceId, maxDistance),
+          autoWeaponSwitchEnabled: (fleet.controller ?? FleetCommandIssuer.Human) === FleetCommandIssuer.AI,
+          onWeaponSwitchStart: (shipId, weapon, duration) => {
+            void weapon
+            this.showWeaponSwitchProgress(shipId, duration)
+          },
+          onWeaponSwitchEnd: (shipId, weapon, completed) => {
+            if (completed && weapon) {
+              this.shipWeaponIds.set(shipId, weapon.id)
+            }
+            this.hideWeaponSwitchProgress(shipId)
+          },
         })
         if (mesh) {
           mesh.userData.teamId = fleet.teamId ?? fleet.id
@@ -1300,6 +1323,40 @@ export class FleetWorld {
     this.shipStatusVisuals.set(id, visual)
     this.updateRingGeometry(visual.hpRing, visual.hpInnerRadius, visual.hpOuterRadius, 1)
     this.updateRingGeometry(visual.energyRing, visual.energyInnerRadius, visual.energyOuterRadius, 1)
+  }
+
+  private showWeaponSwitchProgress(shipId: string, duration: number) {
+    const runtime = this.shipRuntimes.get(shipId)
+    const existing = this.shipWeaponSwitchBars.get(shipId)
+    if (!runtime) return
+
+    if (existing) {
+      existing.reset()
+      return
+    }
+
+    const bar = new CircularProgressBar({
+      target: runtime.mesh,
+      camera: this.camera,
+      eventCtrl: this.eventCtrl,
+      duration,
+      radius: 14,
+      thickness: 4,
+      color: "#f59e0b",
+      trackColor: "rgba(15, 23, 42, 0.65)",
+      offsetX: 0,
+      offsetY: -58,
+      zIndex: 40,
+    })
+    bar.mount(document.body)
+    this.shipWeaponSwitchBars.set(shipId, bar)
+  }
+
+  private hideWeaponSwitchProgress(shipId: string) {
+    const bar = this.shipWeaponSwitchBars.get(shipId)
+    if (!bar) return
+    bar.destroy()
+    this.shipWeaponSwitchBars.delete(shipId)
   }
 
   private createShipStatusVisual(footprint: number): ShipStatusRingVisual {

@@ -8,6 +8,7 @@ import { MonsterId } from "@Glibs/types/monstertypes"
 export type ShipProjectileDef = {
   id: MonsterId
   name?: string
+  damageMultiplier?: number
   range?: number
   hitscan?: boolean
   tracerLife?: number
@@ -55,6 +56,7 @@ export type ControllableProperty = {
   scale: number
   stats?: Partial<Record<StatKey, number>>
   weapons?: ShipProjectileDef[]
+  weaponSwitchDurationSec?: number
   actions?: ActionDef[]
   defaultControlSource?: ControlSource
   stateFactory: (...params: unknown[]) => IActorState

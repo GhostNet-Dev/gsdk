@@ -21,6 +21,8 @@ export enum FleetOrderType {
   Follow = "follow"
 }
 
+export type FleetWeaponDoctrine = "balanced" | "long-range" | "close-assault"
+
 export type FleetOrder = {
   type: FleetOrderType
   issuedAt?: number
@@ -33,6 +35,7 @@ export type FleetOrder = {
   spacing?: number
   facing?: THREE.Vector3
   moveMode?: FleetMoveMode
+  weaponDoctrine?: FleetWeaponDoctrine
 }
 
 export type FleetConfig = {
@@ -311,6 +314,7 @@ export class Fleet {
                 targetId,
                 stopDistance: Math.max(4, spacing * 0.75),
               },
+              weaponDoctrine: order.weaponDoctrine,
             }
           : {
               engagement: {
@@ -318,6 +322,7 @@ export class Fleet {
                 targetId: flagshipId,
                 stopDistance: Math.max(2, spacing * 0.45),
               },
+              weaponDoctrine: order.weaponDoctrine,
             },
         issuedAt,
         issuer,
@@ -345,6 +350,7 @@ export class Fleet {
                 targetId,
                 stopDistance: Math.max(4, spacing * 0.75),
               },
+              weaponDoctrine: order.weaponDoctrine,
             }
           : {
               engagement: {
@@ -353,6 +359,7 @@ export class Fleet {
                 offset: (localPositions[index] ?? localAnchor).clone().sub(flagshipLocalPosition),
                 stopDistance: Math.max(1.5, spacing * 0.35),
               },
+              weaponDoctrine: order.weaponDoctrine,
             },
         issuedAt,
         issuer,

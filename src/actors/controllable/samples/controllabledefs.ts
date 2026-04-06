@@ -27,6 +27,7 @@ export const controllableDefs = {
       speed: 10.0,
     },
     weapons: [shipWeaponDefs.ScoutLaser, shipWeaponDefs.FighterAutocannon, shipWeaponDefs.AllySupportGun],
+    weaponSwitchDurationSec: 3.2,
     policyMap: {
       manual: "human",
       ai: "ship-default-ai",
@@ -44,12 +45,13 @@ export const controllableDefs = {
       mp: 60,
       stamina: 120,
       attackRanged: 10,
-      attackRange: 42,
+      attackRange: 300,
       defense: 5,
       speed: 12.0,
     },
-    // weapons: [shipWeaponDefs.FighterAutocannon, shipWeaponDefs.ScoutLaser, shipWeaponDefs.AllySupportGun],
-    weapons: [shipWeaponDefs.FighterAutocannon],
+    weapons: [shipWeaponDefs.FighterAutocannon, shipWeaponDefs.ScoutLaser, shipWeaponDefs.AllySupportGun],
+    // weapons: [shipWeaponDefs.FighterAutocannon],
+    weaponSwitchDurationSec: 3,
     policyMap: {
       manual: "human",
       ai: "ship-default-ai",
@@ -72,6 +74,7 @@ export const controllableDefs = {
       speed: 5.0,
     },
     weapons: [shipWeaponDefs.AllySupportGun, shipWeaponDefs.FighterAutocannon, shipWeaponDefs.ScoutLaser],
+    weaponSwitchDurationSec: 1.5,
     policyMap: {
       manual: "human",
       ai: "ally-escort-ai",
