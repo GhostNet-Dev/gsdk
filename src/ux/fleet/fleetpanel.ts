@@ -62,6 +62,18 @@ export class FleetPanel {
   private dragDeltaX = 0
   private dragTracking = false
   private isDraggingSlide = false
+  private lastInspectFleetId?: string
+  private lastShipCount = 0
+  private lastFormationMenuOpen = false
+  private lastMoveModeMenuOpen = false
+  private lastPlanMenuOpen = false
+  private shipCards = new Map<string, HTMLElement>()
+  private shipStatusEls = new Map<string, {
+    energyFill: HTMLElement,
+    energyLabel: HTMLElement,
+    modeBadge: HTMLElement,
+    card: HTMLElement
+  }>()
 
   constructor(
     private readonly controller: FleetPanelController,
@@ -80,6 +92,8 @@ export class FleetPanel {
     this.shipDetailPanel.dispose()
     this.topRightControls.remove()
     this.Dom.remove()
+    this.shipCards.clear()
+    this.shipStatusEls.clear()
   }
 
   private setup() {
@@ -368,7 +382,6 @@ export class FleetPanel {
   }
 
   private render() {
-    this.closeFloatingMenu()
     const fleets = this.controller.listFleetSummaries().filter((fleet) => this.controller.canControlFleet(fleet.id))
     const selected = this.inspectFleetId
       ? this.controller.getFleetSummary(this.inspectFleetId)
@@ -479,8 +492,14 @@ export class FleetPanel {
       this.selectedShipId = undefined
       this.shipDetailPanel.hide()
       this.detailTrack.style.transform = "translateX(-33.3333%)"
+      this.lastInspectFleetId = undefined
       return
     }
+
+    const structuralChange = this.lastInspectFleetId !== fleet.id ||
+      this.lastFormationMenuOpen !== this.formationMenuOpen ||
+      this.lastMoveModeMenuOpen !== this.moveModeMenuOpen ||
+      this.lastPlanMenuOpen !== this.planMenuOpen
 
     this.headerEl.style.display = "flex"
     this.titleBtn.innerText = fleet.name
@@ -491,8 +510,17 @@ export class FleetPanel {
     this.settingsBtn.style.background = this.detailSlide === "settings"
       ? "linear-gradient(180deg, rgba(14,165,233,0.28), rgba(3,105,161,0.26))"
       : "rgba(15,23,42,0.82)"
-    this.metaEl.innerHTML = ""
-    this.membersEl.innerText = ""
+    
+    if (structuralChange) {
+      this.closeFloatingMenu()
+      this.lastInspectFleetId = fleet.id
+      this.lastFormationMenuOpen = this.formationMenuOpen
+      this.lastMoveModeMenuOpen = this.moveModeMenuOpen
+      this.lastPlanMenuOpen = this.planMenuOpen
+      
+      this.metaEl.innerHTML = ""
+      this.membersEl.innerText = ""
+    }
 
     const canControlFleet = this.controller.canControlFleet(fleet.id)
     const plannedOrder = this.controller.getPlannedOrder(fleet.id)
@@ -503,90 +531,93 @@ export class FleetPanel {
     this.renderBattleControls(fleet)
     this.renderShipGrid(fleet.id)
 
-    this.formationRow.innerHTML = ""
-    this.formationRow.appendChild(this.makeLabeledPopupSelect(
-      "Formation",
-      fleet.formation,
-      formations.map((formation) => ({
-        label: formation,
-        active: formation === fleet.formation,
-        onSelect: () => {
-          this.formationMenuOpen = false
-          this.controller.setFormation(fleet.id, formation)
-          this.render()
-        },
-      })),
-      this.formationMenuOpen,
-      () => {
-        if (!canControlFleet) return
-        this.formationMenuOpen = !this.formationMenuOpen
-        this.moveModeMenuOpen = false
-        this.planMenuOpen = false
-        this.render()
-      },
-      !canControlFleet,
-    ))
-
-    this.moveModeRow.innerHTML = ""
-    this.moveModeRow.appendChild(this.makeLabeledPopupSelect(
-      "Move Mode",
-      this.moveModeLabel(fleet.moveMode),
-      moveModes.map((moveMode) => ({
-        label: this.moveModeLabel(moveMode),
-        active: moveMode === fleet.moveMode,
-        onSelect: () => {
+    if (structuralChange) {
+      this.formationRow.innerHTML = ""
+      this.formationRow.appendChild(this.makeLabeledPopupSelect(
+        "Formation",
+        fleet.formation,
+        formations.map((formation) => ({
+          label: formation,
+          active: formation === fleet.formation,
+          onSelect: () => {
+            this.formationMenuOpen = false
+            this.controller.setFormation(fleet.id, formation)
+            this.render()
+          },
+        })),
+        this.formationMenuOpen,
+        () => {
+          if (!canControlFleet) return
+          this.formationMenuOpen = !this.formationMenuOpen
           this.moveModeMenuOpen = false
-          this.controller.setMoveMode(fleet.id, moveMode)
+          this.planMenuOpen = false
           this.render()
         },
-      })),
-      this.moveModeMenuOpen,
-      () => {
-        if (!canControlFleet) return
-        this.moveModeMenuOpen = !this.moveModeMenuOpen
-        this.formationMenuOpen = false
-        this.planMenuOpen = false
-        this.render()
-      },
-      !canControlFleet,
-    ))
+        !canControlFleet,
+      ))
 
-    this.planRow.innerHTML = ""
-    this.planRow.appendChild(this.makeLabeledPopupSelect(
-      "Plans",
-      this.planButtonLabel(plannedOrder),
-      [
-        {
-          label: "Plan Hold",
-          active: plannedOrder?.type === FleetOrderType.Hold,
+      this.moveModeRow.innerHTML = ""
+      this.moveModeRow.appendChild(this.makeLabeledPopupSelect(
+        "Move Mode",
+        this.moveModeLabel(fleet.moveMode),
+        moveModes.map((moveMode) => ({
+          label: this.moveModeLabel(moveMode),
+          active: moveMode === fleet.moveMode,
           onSelect: () => {
-            this.planMenuOpen = false
-            this.controller.planHold(fleet.id)
+            this.moveModeMenuOpen = false
+            this.controller.setMoveMode(fleet.id, moveMode)
             this.render()
           },
+        })),
+        this.moveModeMenuOpen,
+        () => {
+          if (!canControlFleet) return
+          this.moveModeMenuOpen = !this.moveModeMenuOpen
+          this.formationMenuOpen = false
+          this.planMenuOpen = false
+          this.render()
         },
-        {
-          label: "Clear Plans",
-          active: false,
-          onSelect: () => {
-            this.planMenuOpen = false
-            this.controller.clearPlans()
-            this.render()
-          },
-        },
-      ],
-      this.planMenuOpen,
-      () => {
-        this.planMenuOpen = !this.planMenuOpen
-        this.formationMenuOpen = false
-        this.moveModeMenuOpen = false
-        this.render()
-      },
-      !canControlFleet,
-    ))
+        !canControlFleet,
+      ))
 
-    this.settingsControlRow.innerHTML = ""
-    this.settingsControlRow.append(this.formationRow, this.moveModeRow, this.planRow)
+      this.planRow.innerHTML = ""
+      this.planRow.appendChild(this.makeLabeledPopupSelect(
+        "Plans",
+        this.planButtonLabel(plannedOrder),
+        [
+          {
+            label: "Plan Hold",
+            active: plannedOrder?.type === FleetOrderType.Hold,
+            onSelect: () => {
+              this.planMenuOpen = false
+              this.controller.planHold(fleet.id)
+              this.render()
+            },
+          },
+          {
+            label: "Clear Plans",
+            active: false,
+            onSelect: () => {
+              this.planMenuOpen = false
+              this.controller.clearPlans()
+              this.render()
+            },
+          },
+        ],
+        this.planMenuOpen,
+        () => {
+          this.planMenuOpen = !this.planMenuOpen
+          this.formationMenuOpen = false
+          this.moveModeMenuOpen = false
+          this.render()
+        },
+        !canControlFleet,
+      ))
+
+      this.settingsControlRow.innerHTML = ""
+      this.settingsControlRow.append(this.formationRow, this.moveModeRow, this.planRow)
+    }
+    
     this.syncSlidePosition(fleet.id)
   }
 
@@ -646,11 +677,37 @@ export class FleetPanel {
 
   private renderShipGrid(fleetId: string) {
     const ships = this.controller.getFleetShips(fleetId)
-    this.shipGrid.innerHTML = ""
+    
+    if (this.lastInspectFleetId !== fleetId || this.lastShipCount !== ships.length) {
+      this.lastShipCount = ships.length
+      this.shipGrid.innerHTML = ""
+      this.shipCards.clear()
+      this.shipStatusEls.clear()
 
-    ships.forEach((ship) => {
-      this.shipGrid.appendChild(this.makeShipCard(fleetId, ship))
-    })
+      ships.forEach((ship) => {
+        const card = this.makeShipCard(fleetId, ship)
+        this.shipGrid.appendChild(card)
+        this.shipCards.set(ship.id, card)
+      })
+    } else {
+      ships.forEach((ship) => {
+        this.updateShipCardStatus(ship)
+      })
+    }
+  }
+
+  private updateShipCardStatus(ship: FleetShipPanelState) {
+    const status = this.shipStatusEls.get(ship.id)
+    if (!status) return
+
+    status.energyFill.style.width = `${Math.max(0, Math.min(100, ship.energyRatio * 100))}%`
+    status.energyLabel.innerText = `Energy ${Math.round(ship.energy)}/${Math.round(ship.maxEnergy)}`
+    status.modeBadge.innerText = this.iconEnergyFocus(ship.energyFocus)
+    status.modeBadge.title = this.titleEnergyFocus(ship.energyFocus)
+    
+    // Update selection state
+    status.card.style.borderColor = ship.selected ? "rgba(125,211,252,0.65)" : "rgba(148,163,184,0.16)"
+    status.card.style.background = ship.selected ? "rgba(14,116,144,0.22)" : "rgba(15,23,42,0.56)"
   }
 
   private makeShipCard(fleetId: string, ship: FleetShipPanelState) {
@@ -732,6 +789,8 @@ export class FleetPanel {
     energyFill.style.height = "100%"
     energyFill.style.background = "linear-gradient(90deg, #38bdf8, #93c5fd)"
     energyBar.appendChild(energyFill)
+
+    this.shipStatusEls.set(ship.id, { energyFill, energyLabel, modeBadge, card })
 
     energy.append(energyLabel, energyBar)
     card.append(head, energy)

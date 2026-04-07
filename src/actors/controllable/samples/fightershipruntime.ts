@@ -320,6 +320,10 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     return this.equippedWeapon?.id
   }
 
+  getPendingWeaponId() {
+    return this.pendingWeapon?.id
+  }
+
   isWeaponSwitching() {
     return this.switching
   }
@@ -464,6 +468,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
       damage: this.ownerSpec.Damage * (weapon.damageMultiplier ?? 1),
       src: this.tmpMuzzleWorld.clone(),
       dir: this.tmpShootDirection.clone(),
+      homing: weapon.homing,
       range: weapon.range ?? this.attackRange,
       hitscan: weapon.hitscan ?? true,
       tracerLife: weapon.tracerLife ?? 0.18,

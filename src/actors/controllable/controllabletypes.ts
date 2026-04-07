@@ -9,6 +9,7 @@ export type ShipProjectileDef = {
   id: MonsterId
   name?: string
   damageMultiplier?: number
+  homing?: boolean
   range?: number
   hitscan?: boolean
   tracerLife?: number

@@ -425,7 +425,9 @@ export class FleetWorld {
         }))
       }
 
-      const currentWeaponId = runtime?.getEquippedWeaponId() ?? this.shipWeaponIds.get(shipId) ?? (availableWeapons[0]?.id || "unknown")
+      const currentWeaponId = runtime?.isWeaponSwitching()
+        ? (runtime.getPendingWeaponId() ?? runtime.getEquippedWeaponId() ?? this.shipWeaponIds.get(shipId) ?? (availableWeapons[0]?.id || "unknown"))
+        : (runtime?.getEquippedWeaponId() ?? this.shipWeaponIds.get(shipId) ?? (availableWeapons[0]?.id || "unknown"))
 
       return {
         id: shipId,

@@ -45,6 +45,7 @@ export type ProjectileMsg = {
   dir: THREE.Vector3;
   range: number;
 
+  homing?: boolean;
   // (2) hitscan 지원
   hitscan?: boolean;      // 오토건/라스건 = true
   tracerLife?: number;    // hitscan 트레이서 표시 시간(초) 예: 0.06~0.12
@@ -64,7 +65,7 @@ export type ProjectileSet = {
     dir: THREE.Vector3;
     damage: number;
     ownerSpec: BaseSpec;
-    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean };
+    opt?: { homing?: boolean; hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean };
   };
 };
 
@@ -171,7 +172,7 @@ export class Projectile implements ILoop {
     damage: number,
     ownerSpec: BaseSpec,
     range: number,
-    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
+    opt?: { homing?: boolean; hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
   ): void;
   AllocateProjPool(
     a: ProjectileMsg | MonsterId,
@@ -180,7 +181,7 @@ export class Projectile implements ILoop {
     damage?: number,
     ownerSpec?: BaseSpec,
     range?: number,
-    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
+    opt?: { homing?: boolean; hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
   ) {
     const msg: ProjectileMsg =
       typeof a === "object" && "id" in a
@@ -192,6 +193,7 @@ export class Projectile implements ILoop {
           damage: damage!,
           ownerSpec: ownerSpec!,
           range: range!,
+          homing: opt?.homing,
           hitscan: opt?.hitscan,
           tracerLife: opt?.tracerLife,
           tracerRange: opt?.tracerRange,
@@ -200,6 +202,7 @@ export class Projectile implements ILoop {
 
     const id = msg.id;
     const startOpt = {
+      homing: msg.homing,
       hitscan: msg.hitscan,
       tracerLife: msg.tracerLife,
       tracerRange: msg.tracerRange,
@@ -285,7 +288,7 @@ export class Projectile implements ILoop {
     dir: THREE.Vector3,
     damage: number,
     ownerSpec: BaseSpec,
-    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
+    opt?: { homing?: boolean; hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
   ) {
     set.releasing = false;
 

@@ -95,7 +95,7 @@ export class ProjectileCtrl implements IActionUser {
     dir: THREE.Vector3,
     damage: number,
     spec: BaseSpec,
-    opt?: { hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
+    opt?: { homing?: boolean; hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
   ) {
     this.position.copy(src);
     this.prevPosition.copy(src);
@@ -121,7 +121,7 @@ export class ProjectileCtrl implements IActionUser {
     this.hasAttacked = false;
     this.useRaycast = !!opt?.useRaycast;
 
-    this.homingActive = this.projectileId === MonsterId.EnergyHoming;
+    this.homingActive = opt?.homing ?? (this.projectileId === MonsterId.EnergyHoming);
     this.homingTarget = this.homingActive ? this.findHomingTarget() : null;
 
     if (this.isHitscan) {

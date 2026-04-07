@@ -15,6 +15,13 @@ export class ShipDetailPanel {
   private energyMenuOpen = false
   private weaponMenuOpen = false
 
+  private lastShipId?: string
+  private lastEnergyMenuOpen = false
+  private lastWeaponMenuOpen = false
+  private energyTextEl = document.createElement("div")
+  private energyTriggerBtn?: HTMLButtonElement
+  private weaponTriggerBtn?: HTMLButtonElement
+
   constructor(
     private readonly controller: FleetPanelController,
   ) {
@@ -37,24 +44,47 @@ export class ShipDetailPanel {
     this.shipId = undefined
     this.energyMenuOpen = false
     this.weaponMenuOpen = false
+    this.lastShipId = undefined
     this.closeFloatingMenu()
     this.renderEmpty()
   }
 
   render() {
-    this.closeFloatingMenu()
     if (!this.fleetId || !this.shipId) {
+      this.closeFloatingMenu()
       this.renderEmpty()
       return
     }
 
     const ship = this.controller.getFleetShips(this.fleetId).find((item) => item.id === this.shipId)
     if (!ship) {
+      this.closeFloatingMenu()
       this.renderEmpty()
       return
     }
 
-    this.renderShip(ship)
+    const structuralChange = this.lastShipId !== ship.id ||
+      this.lastEnergyMenuOpen !== this.energyMenuOpen ||
+      this.lastWeaponMenuOpen !== this.weaponMenuOpen
+
+    if (structuralChange) {
+      this.lastShipId = ship.id
+      this.lastEnergyMenuOpen = this.energyMenuOpen
+      this.lastWeaponMenuOpen = this.weaponMenuOpen
+      this.renderShip(ship)
+    } else {
+      this.updateShipStatus(ship)
+    }
+  }
+
+  private updateShipStatus(ship: FleetShipPanelState) {
+    this.energyTextEl.innerText = `에너지 ${Math.round(ship.energy)}/${Math.round(ship.maxEnergy)}`
+    if (this.energyTriggerBtn && !this.energyMenuOpen) {
+      this.energyTriggerBtn.innerText = this.shortLabelEnergyFocus(ship.energyFocus)
+    }
+    if (this.weaponTriggerBtn && !this.weaponMenuOpen) {
+      this.weaponTriggerBtn.innerText = this.weaponButtonLabel(ship)
+    }
   }
 
   private setup() {
@@ -92,15 +122,15 @@ export class ShipDetailPanel {
   }
 
   private renderShip(ship: FleetShipPanelState) {
+    this.closeFloatingMenu()
     this.titleEl.innerText = ship.isFlagship ? `${ship.id} · 기함` : ship.id
     this.bodyEl.innerHTML = ""
     this.optionsEl.innerHTML = ""
 
-    const energy = document.createElement("div")
-    energy.innerText = `에너지 ${Math.round(ship.energy)}/${Math.round(ship.maxEnergy)}`
-    this.bodyEl.append(energy)
+    this.energyTextEl.innerText = `에너지 ${Math.round(ship.energy)}/${Math.round(ship.maxEnergy)}`
+    this.bodyEl.append(this.energyTextEl)
 
-    this.optionsEl.appendChild(this.makePopupSelect(
+    const energyTrigger = this.makePopupSelect(
       this.shortLabelEnergyFocus(ship.energyFocus),
       energyFocuses.map((focus) => ({
         label: this.labelEnergyFocus(focus),
@@ -117,12 +147,13 @@ export class ShipDetailPanel {
         this.weaponMenuOpen = false
         this.render()
       },
-    ))
+    )
+    this.energyTriggerBtn = energyTrigger.querySelector("button") || undefined
+    this.optionsEl.appendChild(energyTrigger)
 
     if (ship.availableWeapons.length > 0) {
-      const currentWeapon = ship.availableWeapons.find(w => w.id === ship.weaponId)
-      this.optionsEl.appendChild(this.makePopupSelect(
-        currentWeapon?.label || "무기 선택",
+      const weaponTrigger = this.makePopupSelect(
+        this.weaponButtonLabel(ship),
         ship.availableWeapons.map((weapon) => ({
           label: weapon.label,
           active: ship.weaponId === weapon.id,
@@ -138,7 +169,9 @@ export class ShipDetailPanel {
           this.energyMenuOpen = false
           this.render()
         },
-      ))
+      )
+      this.weaponTriggerBtn = weaponTrigger.querySelector("button") || undefined
+      this.optionsEl.appendChild(weaponTrigger)
     }
 
     this.descEl.innerText = this.describeEnergyFocus(ship.energyFocus)
@@ -148,6 +181,7 @@ export class ShipDetailPanel {
     this.titleEl.innerText = "함선 상세"
     this.bodyEl.innerHTML = ""
     this.optionsEl.innerHTML = ""
+    this.lastShipId = undefined
 
     const empty = document.createElement("div")
     empty.innerText = "함선을 선택하면 이 영역에서 상세 정보와 에너지 집중 설정을 바로 조정할 수 있습니다."
@@ -268,6 +302,12 @@ export class ShipDetailPanel {
     if (focus === "defense") return "방어"
     if (focus === "exploration") return "탐색"
     return "항행"
+  }
+
+  private weaponButtonLabel(ship: FleetShipPanelState) {
+    const currentWeapon = ship.availableWeapons.find((weapon) => weapon.id === ship.weaponId)
+    const baseLabel = currentWeapon?.label || "무기 선택"
+    return ship.isWeaponSwitching ? `${baseLabel} 교체중...` : baseLabel
   }
 
   private describeEnergyFocus(focus: FleetShipEnergyFocus) {

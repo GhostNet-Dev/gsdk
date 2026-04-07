@@ -18,6 +18,7 @@ export const shipWeaponDefs = {
     id: MonsterId.EnergyHoming,
     name: "호밍 오토캐논",
     damageMultiplier: 1.15,
+    homing: true,
     range: 110,
     hitscan: false,
     tracerLife: 0.4,
