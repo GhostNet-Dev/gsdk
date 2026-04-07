@@ -4,6 +4,7 @@ import { GlobalEffectType } from "@Glibs/types/effecttypes";
 import { SparkVfx } from "./sparksystem";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { FlameVfx } from "./flame/flame";
+import { FloatingTextVfx } from "./floatingtextvfx";
 
 
 export class GlobalEffector {
@@ -11,10 +12,12 @@ export class GlobalEffector {
   private classMap: Record<string, new (...args: any[]) => any> = {
     SparkVfx: SparkVfx,
     FlameVfx: FlameVfx,
+    FloatingTextVfx: FloatingTextVfx,
   };
   private globalEffectTypes: Record<string, any> = {
     SparkVfx: { eventCtrl: this.eventCtrl, scene: this.scene, camera: this.camera },
     FlameVfx: { eventCtrl: this.eventCtrl, scene: this.scene, scale: 0.5, global: true },
+    FloatingTextVfx: { eventCtrl: this.eventCtrl, scene: this.scene },
   }
   constructor(
     private eventCtrl: IEventController,

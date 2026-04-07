@@ -4,9 +4,11 @@ import { IAsset } from "@Glibs/interface/iasset";
 import { MonsterId } from "./monstertypes";
 import { Effector } from "@Glibs/magical/effects/effector";
 import { FloatingName } from "@Glibs/ux/text/floatingtxt";
-import { EffectType } from "@Glibs/types/effecttypes";
+import { EffectType, GlobalEffectType } from "@Glibs/types/effecttypes";
 import { Ani } from "@Glibs/types/assettypes";
 import { ActionType } from "@Glibs/types/playertypes";
+import IEventController from "@Glibs/interface/ievent";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
 export class Zombie extends PhysicsObject {
     mixer?: THREE.AnimationMixer
@@ -29,12 +31,12 @@ export class Zombie extends PhysicsObject {
     constructor(
         asset: IAsset,
         private monId: MonsterId,
-        private effector: Effector
+        private effector: Effector,
+        private readonly eventCtrl: IEventController,
     ) {
         super(asset)
         this.text = new FloatingName(this.monId.toString())
         this.effector.Enable(EffectType.Damage, 0, 1, 0)
-        this.effector.Enable(EffectType.Status)
     }
 
     async Init(text: string) {
@@ -158,7 +160,17 @@ export class Zombie extends PhysicsObject {
                 //this.effector.StartEffector(EffectType.Lightning)
                 break;
         }
-        this.effector.StartEffector(EffectType.Status, (damage > 0) ? damage.toString() : "miss", "#fff")
+        this.eventCtrl.SendEventMessage(
+            EventTypes.GlobalEffect,
+            GlobalEffectType.FloatingText,
+            this.CenterPos.clone(),
+            (damage > 0) ? damage.toString() : "miss",
+            "#fff",
+            {
+                scale: 3.2,
+                yOffset: 2.8,
+            },
+        )
     }
 
     update(delta: number) {

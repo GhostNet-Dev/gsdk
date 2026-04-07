@@ -2,157 +2,150 @@ import * as THREE from "three";
 import { IEffect } from "./ieffector";
 
 const font = 'bold 14pt "Fredoka", sans-serif';
-//const shadowColor =  "rgba(0,0,0,0.8)";
-const shadowBlur = 2
+const shadowBlur = 2;
+const maxPoolSize = 12;
 
-export class TextStatus extends THREE.Sprite implements IEffect {
-    params_?: string
-    visible_?: boolean
+type ActiveTextStatus = {
+    sprite: THREE.Sprite
+    velocity: THREE.Vector3
+    age: number
+    lifetime: number
+}
 
-    processFlag = false
-    obj = new THREE.Group()
-    get Mesh() {return this.obj}
+export class TextStatusPool implements IEffect {
+    private readonly obj = new THREE.Group()
+    private readonly active: ActiveTextStatus[] = []
+    private readonly inactive: THREE.Sprite[] = []
 
+    get Mesh() { return this.obj }
 
-    constructor(params: string, color: string) {
-        const element = document.createElement('canvas') as HTMLCanvasElement;
-        let context2d = element.getContext('2d');
-        if (context2d == null) return
-
-        context2d.font = font
-        const metrics = context2d.measureText(params)
-        const w = metrics.width
-        const h = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
-        element.width = w;
-        element.height = h;
-
-        context2d = element.getContext('2d');
-        if (context2d == null) return
-
-        context2d.font = font
-
-        context2d.fillStyle = color;
-        context2d.shadowOffsetX = 3;
-        context2d.shadowOffsetY = 3;
-        context2d.shadowBlur = shadowBlur
-        context2d.textAlign = 'center';
-        context2d.textBaseline = "middle"
-        context2d.fillText(params, w / 2, h / 2, w);
-
-        const map = new THREE.CanvasTexture(context2d.canvas);
-
-        super(
-            new THREE.SpriteMaterial({ map: map, color: 0xffffff, fog: false }));
-        this.scale.set(1, 1, 1)
-        this.position.y = 3.3
-        this.position.z = 0.5
-
-        this.params_ = params;
-        this.visible_ = true;
-        this.visible = false
-        this.obj.add(this)
+    Start(text: string, color: string = "#ffffff") {
+        const sprite = this.acquireSprite()
+        this.drawText(sprite, text, color)
+        sprite.visible = true
+        sprite.position.set(
+            THREE.MathUtils.randFloatSpread(0.8),
+            3.3 + Math.random() * 0.35,
+            0.5 + THREE.MathUtils.randFloatSpread(0.15),
+        )
+        const scale = 1 + Math.min(1.2, text.length * 0.1)
+        sprite.scale.set(scale, scale, 1)
+        this.active.push({
+            sprite,
+            velocity: new THREE.Vector3(
+                THREE.MathUtils.randFloatSpread(0.22),
+                0.9 + Math.random() * 0.35,
+                THREE.MathUtils.randFloatSpread(0.08),
+            ),
+            age: 0,
+            lifetime: 0.7 + Math.random() * 0.2,
+        })
     }
 
-    Destroy() {
-        this.traverse(c => {
-            if (c instanceof THREE.Mesh) {
-                if (c.material) {
-                    let materials = c.material;
-                    if (!(c.material instanceof Array)) {
-                        materials = [c.material];
-                    }
-                    for (let m of materials) {
-                        m.dispose();
-                    }
-                }
-
-                if (c.geometry) {
-                    c.geometry.dispose();
-                }
-            }
-        });
-        if (this.parent) {
-            this.parent.remove(this);
-        }
-    }
-
-    InitComponent() {
-    }
-
-    OnDeath_() {
-        this.Destroy();
-    }
-    v = 0.0001
-    Start(text: string, color: string) {
-        this.visible = true
-        this.SetText(text, color)
-        this.position.set(THREE.MathUtils.randFloatSpread(1), 3.3, 0.5)
-        this.material.opacity = 1 
-        this.v = 0.0001
-        this.processFlag = true
-    }
-    Complete() {
-        this.visible = false
-        this.processFlag = false
-    }
     Update(delta: number) {
-        if (!this.processFlag) return
-        this.position.y += delta * .5
-        this.v += 0.001
-        this.material.opacity -= this.v
-        if(this.material.opacity < 0) {
-            this.Complete()
+        for (let i = this.active.length - 1; i >= 0; i--) {
+            const item = this.active[i]
+            item.age += delta
+            item.sprite.position.addScaledVector(item.velocity, delta)
+            item.velocity.multiplyScalar(0.985)
+
+            const material = item.sprite.material as THREE.SpriteMaterial
+            const progress = Math.min(1, item.age / item.lifetime)
+            material.opacity = 1 - progress
+
+            if (progress >= 1) {
+                this.active.splice(i, 1)
+                this.releaseSprite(item.sprite)
+            }
         }
     }
 
-    SetText(text: string, color: string) {
-        if (!this.visible_) {
-            return;
+    Complete() {
+        for (let i = this.active.length - 1; i >= 0; i--) {
+            this.releaseSprite(this.active[i].sprite)
         }
-        const element = document.createElement('canvas') as HTMLCanvasElement;
-        this.material.dispose()
+        this.active.length = 0
+    }
 
-        this.params_ = text
+    private acquireSprite() {
+        const sprite = this.inactive.pop() ?? this.createSprite()
+        if (!sprite.parent) {
+            this.obj.add(sprite)
+        }
+        return sprite
+    }
 
-        if (element == undefined) return
+    private releaseSprite(sprite: THREE.Sprite) {
+        const material = sprite.material as THREE.SpriteMaterial
+        material.opacity = 0
+        sprite.visible = false
+        sprite.position.set(0, 0, 0)
 
-        const context2d_ = element.getContext('2d');
-        if (context2d_ == null) return
+        if (this.inactive.length < maxPoolSize) {
+            this.inactive.push(sprite)
+            return
+        }
 
-        context2d_.font = font
-        const metrics = context2d_.measureText(text)
-        const w = metrics.width
-        const h = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
-        element.width = w + 10;
-        element.height = h;
+        this.disposeSprite(sprite)
+        this.obj.remove(sprite)
+    }
 
-        const context2d = element.getContext('2d');
-        if (context2d == null) return
+    private createSprite() {
+        const material = new THREE.SpriteMaterial({
+            color: 0xffffff,
+            fog: false,
+            transparent: true,
+            depthTest: false,
+            depthWrite: false,
+            opacity: 0,
+        })
+        const sprite = new THREE.Sprite(material)
+        sprite.renderOrder = 99
+        sprite.visible = false
+        return sprite
+    }
+
+    private drawText(sprite: THREE.Sprite, text: string, color: string) {
+        const element = document.createElement("canvas")
+        const measureContext = element.getContext("2d")
+        if (!measureContext) return
+
+        measureContext.font = font
+        const metrics = measureContext.measureText(text)
+        const width = Math.max(32, Math.ceil(metrics.width + 16))
+        const height = Math.max(
+            24,
+            Math.ceil((metrics.fontBoundingBoxAscent ?? 14) + (metrics.fontBoundingBoxDescent ?? 6) + 10),
+        )
+
+        element.width = width
+        element.height = height
+
+        const context2d = element.getContext("2d")
+        if (!context2d) return
 
         context2d.font = font
-        context2d.shadowOffsetX = 1;
-        context2d.shadowOffsetY = 1;
-        context2d.shadowColor = "rgba(0, 0, 0, 1)";
-        context2d.shadowBlur = 0;
-
-        context2d.fillStyle = color;
-        context2d.textAlign = 'center';
+        context2d.fillStyle = color
+        context2d.shadowOffsetX = 2
+        context2d.shadowOffsetY = 2
+        context2d.shadowColor = "rgba(0, 0, 0, 0.9)"
+        context2d.shadowBlur = shadowBlur
+        context2d.textAlign = "center"
         context2d.textBaseline = "middle"
-        context2d.fillText(text, w / 2, h / 2, w);
+        context2d.fillText(text, width / 2, height / 2, width - 8)
 
+        const material = sprite.material as THREE.SpriteMaterial
+        material.map?.dispose()
+        material.map = new THREE.CanvasTexture(element)
+        material.needsUpdate = true
+        material.opacity = 1
+    }
 
-        const map = new THREE.CanvasTexture(context2d.canvas);
-        this.renderOrder = 99
-        this.material =
-            new THREE.SpriteMaterial({ 
-                map: map, 
-                color: 0xffffff, 
-                fog: false, 
-                transparent: true,
-                depthTest: false, 
-                depthWrite: false,
-            });
-        //this.sprite_.position.y += modelData.nameOffset;
-        //msg.model.add(this.sprite_);
+    private disposeSprite(sprite: THREE.Sprite) {
+        const material = sprite.material as THREE.SpriteMaterial
+        material.map?.dispose()
+        material.dispose()
     }
 }
+
+export { TextStatusPool as TextStatus }

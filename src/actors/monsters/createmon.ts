@@ -27,7 +27,7 @@ export class CreateMon {
         if(!pos) pos = new THREE.Vector3(10, 0, 15)
         const property = this.monDb.GetItem(monId)
         const asset = this.loader.GetAssets(property.model)
-        const monster = new Zombie(asset, monId, new Effector(this.game, this.eventCtrl))
+        const monster = new Zombie(asset, monId, new Effector(this.game, this.eventCtrl), this.eventCtrl)
         await monster.Loader(pos, monId as string, id)
 
         const zCtrl = new MonsterCtrl(id, this.player, monster, 

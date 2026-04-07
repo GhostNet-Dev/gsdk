@@ -18,7 +18,6 @@ export class ShipDetailPanel {
   private lastShipId?: string
   private lastEnergyMenuOpen = false
   private lastWeaponMenuOpen = false
-  private energyTextEl = document.createElement("div")
   private energyTriggerBtn?: HTMLButtonElement
   private weaponTriggerBtn?: HTMLButtonElement
 
@@ -78,7 +77,6 @@ export class ShipDetailPanel {
   }
 
   private updateShipStatus(ship: FleetShipPanelState) {
-    this.energyTextEl.innerText = `에너지 ${Math.round(ship.energy)}/${Math.round(ship.maxEnergy)}`
     if (this.energyTriggerBtn && !this.energyMenuOpen) {
       this.energyTriggerBtn.innerText = this.shortLabelEnergyFocus(ship.energyFocus)
     }
@@ -91,7 +89,6 @@ export class ShipDetailPanel {
     this.Dom.style.display = "grid"
     this.Dom.style.gridTemplateRows = "auto auto auto auto"
     this.Dom.style.gap = "12px"
-    this.Dom.style.height = "100%"
     this.Dom.style.padding = "18px"
     this.Dom.style.borderRadius = "16px"
     this.Dom.style.border = "1px solid rgba(148,163,184,0.12)"
@@ -126,9 +123,6 @@ export class ShipDetailPanel {
     this.titleEl.innerText = ship.isFlagship ? `${ship.id} · 기함` : ship.id
     this.bodyEl.innerHTML = ""
     this.optionsEl.innerHTML = ""
-
-    this.energyTextEl.innerText = `에너지 ${Math.round(ship.energy)}/${Math.round(ship.maxEnergy)}`
-    this.bodyEl.append(this.energyTextEl)
 
     const energyTrigger = this.makePopupSelect(
       this.shortLabelEnergyFocus(ship.energyFocus),

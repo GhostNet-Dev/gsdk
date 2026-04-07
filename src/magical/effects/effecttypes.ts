@@ -2,6 +2,7 @@
 export enum GlobalEffectType {
     SparkEshSystem = "SparkVfx",
     Flame = "FlameVfx",
+    FloatingText = "FloatingTextVfx",
 }
 export enum EffectType {
     LightningStrike,

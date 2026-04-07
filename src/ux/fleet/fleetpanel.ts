@@ -69,8 +69,8 @@ export class FleetPanel {
   private lastPlanMenuOpen = false
   private shipCards = new Map<string, HTMLElement>()
   private shipStatusEls = new Map<string, {
+    hullFill: HTMLElement,
     energyFill: HTMLElement,
-    energyLabel: HTMLElement,
     modeBadge: HTMLElement,
     card: HTMLElement
   }>()
@@ -153,7 +153,7 @@ export class FleetPanel {
     this.listCol.style.paddingBottom = "2px"
 
     this.detailCol.style.display = "grid"
-    this.detailCol.style.gridTemplateRows = "auto auto 1fr"
+    this.detailCol.style.gridTemplateRows = "auto auto auto"
     this.detailCol.style.gap = "10px"
     this.detailCol.style.padding = "8px 10px"
     this.detailCol.style.borderRadius = "14px"
@@ -271,15 +271,14 @@ export class FleetPanel {
     this.detailViewport.style.borderRadius = "14px"
     this.detailViewport.style.border = "1px solid rgba(148,163,184,0.12)"
     this.detailViewport.style.background = "rgba(2,6,23,0.24)"
-    this.detailViewport.style.minHeight = "0"
-    this.detailViewport.style.height = "100%"
+    this.detailViewport.style.minHeight = "fit-content"
     this.detailViewport.style.touchAction = "pan-y"
     this.detailViewport.style.cursor = "grab"
 
     this.detailTrack.style.display = "flex"
     this.detailTrack.style.width = "300%"
-    this.detailTrack.style.height = "100%"
     this.detailTrack.style.transition = "transform 220ms ease"
+    this.detailTrack.style.alignItems = "flex-start"
 
     this.settingsPanel.style.flex = "0 0 33.3333%"
     this.settingsPanel.style.minWidth = "0"
@@ -297,7 +296,6 @@ export class FleetPanel {
 
     this.shipPanel.style.flex = "0 0 33.3333%"
     this.shipPanel.style.minWidth = "0"
-    this.shipPanel.style.height = "100%"
     this.shipPanel.style.padding = "14px"
 
     this.shipGrid.style.display = "grid"
@@ -700,8 +698,8 @@ export class FleetPanel {
     const status = this.shipStatusEls.get(ship.id)
     if (!status) return
 
+    status.hullFill.style.width = `${Math.max(0, Math.min(100, ship.hullRatio * 100))}%`
     status.energyFill.style.width = `${Math.max(0, Math.min(100, ship.energyRatio * 100))}%`
-    status.energyLabel.innerText = `Energy ${Math.round(ship.energy)}/${Math.round(ship.maxEnergy)}`
     status.modeBadge.innerText = this.iconEnergyFocus(ship.energyFocus)
     status.modeBadge.title = this.titleEnergyFocus(ship.energyFocus)
     
@@ -769,31 +767,47 @@ export class FleetPanel {
 
     head.appendChild(badgeRow)
 
-    const energy = document.createElement("div")
-    energy.style.display = "grid"
-    energy.style.gap = "4px"
+    const statusStack = document.createElement("div")
+    statusStack.style.display = "grid"
+    statusStack.style.gap = "5px"
 
-    const energyLabel = document.createElement("div")
-    energyLabel.innerText = `Energy ${Math.round(ship.energy)}/${Math.round(ship.maxEnergy)}`
-    energyLabel.style.fontSize = "11px"
-    energyLabel.style.color = "#93c5fd"
+    const makeMetricRow = (labelText: string, ratio: number, fillBackground: string, labelColor: string) => {
+      const row = document.createElement("div")
+      row.style.display = "grid"
+      row.style.gridTemplateColumns = "24px 1fr"
+      row.style.alignItems = "center"
+      row.style.gap = "6px"
 
-    const energyBar = document.createElement("div")
-    energyBar.style.height = "6px"
-    energyBar.style.borderRadius = "999px"
-    energyBar.style.background = "rgba(30,41,59,0.95)"
-    energyBar.style.overflow = "hidden"
+      const label = document.createElement("div")
+      label.innerText = labelText
+      label.style.fontSize = "10px"
+      label.style.fontWeight = "700"
+      label.style.letterSpacing = "0.08em"
+      label.style.color = labelColor
 
-    const energyFill = document.createElement("div")
-    energyFill.style.width = `${Math.max(0, Math.min(100, ship.energyRatio * 100))}%`
-    energyFill.style.height = "100%"
-    energyFill.style.background = "linear-gradient(90deg, #38bdf8, #93c5fd)"
-    energyBar.appendChild(energyFill)
+      const bar = document.createElement("div")
+      bar.style.height = "6px"
+      bar.style.borderRadius = "999px"
+      bar.style.background = "rgba(30,41,59,0.95)"
+      bar.style.overflow = "hidden"
 
-    this.shipStatusEls.set(ship.id, { energyFill, energyLabel, modeBadge, card })
+      const fill = document.createElement("div")
+      fill.style.width = `${Math.max(0, Math.min(100, ratio * 100))}%`
+      fill.style.height = "100%"
+      fill.style.background = fillBackground
+      bar.appendChild(fill)
 
-    energy.append(energyLabel, energyBar)
-    card.append(head, energy)
+      row.append(label, bar)
+      return { row, fill }
+    }
+
+    const hullMetric = makeMetricRow("HP", ship.hullRatio, "linear-gradient(90deg, #f97316, #fb7185)", "#fdba74")
+    const energyMetric = makeMetricRow("EN", ship.energyRatio, "linear-gradient(90deg, #38bdf8, #93c5fd)", "#93c5fd")
+
+    this.shipStatusEls.set(ship.id, { hullFill: hullMetric.fill, energyFill: energyMetric.fill, modeBadge, card })
+
+    statusStack.append(hullMetric.row, energyMetric.row)
+    card.append(head, statusStack)
     card.addEventListener("click", () => {
       this.controller.focusShip(ship.id)
       this.selectedShipId = ship.id

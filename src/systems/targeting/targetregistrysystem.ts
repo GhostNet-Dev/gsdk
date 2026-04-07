@@ -10,6 +10,8 @@ import {
   UpdateTargetStateMsg,
 } from "./targettypes"
 
+type TargetObjectMeta = Partial<RegisterTargetMsg> & { id?: string }
+
 export class TargetRegistrySystem {
   private readonly byId = new Map<string, TargetRecord>()
   private readonly idByObject = new WeakMap<THREE.Object3D, string>()
@@ -38,14 +40,15 @@ export class TargetRegistrySystem {
     if (prev) {
       this.unindexObject(prev.object)
     }
+    const objectMeta = this.getObjectMeta(msg.object)
 
     const record: TargetRecord = {
-      id: msg.id,
+      id: msg.id ?? objectMeta?.id ?? prev?.id ?? msg.object.uuid,
       object: msg.object,
-      teamId: msg.teamId ?? prev?.teamId,
-      factionId: msg.factionId ?? prev?.factionId,
-      fleetId: msg.fleetId ?? prev?.fleetId,
-      kind: msg.kind ?? prev?.kind ?? "other",
+      teamId: msg.teamId ?? objectMeta?.teamId ?? prev?.teamId,
+      factionId: msg.factionId ?? objectMeta?.factionId ?? prev?.factionId,
+      fleetId: msg.fleetId ?? objectMeta?.fleetId ?? prev?.fleetId,
+      kind: msg.kind ?? objectMeta?.kind ?? prev?.kind ?? "other",
       alive: msg.alive ?? prev?.alive ?? true,
       targetable: msg.targetable ?? prev?.targetable ?? true,
       collidable: msg.collidable ?? prev?.collidable ?? true,
@@ -91,6 +94,11 @@ export class TargetRegistrySystem {
     while (current) {
       const id = this.idByObject.get(current)
       if (id) return this.byId.get(id)
+      const metaId = this.getObjectMeta(current)?.id
+      if (metaId) {
+        const record = this.byId.get(metaId)
+        if (record) return record
+      }
       current = current.parent ?? undefined
     }
     return undefined
@@ -165,5 +173,9 @@ export class TargetRegistrySystem {
     object.traverse((child) => {
       this.idByObject.delete(child)
     })
+  }
+
+  private getObjectMeta(object: THREE.Object3D): TargetObjectMeta | undefined {
+    return object.userData?.targetMeta as TargetObjectMeta | undefined
   }
 }

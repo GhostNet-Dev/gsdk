@@ -29,6 +29,7 @@ import { AttackOption } from "@Glibs/types/playertypes"
 import { ActionRegistry } from "@Glibs/actions/actionregistry"
 import { ActionDef, IActionComponent } from "@Glibs/types/actiontypes"
 import { CircularProgressBar } from "@Glibs/ux/progress/circularprogressbar"
+import { GlobalEffectType } from "@Glibs/types/effecttypes"
 
 type Vector3Like = THREE.Vector3 | [number, number, number] | { x: number, y: number, z: number }
 
@@ -48,6 +49,11 @@ type ShipStatusRingVisual = {
   energyOuterRadius: number
   lastHullRatio: number
   lastEnergyRatio: number
+}
+
+type ShipHitBoxVisual = {
+  mesh: THREE.Mesh
+  localCenterOffset: THREE.Vector3
 }
 
 export type FleetWorldGridOptions = {
@@ -88,6 +94,7 @@ export type FleetWorldFleetOptions = {
 
 export type FleetWorldDebugOptions = {
   enabled: boolean
+  showHitboxes: boolean
 }
 
 export type FleetWorldStatusRingOptions = {
@@ -189,6 +196,7 @@ const defaultFleetWorldOptions: FleetWorldOptions = {
   },
   debug: {
     enabled: true,
+    showHitboxes: false,
   },
   statusRings: {
     enabled: true,
@@ -245,6 +253,7 @@ export class FleetWorld {
   private readonly shipEnergyFocuses = new Map<string, FleetShipEnergyFocus>()
   private readonly shipWeaponIds = new Map<string, string>()
   private readonly shipControllableIds = new Map<string, string>()
+  private readonly shipHitBoxes = new Map<string, ShipHitBoxVisual>()
   private readonly controllableIds = new Set<string>()
   private readonly taskObjs: ILoop[] = []
   private readonly fleetRoot = new THREE.Group()
@@ -310,7 +319,8 @@ export class FleetWorld {
     }
     this.taskObjs.push({
       LoopId: 0,
-      update: () => {
+      update: (delta: number) => {
+        this.updateShipHitBoxes()
         this.updateShipStatusVisuals()
       },
     })
@@ -585,7 +595,7 @@ export class FleetWorld {
     this.controllableIds.clear()
 
     this.shipMeshes.forEach((mesh, shipId) => {
-      this.options.deregisterProjectileTarget?.(mesh)
+      this.options.deregisterProjectileTarget?.(this.shipHitBoxes.get(shipId)?.mesh ?? mesh)
       this.eventCtrl.SendEventMessage(EventTypes.DeregisterTarget, shipId)
       const attackListener = this.shipAttackListeners.get(shipId)
       if (attackListener) {
@@ -595,6 +605,10 @@ export class FleetWorld {
     this.shipAttackListeners.clear()
     this.shipWeaponSwitchBars.forEach((bar) => bar.destroy())
     this.shipWeaponSwitchBars.clear()
+    this.shipHitBoxes.forEach((hitbox) => {
+      this.disposeHitBox(hitbox.mesh)
+    })
+    this.shipHitBoxes.clear()
     this.shipRuntimes.clear()
     this.shipMeshes.clear()
     this.fleetIdsByShipId.clear()
@@ -604,7 +618,8 @@ export class FleetWorld {
     this.taskObjs.length = 0
     this.taskObjs.push({
       LoopId: 0,
-      update: () => {
+      update: (delta: number) => {
+        this.updateShipHitBoxes()
         this.updateShipStatusVisuals()
       },
     })
@@ -621,11 +636,12 @@ export class FleetWorld {
     mesh.name = id
     this.tagShipMesh(mesh, id)
     this.shipMeshes.set(id, mesh)
-    this.options.registerProjectileTarget?.(mesh)
     this.fleetRoot.add(mesh)
 
     const footprint = this.measureShipFootprint(mesh)
     this.shipFootprints.set(id, footprint)
+    const hitBox = this.createShipHitBox(mesh, footprint, id)
+    this.options.registerProjectileTarget?.(hitBox.mesh)
     // console.log(
     //   `[FleetWorld] spawn ${id} at (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}) footprint=${footprint.toFixed(2)}`,
     // )
@@ -637,6 +653,7 @@ export class FleetWorld {
       id,
       mesh,
       this.shipRuntimes,
+      hitBox.mesh,
       statsWithOverride,
       def.weapons,
       def.weaponSwitchDurationSec ?? 0,
@@ -760,9 +777,16 @@ export class FleetWorld {
         })
         if (mesh) {
           mesh.userData.teamId = fleet.teamId ?? fleet.id
+          const targetObject = this.shipHitBoxes.get(memberId)?.mesh ?? mesh
+          targetObject.userData.targetMeta = {
+            id: memberId,
+            teamId: fleet.teamId ?? fleet.id,
+            fleetId: fleet.id,
+            kind: "ship",
+          }
           this.eventCtrl.SendEventMessage(EventTypes.RegisterTarget, {
             id: memberId,
-            object: mesh,
+            object: targetObject,
             teamId: fleet.teamId ?? fleet.id,
             fleetId: fleet.id,
             kind: "ship",
@@ -774,7 +798,21 @@ export class FleetWorld {
         if (runtime) {
           const onAttack = (opts: AttackOption[] = []) => {
             const totalDamage = opts.reduce((sum, opt) => sum + Math.max(0, opt.damage ?? 0), 0)
-            runtime.receiveDamage(totalDamage)
+            const appliedDamage = runtime.receiveDamage(totalDamage)
+            if (appliedDamage > 0) {
+              const damagePosition = mesh?.getWorldPosition(new THREE.Vector3()) ?? runtime.mesh.getWorldPosition(new THREE.Vector3())
+              this.eventCtrl.SendEventMessage(
+                EventTypes.GlobalEffect,
+                GlobalEffectType.FloatingText,
+                damagePosition,
+                Math.round(appliedDamage).toString(),
+                "#ffffff",
+                {
+                  scale: Math.max(3, (this.shipFootprints.get(memberId) ?? 6) * 0.45),
+                  yOffset: Math.max(3.6, (this.shipFootprints.get(memberId) ?? 6) * 0.42),
+                },
+              )
+            }
           }
           this.shipAttackListeners.set(memberId, onAttack)
           this.eventCtrl.RegisterEventListener(EventTypes.Attack + memberId, onAttack)
@@ -849,7 +887,10 @@ export class FleetWorld {
     this.scene.updateMatrixWorld(true)
     this.interactionRaycaster.setFromCamera(this.interactionPointer, this.camera as THREE.Camera)
 
-    const hits = this.interactionRaycaster.intersectObjects([...this.shipMeshes.values()], true)
+    const hits = this.interactionRaycaster.intersectObjects(
+      [...this.shipHitBoxes.values()].map((entry) => entry.mesh),
+      false,
+    )
     for (const hit of hits) {
       let obj: THREE.Object3D | null = hit.object
       while (obj) {
@@ -1024,6 +1065,74 @@ export class FleetWorld {
     const size = box.getSize(new THREE.Vector3())
     const planar = Math.max(size.x, size.z)
     return Math.max(planar, 4)
+  }
+
+  private createShipHitBox(mesh: THREE.Object3D, footprint: number, shipId: string): ShipHitBoxVisual {
+    const bounds = new THREE.Box3().setFromObject(mesh)
+    const size = bounds.getSize(new THREE.Vector3())
+    const localCenterOffset = mesh.worldToLocal(bounds.getCenter(new THREE.Vector3()))
+    const geometry = new THREE.BoxGeometry(
+      Math.max(size.x, footprint * 0.7, 2.5),
+      Math.max(size.y, 2.2),
+      Math.max(size.z, footprint, 3.5),
+    )
+    geometry.computeBoundingBox()
+
+    const material = new THREE.MeshBasicMaterial({
+      color: 0xff3b30,
+      wireframe: true,
+      transparent: true,
+      opacity: this.config.debug.showHitboxes ? 0.85 : 0,
+      depthWrite: false,
+    })
+    const hitBox = new THREE.Mesh(geometry, material)
+    hitBox.name = shipId
+    hitBox.userData.shipId = shipId
+    hitBox.userData.hitbox = true
+    hitBox.userData.targetMeta = {
+      id: shipId,
+      kind: "ship",
+    }
+    hitBox.renderOrder = 50
+    hitBox.matrixAutoUpdate = true
+    this.fleetRoot.add(hitBox)
+
+    const visual = {
+      mesh: hitBox,
+      localCenterOffset,
+    }
+    this.shipHitBoxes.set(shipId, visual)
+    this.syncShipHitBox(shipId, visual)
+    return visual
+  }
+
+  private disposeHitBox(hitbox: THREE.Mesh) {
+    hitbox.parent?.remove(hitbox)
+    hitbox.geometry.dispose()
+    const material = hitbox.material
+    if (Array.isArray(material)) {
+      material.forEach((entry) => entry.dispose())
+      return
+    }
+    material.dispose()
+  }
+
+  private updateShipHitBoxes() {
+    this.shipHitBoxes.forEach((hitBox, shipId) => {
+      this.syncShipHitBox(shipId, hitBox)
+    })
+  }
+
+  private syncShipHitBox(shipId: string, hitBox: ShipHitBoxVisual) {
+    const mesh = this.shipMeshes.get(shipId)
+    if (!mesh) return
+
+    mesh.updateMatrixWorld(true)
+    const worldCenter = hitBox.localCenterOffset.clone().applyMatrix4(mesh.matrixWorld)
+    hitBox.mesh.position.copy(worldCenter)
+    hitBox.mesh.quaternion.copy(mesh.getWorldQuaternion(new THREE.Quaternion()))
+    hitBox.mesh.scale.copy(mesh.getWorldScale(new THREE.Vector3()))
+    hitBox.mesh.updateMatrixWorld(true)
   }
 
   private normalizeShipMesh(mesh: THREE.Group) {

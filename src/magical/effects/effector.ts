@@ -67,8 +67,8 @@ export class Effector {
                 //ret = new SparkVfx(this.game)
                 break;
             case EffectType.Status:
-                const text = new TextStatus("0", "#ff0000")
-                this.meshs.add(text)
+                const text = new TextStatus()
+                this.meshs.add(text.Mesh)
                 ret = text
                 break;
             case EffectType.Explosion:

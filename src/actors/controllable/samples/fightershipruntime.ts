@@ -18,7 +18,7 @@ export interface IFighterShipRuntime extends IControllableRuntime {
   canAttackTarget(targetId: string): boolean
   useSkill?(skillId: string, payload?: unknown): void
   configureCombat(options: FighterShipCombatOptions): void
-  receiveDamage(amount: number): void
+  receiveDamage(amount: number): number
   getTeamId(): string | undefined
   getFormationReference(out?: THREE.Vector3): THREE.Vector3
 }
@@ -77,7 +77,7 @@ export type FighterShipCombatOptions = {
 
 export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   LoopId = 0
-  get objs() { return this.mesh }
+  get objs() { return this.collisionObject }
   private hull: number
   private readonly maxHull: number
   private energy: number
@@ -121,6 +121,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     public readonly id: string,
     readonly mesh: THREE.Object3D,
     private readonly runtimeIndex: Map<string, FighterShipRuntime>,
+    private readonly collisionObject: THREE.Object3D = mesh,
     stats: Partial<Record<StatKey, number>> = {},
     weapons: ShipProjectileDef[] = [{ id: MonsterId.WarhamerTracer }],
     weaponSwitchDurationSec = 0,
@@ -500,7 +501,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     const ships: THREE.Object3D[] = []
     this.runtimeIndex.forEach((r) => {
       if (r !== this) {
-        ships.push(r.mesh)
+        ships.push(r.collisionObject)
       }
     })
 
@@ -524,10 +525,15 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     return true
   }
 
-  receiveDamage(amount: number): void {
-    if (this.hull <= 0) return
+  receiveDamage(amount: number): number {
+    if (this.hull <= 0) return 0
 
-    this.hull = Math.max(0, this.hull - Math.max(0, amount))
+    const incomingDamage = Math.max(0, amount)
+    if (incomingDamage <= 0) return 0
+
+    const prevHull = this.hull
+    this.hull = Math.max(0, this.hull - incomingDamage)
+    const appliedDamage = prevHull - this.hull
     if (this.hull <= 0) {
       this.cancelWeaponSwitch()
       this.navigationIntent = { type: NavigationType.Dead }
@@ -535,6 +541,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
       this.engagementIntent = { type: EngagementType.Dead }
       this.onDestroyed?.(this.id)
     }
+    return appliedDamage
   }
 
   private updateEngagementNavigation(delta: number) {
