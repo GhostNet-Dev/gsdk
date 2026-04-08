@@ -323,6 +323,16 @@ export const actionDefs = {
     type: "waterdefence",
     trigger: TriggerType.OnActivate,
   },
+  FighterShipShield: {
+    type: "grantshield",
+    trigger: TriggerType.OnBuffApply,
+    capacity: 36,
+    color: 0x33aaff,
+    hexScale: 10,
+    baseOpacity: 0.92,
+    fallbackResource: "energy",
+    regenCooldownSec: 2.2,
+  },
   // =================================================================
   // Skill Effector
   // =================================================================

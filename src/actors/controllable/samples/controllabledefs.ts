@@ -6,8 +6,7 @@ import { NewFighterShipState } from "../states/fightershipstate"
 import { IFighterShipRuntime } from "./fightershipruntime"
 import { shipWeaponDefs } from "./shipweapondefs"
 import { Char } from "@Glibs/types/assettypes"
-import { MonsterId } from "@Glibs/types/monstertypes"
-import { TriggerType } from "@Glibs/types/actiontypes"
+import { actionDefs } from "@Glibs/types/actiontypes"
 
 const now = () => Date.now()
 
@@ -31,16 +30,7 @@ export const controllableDefs = {
     weaponSwitchDurationSec: 3.2,
     modeSwitchDurationSec: 2.4,
     modeActions: {
-      defense: [{
-        type: "grantshield",
-        trigger: TriggerType.OnBuffApply,
-        capacity: 45,
-        color: 0x44ccff,
-        hexScale: 34,
-        baseOpacity: 0.95,
-        fallbackResource: "energy",
-        regenCooldownSec: 2.5,
-      }],
+      defense: [actionDefs.FighterShipShield],
     },
     policyMap: {
       manual: "human",
@@ -68,16 +58,7 @@ export const controllableDefs = {
     weaponSwitchDurationSec: 3,
     modeSwitchDurationSec: 1.8,
     modeActions: {
-      defense: [{
-        type: "grantshield",
-        trigger: TriggerType.OnBuffApply,
-        capacity: 36,
-        color: 0x33aaff,
-        hexScale: 10,
-        baseOpacity: 0.92,
-        fallbackResource: "energy",
-        regenCooldownSec: 2.2,
-      }],
+      defense: [actionDefs.FighterShipShield],
     },
     policyMap: {
       manual: "human",
@@ -104,16 +85,7 @@ export const controllableDefs = {
     weaponSwitchDurationSec: 1.5,
     modeSwitchDurationSec: 3.2,
     modeActions: {
-      defense: [{
-        type: "grantshield",
-        trigger: TriggerType.OnBuffApply,
-        capacity: 60,
-        color: 0x7dd3fc,
-        hexScale: 28,
-        baseOpacity: 1.0,
-        fallbackResource: "energy",
-        regenCooldownSec: 3.0,
-      }],
+      defense: [actionDefs.FighterShipShield],
     },
     policyMap: {
       manual: "human",
