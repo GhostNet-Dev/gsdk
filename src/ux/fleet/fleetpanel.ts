@@ -1087,21 +1087,6 @@ export class FleetPanel {
     this.floatingMenuEl = undefined
   }
 
-  private describeOrder(order: FleetOrder) {
-    switch (order.type) {
-      case FleetOrderType.Move:
-        if (!order.point) return "Move"
-        return `Move (${order.point.x.toFixed(0)}, ${order.point.z.toFixed(0)})`
-      case FleetOrderType.Attack:
-        return `Attack ${order.targetId ?? "target"}`
-      case FleetOrderType.Follow:
-        return `Follow ${order.targetId ?? "target"}`
-      case FleetOrderType.Hold:
-      default:
-        return "Hold Position"
-    }
-  }
-
   private moveModeLabel(moveMode: FleetMoveMode) {
     if (moveMode === FleetMoveMode.FlagshipFollow) return "Flagship Follow"
     if (moveMode === FleetMoveMode.FlagshipFormation) return "Flagship Formation"
@@ -1111,16 +1096,11 @@ export class FleetPanel {
   private planButtonLabel(order?: FleetOrder) {
     if (!order) return "No Plan"
     if (order.type === FleetOrderType.Hold) return "Hold Position"
+    if (order.type === FleetOrderType.Advance) return "Advance"
     if (order.type === FleetOrderType.Move) return "Move"
     if (order.type === FleetOrderType.Attack) return "Attack"
     if (order.type === FleetOrderType.Follow) return "Follow"
     return "Plan"
-  }
-
-  private describeMoveMode(moveMode: FleetMoveMode) {
-    if (moveMode === FleetMoveMode.FlagshipFollow) return "Move Flagship Follow"
-    if (moveMode === FleetMoveMode.FlagshipFormation) return "Move Flagship Formation"
-    return "Move Formation"
   }
 
   private applyStyle() {

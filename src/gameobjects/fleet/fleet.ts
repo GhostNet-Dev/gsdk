@@ -16,6 +16,7 @@ export enum FleetMoveMode {
 
 export enum FleetOrderType {
   Move = "move",
+  Advance = "advance",
   Attack = "attack",
   Hold = "hold",
   Follow = "follow"
@@ -117,6 +118,9 @@ export class Fleet {
       case FleetOrderType.Move:
         if (!order.point && !order.direction) return []
         return this.moveCommands(members, order.point, issuedAt, issuer, priority, order)
+      case FleetOrderType.Advance:
+        if (!order.direction) return []
+        return this.advanceCommands(members, issuedAt, issuer, priority, order)
       case FleetOrderType.Attack:
         if (!order.targetId) return []
         return this.attackCommands(members, issuedAt, issuer, priority, order)
@@ -174,6 +178,27 @@ export class Fleet {
       payload: order.direction
         ? { direction: order.direction.clone() }
         : undefined,
+      issuedAt,
+      issuer,
+      priority,
+    }))
+  }
+
+  private advanceCommands(
+    members: string[],
+    issuedAt: number,
+    issuer: FleetCommandIssuer,
+    priority: number | undefined,
+    order: FleetOrder,
+  ): ActorCommand[] {
+    if (!order.direction) return []
+
+    return members.map((actorId) => ({
+      type: "move" as const,
+      actorId,
+      payload: {
+        direction: order.direction!.clone(),
+      },
       issuedAt,
       issuer,
       priority,

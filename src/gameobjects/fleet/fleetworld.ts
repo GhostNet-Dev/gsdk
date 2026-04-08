@@ -271,7 +271,6 @@ export class FleetWorld {
   private readonly activeSurfaceFlames = new Map<string, IActionComponent>()
   private readonly fleetIdsByShipId = new Map<string, string>()
   private readonly tmpAimDirection = new THREE.Vector3()
-  private readonly tmpAimTarget = new THREE.Vector3()
   private readonly tmpTrackPosition = new THREE.Vector3()
   private readonly tmpTrackLook = new THREE.Vector3()
   private readonly tmpStatusQuaternion = new THREE.Quaternion()
@@ -1038,7 +1037,8 @@ export class FleetWorld {
 
   private restorePlannedAim(fleetId: string, shipPosition: THREE.Vector3) {
     const plannedOrder = this.options.orderSource?.(fleetId)
-    if (!plannedOrder || plannedOrder.type !== FleetOrderType.Move) return
+    if (!plannedOrder) return
+    if (plannedOrder.type !== FleetOrderType.Move && plannedOrder.type !== FleetOrderType.Advance) return
 
     if (plannedOrder.direction && plannedOrder.direction.lengthSq() > 0.0001) {
       this.aimingController?.setTargetDirection(plannedOrder.direction)
@@ -1085,22 +1085,16 @@ export class FleetWorld {
   private createAimMoveOrder(): FleetOrder | undefined {
     if (!this.aimingController || !this.aimingFleetId || !this.aimingShipId) return
 
-    const runtime = this.shipRuntimes.get(this.aimingShipId)
     const summary = this.fleetManager.getFleetSummary(this.aimingFleetId)
-    if (!runtime || !summary || !this.canControlFleet(this.aimingFleetId)) return
+    if (!summary || !this.canControlFleet(this.aimingFleetId)) return
 
-    const distance = this.options.aimMoveDistance ?? Math.max(summary.spacing * 2.5, 30)
     const direction = this.aimingController.getTargetDirection(this.tmpAimDirection)
     if (direction.lengthSq() <= 0.0001) return
-
-    this.tmpAimTarget
-      .copy(runtime.mesh.position)
-      .addScaledVector(direction.normalize(), distance)
+    direction.normalize()
 
     return {
-      type: FleetOrderType.Move,
+      type: FleetOrderType.Advance,
       issuer: FleetCommandIssuer.Human,
-      point: this.tmpAimTarget.clone(),
       direction: direction.clone(),
       formation: summary.formation,
       spacing: summary.spacing,
