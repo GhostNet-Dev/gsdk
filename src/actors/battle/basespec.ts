@@ -10,6 +10,7 @@ import { CharacterStatus } from "./charstatus"
 import { StatFactory } from "./statfactory"
 import { calculateCompositeDamage, DamageContext, DamageResult } from "./damagecalc"
 import { DamageFormula } from "./damageformula"
+import { DamagePacket, DamageResolution, IDamageInterceptor } from "./damagepacket"
 
 export class BaseSpec {
     // 레거시 호환성을 위한 프로퍼티 (필요 없다면 제거 가능)
@@ -31,6 +32,7 @@ export class BaseSpec {
     
     status: CharacterStatus
     lastUsedWeaponMode: 'melee' | 'ranged' = 'melee'
+    private damageInterceptors: IDamageInterceptor[] = []
 
     // Getters
     get AttackSpeedMelee() {
@@ -200,23 +202,53 @@ export class BaseSpec {
             return;
         }
 
-        // 실제 체력 차감
-        this.status.health -= result.finalDamage;
-        this.status.hit = true;
-
-        // 사망 체크
-        if (this.CheckDie()) {
-            // onDeath 이벤트 등이 있다면 여기서 호출
-        }
+        this.ReceiveDamage({
+            amount: result.finalDamage,
+            isCritical: result.isCritical,
+            tags: result.isBlocked ? ["blocked"] : undefined,
+        });
     }
 
     // 기존 방식의 데미지 처리 (레거시 코드 호환용, 필요 없으면 삭제 추천)
-    ReceiveCalcDamage(damage: number) {
-        // 더 이상 독자 공식을 쓰지 않고, 방어력이 이미 계산된 데미지가 들어온다고 가정하거나
-        // 간단한 처리만 수행
-        this.status.health -= damage;
-        this.status.hit = true;
-        this.status.health = Math.max(0, this.status.health);
+    ReceiveCalcDamage(damage: number): DamageResolution {
+        return this.ReceiveDamage({ amount: damage });
+    }
+
+    ReceiveDamage(packet: DamagePacket): DamageResolution {
+        let remainingPacket: DamagePacket = {
+            ...packet,
+            amount: Math.max(0, packet.amount),
+        }
+        let absorbedAmount = 0
+        let shieldBroken = false
+
+        for (const interceptor of this.damageInterceptors) {
+            if (remainingPacket.amount <= 0) break
+            if (!interceptor.isActive()) continue
+
+            const interceptResult = interceptor.absorb(remainingPacket)
+            absorbedAmount += Math.max(0, interceptResult.absorbedAmount)
+            remainingPacket = {
+                ...interceptResult.remainingPacket,
+                amount: Math.max(0, interceptResult.remainingPacket.amount),
+            }
+            shieldBroken ||= !!interceptResult.shieldBroken
+        }
+
+        const incomingAmount = Math.max(0, packet.amount)
+        const appliedAmount = Math.max(0, remainingPacket.amount)
+        this.status.health = Math.max(0, this.status.health - appliedAmount)
+        this.status.hit = appliedAmount > 0
+
+        return {
+            incomingAmount,
+            absorbedAmount,
+            appliedAmount,
+            remainingAmount: 0,
+            blocked: appliedAmount <= 0,
+            targetDied: this.CheckDie(),
+            shieldBroken,
+        }
     }
 
     ReceiveCalcHeal(heal: number) {
@@ -244,6 +276,15 @@ export class BaseSpec {
         } else {
             this.status.stamina += stamina;
         }
+    }
+
+    AddDamageInterceptor(interceptor: IDamageInterceptor) {
+        if (this.damageInterceptors.includes(interceptor)) return
+        this.damageInterceptors.push(interceptor)
+    }
+
+    RemoveDamageInterceptor(interceptor: IDamageInterceptor) {
+        this.damageInterceptors = this.damageInterceptors.filter((entry) => entry !== interceptor)
     }
 
     TryConsumeHealth(amount: number) {

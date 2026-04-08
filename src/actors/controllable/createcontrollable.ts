@@ -4,6 +4,7 @@ import { ControllableDb } from "./controllabledb"
 import { IControllableRuntime } from "./controllabletypes"
 import { IdleControllableState } from "./states/controllablestate"
 import { IControlPolicy } from "./policy/controlpolicy"
+import { ActionRegistry } from "@Glibs/actions/actionregistry"
 
 export class CreateControllable {
   constructor(
@@ -20,7 +21,7 @@ export class CreateControllable {
 
     const state = def.stateFactory(runtime) ?? new IdleControllableState(runtime)
 
-    return new ControllableCtrl(
+    const ctrl = new ControllableCtrl(
       id,
       runtime,
       this.eventCtrl,
@@ -34,5 +35,11 @@ export class CreateControllable {
       1200,
       def.defaultControlSource ?? "manual",
     )
+
+    def.actions?.forEach((actionDef) => {
+      ctrl.applyAction(ActionRegistry.create(actionDef), { via: "item", source: def })
+    })
+
+    return ctrl
   }
 }

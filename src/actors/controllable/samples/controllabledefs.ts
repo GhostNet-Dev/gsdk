@@ -7,6 +7,7 @@ import { IFighterShipRuntime } from "./fightershipruntime"
 import { shipWeaponDefs } from "./shipweapondefs"
 import { Char } from "@Glibs/types/assettypes"
 import { MonsterId } from "@Glibs/types/monstertypes"
+import { TriggerType } from "@Glibs/types/actiontypes"
 
 const now = () => Date.now()
 
@@ -28,6 +29,14 @@ export const controllableDefs = {
     },
     weapons: [shipWeaponDefs.ScoutLaser, shipWeaponDefs.FighterAutocannon, shipWeaponDefs.AllySupportGun],
     weaponSwitchDurationSec: 3.2,
+    actions: [{
+      type: "grantshield",
+      trigger: TriggerType.OnBuffApply,
+      capacity: 45,
+      color: 0x44ccff,
+      hexScale: 34,
+      baseOpacity: 0.95,
+    }],
     policyMap: {
       manual: "human",
       ai: "ship-default-ai",
@@ -52,6 +61,14 @@ export const controllableDefs = {
     weapons: [shipWeaponDefs.FighterAutocannon, shipWeaponDefs.ScoutLaser, shipWeaponDefs.AllySupportGun],
     // weapons: [shipWeaponDefs.FighterAutocannon],
     weaponSwitchDurationSec: 3,
+    actions: [{
+      type: "grantshield",
+      trigger: TriggerType.OnBuffApply,
+      capacity: 36,
+      color: 0x33aaff,
+      hexScale: 32,
+      baseOpacity: 0.92,
+    }],
     policyMap: {
       manual: "human",
       ai: "ship-default-ai",
@@ -75,6 +92,14 @@ export const controllableDefs = {
     },
     weapons: [shipWeaponDefs.AllySupportGun, shipWeaponDefs.FighterAutocannon, shipWeaponDefs.ScoutLaser],
     weaponSwitchDurationSec: 1.5,
+    actions: [{
+      type: "grantshield",
+      trigger: TriggerType.OnBuffApply,
+      capacity: 60,
+      color: 0x7dd3fc,
+      hexScale: 28,
+      baseOpacity: 1.0,
+    }],
     policyMap: {
       manual: "human",
       ai: "ally-escort-ai",

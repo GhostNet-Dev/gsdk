@@ -4,6 +4,7 @@ import { IControllableRuntime } from "../controllabletypes"
 import { MonsterId } from "@Glibs/types/monstertypes"
 import { ProjectileMsg } from "@Glibs/actors/projectile/projectile"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
+import { DamageKind, DamagePacket } from "@Glibs/actors/battle/damagepacket"
 import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { ShipProjectileDef } from "../controllabletypes"
 import { FleetWeaponDoctrine } from "@Glibs/gameobjects/fleet/fleet"
@@ -19,6 +20,7 @@ export interface IFighterShipRuntime extends IControllableRuntime {
   useSkill?(skillId: string, payload?: unknown): void
   configureCombat(options: FighterShipCombatOptions): void
   receiveDamage(amount: number): number
+  receiveDamage(packet: DamagePacket): number
   getTeamId(): string | undefined
   getFormationReference(out?: THREE.Vector3): THREE.Vector3
 }
@@ -210,7 +212,10 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   configureCombat(options: FighterShipCombatOptions): void {
     this.projectileEmitter = options.eventEmitter
     this.ownerSpec = options.ownerSpec
-    if (this.ownerSpec) this.ownerSpec.lastUsedWeaponMode = "ranged"
+    if (this.ownerSpec) {
+      this.ownerSpec.lastUsedWeaponMode = "ranged"
+      this.ownerSpec.status.health = this.hull
+    }
     this.teamId = options.teamId
     this.findNearestEnemy = options.findNearestEnemy
     this.onDestroyed = options.onDestroyed
@@ -277,15 +282,17 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   getHull() {
-    return this.hull
+    return this.ownerSpec?.Health ?? this.hull
   }
 
   getMaxHull() {
-    return this.maxHull
+    return this.ownerSpec?.stats.getStat("hp") ?? this.maxHull
   }
 
   getHullRatio() {
-    return this.maxHull <= 0 ? 0 : this.hull / this.maxHull
+    const maxHull = this.getMaxHull()
+    const hull = this.getHull()
+    return maxHull <= 0 ? 0 : hull / maxHull
   }
 
   getEnergy() {
@@ -330,6 +337,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   update(delta: number): void {
+    this.hull = this.getHull()
     if (this.hull <= 0) return
     this.logIntentTransitions()
     this.equippedWeaponCooldown = Math.max(0, this.equippedWeaponCooldown - delta)
@@ -525,16 +533,33 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     return true
   }
 
-  receiveDamage(amount: number): number {
+  receiveDamage(amount: number): number
+  receiveDamage(packet: DamagePacket): number
+  receiveDamage(amountOrPacket: number | DamagePacket): number {
     if (this.hull <= 0) return 0
 
-    const incomingDamage = Math.max(0, amount)
+    const packet = typeof amountOrPacket === "number"
+      ? { amount: amountOrPacket, kind: "physical" as DamageKind, tags: ["ranged"] }
+      : amountOrPacket
+    const incomingDamage = Math.max(0, packet.amount)
     if (incomingDamage <= 0) return 0
 
-    const prevHull = this.hull
-    this.hull = Math.max(0, this.hull - incomingDamage)
-    const appliedDamage = prevHull - this.hull
-    if (this.hull <= 0) {
+    const prevHull = this.getHull()
+    const resolution = this.ownerSpec
+      ? this.ownerSpec.ReceiveDamage(packet)
+      : {
+          appliedAmount: incomingDamage,
+          targetDied: false,
+        }
+
+    if (!this.ownerSpec) {
+      this.hull = Math.max(0, this.hull - incomingDamage)
+    } else {
+      this.hull = this.ownerSpec.Health
+    }
+
+    const appliedDamage = Math.max(0, prevHull - this.hull)
+    if ((this.ownerSpec?.Health ?? this.hull) <= 0 || resolution.targetDied) {
       this.cancelWeaponSwitch()
       this.navigationIntent = { type: NavigationType.Dead }
       this.combatIntent = { type: CombatType.Dead }

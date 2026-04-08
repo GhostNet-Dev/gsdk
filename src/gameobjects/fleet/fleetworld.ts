@@ -25,7 +25,7 @@ import { FleetShipEnergyFocus } from "@Glibs/ux/fleet/fleetpaneltypes"
 import { FleetControllerType, FleetOrder, FleetOrderType, FleetCommandIssuer, FleetMoveMode } from "./fleet"
 import { ICameraTrackTarget } from "@Glibs/systems/camera/cameratypes"
 import { ProjectileMsg } from "@Glibs/actors/projectile/projectile"
-import { AttackOption } from "@Glibs/types/playertypes"
+import { AttackOption, AttackType } from "@Glibs/types/playertypes"
 import { ActionRegistry } from "@Glibs/actions/actionregistry"
 import { ActionDef, IActionComponent } from "@Glibs/types/actiontypes"
 import { CircularProgressBar } from "@Glibs/ux/progress/circularprogressbar"
@@ -797,8 +797,39 @@ export class FleetWorld {
         }
         if (runtime) {
           const onAttack = (opts: AttackOption[] = []) => {
-            const totalDamage = opts.reduce((sum, opt) => sum + Math.max(0, opt.damage ?? 0), 0)
-            const appliedDamage = runtime.receiveDamage(totalDamage)
+            const appliedDamage = opts.reduce((sum, opt) => {
+              const tags: string[] = []
+              let kind: "physical" | "magic" | "true" = "physical"
+
+              switch (opt.type) {
+                case AttackType.Magic0:
+                  kind = "magic"
+                  tags.push("ranged", "spell")
+                  break
+                case AttackType.RangedShot:
+                  tags.push("ranged", "projectile")
+                  break
+                case AttackType.AOE:
+                  tags.push("aoe")
+                  break
+                case AttackType.FullSwing:
+                case AttackType.NormalSwing:
+                  tags.push("melee")
+                  break
+                default:
+                  break
+              }
+
+              return sum + runtime.receiveDamage({
+                amount: Math.max(0, opt.damage ?? 0),
+                kind,
+                sourceSpec: opt.spec,
+                sourceId: opt.obj?.name,
+                targetId: memberId,
+                tags,
+                hitPoint: opt.targetPoint,
+              })
+            }, 0)
             if (appliedDamage > 0) {
               const damagePosition = mesh?.getWorldPosition(new THREE.Vector3()) ?? runtime.mesh.getWorldPosition(new THREE.Vector3())
               this.eventCtrl.SendEventMessage(
