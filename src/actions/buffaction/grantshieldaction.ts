@@ -3,14 +3,17 @@ import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actio
 import IEventController from "@Glibs/interface/ievent"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
 import { ShieldActor, ShieldActorOptions } from "@Glibs/actors/shield/shieldactor"
+import { ShipEnergyPool } from "@Glibs/actors/shield/shipenergypool"
 
 export interface GrantShieldActionOptions extends ShieldActorOptions {
   capacityPerLevel?: number
   radiusPerLevel?: number
+  fallbackResource?: "energy" | "mana" | "stamina"
 }
 
 type ShieldAwareUser = IActionUser & {
   __shieldActors?: Map<string, ShieldActor>
+  getRuntime?: () => unknown
 }
 
 export class GrantShieldAction implements IActionComponent {
@@ -52,6 +55,7 @@ export class GrantShieldAction implements IActionComponent {
         capacity,
         maxCapacity: capacity,
         radius,
+        fallbackPool: this.resolveFallbackPool(owner),
       },
     ))
   }
@@ -62,5 +66,26 @@ export class GrantShieldAction implements IActionComponent {
     if (!shield) return
     shield.dispose()
     owner.__shieldActors?.delete(this.id)
+  }
+
+  private resolveFallbackPool(target: ShieldAwareUser) {
+    if (this.options.fallbackResource !== "energy") return undefined
+    const runtime = target.getRuntime?.()
+    if (!runtime || !this.isEnergyRuntime(runtime)) return undefined
+    return new ShipEnergyPool(runtime)
+  }
+
+  private isEnergyRuntime(value: unknown): value is {
+    getEnergy(): number
+    getMaxEnergy(): number
+    consumeEnergyAmount(amount: number): number
+  } {
+    if (!value || typeof value !== "object") return false
+    const candidate = value as Record<string, unknown>
+    return (
+      typeof candidate.getEnergy === "function" &&
+      typeof candidate.getMaxEnergy === "function" &&
+      typeof candidate.consumeEnergyAmount === "function"
+    )
   }
 }

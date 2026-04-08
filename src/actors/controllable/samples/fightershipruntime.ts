@@ -23,6 +23,7 @@ export interface IFighterShipRuntime extends IControllableRuntime {
   receiveDamage(packet: DamagePacket): number
   getTeamId(): string | undefined
   getFormationReference(out?: THREE.Vector3): THREE.Vector3
+  consumeEnergyAmount(amount: number): number
 }
 
 export enum NavigationType {
@@ -305,6 +306,12 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
 
   getEnergyRatio() {
     return this.maxEnergy <= 0 ? 0 : this.energy / this.maxEnergy
+  }
+
+  consumeEnergyAmount(amount: number) {
+    const consumed = Math.min(Math.max(0, amount), this.energy)
+    this.energy = Math.max(0, this.energy - consumed)
+    return consumed
   }
 
   setWeapon(weapon: ShipProjectileDef) {
@@ -768,7 +775,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   private consumeEnergy(delta: number, rate: number) {
-    this.energy = Math.max(0, this.energy - (rate * delta))
+    this.consumeEnergyAmount(rate * delta)
   }
 
   private restoreEnergy(delta: number, rate: number) {

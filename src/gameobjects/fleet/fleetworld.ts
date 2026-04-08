@@ -254,6 +254,7 @@ export class FleetWorld {
   private readonly shipWeaponIds = new Map<string, string>()
   private readonly shipControllableIds = new Map<string, string>()
   private readonly shipHitBoxes = new Map<string, ShipHitBoxVisual>()
+  private readonly shipDefenseActions = new Map<string, IActionComponent[]>()
   private readonly controllableIds = new Set<string>()
   private readonly taskObjs: ILoop[] = []
   private readonly fleetRoot = new THREE.Group()
@@ -510,7 +511,10 @@ export class FleetWorld {
 
   setShipEnergyFocus(shipId: string, focus: FleetShipEnergyFocus) {
     if (!this.shipRuntimes.has(shipId)) return
+    const previous = this.shipEnergyFocuses.get(shipId) ?? "navigation"
     this.shipEnergyFocuses.set(shipId, focus)
+    if (previous === focus) return
+    this.syncShipDefenseMode(shipId, focus)
   }
 
   setShipWeapon(shipId: string, weaponId: string) {
@@ -613,6 +617,7 @@ export class FleetWorld {
     this.shipMeshes.clear()
     this.fleetIdsByShipId.clear()
     this.shipEnergyFocuses.clear()
+    this.shipDefenseActions.clear()
     this.shipFootprints.clear()
     this.shipStatusVisuals.clear()
     this.taskObjs.length = 0
@@ -668,8 +673,31 @@ export class FleetWorld {
     const ctrl = this.createControllable.create(controllableId, runtime)
     this.controllables.register(id, ctrl)
     this.controllableIds.add(id)
+    this.syncShipDefenseMode(id, this.shipEnergyFocuses.get(id) ?? "navigation")
 
     return { mesh, runtime, ctrl }
+  }
+
+  private syncShipDefenseMode(shipId: string, focus: FleetShipEnergyFocus) {
+    const ctrl = this.controllables.get(shipId)
+    if (!ctrl) return
+
+    const controllableId = this.shipControllableIds.get(shipId) ?? "ship.fighter"
+    const def = Object.values(controllableDefs).find((candidate) => candidate.id === controllableId)
+    const defenseActions = def?.actions?.filter((actionDef) => actionDef.type === "grantshield") ?? []
+    const activeActions = this.shipDefenseActions.get(shipId) ?? []
+
+    if (focus === "defense") {
+      if (activeActions.length > 0) return
+      const createdActions = defenseActions.map((actionDef) => ActionRegistry.create(actionDef as ActionDef))
+      createdActions.forEach((action) => ctrl.applyAction(action, { via: "item", source: def }))
+      this.shipDefenseActions.set(shipId, createdActions)
+      return
+    }
+
+    if (activeActions.length <= 0) return
+    activeActions.forEach((action) => ctrl.removeAction(action, { via: "item", source: def }))
+    this.shipDefenseActions.delete(shipId)
   }
 
   private setupScene() {

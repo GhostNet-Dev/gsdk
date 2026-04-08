@@ -8,6 +8,7 @@ import {
   IDamageInterceptor,
 } from "@Glibs/actors/battle/damagepacket"
 import { HexShield, HexShieldOptions } from "@Glibs/magical/libs/hexshield"
+import { IShieldResourcePool } from "./shieldresource"
 
 export interface ShieldActorOptions extends HexShieldOptions {
   capacity?: number
@@ -15,6 +16,7 @@ export interface ShieldActorOptions extends HexShieldOptions {
   hitIntensity?: number
   activeOpacity?: number
   brokenOpacity?: number
+  fallbackPool?: IShieldResourcePool
 }
 
 export class ShieldActor implements IDamageInterceptor, ILoop {
@@ -26,6 +28,7 @@ export class ShieldActor implements IDamageInterceptor, ILoop {
   private readonly hitIntensity: number
   private readonly activeOpacity: number
   private readonly brokenOpacity: number
+  private readonly fallbackPool?: IShieldResourcePool
 
   private readonly tmpWorldCenter = new THREE.Vector3()
   private readonly tmpLocalDirection = new THREE.Vector3()
@@ -43,6 +46,7 @@ export class ShieldActor implements IDamageInterceptor, ILoop {
     this.hitIntensity = options.hitIntensity ?? 3.2
     this.activeOpacity = options.activeOpacity ?? options.baseOpacity ?? 1
     this.brokenOpacity = options.brokenOpacity ?? 0
+    this.fallbackPool = options.fallbackPool
 
     const radius = options.radius ?? this.resolveRadius(ownerObject)
     this.shield = new HexShield({
@@ -53,12 +57,12 @@ export class ShieldActor implements IDamageInterceptor, ILoop {
 
     this.ownerSpec.AddDamageInterceptor(this)
     this.ownerObject.add(this.shield.getMesh())
-    this.shield.getMesh().visible = this.currentCapacity > 0
+    this.syncVisualState()
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
   }
 
   isActive(): boolean {
-    return this.active && this.currentCapacity > 0
+    return this.active && (this.currentCapacity > 0 || (this.fallbackPool?.getCurrent() ?? 0) > 0)
   }
 
   getCapacity(): number {
@@ -72,8 +76,7 @@ export class ShieldActor implements IDamageInterceptor, ILoop {
   restore(amount?: number): void {
     const restoreAmount = amount ?? this.maxCapacity
     this.currentCapacity = Math.min(this.maxCapacity, this.currentCapacity + Math.max(0, restoreAmount))
-    this.shield.setVisible(this.currentCapacity > 0)
-    this.shield.setOpacity(this.currentCapacity > 0 ? this.activeOpacity : this.brokenOpacity)
+    this.syncVisualState()
   }
 
   absorb(packet: DamagePacket): DamageInterceptResult {
@@ -92,16 +95,22 @@ export class ShieldActor implements IDamageInterceptor, ILoop {
       }
     }
 
-    const absorbedAmount = Math.min(this.currentCapacity, incomingAmount)
-    this.currentCapacity = Math.max(0, this.currentCapacity - absorbedAmount)
-    this.triggerHit(packet)
+    const capacityAbsorbedAmount = Math.min(this.currentCapacity, incomingAmount)
+    this.currentCapacity = Math.max(0, this.currentCapacity - capacityAbsorbedAmount)
 
-    const remainingAmount = Math.max(0, incomingAmount - absorbedAmount)
-    const shieldBroken = this.currentCapacity <= 0
-    if (shieldBroken) {
-      this.shield.setOpacity(this.brokenOpacity)
-      this.shield.setVisible(false)
+    let remainingAmount = Math.max(0, incomingAmount - capacityAbsorbedAmount)
+    const fallbackAbsorbedAmount = remainingAmount > 0
+      ? this.fallbackPool?.consume(remainingAmount) ?? 0
+      : 0
+    remainingAmount = Math.max(0, remainingAmount - fallbackAbsorbedAmount)
+
+    const absorbedAmount = capacityAbsorbedAmount + fallbackAbsorbedAmount
+    if (absorbedAmount > 0) {
+      this.triggerHit(packet)
     }
+
+    const shieldBroken = this.currentCapacity <= 0
+    this.syncVisualState()
 
     return {
       absorbedAmount,
@@ -131,6 +140,12 @@ export class ShieldActor implements IDamageInterceptor, ILoop {
     this.shield.setVisible(true)
     this.shield.setOpacity(this.activeOpacity)
     this.shield.triggerHit(hitDirection, this.hitIntensity)
+  }
+
+  private syncVisualState(): void {
+    const visible = this.currentCapacity > 0 || (this.fallbackPool?.getCurrent() ?? 0) > 0
+    this.shield.setVisible(visible)
+    this.shield.setOpacity(visible ? this.activeOpacity : this.brokenOpacity)
   }
 
   private resolveHitDirection(packet: DamagePacket): THREE.Vector3 {

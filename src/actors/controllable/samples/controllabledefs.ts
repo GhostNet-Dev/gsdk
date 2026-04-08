@@ -36,6 +36,7 @@ export const controllableDefs = {
       color: 0x44ccff,
       hexScale: 34,
       baseOpacity: 0.95,
+      fallbackResource: "energy",
     }],
     policyMap: {
       manual: "human",
@@ -68,6 +69,7 @@ export const controllableDefs = {
       color: 0x33aaff,
       hexScale: 32,
       baseOpacity: 0.92,
+      fallbackResource: "energy",
     }],
     policyMap: {
       manual: "human",
@@ -99,6 +101,7 @@ export const controllableDefs = {
       color: 0x7dd3fc,
       hexScale: 28,
       baseOpacity: 1.0,
+      fallbackResource: "energy",
     }],
     policyMap: {
       manual: "human",
