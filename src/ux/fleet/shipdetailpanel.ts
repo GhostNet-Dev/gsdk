@@ -78,7 +78,7 @@ export class ShipDetailPanel {
 
   private updateShipStatus(ship: FleetShipPanelState) {
     if (this.energyTriggerBtn && !this.energyMenuOpen) {
-      this.energyTriggerBtn.innerText = this.shortLabelEnergyFocus(ship.energyFocus)
+      this.energyTriggerBtn.innerText = this.energyFocusLabel(ship)
     }
     if (this.weaponTriggerBtn && !this.weaponMenuOpen) {
       this.weaponTriggerBtn.innerText = this.weaponButtonLabel(ship)
@@ -125,7 +125,7 @@ export class ShipDetailPanel {
     this.optionsEl.innerHTML = ""
 
     const energyTrigger = this.makePopupSelect(
-      this.shortLabelEnergyFocus(ship.energyFocus),
+      this.energyFocusLabel(ship),
       energyFocuses.map((focus) => ({
         label: this.labelEnergyFocus(focus),
         active: ship.energyFocus === focus,
@@ -168,7 +168,7 @@ export class ShipDetailPanel {
       this.optionsEl.appendChild(weaponTrigger)
     }
 
-    this.descEl.innerText = this.describeEnergyFocus(ship.energyFocus)
+    this.descEl.innerText = this.describeModeState(ship)
   }
 
   private renderEmpty() {
@@ -302,6 +302,21 @@ export class ShipDetailPanel {
     const currentWeapon = ship.availableWeapons.find((weapon) => weapon.id === ship.weaponId)
     const baseLabel = currentWeapon?.label || "무기 선택"
     return ship.isWeaponSwitching ? `${baseLabel} 교체중...` : baseLabel
+  }
+
+  private energyFocusLabel(ship: FleetShipPanelState) {
+    if (!ship.isModeSwitching || !ship.pendingEnergyFocus) {
+      return this.shortLabelEnergyFocus(ship.energyFocus)
+    }
+    return `${this.shortLabelEnergyFocus(ship.energyFocus)} -> ${this.shortLabelEnergyFocus(ship.pendingEnergyFocus)}`
+  }
+
+  private describeModeState(ship: FleetShipPanelState) {
+    if (!ship.isModeSwitching || !ship.pendingEnergyFocus) {
+      return this.describeEnergyFocus(ship.energyFocus)
+    }
+    const progress = Math.round(ship.modeSwitchProgress * 100)
+    return `${this.labelEnergyFocus(ship.pendingEnergyFocus)} 모드로 전환 중입니다. (${progress}%)`
   }
 
   private describeEnergyFocus(focus: FleetShipEnergyFocus) {

@@ -5,6 +5,8 @@ import { IActorState } from "../player/states/playerstate"
 import { Char } from "@Glibs/types/assettypes"
 import { MonsterId } from "@Glibs/types/monstertypes"
 
+export type ControllableMode = "attack" | "defense" | "navigation" | "exploration"
+
 export type ShipProjectileDef = {
   id: MonsterId
   name?: string
@@ -58,7 +60,9 @@ export type ControllableProperty = {
   stats?: Partial<Record<StatKey, number>>
   weapons?: ShipProjectileDef[]
   weaponSwitchDurationSec?: number
+  modeSwitchDurationSec?: number
   actions?: ActionDef[]
+  modeActions?: Partial<Record<ControllableMode, ActionDef[]>>
   defaultControlSource?: ControlSource
   stateFactory: (...params: unknown[]) => IActorState
 }
@@ -78,6 +82,11 @@ export interface IControllableRuntime {
   holdPosition?(): void
   followTarget?(targetId: string, payload?: unknown): void
   useSkill?(skillId: string, payload?: unknown): void
+  requestMode?(mode: ControllableMode): void
+  getActiveMode?(): ControllableMode
+  getPendingMode?(): ControllableMode | undefined
+  isModeSwitching?(): boolean
+  getModeSwitchProgress?(): number
 }
 
 export type CommandArbiter = (commands: ActorCommand[]) => ActorCommand[]

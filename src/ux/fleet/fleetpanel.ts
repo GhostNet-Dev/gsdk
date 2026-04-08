@@ -700,8 +700,10 @@ export class FleetPanel {
 
     status.hullFill.style.width = `${Math.max(0, Math.min(100, ship.hullRatio * 100))}%`
     status.energyFill.style.width = `${Math.max(0, Math.min(100, ship.energyRatio * 100))}%`
-    status.modeBadge.innerText = this.iconEnergyFocus(ship.energyFocus)
-    status.modeBadge.title = this.titleEnergyFocus(ship.energyFocus)
+    status.modeBadge.innerText = ship.isModeSwitching ? `${this.iconEnergyFocus(ship.energyFocus)}…` : this.iconEnergyFocus(ship.energyFocus)
+    status.modeBadge.title = ship.isModeSwitching && ship.pendingEnergyFocus
+      ? `${this.titleEnergyFocus(ship.energyFocus)} -> ${this.titleEnergyFocus(ship.pendingEnergyFocus)}`
+      : this.titleEnergyFocus(ship.energyFocus)
     
     // Update selection state
     status.card.style.borderColor = ship.selected ? "rgba(125,211,252,0.65)" : "rgba(148,163,184,0.16)"
@@ -741,8 +743,10 @@ export class FleetPanel {
     badgeRow.style.gap = "4px"
 
     const modeBadge = document.createElement("span")
-    modeBadge.innerText = this.iconEnergyFocus(ship.energyFocus)
-    modeBadge.title = this.titleEnergyFocus(ship.energyFocus)
+    modeBadge.innerText = ship.isModeSwitching ? `${this.iconEnergyFocus(ship.energyFocus)}…` : this.iconEnergyFocus(ship.energyFocus)
+    modeBadge.title = ship.isModeSwitching && ship.pendingEnergyFocus
+      ? `${this.titleEnergyFocus(ship.energyFocus)} -> ${this.titleEnergyFocus(ship.pendingEnergyFocus)}`
+      : this.titleEnergyFocus(ship.energyFocus)
     modeBadge.style.width = "20px"
     modeBadge.style.height = "20px"
     modeBadge.style.display = "grid"

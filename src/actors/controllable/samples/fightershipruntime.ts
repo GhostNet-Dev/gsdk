@@ -1,6 +1,6 @@
 import * as THREE from "three"
 import { ILoop } from "@Glibs/interface/ievent"
-import { IControllableRuntime } from "../controllabletypes"
+import { ControllableMode, IControllableRuntime } from "../controllabletypes"
 import { MonsterId } from "@Glibs/types/monstertypes"
 import { ProjectileMsg } from "@Glibs/actors/projectile/projectile"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
@@ -24,6 +24,11 @@ export interface IFighterShipRuntime extends IControllableRuntime {
   getTeamId(): string | undefined
   getFormationReference(out?: THREE.Vector3): THREE.Vector3
   consumeEnergyAmount(amount: number): number
+  requestMode(mode: ControllableMode): void
+  getActiveMode(): ControllableMode
+  getPendingMode(): ControllableMode | undefined
+  isModeSwitching(): boolean
+  getModeSwitchProgress(): number
 }
 
 export enum NavigationType {
@@ -75,6 +80,8 @@ export type FighterShipCombatOptions = {
   onDestroyed?: (shipId: string) => void
   onWeaponSwitchStart?: (shipId: string, weapon: ShipProjectileDef, duration: number) => void
   onWeaponSwitchEnd?: (shipId: string, weapon?: ShipProjectileDef, completed?: boolean) => void
+  onModeSwitchStart?: (shipId: string, mode: ControllableMode, duration: number) => void
+  onModeSwitchEnd?: (shipId: string, mode: ControllableMode) => void
   autoWeaponSwitchEnabled?: boolean
 }
 
@@ -104,6 +111,11 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private switchElapsed = 0
   private readonly switchDuration: number
   private pendingWeapon?: ShipProjectileDef
+  private activeMode: ControllableMode = "navigation"
+  private pendingMode?: ControllableMode
+  private modeSwitching = false
+  private modeSwitchElapsed = 0
+  private readonly modeSwitchDuration: number
   private readonly tmpMuzzleWorld = new THREE.Vector3()
   private readonly tmpShootDirection = new THREE.Vector3()
   private readonly raycaster = new THREE.Raycaster()
@@ -114,6 +126,8 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private onDestroyed?: (shipId: string) => void
   private onWeaponSwitchStart?: (shipId: string, weapon: ShipProjectileDef, duration: number) => void
   private onWeaponSwitchEnd?: (shipId: string, weapon?: ShipProjectileDef, completed?: boolean) => void
+  private onModeSwitchStart?: (shipId: string, mode: ControllableMode, duration: number) => void
+  private onModeSwitchEnd?: (shipId: string, mode: ControllableMode) => void
   private autoWeaponSwitchEnabled = false
   private weaponDoctrine: FleetWeaponDoctrine = "balanced"
   private lastLoggedNavigationState = NavigationType.Idle as string
@@ -128,6 +142,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     stats: Partial<Record<StatKey, number>> = {},
     weapons: ShipProjectileDef[] = [{ id: MonsterId.WarhamerTracer }],
     weaponSwitchDurationSec = 0,
+    modeSwitchDurationSec = 0,
   ) {
     this.maxHull = stats.hp ?? 100
     this.hull = this.maxHull
@@ -140,6 +155,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     this.availableWeapons = [...weapons]
     this.equippedWeapon = this.availableWeapons[0]
     this.switchDuration = Math.max(0, weaponSwitchDurationSec)
+    this.modeSwitchDuration = Math.max(0, modeSwitchDurationSec)
   }
 
   moveTo(point: THREE.Vector3, continueDirection?: THREE.Vector3): void {
@@ -222,7 +238,39 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     this.onDestroyed = options.onDestroyed
     this.onWeaponSwitchStart = options.onWeaponSwitchStart
     this.onWeaponSwitchEnd = options.onWeaponSwitchEnd
+    this.onModeSwitchStart = options.onModeSwitchStart
+    this.onModeSwitchEnd = options.onModeSwitchEnd
     this.autoWeaponSwitchEnabled = options.autoWeaponSwitchEnabled ?? false
+  }
+
+  requestMode(mode: ControllableMode): void {
+    if (this.activeMode === mode && !this.modeSwitching) return
+    if (this.modeSwitching && this.pendingMode === mode) return
+    if (this.modeSwitchDuration <= 0) {
+      this.completeModeSwitch(mode)
+      return
+    }
+    this.pendingMode = mode
+    this.modeSwitching = true
+    this.modeSwitchElapsed = 0
+    this.onModeSwitchStart?.(this.id, mode, this.modeSwitchDuration)
+  }
+
+  getActiveMode(): ControllableMode {
+    return this.activeMode
+  }
+
+  getPendingMode(): ControllableMode | undefined {
+    return this.pendingMode
+  }
+
+  isModeSwitching(): boolean {
+    return this.modeSwitching
+  }
+
+  getModeSwitchProgress(): number {
+    if (!this.modeSwitching || this.modeSwitchDuration <= 0) return 0
+    return Math.max(0, Math.min(1, this.modeSwitchElapsed / this.modeSwitchDuration))
   }
 
   holdPosition(): void {
@@ -349,11 +397,27 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     this.logIntentTransitions()
     this.equippedWeaponCooldown = Math.max(0, this.equippedWeaponCooldown - delta)
     this.updateWeaponSwitch(delta)
+    this.updateModeSwitch(delta)
     const navigationActive = this.updateNavigation(delta)
     const engaged = this.updateCombat(delta)
 
     if (navigationActive || engaged) return
     this.restoreEnergy(delta, 10)
+  }
+
+  private updateModeSwitch(delta: number) {
+    if (!this.modeSwitching || !this.pendingMode) return
+    this.modeSwitchElapsed += delta
+    if (this.modeSwitchElapsed < this.modeSwitchDuration) return
+    this.completeModeSwitch(this.pendingMode)
+  }
+
+  private completeModeSwitch(mode: ControllableMode) {
+    this.activeMode = mode
+    this.pendingMode = undefined
+    this.modeSwitching = false
+    this.modeSwitchElapsed = 0
+    this.onModeSwitchEnd?.(this.id, mode)
   }
 
   private updateNavigation(delta: number) {

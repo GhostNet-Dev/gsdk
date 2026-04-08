@@ -42,10 +42,21 @@ export class GrantShieldAction implements IActionComponent {
     if (!owner.__shieldActors) owner.__shieldActors = new Map()
     const existing = owner.__shieldActors.get(this.id)
     if (existing) {
+      console.log("[GrantShieldAction] restore-existing", {
+        owner: obj.name || target.name || "unknown",
+        actionId: this.id,
+        capacity,
+      })
       existing.restore(capacity)
       return
     }
 
+    console.log("[GrantShieldAction] create-shield", {
+      owner: obj.name || target.name || "unknown",
+      actionId: this.id,
+      capacity,
+      fallbackResource: this.options.fallbackResource ?? null,
+    })
     owner.__shieldActors.set(this.id, new ShieldActor(
       this.eventCtrl,
       target.baseSpec as BaseSpec,
@@ -64,6 +75,10 @@ export class GrantShieldAction implements IActionComponent {
     const owner = target as ShieldAwareUser
     const shield = owner.__shieldActors?.get(this.id)
     if (!shield) return
+    console.log("[GrantShieldAction] dispose-shield", {
+      owner: (target.objs as THREE.Object3D | undefined)?.name || target.name || "unknown",
+      actionId: this.id,
+    })
     shield.dispose()
     owner.__shieldActors?.delete(this.id)
   }

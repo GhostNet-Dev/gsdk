@@ -56,14 +56,14 @@ export class FleetReactiveAiController implements ILoop {
         const nextKey = serializeOrder(nextOrder)
         if (this.lastOrderKeys.get(fleet.id) === nextKey) return
 
-        console.log("[FleetReactiveAI] issue order", {
-          fleetId: fleet.id,
-          moveMode: fleet.moveMode,
-          orderType: nextOrder.type,
-          targetId: nextOrder.targetId,
-          point: nextOrder.point?.toArray?.(),
-          direction: nextOrder.direction?.toArray?.(),
-        })
+        // console.log("[FleetReactiveAI] issue order", {
+        //   fleetId: fleet.id,
+        //   moveMode: fleet.moveMode,
+        //   orderType: nextOrder.type,
+        //   targetId: nextOrder.targetId,
+        //   point: nextOrder.point?.toArray?.(),
+        //   direction: nextOrder.direction?.toArray?.(),
+        // })
         this.world.manager.issueOrder(fleet.id, nextOrder)
         this.lastOrderKeys.set(fleet.id, nextKey)
       })
@@ -72,12 +72,12 @@ export class FleetReactiveAiController implements ILoop {
 
 export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, enemies }) => {
   if (enemies.length === 0 || fleet.operationalShipCount === 0) {
-    console.log("[FleetReactiveAI] planner branch", {
-      fleetId: fleet.id,
-      branch: "hold:no-enemies-or-no-ships",
-      enemyCount: enemies.length,
-      operationalShipCount: fleet.operationalShipCount,
-    })
+    // console.log("[FleetReactiveAI] planner branch", {
+    //   fleetId: fleet.id,
+    //   branch: "hold:no-enemies-or-no-ships",
+    //   enemyCount: enemies.length,
+    //   operationalShipCount: fleet.operationalShipCount,
+    // })
     return { type: FleetOrderType.Hold, priority: 2 }
   }
 
@@ -97,14 +97,14 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
   const weaponDoctrine = selectWeaponDoctrine(enemyDistance, averageHullRatio)
 
   if (averageEnergyRatio < 0.12) {
-    console.log("[FleetReactiveAI] planner branch", {
-      fleetId: fleet.id,
-      branch: "hold:low-energy",
-      averageEnergyRatio,
-      averageHullRatio,
-      enemyDistance,
-      targetShipId: targetShip?.id,
-    })
+    // console.log("[FleetReactiveAI] planner branch", {
+    //   fleetId: fleet.id,
+    //   branch: "hold:low-energy",
+    //   averageEnergyRatio,
+    //   averageHullRatio,
+    //   enemyDistance,
+    //   targetShipId: targetShip?.id,
+    // })
     return { type: FleetOrderType.Hold, priority: 3 }
   }
 
@@ -112,14 +112,14 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
     const retreatDirection = fleet.center.clone().sub(primaryEnemy.center)
     if (retreatDirection.lengthSq() <= 0.0001) retreatDirection.set(0, 0, -1)
     retreatDirection.normalize()
-    console.log("[FleetReactiveAI] planner branch", {
-      fleetId: fleet.id,
-      branch: "move:retreat",
-      averageEnergyRatio,
-      averageHullRatio,
-      enemyDistance,
-      targetShipId: targetShip?.id,
-    })
+    // console.log("[FleetReactiveAI] planner branch", {
+    //   fleetId: fleet.id,
+    //   branch: "move:retreat",
+    //   averageEnergyRatio,
+    //   averageHullRatio,
+    //   enemyDistance,
+    //   targetShipId: targetShip?.id,
+    // })
     return {
       type: FleetOrderType.Move,
       priority: 18,
@@ -137,15 +137,15 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
       ? toEnemy.clone().normalize()
       : new THREE.Vector3(0, 0, 1)
     const stagingDistance = Math.max(14, Math.min(22, fleet.spacing * 1.25))
-    console.log("[FleetReactiveAI] planner branch", {
-      fleetId: fleet.id,
-      branch: "move:approach",
-      averageEnergyRatio,
-      averageHullRatio,
-      enemyDistance,
-      stagingDistance,
-      targetShipId: targetShip?.id,
-    })
+    // console.log("[FleetReactiveAI] planner branch", {
+    //   fleetId: fleet.id,
+    //   branch: "move:approach",
+    //   averageEnergyRatio,
+    //   averageHullRatio,
+    //   enemyDistance,
+    //   stagingDistance,
+    //   targetShipId: targetShip?.id,
+    // })
     return {
       type: FleetOrderType.Move,
       priority: 12,
@@ -159,14 +159,14 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
   }
 
   if (targetShip) {
-    console.log("[FleetReactiveAI] planner branch", {
-      fleetId: fleet.id,
-      branch: "attack",
-      averageEnergyRatio,
-      averageHullRatio,
-      enemyDistance,
-      targetShipId: targetShip.id,
-    })
+    // console.log("[FleetReactiveAI] planner branch", {
+    //   fleetId: fleet.id,
+    //   branch: "attack",
+    //   averageEnergyRatio,
+    //   averageHullRatio,
+    //   enemyDistance,
+    //   targetShipId: targetShip.id,
+    // })
     return {
       type: FleetOrderType.Attack,
       priority: 20,
@@ -175,13 +175,13 @@ export const defaultReactiveFleetAiPlanner: FleetReactiveAiPlanner = ({ fleet, e
     }
   }
 
-  console.log("[FleetReactiveAI] planner branch", {
-    fleetId: fleet.id,
-    branch: "hold:no-target",
-    averageEnergyRatio,
-    averageHullRatio,
-    enemyDistance,
-  })
+  // console.log("[FleetReactiveAI] planner branch", {
+  //   fleetId: fleet.id,
+  //   branch: "hold:no-target",
+  //   averageEnergyRatio,
+  //   averageHullRatio,
+  //   enemyDistance,
+  // })
   return { type: FleetOrderType.Hold, priority: 2 }
 }
 

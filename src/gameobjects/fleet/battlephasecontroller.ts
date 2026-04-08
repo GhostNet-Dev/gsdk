@@ -77,12 +77,12 @@ export class BattlePhaseController implements ILoop {
     if (this.plannedOrders.size === 0) return false
 
     for (const [fleetId, order] of this.plannedOrders) {
-      console.log("[BattlePhase] commit", fleetId, {
-        type: order.type,
-        point: order.point?.toArray?.(),
-        direction: order.direction?.toArray?.(),
-        facing: order.facing?.toArray?.(),
-      })
+      // console.log("[BattlePhase] commit", fleetId, {
+      //   type: order.type,
+      //   point: order.point?.toArray?.(),
+      //   direction: order.direction?.toArray?.(),
+      //   facing: order.facing?.toArray?.(),
+      // })
       this.fleetManager.issueOrder(fleetId, order)
     }
 
@@ -110,10 +110,10 @@ export class BattlePhaseController implements ILoop {
     this.elapsed += delta
     if (this.elapsed < this.executionWindowSec) return
 
-    console.log("[BattlePhase] execution complete", {
-      elapsed: this.elapsed,
-      duration: this.executionWindowSec,
-    })
+    // console.log("[BattlePhase] execution complete", {
+    //   elapsed: this.elapsed,
+    //   duration: this.executionWindowSec,
+    // })
     this.resetToPlanning()
   }
 

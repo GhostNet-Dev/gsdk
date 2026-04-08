@@ -30,6 +30,7 @@ import { ActionRegistry } from "@Glibs/actions/actionregistry"
 import { ActionDef, IActionComponent } from "@Glibs/types/actiontypes"
 import { CircularProgressBar } from "@Glibs/ux/progress/circularprogressbar"
 import { GlobalEffectType } from "@Glibs/types/effecttypes"
+import { ControllableMode } from "@Glibs/actors/controllable/controllabletypes"
 
 type Vector3Like = THREE.Vector3 | [number, number, number] | { x: number, y: number, z: number }
 
@@ -250,11 +251,13 @@ export class FleetWorld {
   private readonly shipFootprints = new Map<string, number>()
   private readonly shipStatusVisuals = new Map<string, ShipStatusRingVisual>()
   private readonly shipWeaponSwitchBars = new Map<string, CircularProgressBar>()
+  private readonly shipModeSwitchBars = new Map<string, CircularProgressBar>()
   private readonly shipEnergyFocuses = new Map<string, FleetShipEnergyFocus>()
+  private readonly shipPendingEnergyFocuses = new Map<string, FleetShipEnergyFocus>()
   private readonly shipWeaponIds = new Map<string, string>()
   private readonly shipControllableIds = new Map<string, string>()
   private readonly shipHitBoxes = new Map<string, ShipHitBoxVisual>()
-  private readonly shipDefenseActions = new Map<string, IActionComponent[]>()
+  private readonly shipModeActions = new Map<string, IActionComponent[]>()
   private readonly controllableIds = new Set<string>()
   private readonly taskObjs: ILoop[] = []
   private readonly fleetRoot = new THREE.Group()
@@ -420,6 +423,7 @@ export class FleetWorld {
   }
 
   getFleetShips(fleetId: string) {
+    this.syncShipModeStates()
     const summary = this.fleetManager.getFleetSummary(fleetId)
     if (!summary) return []
 
@@ -451,6 +455,9 @@ export class FleetWorld {
         selected: shipId === this.selectedShipId,
         isFlagship: shipId === summary.flagshipId,
         energyFocus: this.shipEnergyFocuses.get(shipId) ?? "navigation",
+        pendingEnergyFocus: this.shipPendingEnergyFocuses.get(shipId),
+        isModeSwitching: runtime?.isModeSwitching() ?? false,
+        modeSwitchProgress: runtime?.getModeSwitchProgress() ?? 0,
         weaponId: currentWeaponId,
         availableWeapons,
         isWeaponSwitching: runtime?.isWeaponSwitching() ?? false,
@@ -510,11 +517,13 @@ export class FleetWorld {
   }
 
   setShipEnergyFocus(shipId: string, focus: FleetShipEnergyFocus) {
-    if (!this.shipRuntimes.has(shipId)) return
-    const previous = this.shipEnergyFocuses.get(shipId) ?? "navigation"
-    this.shipEnergyFocuses.set(shipId, focus)
-    if (previous === focus) return
-    this.syncShipDefenseMode(shipId, focus)
+    const runtime = this.shipRuntimes.get(shipId)
+    if (!runtime) return
+    runtime.requestMode(focus)
+    this.shipEnergyFocuses.set(shipId, runtime.getActiveMode())
+    const pending = runtime.getPendingMode()
+    if (pending) this.shipPendingEnergyFocuses.set(shipId, pending)
+    else this.shipPendingEnergyFocuses.delete(shipId)
   }
 
   setShipWeapon(shipId: string, weaponId: string) {
@@ -609,6 +618,8 @@ export class FleetWorld {
     this.shipAttackListeners.clear()
     this.shipWeaponSwitchBars.forEach((bar) => bar.destroy())
     this.shipWeaponSwitchBars.clear()
+    this.shipModeSwitchBars.forEach((bar) => bar.destroy())
+    this.shipModeSwitchBars.clear()
     this.shipHitBoxes.forEach((hitbox) => {
       this.disposeHitBox(hitbox.mesh)
     })
@@ -617,13 +628,15 @@ export class FleetWorld {
     this.shipMeshes.clear()
     this.fleetIdsByShipId.clear()
     this.shipEnergyFocuses.clear()
-    this.shipDefenseActions.clear()
+    this.shipPendingEnergyFocuses.clear()
+    this.shipModeActions.clear()
     this.shipFootprints.clear()
     this.shipStatusVisuals.clear()
     this.taskObjs.length = 0
     this.taskObjs.push({
       LoopId: 0,
       update: (delta: number) => {
+        this.syncShipModeStates()
         this.updateShipHitBoxes()
         this.updateShipStatusVisuals()
       },
@@ -662,6 +675,7 @@ export class FleetWorld {
       statsWithOverride,
       def.weapons,
       def.weaponSwitchDurationSec ?? 0,
+      def.modeSwitchDurationSec ?? 0,
     )
     this.shipRuntimes.set(id, runtime)
     this.shipControllableIds.set(id, controllableId)
@@ -673,31 +687,45 @@ export class FleetWorld {
     const ctrl = this.createControllable.create(controllableId, runtime)
     this.controllables.register(id, ctrl)
     this.controllableIds.add(id)
-    this.syncShipDefenseMode(id, this.shipEnergyFocuses.get(id) ?? "navigation")
+    this.syncShipModeStates()
 
     return { mesh, runtime, ctrl }
   }
 
-  private syncShipDefenseMode(shipId: string, focus: FleetShipEnergyFocus) {
+  private syncShipModeStates() {
+    this.shipRuntimes.forEach((runtime, shipId) => {
+      const activeMode = runtime.getActiveMode()
+      const pendingMode = runtime.getPendingMode()
+      const previousMode = this.shipEnergyFocuses.get(shipId) ?? "navigation"
+
+      if (previousMode !== activeMode) {
+        this.syncShipModeActions(shipId, activeMode)
+      }
+
+      this.shipEnergyFocuses.set(shipId, activeMode)
+      if (pendingMode) this.shipPendingEnergyFocuses.set(shipId, pendingMode)
+      else this.shipPendingEnergyFocuses.delete(shipId)
+    })
+  }
+
+  private syncShipModeActions(shipId: string, focus: ControllableMode) {
     const ctrl = this.controllables.get(shipId)
     if (!ctrl) return
 
     const controllableId = this.shipControllableIds.get(shipId) ?? "ship.fighter"
     const def = Object.values(controllableDefs).find((candidate) => candidate.id === controllableId)
-    const defenseActions = def?.actions?.filter((actionDef) => actionDef.type === "grantshield") ?? []
-    const activeActions = this.shipDefenseActions.get(shipId) ?? []
-
-    if (focus === "defense") {
-      if (activeActions.length > 0) return
-      const createdActions = defenseActions.map((actionDef) => ActionRegistry.create(actionDef as ActionDef))
-      createdActions.forEach((action) => ctrl.applyAction(action, { via: "item", source: def }))
-      this.shipDefenseActions.set(shipId, createdActions)
-      return
+    const activeActions = this.shipModeActions.get(shipId) ?? []
+    if (activeActions.length > 0) {
+      activeActions.forEach((action) => ctrl.removeAction(action, { via: "item", source: def }))
+      this.shipModeActions.delete(shipId)
     }
 
-    if (activeActions.length <= 0) return
-    activeActions.forEach((action) => ctrl.removeAction(action, { via: "item", source: def }))
-    this.shipDefenseActions.delete(shipId)
+    const modeActions = (def?.modeActions as Partial<Record<ControllableMode, ActionDef[]>> | undefined)?.[focus] ?? []
+    if (modeActions.length <= 0) return
+
+    const createdActions = modeActions.map((actionDef: ActionDef) => ActionRegistry.create(actionDef))
+    createdActions.forEach((action: IActionComponent) => ctrl.applyAction(action, { via: "item", source: def }))
+    this.shipModeActions.set(shipId, createdActions)
   }
 
   private setupScene() {
@@ -801,6 +829,12 @@ export class FleetWorld {
               this.shipWeaponIds.set(shipId, weapon.id)
             }
             this.hideWeaponSwitchProgress(shipId)
+          },
+          onModeSwitchStart: (shipId, _mode, duration) => {
+            this.showModeSwitchProgress(shipId, duration)
+          },
+          onModeSwitchEnd: (shipId) => {
+            this.hideModeSwitchProgress(shipId)
           },
         })
         if (mesh) {
@@ -1546,6 +1580,40 @@ export class FleetWorld {
     if (!bar) return
     bar.destroy()
     this.shipWeaponSwitchBars.delete(shipId)
+  }
+
+  private showModeSwitchProgress(shipId: string, duration: number) {
+    const runtime = this.shipRuntimes.get(shipId)
+    const existing = this.shipModeSwitchBars.get(shipId)
+    if (!runtime) return
+
+    if (existing) {
+      existing.reset()
+      return
+    }
+
+    const bar = new CircularProgressBar({
+      target: runtime.mesh,
+      camera: this.camera,
+      eventCtrl: this.eventCtrl,
+      duration,
+      radius: 18,
+      thickness: 3,
+      color: "#38bdf8",
+      trackColor: "rgba(15, 23, 42, 0.65)",
+      offsetX: 0,
+      offsetY: -74,
+      zIndex: 39,
+    })
+    bar.mount(document.body)
+    this.shipModeSwitchBars.set(shipId, bar)
+  }
+
+  private hideModeSwitchProgress(shipId: string) {
+    const bar = this.shipModeSwitchBars.get(shipId)
+    if (!bar) return
+    bar.destroy()
+    this.shipModeSwitchBars.delete(shipId)
   }
 
   private createShipStatusVisual(footprint: number): ShipStatusRingVisual {

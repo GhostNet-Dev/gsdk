@@ -2,8 +2,9 @@ import { FleetFormation } from "@Glibs/gameobjects/fleet/formation"
 import { BattlePhaseSnapshot } from "@Glibs/gameobjects/fleet/battlephasecontroller"
 import { FleetMoveMode, FleetOrder } from "@Glibs/gameobjects/fleet/fleet"
 import { FleetSummary } from "@Glibs/gameobjects/fleet/fleetmanager"
+import { ControllableMode } from "@Glibs/actors/controllable/controllabletypes"
 
-export type FleetShipEnergyFocus = "attack" | "defense" | "navigation" | "exploration"
+export type FleetShipEnergyFocus = ControllableMode
 
 export type FleetShipPanelState = {
   id: string
@@ -16,6 +17,9 @@ export type FleetShipPanelState = {
   selected: boolean
   isFlagship: boolean
   energyFocus: FleetShipEnergyFocus
+  pendingEnergyFocus?: FleetShipEnergyFocus
+  isModeSwitching: boolean
+  modeSwitchProgress: number
   weaponId: string
   isWeaponSwitching: boolean
   availableWeapons: { id: string, label: string }[]
