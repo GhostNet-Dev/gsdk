@@ -25,7 +25,7 @@ export default class OptPhysics implements IGPhysic {
 
     constructor(private scene: THREE.Scene, eventCtrl: IEventController) {
         this.raycast.far = 2
-        this.scene.add(this.marker)
+        // this.scene.add(this.marker)
         eventCtrl.RegisterEventListener(EventTypes.TimeCtrl, (scale: number) => {
             this.timeScale = scale
         })

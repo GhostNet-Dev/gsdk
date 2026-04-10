@@ -273,7 +273,7 @@ export class FleetWorld {
   private readonly tmpAimDirection = new THREE.Vector3()
   private readonly tmpTrackPosition = new THREE.Vector3()
   private readonly tmpTrackLook = new THREE.Vector3()
-  private readonly tmpStatusQuaternion = new THREE.Quaternion()
+  private readonly tmpStatusPosition = new THREE.Vector3()
   private readonly interactionDom: HTMLElement
   private readonly orbitControls?: IOrbitControlsAccess
   private readonly shipAttackListeners = new Map<string, (opts: AttackOption[]) => void>()
@@ -630,6 +630,7 @@ export class FleetWorld {
     this.shipPendingEnergyFocuses.clear()
     this.shipModeActions.clear()
     this.shipFootprints.clear()
+    this.shipStatusVisuals.forEach((visual) => this.scene.remove(visual.group))
     this.shipStatusVisuals.clear()
     this.taskObjs.length = 0
     this.taskObjs.push({
@@ -1467,9 +1468,8 @@ export class FleetWorld {
         if (runtime.getHull() > 0) enemyShipsAlive++
       }
 
-      visual.group.quaternion.copy(
-        this.tmpStatusQuaternion.copy(runtime.mesh.quaternion).invert(),
-      )
+      runtime.mesh.getWorldPosition(this.tmpStatusPosition)
+      visual.group.position.copy(this.tmpStatusPosition)
 
       const hullRatio = runtime.getHullRatio()
       if (Math.abs(hullRatio - visual.lastHullRatio) > 0.001) {
@@ -1538,7 +1538,7 @@ export class FleetWorld {
   private attachShipStatusVisual(id: string, mesh: THREE.Object3D, footprint: number) {
     if (!this.config.statusRings.enabled) return
     const visual = this.createShipStatusVisual(footprint)
-    mesh.add(visual.group)
+    this.scene.add(visual.group)
     this.shipStatusVisuals.set(id, visual)
     this.updateRingGeometry(visual.hpRing, visual.hpInnerRadius, visual.hpOuterRadius, 1)
     this.updateRingGeometry(visual.energyRing, visual.energyInnerRadius, visual.energyOuterRadius, 1)
