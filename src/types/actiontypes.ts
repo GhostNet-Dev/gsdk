@@ -333,6 +333,23 @@ export const actionDefs = {
     fallbackResource: "energy",
     regenCooldownSec: 2.2,
   },
+  NavigationAfterburner: {
+    type: "navigationAfterburner",
+    trigger: TriggerType.OnActivate,
+    color: 0x39bdf8,
+    scale: 0.5,
+    length: 0.5,
+    reverseDirection: true,
+    offsetZ: 0.1,
+    spawnPerSecond: 120,
+    particleLifetime: 0.42,
+    activationSpeed: 0.35,
+    fullSpeed: 10,
+    nozzleOffsets: [
+      { x: -1.25, y: 0, z: 0 },
+      { x: 1.25, y: 0, z: 0 },
+    ],
+  },
   // =================================================================
   // Skill Effector
   // =================================================================

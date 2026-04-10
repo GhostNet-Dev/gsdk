@@ -5,6 +5,7 @@ import { CommandPlanner } from "../policy/aipolicy"
 import { NewFighterShipState } from "../states/fightershipstate"
 import { IFighterShipRuntime } from "./fightershipruntime"
 import { shipWeaponDefs } from "./shipweapondefs"
+import { sharedShipModeProfiles } from "./shipmodeprofiles"
 import { Char } from "@Glibs/types/assettypes"
 import { actionDefs } from "@Glibs/types/actiontypes"
 
@@ -30,8 +31,10 @@ export const controllableDefs = {
     weaponSwitchDurationSec: 3.2,
     modeSwitchDurationSec: 2.4,
     modeActions: {
+      navigation: [actionDefs.NavigationAfterburner],
       defense: [actionDefs.FighterShipShield],
     },
+    modeProfiles: sharedShipModeProfiles,
     policyMap: {
       manual: "human",
       ai: "ship-default-ai",
@@ -58,8 +61,11 @@ export const controllableDefs = {
     weaponSwitchDurationSec: 3,
     modeSwitchDurationSec: 1.8,
     modeActions: {
+      attack: [actionDefs.ElectricAura],
+      navigation: [actionDefs.NavigationAfterburner],
       defense: [actionDefs.FighterShipShield],
     },
+    modeProfiles: sharedShipModeProfiles,
     policyMap: {
       manual: "human",
       ai: "ship-default-ai",
@@ -85,8 +91,10 @@ export const controllableDefs = {
     weaponSwitchDurationSec: 1.5,
     modeSwitchDurationSec: 3.2,
     modeActions: {
+      navigation: [actionDefs.NavigationAfterburner],
       defense: [actionDefs.FighterShipShield],
     },
+    modeProfiles: sharedShipModeProfiles,
     policyMap: {
       manual: "human",
       ai: "ally-escort-ai",

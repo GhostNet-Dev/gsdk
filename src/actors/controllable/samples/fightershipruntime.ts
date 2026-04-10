@@ -1,6 +1,6 @@
 import * as THREE from "three"
 import { ILoop } from "@Glibs/interface/ievent"
-import { ControllableMode, IControllableRuntime } from "../controllabletypes"
+import { ControllableMode, IControllableRuntime, ModeProfileMap } from "../controllabletypes"
 import { MonsterId } from "@Glibs/types/monstertypes"
 import { ProjectileMsg } from "@Glibs/actors/projectile/projectile"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
@@ -10,6 +10,7 @@ import { ShipProjectileDef } from "../controllabletypes"
 import { FleetWeaponDoctrine } from "@Glibs/gameobjects/fleet/fleet"
 
 export interface IFighterShipRuntime extends IControllableRuntime {
+  getCollisionObject(): THREE.Object3D
   moveTo(point: THREE.Vector3, continueDirection?: THREE.Vector3): void
   moveAlong(direction: THREE.Vector3): void
   attackTarget(targetId: string, payload?: unknown): void
@@ -87,7 +88,7 @@ export type FighterShipCombatOptions = {
 
 export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   LoopId = 0
-  get objs() { return this.collisionObject }
+  get objs() { return this.mesh }
   private hull: number
   private readonly maxHull: number
   private energy: number
@@ -95,6 +96,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private readonly moveSpeed: number
   private readonly attackRange: number
   private readonly turnSpeed: number
+  private readonly modeProfiles: ModeProfileMap
   private navigationIntent: NavigationIntent = { type: NavigationType.Idle }
   private combatIntent: CombatIntent = { type: CombatType.Idle }
   private engagementIntent: EngagementIntent = { type: EngagementType.Idle }
@@ -143,6 +145,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     weapons: ShipProjectileDef[] = [{ id: MonsterId.WarhamerTracer }],
     weaponSwitchDurationSec = 0,
     modeSwitchDurationSec = 0,
+    modeProfiles: ModeProfileMap = {},
   ) {
     this.maxHull = stats.hp ?? 100
     this.hull = this.maxHull
@@ -156,6 +159,11 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     this.equippedWeapon = this.availableWeapons[0]
     this.switchDuration = Math.max(0, weaponSwitchDurationSec)
     this.modeSwitchDuration = Math.max(0, modeSwitchDurationSec)
+    this.modeProfiles = modeProfiles
+  }
+
+  getCollisionObject(): THREE.Object3D {
+    return this.collisionObject
   }
 
   moveTo(point: THREE.Vector3, continueDirection?: THREE.Vector3): void {
@@ -471,7 +479,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
         }
         return true
       case NavigationType.MoveAlong:
-        this.mesh.position.addScaledVector(this.navigationIntent.direction, this.moveSpeed * delta)
+        this.mesh.position.addScaledVector(this.navigationIntent.direction, this.getEffectiveMoveSpeed() * delta)
         this.face(this.mesh.position.clone().add(this.navigationIntent.direction), delta)
         return true
       case NavigationType.Dead:
@@ -498,7 +506,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
       return true
     }
 
-    const weaponRange = this.equippedWeapon?.range ?? this.attackRange
+    const weaponRange = this.getEffectiveWeaponRange(this.equippedWeapon)
     const distSq = this.mesh.position.distanceToSquared(target.mesh.position)
     const inRange = distSq <= weaponRange * weaponRange
     if (inRange) {
@@ -520,7 +528,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
       this.combatIntent = { type: CombatType.Idle }
     }
 
-    return this.findNearestEnemy?.(this.id, this.attackRange)
+    return this.findNearestEnemy?.(this.id, this.getEffectiveAttackRange())
   }
 
   private fireAtTarget(target: FighterShipRuntime) {
@@ -545,17 +553,17 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     this.projectileEmitter({
       id: weapon.id,
       ownerSpec: this.ownerSpec,
-      damage: this.ownerSpec.Damage * (weapon.damageMultiplier ?? 1),
+      damage: this.ownerSpec.Damage * (weapon.damageMultiplier ?? 1) * this.getModeDamageMultiplier(),
       src: this.tmpMuzzleWorld.clone(),
       dir: this.tmpShootDirection.clone(),
       homing: weapon.homing,
-      range: weapon.range ?? this.attackRange,
+      range: this.getEffectiveWeaponRange(weapon),
       hitscan: weapon.hitscan ?? true,
       tracerLife: weapon.tracerLife ?? 0.18,
       tracerRange: weapon.tracerRange,
       useRaycast: weapon.useRaycast ?? true,
     })
-    this.equippedWeaponCooldown = weapon.fireCooldownSec ?? 0.45
+    this.equippedWeaponCooldown = Math.max(0.05, (weapon.fireCooldownSec ?? 0.45) * this.getWeaponCooldownMultiplier())
   }
 
   private isFiringLaneClear(target: FighterShipRuntime): boolean {
@@ -580,7 +588,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     const ships: THREE.Object3D[] = []
     this.runtimeIndex.forEach((r) => {
       if (r !== this) {
-        ships.push(r.collisionObject)
+        ships.push(r.getCollisionObject())
       }
     })
 
@@ -616,16 +624,17 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     if (incomingDamage <= 0) return 0
 
     const prevHull = this.getHull()
-    const resolution = this.ownerSpec
-      ? this.ownerSpec.ReceiveDamage(packet)
-      : {
-          appliedAmount: incomingDamage,
-          targetDied: false,
-        }
+    const mitigatedDamage = incomingDamage / this.getDefenseMultiplier()
+    let resolution = {
+      appliedAmount: mitigatedDamage,
+      targetDied: false,
+    }
 
     if (!this.ownerSpec) {
-      this.hull = Math.max(0, this.hull - incomingDamage)
+      this.hull = Math.max(0, this.hull - mitigatedDamage)
     } else {
+      const adjustedPacket = { ...packet, amount: mitigatedDamage }
+      resolution = this.ownerSpec.ReceiveDamage(adjustedPacket)
       this.hull = this.ownerSpec.Health
     }
 
@@ -782,22 +791,22 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     if (this.availableWeapons.length === 0) return undefined
 
     const distance = this.mesh.position.distanceTo(target.mesh.position)
-    const inRangeWeapons = this.availableWeapons.filter((weapon) => distance <= (weapon.range ?? this.attackRange))
+    const inRangeWeapons = this.availableWeapons.filter((weapon) => distance <= this.getEffectiveWeaponRange(weapon))
     if (inRangeWeapons.length > 0) {
       return [...inRangeWeapons].sort((left, right) => this.getWeaponScore(right) - this.getWeaponScore(left))[0]
     }
 
     return [...this.availableWeapons].sort((left, right) => {
-      const leftRange = left.range ?? this.attackRange
-      const rightRange = right.range ?? this.attackRange
+      const leftRange = this.getEffectiveWeaponRange(left)
+      const rightRange = this.getEffectiveWeaponRange(right)
       return rightRange - leftRange
     })[0]
   }
 
   private getWeaponScore(weapon: ShipProjectileDef) {
-    const cooldown = Math.max(weapon.fireCooldownSec ?? 0.45, 0.05)
-    const damageMultiplier = weapon.damageMultiplier ?? 1
-    const range = weapon.range ?? this.attackRange
+    const cooldown = Math.max((weapon.fireCooldownSec ?? 0.45) * this.getWeaponCooldownMultiplier(), 0.05)
+    const damageMultiplier = (weapon.damageMultiplier ?? 1) * this.getModeDamageMultiplier()
+    const range = this.getEffectiveWeaponRange(weapon)
     const baseScore = damageMultiplier / cooldown
     switch (this.weaponDoctrine) {
       case "long-range":
@@ -821,7 +830,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     // 2. 이동은 목표 지점(desired)이 아닌 함선의 현재 정면(forward) 방향으로 수행
     // 이를 통해 선회하는 곡선 경로가 만들어짐
     this.forward.set(0, 0, 1).applyQuaternion(this.mesh.quaternion)
-    this.mesh.position.addScaledVector(this.forward, this.moveSpeed * delta)
+    this.mesh.position.addScaledVector(this.forward, this.getEffectiveMoveSpeed() * delta)
   }
 
   private face(point: THREE.Vector3, delta: number) {
@@ -835,7 +844,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     )
 
     // 초당 turnSpeed 라디안만큼 목표 회전값으로 선형 보간 회전
-    this.mesh.quaternion.rotateTowards(targetQuaternion, this.turnSpeed * delta)
+    this.mesh.quaternion.rotateTowards(targetQuaternion, this.getEffectiveTurnSpeed() * delta)
   }
 
   private consumeEnergy(delta: number, rate: number) {
@@ -843,6 +852,42 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   private restoreEnergy(delta: number, rate: number) {
-    this.energy = Math.min(this.maxEnergy, this.energy + (rate * delta))
+    this.energy = Math.min(this.maxEnergy, this.energy + (rate * this.getEnergyRegenMultiplier() * delta))
+  }
+
+  private getActiveModeProfile() {
+    return this.modeProfiles[this.activeMode] ?? {}
+  }
+
+  private getEffectiveMoveSpeed() {
+    return this.moveSpeed * (this.getActiveModeProfile().speedMultiplier ?? 1)
+  }
+
+  private getEffectiveTurnSpeed() {
+    return this.turnSpeed * (this.getActiveModeProfile().turnSpeedMultiplier ?? 1)
+  }
+
+  private getEffectiveAttackRange() {
+    return this.attackRange * (this.getActiveModeProfile().attackRangeMultiplier ?? 1)
+  }
+
+  private getEffectiveWeaponRange(weapon?: ShipProjectileDef) {
+    return (weapon?.range ?? this.attackRange) * (this.getActiveModeProfile().attackRangeMultiplier ?? 1)
+  }
+
+  private getDefenseMultiplier() {
+    return Math.max(0.1, this.getActiveModeProfile().defenseMultiplier ?? 1)
+  }
+
+  private getModeDamageMultiplier() {
+    return this.getActiveModeProfile().damageMultiplier ?? 1
+  }
+
+  private getEnergyRegenMultiplier() {
+    return this.getActiveModeProfile().energyRegenMultiplier ?? 1
+  }
+
+  private getWeaponCooldownMultiplier() {
+    return Math.max(0.1, this.getActiveModeProfile().weaponCooldownMultiplier ?? 1)
   }
 }

@@ -25,6 +25,7 @@ import { ComboSkillAction } from "./skillactions/comboact";
 import { WarpArrivalAction, WarpArrivalOptions } from "./visualactions/warparrivalact";
 import { DamageBurningAction, DamageBurningOptions } from "./visualactions/damageburningact";
 import { GrantShieldAction, GrantShieldActionOptions } from "./buffaction/grantshieldaction";
+import { NavigationAfterburnerAction, NavigationAfterburnerActionOptions } from "./visualactions/navigationafterburneract";
 
 export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scene, camera: Camera) {
     ActionRegistry.register("statBoost", def => new StatBoostAction(def))
@@ -68,4 +69,5 @@ export function InitActionRegistry(eventCtrl: EventController, scene: THREE.Scen
     ActionRegistry.register("waterdefence", def => new WaterDefenceAction(eventCtrl, def))
     ActionRegistry.register("comboMelee", def => new ComboSkillAction(def))
     ActionRegistry.register("warpArrival", def => new WarpArrivalAction(eventCtrl, def as WarpArrivalOptions))
+    ActionRegistry.register("navigationAfterburner", def => new NavigationAfterburnerAction(eventCtrl, def as NavigationAfterburnerActionOptions))
 }

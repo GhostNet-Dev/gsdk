@@ -675,6 +675,7 @@ export class FleetWorld {
       def.weapons,
       def.weaponSwitchDurationSec ?? 0,
       def.modeSwitchDurationSec ?? 0,
+      def.modeProfiles,
     )
     this.shipRuntimes.set(id, runtime)
     this.shipControllableIds.set(id, controllableId)
@@ -696,8 +697,9 @@ export class FleetWorld {
       const activeMode = runtime.getActiveMode()
       const pendingMode = runtime.getPendingMode()
       const previousMode = this.shipEnergyFocuses.get(shipId) ?? "navigation"
+      const hasAppliedModeActions = (this.shipModeActions.get(shipId)?.length ?? 0) > 0
 
-      if (previousMode !== activeMode) {
+      if (previousMode !== activeMode || !hasAppliedModeActions) {
         this.syncShipModeActions(shipId, activeMode)
       }
 

@@ -7,6 +7,18 @@ import { MonsterId } from "@Glibs/types/monstertypes"
 
 export type ControllableMode = "attack" | "defense" | "navigation" | "exploration"
 
+export type ModeProfile = {
+  speedMultiplier?: number
+  turnSpeedMultiplier?: number
+  attackRangeMultiplier?: number
+  defenseMultiplier?: number
+  damageMultiplier?: number
+  energyRegenMultiplier?: number
+  weaponCooldownMultiplier?: number
+}
+
+export type ModeProfileMap = Partial<Record<ControllableMode, ModeProfile>>
+
 export type ShipProjectileDef = {
   id: MonsterId
   name?: string
@@ -63,6 +75,7 @@ export type ControllableProperty = {
   modeSwitchDurationSec?: number
   actions?: ActionDef[]
   modeActions?: Partial<Record<ControllableMode, ActionDef[]>>
+  modeProfiles?: ModeProfileMap
   defaultControlSource?: ControlSource
   stateFactory: (...params: unknown[]) => IActorState
 }
