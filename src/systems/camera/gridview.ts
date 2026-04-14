@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { ICameraStrategy } from "./cameratypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
-import { OrbitControlsBroker, OrbitControlsHandle } from "./orbitbroker";
+import { CameraInputPreset, OrbitControlsBroker, OrbitControlsHandle } from "./orbitbroker";
 
 export default class GridViewCameraStrategy implements ICameraStrategy {
     private savedSettings: {
@@ -42,6 +42,7 @@ export default class GridViewCameraStrategy implements ICameraStrategy {
         ctrl.maxPolarAngle = fixedPolarAngle;
         ctrl.minAzimuthAngle = fixedAzimuthAngle;
         ctrl.maxAzimuthAngle = fixedAzimuthAngle;
+        broker.setInputPreset(CameraInputPreset.RtsPan);
 
         const target = ctrl.target;
         const x = distance * Math.sin(fixedPolarAngle) * Math.sin(fixedAzimuthAngle);

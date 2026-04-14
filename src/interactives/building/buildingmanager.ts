@@ -13,6 +13,7 @@ import { ResourceProduction } from "./buildingobjs/resourceproduction";
 import { Wall } from "./buildingobjs/wall";
 import { Bunker } from "./buildingobjs/bunker";
 import { CameraMode } from "@Glibs/systems/camera/cameratypes";
+import { CameraInputPreset } from "@Glibs/systems/camera/orbitbroker";
 import { SelectionPanel } from "@Glibs/ux/selectionpanel/selectionpanel";
 
 export interface BuildingTask {
@@ -214,6 +215,7 @@ export class BuildingManager implements ILoop {
     this.currentGuideNodeId = null;
 
     if (restoreCamera) {
+      this.eventCtrl.SendEventMessage(EventTypes.CameraInputPreset, CameraInputPreset.Default);
       this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.Restore);
     }
   }

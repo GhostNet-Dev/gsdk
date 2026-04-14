@@ -8,15 +8,21 @@ import { LoopType } from '../event/canvas';
 export default class DefaultLights extends THREE.DirectionalLight implements ILoop {
     LoopId: number = 0;
     private player?: IPhysicsObject
-    hemi = new THREE.HemisphereLight(0xfffbef, 0xf7fbff, 0.8); // warm sky, very light ground
-    ambient = new THREE.AmbientLight(0xffffff, 1.0); // 밝은 베이스
-    fill = new THREE.DirectionalLight(0xfffaef, 0.25);
+    // 파스텔 하늘(복숭아), 파스텔 땅(크림) → 전체를 따뜻하게 감싸는 환경광
+    hemi = new THREE.HemisphereLight(0xffd6b0, 0xfff0d6, 1.2);
+    // 밝은 크림-화이트 기저 앰비언트
+    ambient = new THREE.AmbientLight(0xfff5e8, 1.4);
+    // 반대편 소프트 라벤더-핑크 필라이트 (그림자 없음)
+    fill = new THREE.DirectionalLight(0xffd6e8, 0.45);
+    // 측면 파스텔 피치 보조광
+    rimLight = new THREE.DirectionalLight(0xffe0b0, 0.35);
     lightOffset = new THREE.Vector3(12, 20, 8);
     constructor(
         private scene: THREE.Scene,
         private eventCtrl: IEventController,
     ) {
-        super(0xfff2e0, 1.0)
+        // 따뜻한 파스텔 황금빛 태양
+        super(0xffcf8a, 1.3)
 
         this.hemi.position.set(0, 80, 0);
 
@@ -38,10 +44,15 @@ export default class DefaultLights extends THREE.DirectionalLight implements ILo
         sun.shadow.bias = -0.0004;
         sun.shadow.normalBias = 0.03;
 
-        // 반대편에서 아주 약한 필라이트(그림자 X)
+        // 라벤더-핑크 필라이트 (좌측 후방)
         this.fill.position.set(-10, 10, -6);
         this.fill.castShadow = false;
-        this.scene.add(this.ambient, this.fill, this.hemi, /*hemispherelight,*/ this,/*this.effector.meshs*/)
+
+        // 피치 림라이트 (우측 측면)
+        this.rimLight.position.set(8, 6, -12);
+        this.rimLight.castShadow = false;
+
+        this.scene.add(this.ambient, this.fill, this.rimLight, this.hemi, this)
 
         eventCtrl.RegisterEventListener(EventTypes.CtrlObj, (obj: IPhysicsObject) => {
             this.player = obj

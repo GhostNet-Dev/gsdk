@@ -6,7 +6,7 @@ import { Canvas, LoopType } from "@Glibs/systems/event/canvas";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { CameraMode, ICameraStrategy, ICameraTrackTarget } from "./cameratypes";
-import { IOrbitControlsAccess, OrbitControlsBroker, OrbitControlsLogger } from "./orbitbroker";
+import { CameraInputPreset, IOrbitControlsAccess, OrbitControlsBroker, OrbitControlsLogger } from "./orbitbroker";
 import TopViewCameraStrategy from "./topview";
 import ThirdPersonCameraStrategy from "./thirdperson";
 import ThirdPersonFollowCameraStrategy from "./followcam";
@@ -84,6 +84,9 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         })
         eventCtrl.RegisterEventListener(EventTypes.CameraMode, (mode: CameraMode) => {
             this.setMode(mode)
+        })
+        eventCtrl.RegisterEventListener(EventTypes.CameraInputPreset, (preset: CameraInputPreset) => {
+            this.broker.setInputPreset(preset)
         })
         eventCtrl.RegisterEventListener(EventTypes.CameraTrackTarget, (resolver?: () => ICameraTrackTarget | undefined) => {
             this.trackTargetResolver = resolver
@@ -240,15 +243,21 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     }
 
     setMode(mode: CameraMode) {
+        const prevMode = this.mode
+        const requestedMode = mode
+
         if (mode === CameraMode.Restore) {
             mode = this.previousMode;
         }
 
         if (!this.strategies.has(mode)) return
-        if (this.mode === mode) return;
-
-        const prevMode = this.mode
         this.previousMode = prevMode;
+        if (this.mode === mode) {
+            if (requestedMode === CameraMode.Restore) {
+                this.broker.setInputPreset(this.getDefaultInputPreset(mode));
+            }
+            return;
+        }
 
         if (mode === CameraMode.AimThirdPerson && prevMode !== CameraMode.AimThirdPerson) {
             this.preAimSnapshot = {
@@ -266,6 +275,7 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         this.mode = mode
         this.strategy = this.strategies.get(mode)!
         this.strategy.init?.(this, this.broker)
+        this.broker.setInputPreset(this.getDefaultInputPreset(mode));
 
         if (
             prevMode === CameraMode.AimThirdPerson &&
@@ -274,6 +284,12 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
             const followStrategy = this.strategies.get(CameraMode.ThirdFollowPerson) as any
             followStrategy?.syncFromCameraPose?.()
         }
+    }
+
+    private getDefaultInputPreset(mode: CameraMode): CameraInputPreset {
+        return mode === CameraMode.Grid
+            ? CameraInputPreset.RtsPan
+            : CameraInputPreset.Default
     }
 
     resize(width: number, height: number) {

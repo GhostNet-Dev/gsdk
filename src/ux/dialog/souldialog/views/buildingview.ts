@@ -4,6 +4,7 @@ import { TechTreeDefBase } from '@Glibs/techtree/techtreedefs';
 import { BuildingProperty } from '@Glibs/interactives/building/buildingdefs';
 import { TooltipComponent } from '../core/tooltip';
 import { EventTypes } from '@Glibs/types/globaltypes';
+import { CameraInputPreset } from '@Glibs/systems/camera/orbitbroker';
 import * as THREE from 'three';
 
 type BuildingViewProps = {
@@ -232,6 +233,7 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
             depth: prop.size.depth,
             nodeId: node.id
         });
+        this.ctx.events?.SendEventMessage(EventTypes.CameraInputPreset, CameraInputPreset.Placement);
 
         // [추가] 하단 정보 바에 선택된 건물 정보 표시
         let costStr = "무료";

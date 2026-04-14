@@ -1,6 +1,13 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
+export enum CameraInputPreset {
+    Default,
+    RtsPan,
+    Placement,
+    Disabled,
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Logger
 // ─────────────────────────────────────────────────────────────────────────────
@@ -162,6 +169,7 @@ export class OrbitControlsHandle {
  */
 export class OrbitControlsBroker {
     private currentHandle: OrbitControlsHandle | null = null;
+    private inputPreset: CameraInputPreset = CameraInputPreset.Default;
 
     constructor(private readonly controls: OrbitControls) {}
 
@@ -174,5 +182,50 @@ export class OrbitControlsBroker {
         this.currentHandle?.invalidate();
         this.currentHandle = new OrbitControlsHandle(this.controls, ownerTag);
         return this.currentHandle;
+    }
+
+    setInputPreset(preset: CameraInputPreset): void {
+        this.inputPreset = preset;
+        this.applyInputPreset();
+    }
+
+    getInputPreset(): CameraInputPreset {
+        return this.inputPreset;
+    }
+
+    applyInputPreset(): void {
+        const ctrl = this.controls;
+
+        switch (this.inputPreset) {
+            case CameraInputPreset.RtsPan:
+                ctrl.mouseButtons.LEFT = THREE.MOUSE.PAN;
+                ctrl.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
+                ctrl.mouseButtons.RIGHT = null;
+                ctrl.touches.ONE = THREE.TOUCH.PAN;
+                ctrl.touches.TWO = THREE.TOUCH.DOLLY_PAN;
+                break;
+            case CameraInputPreset.Placement:
+                ctrl.mouseButtons.LEFT = null;
+                ctrl.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
+                ctrl.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+                ctrl.touches.ONE = null;
+                ctrl.touches.TWO = THREE.TOUCH.DOLLY_PAN;
+                break;
+            case CameraInputPreset.Disabled:
+                ctrl.mouseButtons.LEFT = null;
+                ctrl.mouseButtons.MIDDLE = null;
+                ctrl.mouseButtons.RIGHT = null;
+                ctrl.touches.ONE = null;
+                ctrl.touches.TWO = null;
+                break;
+            case CameraInputPreset.Default:
+            default:
+                ctrl.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+                ctrl.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
+                ctrl.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+                ctrl.touches.ONE = THREE.TOUCH.ROTATE;
+                ctrl.touches.TWO = THREE.TOUCH.DOLLY_PAN;
+                break;
+        }
     }
 }

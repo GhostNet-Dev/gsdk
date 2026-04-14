@@ -35,6 +35,7 @@ export enum EventTypes {
     CtrlObjOff = "ctrlObjOff",
     OrbitControlsOnOff = "orbitcontrols",
     CameraMode = "cameramode",
+    CameraInputPreset = "camerainputpreset",
     CameraTrackTarget = "cameratracktarget",
     AimOverlay = "aimoverlay",
 
