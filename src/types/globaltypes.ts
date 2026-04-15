@@ -63,6 +63,7 @@ export enum EventTypes {
     People = "people",
     Gold = "gold",
     Wood = "wood",
+    Stone = "stone",
     Water = "water",
     Electric = "electric",
     Food = "food",

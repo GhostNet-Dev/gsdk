@@ -7,6 +7,7 @@ import { EventTypes } from '@Glibs/types/globaltypes';
 import { Loader } from '@Glibs/loader/loader';
 import { Char } from '@Glibs/loader/assettypes';
 import { buildingDefs } from '../../interactives/building/buildingdefs';
+import { environmentDefs } from '../../interactives/environment/environmentdefs';
 
 /* ----------------------------- Helpers ----------------------------- */
 function toU8(a: Uint8Array | Uint8ClampedArray): Uint8Array {
@@ -145,6 +146,7 @@ export default class CustomGround implements IWorldMapObject {
   private lastNodeId?: string;
   private gridSize = 4.0;
   private occupiedBuildings: Array<{ nodeId?: string, pos: THREE.Vector3, width: number, depth: number, buildRange?: number }> = [];
+  private buildingsWithRange: Array<{ pos: THREE.Vector3, buildRange: number }> = [];
 
   constructor(
     private scene: THREE.Scene,
@@ -169,22 +171,27 @@ export default class CustomGround implements IWorldMapObject {
           this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { dir: 'SYNC', delta: new THREE.Vector3(), pos: snappedWorldPos });
       }
     });
-    this.eventCtrl.RegisterEventListener(EventTypes.ResponseBuilding, (buildings: any[]) => {
-      this.occupiedBuildings = buildings.map(b => {
-        // nodeId가 'cc'와 같은 내부 ID일 경우를 대비해 buildingDefs에서 실제 속성 찾기
-        let property = (buildingDefs as any)[b.nodeId];
+    this.eventCtrl.RegisterEventListener(EventTypes.ResponseBuilding, (items: any[]) => {
+      // 1. 모든 객체 점유 정보 업데이트 (AABB 체크용)
+      this.occupiedBuildings = items.map(b => {
+        let property = (buildingDefs as any)[b.nodeId] || (environmentDefs as any)[b.nodeId];
         if (!property && b.nodeId) {
-            property = Object.values(buildingDefs).find(p => p.id === b.nodeId);
+            property = (Object.values(buildingDefs) as any[]).find(p => p.id === b.nodeId) || 
+                       (Object.values(environmentDefs) as any[]).find(p => p.id === b.nodeId);
         }
 
         return {
           ...b,
-          // b.pos가 단순 객체인 경우 Vector3로 변환하여 distanceTo 메서드 사용 보장
           pos: b.pos instanceof THREE.Vector3 ? b.pos : new THREE.Vector3(b.pos.x, b.pos.y, b.pos.z),
           buildRange: b.buildRange ?? property?.buildRange
         };
       });
       
+      // 2. [최적화] 범위 시각화가 필요한 건물만 별도로 추출 (성능 핵심)
+      this.buildingsWithRange = this.occupiedBuildings
+        .filter(b => b.buildRange && b.buildRange > 0)
+        .map(b => ({ pos: b.pos, buildRange: b.buildRange! }));
+
       this.updateExistingRangeMeshes();
 
       if (this.highlightMesh && this.highlightMesh.visible) {
@@ -202,30 +209,26 @@ export default class CustomGround implements IWorldMapObject {
     this.existingRangeGroup.clear();
 
     const s = this.gridSize / this.scale;
-    console.log(`[CustomGround] Updating existing ranges. Total occupied: ${this.occupiedBuildings.length}`);
-
-    this.occupiedBuildings.forEach(b => {
-      if (b.buildRange) {
-        console.log(`[CustomGround] Adding range circle for ${b.nodeId} at ${b.pos.x}, ${b.pos.z} with range ${b.buildRange}`);
-        const rangeGeom = new THREE.CircleGeometry(1, 64);
-        rangeGeom.rotateX(-Math.PI / 2);
-        const rangeMat = new THREE.MeshBasicMaterial({ 
-            color: 0x00ffff, 
-            transparent: true, 
-            opacity: 0.2, 
-            side: THREE.DoubleSide,
-            depthWrite: false // 지면과 겹칠 때 깜빡임 방지
-        });
-        const mesh = new THREE.Mesh(rangeGeom, rangeMat);
-        mesh.renderOrder = 1; // 지면(0)보다 높게 설정
-        
-        const localPos = this.obj.worldToLocal(b.pos.clone());
-        mesh.position.set(localPos.x, 0.5, localPos.z); // 높이를 0.5로 상향
-        
-        const rangeScale = b.buildRange * s;
-        mesh.scale.set(rangeScale, 1, rangeScale);
-        this.existingRangeGroup?.add(mesh);
-      }
+    // 최적화: 수천 개의 나무 대신, 범위가 있는 소수의 건물만 순회
+    this.buildingsWithRange.forEach(b => {
+      const rangeGeom = new THREE.CircleGeometry(1, 64);
+      rangeGeom.rotateX(-Math.PI / 2);
+      const rangeMat = new THREE.MeshBasicMaterial({ 
+          color: 0x00ffff, 
+          transparent: true, 
+          opacity: 0.2, 
+          side: THREE.DoubleSide,
+          depthWrite: false 
+      });
+      const mesh = new THREE.Mesh(rangeGeom, rangeMat);
+      mesh.renderOrder = 1; 
+      
+      const localPos = this.obj.worldToLocal(b.pos.clone());
+      mesh.position.set(localPos.x, 0.5, localPos.z); 
+      
+      const rangeScale = b.buildRange * s;
+      mesh.scale.set(rangeScale, 1, rangeScale);
+      this.existingRangeGroup?.add(mesh);
     });
   }
 
