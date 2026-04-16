@@ -100,6 +100,8 @@ export class EnvironmentManager implements ILoop {
 
         const occupiedKeys = new Set<string>();
         const pos = new THREE.Vector3();
+        const prop = environmentDefs[nodeId];
+        if (!prop) throw new Error(`Unknown nodeId: ${nodeId}`);
 
         for (let x = 0; x < width; x += this.gridSize) {
             for (let z = 0; z < depth; z += this.gridSize) {
@@ -114,7 +116,7 @@ export class EnvironmentManager implements ILoop {
 
                     if (!occupiedKeys.has(key)) {
                         occupiedKeys.add(key);
-                        pos.set(gridX * this.gridSize, 0, gridZ * this.gridSize);
+                        this._setPlacementAlignedPosition(pos, gridX, gridZ, prop);
                         this._spawnInstanced(nodeId, pos);
                     }
                 }
@@ -222,11 +224,12 @@ export class EnvironmentManager implements ILoop {
     async spawn(nodeId: string, pos: THREE.Vector3, silent = false, useInstancing = false): Promise<string | null> {
         const prop = environmentDefs[nodeId];
         if (!prop) return null;
+        const alignedPos = this._snapToPlacementGrid(pos, prop);
 
         try {
             if (useInstancing) {
                 await this._ensureInstancedMesh(nodeId);
-                const id = this._spawnInstanced(nodeId, pos);
+                const id = this._spawnInstanced(nodeId, alignedPos);
                 if (!silent && id) {
                     this.rebuildClusters(nodeId);
                     this._initRenderSlots(nodeId);
@@ -238,7 +241,7 @@ export class EnvironmentManager implements ILoop {
                 const [model] = await asset.UniqModel(`env_${Date.now()}_${nodeId}`);
                 if (!model) return null;
 
-                model.position.copy(pos);
+                model.position.copy(alignedPos);
                 if (prop.randomRotation) model.rotation.y = Math.random() * Math.PI * 2;
                 let s = prop.scale;
                 if (prop.randomScaleRange) {
@@ -248,7 +251,7 @@ export class EnvironmentManager implements ILoop {
                 this.scene.add(model);
 
                 const id = EnvironmentManager._nextId();
-                const envObj = new Tree(id, prop, pos, model, this.eventCtrl);
+                const envObj = new Tree(id, prop, alignedPos, model, this.eventCtrl);
                 this.envObjects.set(id, envObj);
                 this.envObjectsArray.push(envObj);
                 PlacementManager.Instance.registerFootprint({
@@ -256,12 +259,12 @@ export class EnvironmentManager implements ILoop {
                     source: 'environment',
                     state: 'active',
                     nodeId,
-                    pos,
+                    pos: alignedPos,
                     width: prop.size.width,
                     depth: prop.size.depth,
                 });
 
-                const cellKey = this._cellKey(pos.x, pos.z);
+                const cellKey = this._cellKey(alignedPos.x, alignedPos.z);
                 if (!this._spatialGrid.has(cellKey)) this._spatialGrid.set(cellKey, []);
                 this._spatialGrid.get(cellKey)!.push(envObj);
 
@@ -297,6 +300,21 @@ export class EnvironmentManager implements ILoop {
             }
         });
         return parts;
+    }
+
+    private _setPlacementAlignedPosition(target: THREE.Vector3, gridX: number, gridZ: number, prop: EnvironmentProperty) {
+        const offsetX = (prop.size.width % 2 !== 0) ? this.gridSize * 0.5 : 0;
+        const offsetZ = (prop.size.depth % 2 !== 0) ? this.gridSize * 0.5 : 0;
+        target.set(gridX * this.gridSize + offsetX, 0, gridZ * this.gridSize + offsetZ);
+    }
+
+    private _snapToPlacementGrid(pos: THREE.Vector3, prop: EnvironmentProperty): THREE.Vector3 {
+        const gridX = Math.round(pos.x / this.gridSize);
+        const gridZ = Math.round(pos.z / this.gridSize);
+        const snapped = new THREE.Vector3();
+        this._setPlacementAlignedPosition(snapped, gridX, gridZ, prop);
+        snapped.y = pos.y;
+        return snapped;
     }
 
     private _computeInstanceCullRadius(parts: THREE.InstancedMesh[], prop: EnvironmentProperty): number {

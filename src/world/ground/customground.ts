@@ -120,8 +120,12 @@ export default class CustomGround implements IWorldMapObject {
   // 격자 및 강조 표시
   private gridHelper?: THREE.GridHelper;
   private highlightMesh?: THREE.Mesh;
-  private rangeMesh?: THREE.Mesh; // 현재 배치 중인 건물의 범위 preview
-  private existingRangeGroup?: THREE.Group; // 이미 배치된 건물들의 범위
+  private environmentOccupancyOverlay?: THREE.InstancedMesh;
+  private environmentOccupancyOverlayCapacity = 0;
+  private existingBuildRangeOverlay?: THREE.InstancedMesh;
+  private existingBuildRangeOverlayCapacity = 0;
+  private previewBuildRangeOverlay?: THREE.InstancedMesh;
+  private previewBuildRangeOverlayCapacity = 0;
 
   // 브러시/스케일
   scale = 0.5;
@@ -172,7 +176,8 @@ export default class CustomGround implements IWorldMapObject {
     });
     this.eventCtrl.RegisterEventListener(EventTypes.ResponseBuilding, (items: any[]) => {
       this.refreshPlacementRanges();
-      this.updateExistingRangeMeshes();
+      this.updateExistingBuildRangeOverlay();
+      if (this.gridHelper?.visible) this.updateEnvironmentOccupancyOverlay();
 
       if (this.highlightMesh && this.highlightMesh.visible) {
         const worldPosCenter = this.obj.localToWorld(this.highlightMesh.position.clone());
@@ -185,35 +190,193 @@ export default class CustomGround implements IWorldMapObject {
     this.buildingsWithRange = PlacementManager.Instance.getBuildRanges();
   }
 
-  private updateExistingRangeMeshes() {
-    if (!this.existingRangeGroup) {
-      this.existingRangeGroup = new THREE.Group();
-      if (this.obj) this.obj.add(this.existingRangeGroup);
+  private ensureEnvironmentOccupancyOverlay(count: number): THREE.InstancedMesh {
+    const capacity = Math.max(1, count);
+    if (this.environmentOccupancyOverlay && this.environmentOccupancyOverlayCapacity >= capacity) {
+      return this.environmentOccupancyOverlay;
     }
-    this.existingRangeGroup.clear();
+
+    if (this.environmentOccupancyOverlay) {
+      this.environmentOccupancyOverlay.parent?.remove(this.environmentOccupancyOverlay);
+      this.environmentOccupancyOverlay.geometry.dispose();
+      const material = this.environmentOccupancyOverlay.material;
+      if (Array.isArray(material)) {
+        material.forEach(m => m.dispose());
+      } else {
+        material.dispose();
+      }
+    }
+
+    const geom = new THREE.PlaneGeometry(1, 1);
+    geom.rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xffcc00,
+      transparent: true,
+      opacity: 0.25,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      depthTest: true,
+    });
+
+    this.environmentOccupancyOverlay = new THREE.InstancedMesh(geom, mat, capacity);
+    this.environmentOccupancyOverlay.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.environmentOccupancyOverlay.renderOrder = 0;
+    this.environmentOccupancyOverlay.visible = false;
+    this.environmentOccupancyOverlayCapacity = capacity;
+    if (this.obj) this.obj.add(this.environmentOccupancyOverlay);
+
+    return this.environmentOccupancyOverlay;
+  }
+
+  private updateEnvironmentOccupancyOverlay() {
+    if (!this.obj) return;
+
+    const footprints = PlacementManager.Instance.getFootprints('environment');
+    const overlay = this.ensureEnvironmentOccupancyOverlay(footprints.length);
+    const s = this.gridSize / this.scale;
+    const matrix = new THREE.Matrix4();
+    const pos = new THREE.Vector3();
+    const quat = new THREE.Quaternion();
+    const scale = new THREE.Vector3();
+
+    for (let i = 0; i < footprints.length; i++) {
+      const footprint = footprints[i];
+      const localPos = this.obj.worldToLocal(footprint.pos.clone());
+      pos.set(localPos.x, 0.22, localPos.z);
+      scale.set(footprint.width * s, 1, footprint.depth * s);
+      matrix.compose(pos, quat, scale);
+      overlay.setMatrixAt(i, matrix);
+    }
+
+    overlay.count = footprints.length;
+    overlay.instanceMatrix.needsUpdate = true;
+    overlay.visible = !!this.gridHelper?.visible && footprints.length > 0;
+  }
+
+  private disposeMesh(mesh: THREE.InstancedMesh) {
+    mesh.parent?.remove(mesh);
+    mesh.geometry.dispose();
+    const material = mesh.material;
+    if (Array.isArray(material)) {
+      material.forEach(m => m.dispose());
+    } else {
+      material.dispose();
+    }
+  }
+
+  private createCellOverlay(capacity: number, color: number, opacity: number): THREE.InstancedMesh {
+    const geom = new THREE.PlaneGeometry(1, 1);
+    geom.rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      depthTest: true,
+    });
+    const mesh = new THREE.InstancedMesh(geom, mat, Math.max(1, capacity));
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    mesh.renderOrder = 0;
+    mesh.visible = false;
+    if (this.obj) this.obj.add(mesh);
+    return mesh;
+  }
+
+  private ensureExistingBuildRangeOverlay(count: number): THREE.InstancedMesh {
+    const capacity = Math.max(1, count);
+    if (this.existingBuildRangeOverlay && this.existingBuildRangeOverlayCapacity >= capacity) {
+      return this.existingBuildRangeOverlay;
+    }
+
+    if (this.existingBuildRangeOverlay) this.disposeMesh(this.existingBuildRangeOverlay);
+
+    this.existingBuildRangeOverlay = this.createCellOverlay(capacity, 0x00ffff, 0.14);
+    this.existingBuildRangeOverlayCapacity = capacity;
+    return this.existingBuildRangeOverlay;
+  }
+
+  private ensurePreviewBuildRangeOverlay(count: number): THREE.InstancedMesh {
+    const capacity = Math.max(1, count);
+    if (this.previewBuildRangeOverlay && this.previewBuildRangeOverlayCapacity >= capacity) {
+      return this.previewBuildRangeOverlay;
+    }
+
+    if (this.previewBuildRangeOverlay) this.disposeMesh(this.previewBuildRangeOverlay);
+
+    this.previewBuildRangeOverlay = this.createCellOverlay(capacity, 0x00e5ff, 0.24);
+    this.previewBuildRangeOverlayCapacity = capacity;
+    return this.previewBuildRangeOverlay;
+  }
+
+  private collectBuildRangeCells(ranges: Array<{ pos: THREE.Vector3, buildRange: number }>): THREE.Vector3[] {
+    if (!this.obj) return [];
 
     const s = this.gridSize / this.scale;
-    // 최적화: 수천 개의 나무 대신, 범위가 있는 소수의 건물만 순회
-    this.buildingsWithRange.forEach(b => {
-      const rangeGeom = new THREE.CircleGeometry(1, 64);
-      rangeGeom.rotateX(-Math.PI / 2);
-      const rangeMat = new THREE.MeshBasicMaterial({ 
-          color: 0x00ffff, 
-          transparent: true, 
-          opacity: 0.2, 
-          side: THREE.DoubleSide,
-          depthWrite: false 
-      });
-      const mesh = new THREE.Mesh(rangeGeom, rangeMat);
-      mesh.renderOrder = 1; 
-      
-      const localPos = this.obj.worldToLocal(b.pos.clone());
-      mesh.position.set(localPos.x, 0.5, localPos.z); 
-      
-      const rangeScale = b.buildRange * s;
-      mesh.scale.set(rangeScale, 1, rangeScale);
-      this.existingRangeGroup?.add(mesh);
-    });
+    const visited = new Set<string>();
+    const cells: THREE.Vector3[] = [];
+
+    for (const range of ranges) {
+      const providerLocal = this.obj.worldToLocal(range.pos.clone());
+      const baseGx = Math.floor(providerLocal.x / s);
+      const baseGz = Math.floor(providerLocal.z / s);
+      const cellRadius = Math.ceil(range.buildRange);
+      const worldRadius = range.buildRange * this.gridSize;
+
+      for (let dx = -cellRadius; dx <= cellRadius; dx++) {
+        for (let dz = -cellRadius; dz <= cellRadius; dz++) {
+          const gx = baseGx + dx;
+          const gz = baseGz + dz;
+          const key = `${gx},${gz}`;
+          if (visited.has(key)) continue;
+
+          const localX = gx * s + s * 0.5;
+          const localZ = gz * s + s * 0.5;
+          const worldCenter = this.obj.localToWorld(new THREE.Vector3(localX, 0, localZ));
+          if (worldCenter.distanceTo(range.pos) > worldRadius) continue;
+
+          visited.add(key);
+          cells.push(new THREE.Vector3(localX, 0, localZ));
+        }
+      }
+    }
+
+    return cells;
+  }
+
+  private writeCellOverlayMatrices(overlay: THREE.InstancedMesh, cells: THREE.Vector3[], y: number) {
+    const s = this.gridSize / this.scale;
+    const matrix = new THREE.Matrix4();
+    const pos = new THREE.Vector3();
+    const quat = new THREE.Quaternion();
+    const scale = new THREE.Vector3(s, 1, s);
+
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
+      pos.set(cell.x, y, cell.z);
+      matrix.compose(pos, quat, scale);
+      overlay.setMatrixAt(i, matrix);
+    }
+
+    overlay.count = cells.length;
+    overlay.instanceMatrix.needsUpdate = true;
+    overlay.visible = !!this.gridHelper?.visible && cells.length > 0;
+  }
+
+  private updateExistingBuildRangeOverlay() {
+    const cells = this.collectBuildRangeCells(this.buildingsWithRange);
+    const overlay = this.ensureExistingBuildRangeOverlay(cells.length);
+    this.writeCellOverlayMatrices(overlay, cells, 0.16);
+  }
+
+  private updatePreviewBuildRangeOverlay(pos: THREE.Vector3, buildRange: number) {
+    const cells = this.collectBuildRangeCells([{ pos, buildRange }]);
+    const overlay = this.ensurePreviewBuildRangeOverlay(cells.length);
+    this.writeCellOverlayMatrices(overlay, cells, 0.18);
+  }
+
+  private hidePreviewBuildRangeOverlay() {
+    if (this.previewBuildRangeOverlay) this.previewBuildRangeOverlay.visible = false;
   }
 
   private onPointerDown = (e: PointerEvent) => {
@@ -1028,8 +1191,13 @@ export default class CustomGround implements IWorldMapObject {
         this.obj.add(this.gridHelper);
       }
       if (this.gridHelper) this.gridHelper.visible = true;
+      this.updateExistingBuildRangeOverlay();
+      this.updateEnvironmentOccupancyOverlay();
     } else {
       if (this.gridHelper) this.gridHelper.visible = false;
+      if (this.environmentOccupancyOverlay) this.environmentOccupancyOverlay.visible = false;
+      if (this.existingBuildRangeOverlay) this.existingBuildRangeOverlay.visible = false;
+      if (this.previewBuildRangeOverlay) this.previewBuildRangeOverlay.visible = false;
       this.ClearHighlight();
     }
   }
@@ -1112,9 +1280,9 @@ export default class CustomGround implements IWorldMapObject {
     this.highlightMesh.position.set(lineX + offsetX, 0.25, lineZ + offsetZ);
     this.highlightMesh.visible = true;
 
-    if (this.existingRangeGroup) this.existingRangeGroup.visible = true;
+    if (this.existingBuildRangeOverlay) this.existingBuildRangeOverlay.visible = true;
 
-    // [추가] buildRange를 위한 rangeMesh 생성 및 업데이트
+    // [추가] buildRange를 위한 grid overlay 생성 및 업데이트
     // buildingDefs는 Record<string, BuildingProperty> 타입이지만, nodeId가 def의 키와 매칭되어야 합니다.
     let property = nodeId ? (buildingDefs as any)[nodeId] : null;
     if (!property && nodeId) {
@@ -1122,25 +1290,14 @@ export default class CustomGround implements IWorldMapObject {
         property = Object.values(buildingDefs).find(p => p.id === nodeId);
     }
 
+    const worldPosCenter = this.obj.localToWorld(this.highlightMesh.position.clone());
     if (property && property.buildRange) {
-        if (!this.rangeMesh) {
-            const rangeGeom = new THREE.RingGeometry(0, 1, 64);
-            rangeGeom.rotateX(-Math.PI / 2);
-            const rangeMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
-            this.rangeMesh = new THREE.Mesh(rangeGeom, rangeMat);
-            this.obj.add(this.rangeMesh);
-        }
-        // 원형 범위: buildRange는 반경(radius)으로 해석하여 스케일 설정
-        const rangeScale = property.buildRange * s;
-        this.rangeMesh.scale.set(rangeScale, rangeScale, rangeScale);
-        this.rangeMesh.position.copy(this.highlightMesh.position);
-        this.rangeMesh.visible = true;
-    } else if (this.rangeMesh) {
-        this.rangeMesh.visible = false;
+        this.updatePreviewBuildRangeOverlay(worldPosCenter, property.buildRange);
+    } else {
+        this.hidePreviewBuildRangeOverlay();
     }
 
     // 점유 상태 체크 및 색상 변경
-    const worldPosCenter = this.obj.localToWorld(this.highlightMesh.position.clone());
     const isOccupied = this.checkOccupancy(worldPosCenter, width, depth);
     
     // [추가] 지원 범위(Pylon과 같은) 내인지 확인
@@ -1182,8 +1339,9 @@ export default class CustomGround implements IWorldMapObject {
 
   ClearHighlight() {
     if (this.highlightMesh) this.highlightMesh.visible = false;
-    if (this.rangeMesh) this.rangeMesh.visible = false;
-    if (this.existingRangeGroup) this.existingRangeGroup.visible = false;
+    if (this.previewBuildRangeOverlay) this.previewBuildRangeOverlay.visible = false;
+    if (this.existingBuildRangeOverlay) this.existingBuildRangeOverlay.visible = false;
+    if (this.environmentOccupancyOverlay) this.environmentOccupancyOverlay.visible = false;
     if (this.arrowGroup) this.arrowGroup.visible = false;
   }
 
@@ -1209,6 +1367,11 @@ export default class CustomGround implements IWorldMapObject {
     this.geometry?.dispose();
     this.blendMap?.dispose();
     this.gridHelper?.dispose();
+    if (this.environmentOccupancyOverlay) {
+      this.disposeMesh(this.environmentOccupancyOverlay);
+    }
+    if (this.existingBuildRangeOverlay) this.disposeMesh(this.existingBuildRangeOverlay);
+    if (this.previewBuildRangeOverlay) this.disposeMesh(this.previewBuildRangeOverlay);
     if (this.highlightMesh) {
       this.highlightMesh.geometry.dispose();
       (this.highlightMesh.material as THREE.Material).dispose();
