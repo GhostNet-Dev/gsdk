@@ -15,6 +15,7 @@ import { Bunker } from "./buildingobjs/bunker";
 import { CameraMode } from "@Glibs/systems/camera/cameratypes";
 import { CameraInputPreset } from "@Glibs/systems/camera/orbitbroker";
 import { SelectionPanel } from "@Glibs/ux/selectionpanel/selectionpanel";
+import { PlacementManager } from "@Glibs/interactives/placement/placementmanager";
 
 export interface BuildingTask {
   nodeId: string;
@@ -308,6 +309,16 @@ export class BuildingManager implements ILoop {
     const prop = node.tech as BuildingProperty;
     const curLv = this.service.levels[nodeId] ?? 0;
 
+    if (pos) {
+      const isBaseBuilding = nodeId === 'cc' || nodeId === 'CommandCenter';
+      const placement = PlacementManager.Instance.validatePlacement(pos, prop.size.width, prop.size.depth, isBaseBuilding);
+      if (!placement.ok) {
+        const reason = placement.reason === 'occupied' ? "이미 점유된 지역입니다." : "건설 지원 범위 밖입니다.";
+        this.eventCtrl.SendEventMessage(EventTypes.Toast, reason);
+        return null;
+      }
+    }
+
     // [수정] 테크트리에서 이미 해금(레벨 1 이상)되었다면 추가 비용 차감 방지
     if (curLv === 0) {
         const canLevel = this.service.canLevelUp(nodeId);
@@ -376,6 +387,18 @@ export class BuildingManager implements ILoop {
     };
 
     this.activeTasks.set(taskId, task);
+    if (pos) {
+      PlacementManager.Instance.registerFootprint({
+        id: taskId,
+        source: 'building',
+        state: 'pending',
+        nodeId,
+        pos,
+        width: prop.size.width,
+        depth: prop.size.depth,
+        buildRange: prop.buildRange,
+      });
+    }
     this.sendBuildingStatus();
     return taskId;
   }
@@ -404,6 +427,7 @@ export class BuildingManager implements ILoop {
     task.progress = 1;
     task.remainingTurns = 0;
     task.isFinished = true;
+    PlacementManager.Instance.unregisterFootprint(taskId);
 
     if (task.constructionModel) this.scene.remove(task.constructionModel);
     if (task.progressMesh) this.scene.remove(task.progressMesh);
@@ -448,6 +472,16 @@ export class BuildingManager implements ILoop {
             buildingObj.level = 1; // 기본 레벨 1 설정
             this.buildingObjects.set(id, buildingObj);
             model.userData.buildingId = id;
+            PlacementManager.Instance.registerFootprint({
+              id,
+              source: 'building',
+              state: 'active',
+              nodeId: task.nodeId,
+              pos: task.pos,
+              width: task.prop.size.width,
+              depth: task.prop.size.depth,
+              buildRange: task.prop.buildRange,
+            });
 
             // [추가] 인구수 공급 반영
             if (task.prop.providesPeople) {
@@ -467,12 +501,14 @@ export class BuildingManager implements ILoop {
 
   private sendBuildingStatus() {
     const buildings = Array.from(this.buildingObjects.values()).map(b => ({
+      source: 'building',
       nodeId: b.property.id,
       pos: b.position, 
       width: b.property.size.width, 
       depth: b.property.size.depth
     }));
     const pending = Array.from(this.activeTasks.values()).filter(t => !t.isFinished && t.pos).map(t => ({
+      source: 'building',
       nodeId: t.nodeId,
       pos: t.pos!, 
       width: t.prop.size.width, 

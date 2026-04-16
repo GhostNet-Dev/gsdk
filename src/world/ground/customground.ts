@@ -7,7 +7,7 @@ import { EventTypes } from '@Glibs/types/globaltypes';
 import { Loader } from '@Glibs/loader/loader';
 import { Char } from '@Glibs/loader/assettypes';
 import { buildingDefs } from '../../interactives/building/buildingdefs';
-import { environmentDefs } from '../../interactives/environment/environmentdefs';
+import { PlacementManager } from '../../interactives/placement/placementmanager';
 
 /* ----------------------------- Helpers ----------------------------- */
 function toU8(a: Uint8Array | Uint8ClampedArray): Uint8Array {
@@ -145,7 +145,6 @@ export default class CustomGround implements IWorldMapObject {
 
   private lastNodeId?: string;
   private gridSize = 4.0;
-  private occupiedBuildings: Array<{ nodeId?: string, pos: THREE.Vector3, width: number, depth: number, buildRange?: number }> = [];
   private buildingsWithRange: Array<{ pos: THREE.Vector3, buildRange: number }> = [];
 
   constructor(
@@ -172,26 +171,7 @@ export default class CustomGround implements IWorldMapObject {
       }
     });
     this.eventCtrl.RegisterEventListener(EventTypes.ResponseBuilding, (items: any[]) => {
-      // 1. 모든 객체 점유 정보 업데이트 (AABB 체크용)
-      this.occupiedBuildings = items.map(b => {
-        let property = (buildingDefs as any)[b.nodeId] || (environmentDefs as any)[b.nodeId];
-        if (!property && b.nodeId) {
-            property = (Object.values(buildingDefs) as any[]).find(p => p.id === b.nodeId) || 
-                       (Object.values(environmentDefs) as any[]).find(p => p.id === b.nodeId);
-        }
-
-        return {
-          ...b,
-          pos: b.pos instanceof THREE.Vector3 ? b.pos : new THREE.Vector3(b.pos.x, b.pos.y, b.pos.z),
-          buildRange: b.buildRange ?? property?.buildRange
-        };
-      });
-      
-      // 2. [최적화] 범위 시각화가 필요한 건물만 별도로 추출 (성능 핵심)
-      this.buildingsWithRange = this.occupiedBuildings
-        .filter(b => b.buildRange && b.buildRange > 0)
-        .map(b => ({ pos: b.pos, buildRange: b.buildRange! }));
-
+      this.refreshPlacementRanges();
       this.updateExistingRangeMeshes();
 
       if (this.highlightMesh && this.highlightMesh.visible) {
@@ -199,6 +179,10 @@ export default class CustomGround implements IWorldMapObject {
         this.HighlightGrid(worldPosCenter, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
       }
     });
+  }
+
+  private refreshPlacementRanges() {
+    this.buildingsWithRange = PlacementManager.Instance.getBuildRanges();
   }
 
   private updateExistingRangeMeshes() {
@@ -1204,47 +1188,11 @@ export default class CustomGround implements IWorldMapObject {
   }
 
   private checkOccupancy(pos: THREE.Vector3, width: number, depth: number): boolean {
-    // 현재 하이라이트된 영역의 바운딩 박스 (간소화된 2D 체크)
-    const halfW = (width * this.gridSize) * 0.5;
-    const halfD = (depth * this.gridSize) * 0.5;
-    
-    const minX = pos.x - halfW + 0.1; // 약간의 여유를 둬서 경계선 충돌 방지
-    const maxX = pos.x + halfW - 0.1;
-    const minZ = pos.z - halfD + 0.1;
-    const maxZ = pos.z + halfD - 0.1;
-
-    for (const b of this.occupiedBuildings) {
-      const bHalfW = (b.width * this.gridSize) * 0.5;
-      const bHalfD = (b.depth * this.gridSize) * 0.5;
-      
-      const bMinX = b.pos.x - bHalfW;
-      const bMaxX = b.pos.x + bHalfW;
-      const bMinZ = b.pos.z - bHalfD;
-      const bMaxZ = b.pos.z + bHalfD;
-
-      // AABB 충돌 검사
-      if (minX < bMaxX && maxX > bMinX && minZ < bMaxZ && maxZ > bMinZ) {
-        return true;
-      }
-    }
-    return false;
+    return PlacementManager.Instance.isFootprintOccupied(pos, width, depth);
   }
 
   private checkBuildRange(pos: THREE.Vector3): boolean {
-    // 맵에 아무 건물도 없으면 (최초 건설) 범위를 체크하지 않음
-    if (this.occupiedBuildings.length === 0) return true;
-
-    for (const b of this.occupiedBuildings) {
-      if (b.buildRange) {
-        // 거리 기반 체크 (원형 범위)
-        const dist = pos.distanceTo(b.pos);
-        // buildRange는 그리드 단위이므로 실제 거리로 변환
-        if (dist <= b.buildRange * this.gridSize) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return PlacementManager.Instance.isInBuildRange(pos);
   }
 
   Delete(...param: any) {

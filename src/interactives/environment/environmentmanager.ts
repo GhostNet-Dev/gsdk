@@ -6,6 +6,7 @@ import { EnvironmentProperty, environmentDefs } from "./environmentdefs";
 import { IEnvironmentObject } from "./ienvironmentobj";
 import { Tree } from "./environmentobjs/tree";
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise';
+import { PlacementManager } from "@Glibs/interactives/placement/placementmanager";
 
 export class EnvironmentManager implements ILoop {
     private static _instance: EnvironmentManager | null = null;
@@ -23,6 +24,7 @@ export class EnvironmentManager implements ILoop {
     private baseMatrices: Map<string, Float32Array> = new Map();
     private nextInstanceIndex: Map<string, number> = new Map();
     private instanceIndexMap: Map<string, Map<number, IEnvironmentObject>> = new Map();
+    private instanceCullRadius: Map<string, number> = new Map();
 
     private loader = new Loader();
     private noise = new ImprovedNoise();
@@ -134,6 +136,7 @@ export class EnvironmentManager implements ILoop {
         const asset = await this.loader.GetAssets(prop.assetKey);
         const parts = this._createInstancedMeshParts(await asset.CloneModel(), this.MAX_INSTANCES);
         this.instancedMeshes.set(nodeId, parts);
+        this.instanceCullRadius.set(nodeId, this._computeInstanceCullRadius(parts, prop));
         parts.forEach(p => this.scene.add(p));
 
         this.baseMatrices.set(nodeId, new Float32Array(this.MAX_INSTANCES * 16));
@@ -172,6 +175,15 @@ export class EnvironmentManager implements ILoop {
         this.envObjects.set(id, envObj);
         this.envObjectsArray.push(envObj);
         indexMap.set(index, envObj);
+        PlacementManager.Instance.registerFootprint({
+            id,
+            source: 'environment',
+            state: 'active',
+            nodeId,
+            pos,
+            width: prop.size.width,
+            depth: prop.size.depth,
+        });
 
         // 공간 그리드에 등록
         const cellKey = this._cellKey(pos.x, pos.z);
@@ -239,6 +251,15 @@ export class EnvironmentManager implements ILoop {
                 const envObj = new Tree(id, prop, pos, model, this.eventCtrl);
                 this.envObjects.set(id, envObj);
                 this.envObjectsArray.push(envObj);
+                PlacementManager.Instance.registerFootprint({
+                    id,
+                    source: 'environment',
+                    state: 'active',
+                    nodeId,
+                    pos,
+                    width: prop.size.width,
+                    depth: prop.size.depth,
+                });
 
                 const cellKey = this._cellKey(pos.x, pos.z);
                 if (!this._spatialGrid.has(cellKey)) this._spatialGrid.set(cellKey, []);
@@ -276,6 +297,21 @@ export class EnvironmentManager implements ILoop {
             }
         });
         return parts;
+    }
+
+    private _computeInstanceCullRadius(parts: THREE.InstancedMesh[], prop: EnvironmentProperty): number {
+        let radius = Math.max(prop.size.width, prop.size.depth, 1);
+        const maxRandomScale = prop.randomScaleRange?.[1] ?? 1;
+        const instanceScale = prop.scale * maxRandomScale;
+
+        for (const part of parts) {
+            if (!part.geometry.boundingSphere) part.geometry.computeBoundingSphere();
+            const bounds = part.geometry.boundingSphere;
+            if (!bounds) continue;
+            radius = Math.max(radius, bounds.radius * instanceScale);
+        }
+
+        return radius * 1.1;
     }
 
     private rebuildClusters(nodeId: string) {
@@ -391,6 +427,7 @@ export class EnvironmentManager implements ILoop {
                 const slotToLogical = this._renderSlotToLogical.get(nodeId);
                 const logicalToSlot = this._logicalToRenderSlot.get(nodeId);
                 if (!parts || !clusters || !matrices || !indexMap || !slotToLogical || !logicalToSlot) return;
+                const instanceRadius = this.instanceCullRadius.get(nodeId) ?? 2.0;
 
                 let visCache = this._clusterVisibility.get(nodeId);
                 if (!visCache || visCache.length !== clusters.length) {
@@ -410,11 +447,12 @@ export class EnvironmentManager implements ILoop {
                     anyChanged = true;
                 }
 
-                if (!anyChanged) return;
+                if (!anyChanged && !moved && !rotated) return;
 
                 // 가시 클러스터의 non-depleted 인스턴스를 [0, N) 슬롯에 팩킹
                 // inst.count = N → GPU는 N개 인스턴스만 vertex shader 실행 (시야 밖 완전 생략)
                 let slot = 0;
+                logicalToSlot.fill(-1);
                 for (let ci = 0; ci < clusters.length; ci++) {
                     if (visCache[ci] !== 1) continue;
                     const indices = clusters[ci].indices;
@@ -422,6 +460,8 @@ export class EnvironmentManager implements ILoop {
                         const logIdx = indices[k];
                         const obj = indexMap.get(logIdx);
                         if (!obj || obj.isDepleted) continue;
+                        this._cullSphere.set(obj.position, instanceRadius);
+                        if (!this._frustum.intersectsSphere(this._cullSphere)) continue;
                         this._tempMatrix.fromArray(matrices, logIdx * 16);
                         parts.forEach(p => p.setMatrixAt(slot, this._tempMatrix));
                         slotToLogical[slot] = logIdx;
@@ -459,6 +499,7 @@ export class EnvironmentManager implements ILoop {
 
     private sendEnvironmentStatus() {
         const envs = this.envObjectsArray.map(e => ({
+            source: 'environment',
             nodeId: e.property.id,
             pos: e.position,
             width: e.property.size.width,
