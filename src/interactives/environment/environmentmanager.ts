@@ -8,6 +8,22 @@ import { Tree } from "./environmentobjs/tree";
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise';
 import { PlacementManager } from "@Glibs/interactives/placement/placementmanager";
 
+type RadialPathPopulateOptions = {
+    centerX: number,
+    centerZ: number,
+    width: number,
+    depth: number,
+    density: number,
+    threshold: number,
+    noiseScale: number,
+    clearingRadius: number,
+    roadCount: number,
+    roadWidth: number,
+    roadAngleOffset?: number,
+}
+
+type GroundRadialPathPopulateOptions = Omit<RadialPathPopulateOptions, 'centerX' | 'centerZ' | 'width' | 'depth'>;
+
 export class EnvironmentManager implements ILoop {
     private static _instance: EnvironmentManager | null = null;
     public static get Instance(): EnvironmentManager {
@@ -125,6 +141,139 @@ export class EnvironmentManager implements ILoop {
 
         this.rebuildClusters(nodeId);
         // 초기 팩킹: 전체 인스턴스가 visible로 시작
+        this._initRenderSlots(nodeId);
+        this.sendEnvironmentStatus();
+    }
+
+    async populateGroundWithRadialPaths(
+        nodeId: string,
+        ground: THREE.Object3D,
+        options: GroundRadialPathPopulateOptions
+    ) {
+        const prop = environmentDefs[nodeId];
+        if (!prop) throw new Error(`Unknown nodeId: ${nodeId}`);
+
+        ground.updateWorldMatrix(true, true);
+        const bounds = new THREE.Box3().setFromObject(ground);
+        if (bounds.isEmpty()) {
+            console.warn(`[EnvironmentManager] Ground bounds are empty. Skip populating ${nodeId}.`);
+            return;
+        }
+
+        const center = bounds.getCenter(new THREE.Vector3());
+        const footprintHalfX = prop.size.width * this.gridSize * 0.5;
+        const footprintHalfZ = prop.size.depth * this.gridSize * 0.5;
+        const minX = bounds.min.x + footprintHalfX;
+        const maxX = bounds.max.x - footprintHalfX;
+        const minZ = bounds.min.z + footprintHalfZ;
+        const maxZ = bounds.max.z - footprintHalfZ;
+
+        if (minX > maxX || minZ > maxZ) {
+            console.warn(`[EnvironmentManager] Ground is too small for ${nodeId} footprints.`);
+            return;
+        }
+
+        console.log(`[EnvironmentManager] Populating ${nodeId} inside ground bounds...`);
+
+        await this._ensureInstancedMesh(nodeId);
+
+        const occupiedKeys = new Set<string>();
+        const pos = new THREE.Vector3();
+        const offsetX = (prop.size.width % 2 !== 0) ? this.gridSize * 0.5 : 0;
+        const offsetZ = (prop.size.depth % 2 !== 0) ? this.gridSize * 0.5 : 0;
+        const minGridX = Math.ceil((minX - offsetX) / this.gridSize);
+        const maxGridX = Math.floor((maxX - offsetX) / this.gridSize);
+        const minGridZ = Math.ceil((minZ - offsetZ) / this.gridSize);
+        const maxGridZ = Math.floor((maxZ - offsetZ) / this.gridSize);
+        const roadAngleOffset = options.roadAngleOffset ?? -Math.PI / 2;
+
+        for (let gridX = minGridX; gridX <= maxGridX; gridX++) {
+            for (let gridZ = minGridZ; gridZ <= maxGridZ; gridZ++) {
+                const key = `${gridX},${gridZ}`;
+                if (occupiedKeys.has(key)) continue;
+
+                this._setPlacementAlignedPosition(pos, gridX, gridZ, prop);
+                if (this._isInsideRadialPathOpening(pos, {
+                    centerX: center.x,
+                    centerZ: center.z,
+                    clearingRadius: options.clearingRadius,
+                    roadCount: options.roadCount,
+                    roadWidth: options.roadWidth,
+                    roadAngleOffset,
+                })) {
+                    continue;
+                }
+
+                const nv = (this.noise.noise(pos.x / options.noiseScale, pos.z / options.noiseScale, 0) + 1) / 2;
+                if (nv <= options.threshold || Math.random() >= options.density) continue;
+
+                occupiedKeys.add(key);
+                this._spawnInstanced(nodeId, pos);
+            }
+        }
+
+        this.rebuildClusters(nodeId);
+        this._initRenderSlots(nodeId);
+        this.sendEnvironmentStatus();
+    }
+
+    async populateWithRadialPaths(nodeId: string, options: RadialPathPopulateOptions) {
+        const {
+            centerX,
+            centerZ,
+            width,
+            depth,
+            density,
+            threshold,
+            noiseScale,
+            clearingRadius,
+            roadCount,
+            roadWidth,
+            roadAngleOffset = -Math.PI / 2,
+        } = options;
+        const startX = centerX - width / 2;
+        const startZ = centerZ - depth / 2;
+
+        console.log(`[EnvironmentManager] Populating ${nodeId} with radial paths...`);
+
+        await this._ensureInstancedMesh(nodeId);
+
+        const occupiedKeys = new Set<string>();
+        const pos = new THREE.Vector3();
+        const prop = environmentDefs[nodeId];
+        if (!prop) throw new Error(`Unknown nodeId: ${nodeId}`);
+
+        for (let x = 0; x < width; x += this.gridSize) {
+            for (let z = 0; z < depth; z += this.gridSize) {
+                const worldX = startX + x;
+                const worldZ = startZ + z;
+                const gridX = Math.round(worldX / this.gridSize);
+                const gridZ = Math.round(worldZ / this.gridSize);
+                const key = `${gridX},${gridZ}`;
+
+                if (occupiedKeys.has(key)) continue;
+
+                this._setPlacementAlignedPosition(pos, gridX, gridZ, prop);
+                if (this._isInsideRadialPathOpening(pos, {
+                    centerX,
+                    centerZ,
+                    clearingRadius,
+                    roadCount,
+                    roadWidth,
+                    roadAngleOffset,
+                })) {
+                    continue;
+                }
+
+                const nv = (this.noise.noise(worldX / noiseScale, worldZ / noiseScale, 0) + 1) / 2;
+                if (nv <= threshold || Math.random() >= density) continue;
+
+                occupiedKeys.add(key);
+                this._spawnInstanced(nodeId, pos);
+            }
+        }
+
+        this.rebuildClusters(nodeId);
         this._initRenderSlots(nodeId);
         this.sendEnvironmentStatus();
     }
@@ -315,6 +464,39 @@ export class EnvironmentManager implements ILoop {
         this._setPlacementAlignedPosition(snapped, gridX, gridZ, prop);
         snapped.y = pos.y;
         return snapped;
+    }
+
+    private _isInsideRadialPathOpening(pos: THREE.Vector3, options: {
+        centerX: number,
+        centerZ: number,
+        clearingRadius: number,
+        roadCount: number,
+        roadWidth: number,
+        roadAngleOffset: number,
+    }): boolean {
+        const dx = pos.x - options.centerX;
+        const dz = pos.z - options.centerZ;
+        const distSq = dx * dx + dz * dz;
+
+        if (distSq <= options.clearingRadius * options.clearingRadius) return true;
+        if (options.roadCount <= 0 || options.roadWidth <= 0) return false;
+
+        const halfRoadWidth = options.roadWidth * 0.5;
+        const angleStep = Math.PI * 2 / options.roadCount;
+
+        for (let i = 0; i < options.roadCount; i++) {
+            const angle = options.roadAngleOffset + angleStep * i;
+            const dirX = Math.cos(angle);
+            const dirZ = Math.sin(angle);
+            const forward = dx * dirX + dz * dirZ;
+
+            if (forward < options.clearingRadius) continue;
+
+            const side = Math.abs(dx * dirZ - dz * dirX);
+            if (side <= halfRoadWidth) return true;
+        }
+
+        return false;
     }
 
     private _computeInstanceCullRadius(parts: THREE.InstancedMesh[], prop: EnvironmentProperty): number {

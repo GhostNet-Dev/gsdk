@@ -5,7 +5,12 @@ import { CameraInputPreset, OrbitControlsBroker, OrbitControlsHandle } from "./o
 
 export default class GridViewCameraStrategy implements ICameraStrategy {
     private savedSettings: {
+        enabled: boolean;
+        enablePan: boolean;
+        enableZoom: boolean;
         enableRotate: boolean;
+        enableDamping: boolean;
+        panSpeed: number;
         minPolarAngle: number;
         maxPolarAngle: number;
         minAzimuthAngle: number;
@@ -20,7 +25,12 @@ export default class GridViewCameraStrategy implements ICameraStrategy {
         const ctrl = this.handle.controls;
 
         this.savedSettings = {
+            enabled: ctrl.enabled,
+            enablePan: ctrl.enablePan,
+            enableZoom: ctrl.enableZoom,
             enableRotate: ctrl.enableRotate,
+            enableDamping: ctrl.enableDamping,
+            panSpeed: ctrl.panSpeed,
             minPolarAngle: ctrl.minPolarAngle,
             maxPolarAngle: ctrl.maxPolarAngle,
             minAzimuthAngle: ctrl.minAzimuthAngle,
@@ -36,6 +46,11 @@ export default class GridViewCameraStrategy implements ICameraStrategy {
         const fixedAzimuthAngle = Math.PI / 4;
         const distance = 200;
 
+        ctrl.enabled = true;
+        ctrl.enablePan = true;
+        ctrl.enableZoom = true;
+        ctrl.enableDamping = false;
+        ctrl.panSpeed = 1;
         ctrl.screenSpacePanning = false;
         ctrl.enableRotate = false;
         ctrl.minPolarAngle = fixedPolarAngle;
@@ -60,6 +75,11 @@ export default class GridViewCameraStrategy implements ICameraStrategy {
         camera.fov = this.savedSettings.fov;
         camera.updateProjectionMatrix();
 
+        ctrl.enabled = this.savedSettings.enabled;
+        ctrl.enablePan = this.savedSettings.enablePan;
+        ctrl.enableZoom = this.savedSettings.enableZoom;
+        ctrl.enableDamping = this.savedSettings.enableDamping;
+        ctrl.panSpeed = this.savedSettings.panSpeed;
         ctrl.screenSpacePanning = this.savedSettings.screenSpacePanning;
         ctrl.enableRotate = this.savedSettings.enableRotate;
         ctrl.minPolarAngle = this.savedSettings.minPolarAngle;
