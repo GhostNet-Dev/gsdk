@@ -10,6 +10,7 @@ export class BuildingInfoBar extends GUX {
     private nameLabel: HTMLSpanElement | null = null;
     private costLabel: HTMLSpanElement | null = null;
     private closeBtn: HTMLButtonElement | null = null;
+    private confirmBtn: HTMLButtonElement | null = null;
 
     constructor(private eventCtrl: IEventController) {
         super();
@@ -41,6 +42,10 @@ export class BuildingInfoBar extends GUX {
         this.eventCtrl.SendEventMessage(EventTypes.HideGrid);
     };
 
+    private onConfirmClick = () => {
+        this.eventCtrl.SendEventMessage('GridConfirmClick' as any);
+    };
+
     RenderHTML(): void {
         this.Dom.id = "gnx-building-infobar";
         this.Dom.innerHTML = `
@@ -48,21 +53,33 @@ export class BuildingInfoBar extends GUX {
                 <span class="gnx-build-name">건물 이름</span>
                 <span class="gnx-build-cost">가격: 0</span>
             </div>
-            <button class="gnx-grid-close-btn" title="그리드 종료 (ESC)">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 6L6 18M6 6l12 12"></path>
-                </svg>
-                <span>종료</span>
-            </button>
+            <div class="gnx-info-right">
+                <button class="gnx-grid-confirm-btn" title="이 위치에 건설">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>건설</span>
+                </button>
+                <button class="gnx-grid-close-btn" title="그리드 종료 (ESC)">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"></path>
+                    </svg>
+                    <span>종료</span>
+                </button>
+            </div>
         `;
         document.body.appendChild(this.Dom);
 
         this.nameLabel = this.Dom.querySelector('.gnx-build-name');
         this.costLabel = this.Dom.querySelector('.gnx-build-cost');
         this.closeBtn = this.Dom.querySelector('.gnx-grid-close-btn');
+        this.confirmBtn = this.Dom.querySelector('.gnx-grid-confirm-btn');
 
         if (this.closeBtn) {
             this.closeBtn.addEventListener('click', this.onCloseClick);
+        }
+        if (this.confirmBtn) {
+            this.confirmBtn.addEventListener('click', this.onConfirmClick);
         }
 
         this.applyDynamicStyle("gnx-building-infobar-css", CSS);
@@ -109,7 +126,14 @@ const CSS = `
     font-weight: 500;
 }
 
-.gnx-grid-close-btn {
+.gnx-info-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gnx-grid-close-btn,
+.gnx-grid-confirm-btn {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -130,7 +154,17 @@ const CSS = `
     transform: translateY(-1px);
 }
 
-.gnx-grid-close-btn:active {
+.gnx-grid-confirm-btn {
+    color: #4CAF50;
+}
+.gnx-grid-confirm-btn:hover {
+    background: rgba(76, 175, 80, 0.15);
+    border-color: rgba(76, 175, 80, 0.3);
+    transform: translateY(-1px);
+}
+
+.gnx-grid-close-btn:active,
+.gnx-grid-confirm-btn:active {
     transform: translateY(0);
 }
 `;

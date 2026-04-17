@@ -99,9 +99,11 @@ export class BuildingManager implements ILoop {
   }
 
   private onPointerDown = (e: PointerEvent) => {
-    // 오직 <canvas> 요소에서 발생한 클릭만 처리 (모든 UI 클릭 무시)
     const target = e.target as HTMLElement;
-    if (target.tagName !== 'CANVAS') return;
+    
+    // UI 창이나 HTML 상호작용 요소(버튼 등)를 클릭한 경우 무시
+    if (target.closest && target.closest('#gnx-building-infobar')) return;
+    if (target.tagName === 'BUTTON' || target.tagName === 'INPUT') return;
 
     const rect = target.getBoundingClientRect();
     this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;

@@ -184,6 +184,9 @@ export default class CustomGround implements IWorldMapObject {
         this.HighlightGrid(worldPosCenter, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
       }
     });
+    this.eventCtrl.RegisterEventListener('GridConfirmClick' as any, () => {
+      this.confirmBuildingRequest();
+    });
   }
 
   private refreshPlacementRanges() {
@@ -383,6 +386,11 @@ export default class CustomGround implements IWorldMapObject {
     if (!this.highlightMesh || !this.highlightMesh.visible || !this.arrowGroup) return;
 
     const target = e.target as HTMLElement;
+    
+    // UI 창이나 HTML 상호작용 요소(버튼 등)를 클릭한 경우 무시
+    if (target.closest && target.closest('#gnx-building-infobar')) return;
+    if (target.tagName === 'BUTTON' || target.tagName === 'INPUT') return;
+
     const rect = target.getBoundingClientRect?.();
 
     if (rect) {
@@ -395,22 +403,35 @@ export default class CustomGround implements IWorldMapObject {
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
 
+    console.log('[Arrow] arrowGroup children:', this.arrowGroup.children.length, '| mouse:', this.mouse.x.toFixed(3), this.mouse.y.toFixed(3));
+
     const intersectsArrow = this.raycaster.intersectObjects(this.arrowGroup.children, true);
+    console.log('[Arrow] intersectsArrow count:', intersectsArrow.length, intersectsArrow.map(i => i.object.name));
     if (intersectsArrow.length > 0) {
         const arrow = intersectsArrow[0].object;
         const dir = arrow.name.split('_').pop();
-        
+        console.log('[Arrow] HIT → dir:', dir, '| object.name:', arrow.name);
+
         const worldDelta = new THREE.Vector3();
         if (dir === 'N') worldDelta.z = -this.gridSize;
         if (dir === 'S') worldDelta.z = this.gridSize;
         if (dir === 'W') worldDelta.x = -this.gridSize;
         if (dir === 'E') worldDelta.x = this.gridSize;
 
-        const currentWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
-        const nextWorldPos = currentWorldPos.add(worldDelta);
-        
+        // half-cell offset을 제거한 그리드 기준선 좌표로 delta 계산
+        // (offset 포함 좌표는 Math.round 0.5 경계에 걸려 0칸/2칸 이동 버그 유발)
+        const s = this.gridSize / this.scale;
+        const offsetX = (this.lastWidth % 2 !== 0) ? (s / 2) : 0;
+        const offsetZ = (this.lastDepth % 2 !== 0) ? (s / 2) : 0;
+        const gridLineLocal = this.highlightMesh.position.clone();
+        gridLineLocal.x -= offsetX;
+        gridLineLocal.z -= offsetZ;
+
+        const currentWorldPos = this.obj.localToWorld(gridLineLocal);
+        const nextWorldPos = currentWorldPos.clone().add(worldDelta);
+
         this.HighlightGrid(nextWorldPos, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
-        
+
         // [수정] 스냅된 최종 월드 좌표를 함께 전달
         const snappedWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
         this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { dir, delta: worldDelta, pos: snappedWorldPos });
@@ -419,45 +440,50 @@ export default class CustomGround implements IWorldMapObject {
 
     const intersectsHighlight = this.raycaster.intersectObject(this.highlightMesh);
     if (intersectsHighlight.length > 0) {
-        const worldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
-        if (this.checkOccupancy(worldPos, this.lastWidth, this.lastDepth)) {
-            console.warn("🚫 [CustomGround] 이미 점유된 지역입니다. 건설 불가!");
-            return;
-        }
-
-        // [추가] 범위 밖일 경우 건설 요청 차단 (지휘 본부 제외)
-        const isBaseBuilding = this.lastNodeId === 'cc' || this.lastNodeId === 'CommandCenter';
-        if (!isBaseBuilding && !this.checkBuildRange(worldPos)) {
-            console.warn("🚫 [CustomGround] 건설 지원 범위 밖입니다. 건설 불가!");
-            this.eventCtrl.SendEventMessage(EventTypes.Toast, "건설 지원 범위 밖입니다.");
-            return;
-        }
-
-        console.log("🏗️ [CustomGround] 하이라이트 그리드 클릭: 건설 요청");
-        this.eventCtrl.SendEventMessage(EventTypes.RequestBuilding, {
-            nodeId: this.lastNodeId,
-            pos: worldPos,
-            width: this.lastWidth,
-            depth: this.lastDepth
-        });
+        console.log('[Arrow] MISS → highlight mesh 클릭');
         return;
     }
 
     const intersectsGround = this.raycaster.intersectObject(this.obj);
     if (intersectsGround.length > 0) {
+        console.log('[Arrow] MISS → ground 클릭');
         const oldWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
         this.HighlightGrid(intersectsGround[0].point, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
         const newWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
         const delta = newWorldPos.clone().sub(oldWorldPos);
-        
+
         // [수정] 스냅된 최종 월드 좌표를 함께 전달
         this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { dir: 'GROUND', delta, pos: newWorldPos });
         return;
     }
 
-    if (target.tagName === 'CANVAS') {
-        this.eventCtrl.SendEventMessage(EventTypes.HideGrid);
+    console.log('[Arrow] MISS → 하늘 클릭 (HideGrid)');
+    // 캔버스를 클릭했지만 지면(Ground)을 빗맞춘 경우 (예: 하늘 클릭) 배치 취소 및 종료
+    this.eventCtrl.SendEventMessage(EventTypes.HideGrid);
+  }
+
+  private confirmBuildingRequest() {
+    if (!this.highlightMesh || !this.highlightMesh.visible) return;
+
+    const worldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
+    
+    if (this.checkOccupancy(worldPos, this.lastWidth, this.lastDepth)) {
+        this.eventCtrl.SendEventMessage(EventTypes.Toast, "이미 점유된 지역입니다.");
+        return;
     }
+
+    const isBaseBuilding = this.lastNodeId === 'cc' || this.lastNodeId === 'CommandCenter';
+    if (!isBaseBuilding && !this.checkBuildRange(worldPos)) {
+        this.eventCtrl.SendEventMessage(EventTypes.Toast, "건설 지원 범위 밖입니다.");
+        return;
+    }
+
+    this.eventCtrl.SendEventMessage(EventTypes.RequestBuilding, {
+        nodeId: this.lastNodeId,
+        pos: worldPos,
+        width: this.lastWidth,
+        depth: this.lastDepth
+    });
   }
 
   /* -------------------------------- 생성 -------------------------------- */
@@ -1206,13 +1232,12 @@ export default class CustomGround implements IWorldMapObject {
 
   private CreateArrows() {
     this.arrowGroup = new THREE.Group();
-    
-    const offset = 3.5 * (this.gridSize / 4);
+
     const dirs = [
-      { id: 'N', pos: [0, 0, -offset * 4], rot: Math.PI / 2 },
-      { id: 'S', pos: [0, 0, offset * 4], rot: -Math.PI / 2 },
-      { id: 'W', pos: [-offset * 4, 0, 0], rot: Math.PI },
-      { id: 'E', pos: [offset * 4, 0, 0], rot: 0 }
+      { id: 'N', rot: Math.PI / 2 },
+      { id: 'S', rot: -Math.PI / 2 },
+      { id: 'W', rot: Math.PI },
+      { id: 'E', rot: 0 }
     ];
 
     this.loader.GetAssets(Char.UltimateLvAndMaArrow).CloneModel().then((model: THREE.Group) => {
@@ -1221,10 +1246,10 @@ export default class CustomGround implements IWorldMapObject {
       dirs.forEach(d => {
         const arrow = model.clone();
         arrow.name = `build_arrow_${d.id}`;
-        arrow.position.set(d.pos[0], 0.1, d.pos[2]);
+        arrow.position.set(0, 0.1, 0);
         arrow.rotation.y = d.rot;
-        arrow.scale.set(this.gridSize, this.gridSize, this.gridSize * 2)
-        
+        arrow.scale.set(this.gridSize, this.gridSize, this.gridSize * 2);
+
         arrow.traverse((child: any) => {
           if (child instanceof THREE.Mesh) {
             child.name = arrow.name;
@@ -1233,13 +1258,14 @@ export default class CustomGround implements IWorldMapObject {
 
         this.arrowGroup?.add(arrow);
       });
-      
+
       if (this.highlightMesh) {
-          this.HighlightGrid(this.highlightMesh.position, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
+        const worldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
+        this.HighlightGrid(worldPos, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
       }
     });
-    
-    this.obj.add(this.arrowGroup);
+
+    this.scene.add(this.arrowGroup);
   }
 
   HighlightGrid(worldPos: THREE.Vector3, width: number, depth: number, color: THREE.Color = new THREE.Color(0x00ff00), nodeId?: string) {
@@ -1319,20 +1345,21 @@ export default class CustomGround implements IWorldMapObject {
     const snappedWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
     this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { pos: snappedWorldPos });
 
-    // 화살표 위치 업데이트
+    // 화살표 위치 업데이트 (scene 직속이므로 월드 좌표 기준)
     if (this.arrowGroup) {
-        this.arrowGroup.position.copy(this.highlightMesh.position);
+        const worldCenter = this.obj.localToWorld(this.highlightMesh.position.clone());
+        this.arrowGroup.position.copy(worldCenter);
         this.arrowGroup.visible = true;
-        
-        const margin = 1.0 * s;
+
+        const ws = this.gridSize;
+        const margin = ws;
         this.arrowGroup.children.forEach(child => {
-            const arrow = child as THREE.Mesh;
-            const dir = arrow.name.split('_').pop();
-            
-            if (dir === 'N') arrow.position.set(0, 0, -(depth * s * 0.5 + margin));
-            if (dir === 'S') arrow.position.set(0, 0, (depth * s * 0.5 + margin));
-            if (dir === 'W') arrow.position.set(-(width * s * 0.5 + margin), 0, 0);
-            if (dir === 'E') arrow.position.set((width * s * 0.5 + margin), 0, 0);
+            const dir = child.name.split('_').pop();
+
+            if (dir === 'N') child.position.set(0, 0.1, -(depth * ws * 0.5 + margin));
+            if (dir === 'S') child.position.set(0, 0.1,  (depth * ws * 0.5 + margin));
+            if (dir === 'W') child.position.set(-(width * ws * 0.5 + margin), 0.1, 0);
+            if (dir === 'E') child.position.set( (width * ws * 0.5 + margin), 0.1, 0);
         });
     }
   }
@@ -1362,6 +1389,7 @@ export default class CustomGround implements IWorldMapObject {
     this.eventCtrl.DeregisterEventListener(EventTypes.ShowGrid);
     this.eventCtrl.DeregisterEventListener(EventTypes.HideGrid);
     this.eventCtrl.DeregisterEventListener(EventTypes.HighlightGrid);
+    this.eventCtrl.DeregisterEventListener('GridConfirmClick' as any);
 
     this.shaderMaterial?.dispose();
     this.geometry?.dispose();
@@ -1376,6 +1404,7 @@ export default class CustomGround implements IWorldMapObject {
       this.highlightMesh.geometry.dispose();
       (this.highlightMesh.material as THREE.Material).dispose();
     }
+    if (this.arrowGroup) this.scene.remove(this.arrowGroup);
     if (this.obj) this.obj.userData.mapObj = undefined;
   }
 
