@@ -8,7 +8,7 @@ export default class ResourceManager {
     private eventCtrl: IEventController,
     private wallet: WalletManager,
   ) {
-    this.eventCtrl.RegisterEventListener(EventTypes.ResourceChangeRequested, this.onResourceChangeRequested);
+    this.eventCtrl.RegisterEventListener(EventTypes.CurrencyChangeRequested, this.onResourceChangeRequested);
 
     for (const type of WALLET_KEYS) {
       this.eventCtrl.RegisterEventListener(type, (amount: number) => {
@@ -61,6 +61,6 @@ export default class ResourceManager {
       reason: request.reason,
     };
 
-    this.eventCtrl.SendEventMessage(EventTypes.ResourceAmountChanged, payload);
+    this.eventCtrl.SendEventMessage(EventTypes.CurrencyAmountChanged, payload);
   }
 }

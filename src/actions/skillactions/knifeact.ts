@@ -58,7 +58,7 @@ export class KnifeAction implements IActionComponent {
 
     this.lastUsed = now
     fanDirs.forEach((dir) => {
-      this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
+      this.eventCtrl.SendEventMessage(EventTypes.SpawnProjectile, {
         id: MonsterId.Knife,
         ownerSpec: baseSpec,
         damage,

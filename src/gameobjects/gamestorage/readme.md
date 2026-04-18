@@ -30,14 +30,30 @@
 
 ```typescript
 export interface ISaveable<T> {
+  readonly saveVersion: number;
   exportState(): T;
-  importState(data: T): Promise<void> | void;
+  importState(data: T, savedVersion: number): Promise<void> | void;
+}
+
+export type SavePhase = "core" | "world" | "player";
+
+export interface SaveableRegistrationOptions {
+  phase: SavePhase;
+  order: number;
+  /**
+   * 1차 구현에서는 사용하지 않습니다.
+   * phase + order만으로 로드 순서를 결정합니다.
+   * 시스템이 많아져 순환 의존성 문제가 생기면 위상 정렬 로직과 함께 도입합니다.
+   */
+  dependencies?: string[];
 }
 ```
 
-- `exportState`: JSON 변환 가능한 순수 데이터 객체를 반환합니다.
-- `importState`: 저장 데이터를 기반으로 내부 상태, 모델, 캐시, footprint를 복원합니다.
+- `exportState`: JSON 변환 가능한 순수 데이터 객체를 반환합니다. `SaveEnvelope`로 감싸는 것은 각 시스템이 아니라 `GameSaveManager`가 담당합니다.
+- `importState`: 저장 데이터를 기반으로 내부 상태, 모델, 캐시, footprint를 복원합니다. `savedVersion`을 받아 버전 차이가 있을 때 내부에서 필드 보정을 처리합니다.
+- `saveVersion`: 이 시스템의 현재 데이터 포맷 버전입니다. `GameSaveManager`가 envelope 조립 시 사용합니다.
 - 저장 데이터에는 `THREE.Vector3`, `Map`, `Set`, class instance를 그대로 넣지 않습니다. `{ x, y, z }`, 배열, plain object로 변환합니다.
+- `phase`, `order`는 시스템이 늘어났을 때 로드 순서를 하드코딩하지 않기 위한 등록 메타데이터입니다. `dependencies`는 2차 이후 도입합니다.
 
 ### 2.2 `GameSaveManager`
 
@@ -55,7 +71,11 @@ API 역할 구분:
 
 ```typescript
 export class GameSaveManager {
-  register<T>(key: string, saveable: ISaveable<T>): void;
+  register<T>(
+    key: string,
+    saveable: ISaveable<T>,
+    options: SaveableRegistrationOptions
+  ): void;
 
   /** 각 시스템에서 상태를 수집하여 IndexedDB에 기록합니다. */
   save(slotId: string): Promise<void>;
@@ -100,20 +120,31 @@ export interface IGameStorageBackend {
 세이브 파일 최상위 구조는 버전과 도메인별 데이터를 명확히 나눕니다.
 
 ```typescript
+export interface SaveEnvelope<T> {
+  version: number;
+  data: T;
+}
+
 export interface GameSaveDataV1 {
   version: 1;
   slotId: string;
   savedAt: number;
   committed: boolean;
 
-  wallet: WalletSaveData;
-  techLevels: TechLevelsSaveData;
-  buildings: BuildingManagerSaveData;
-  environment: EnvironmentManagerSaveData;
+  wallet: SaveEnvelope<WalletSaveData>;
+  techLevels: SaveEnvelope<TechLevelsSaveData>;
+  buildings: SaveEnvelope<BuildingManagerSaveData>;
+  environment: SaveEnvelope<EnvironmentManagerSaveData>;
 
-  turn: TurnSaveData | null;
-  player: PlayerSaveData | null;
-  inventory: InventorySaveData | null;
+  turn: SaveEnvelope<TurnSaveData> | null;
+  player: SaveEnvelope<PlayerSaveData> | null;
+  inventory: SaveEnvelope<InventorySaveData> | null;
+
+  /**
+   * 핵심 필드에 아직 편입하지 않은 확장 시스템용 저장소입니다.
+   * 예: quest, achievement, tutorial, cityPolicy, npcRelationship.
+   */
+  systems?: Record<string, SaveEnvelope<unknown>>;
 }
 
 export interface Vector3SaveData {
@@ -125,7 +156,13 @@ export interface Vector3SaveData {
 
 `version`은 필수입니다. 저장 포맷이 바뀔 때 migration을 추가하기 위해 최상위에 둡니다.
 
+각 도메인 데이터는 `SaveEnvelope<T>`로 감싸서 도메인별 `version`을 별도로 가집니다. 전체 세이브 포맷은 그대로 두고 건물, 환경, 인벤토리 같은 일부 시스템만 migration해야 할 때 유리합니다.
+
 `turn`, `player`, `inventory`는 미구현 단계에서는 `null`로 명시합니다. `undefined`로 두면 직렬화 시 키 자체가 사라져 migration 조건 판별이 어려워집니다.
+
+새 시스템이 추가될 때마다 최상위 타입을 반드시 수정하지 않도록 `systems` 확장 슬롯을 둡니다. 핵심 시스템은 타입 안정성을 위해 명시 필드로 유지하고, 퀘스트/업적/튜토리얼/도시 정책처럼 후속 모듈은 `systems`에 등록형으로 저장할 수 있습니다.
+
+`systems`는 optional이므로 기존 저장 파일(systems 없음)을 로드할 때 `undefined`가 들어옵니다. `applyToSystems()` 내부에서 반드시 `save.systems ?? {}`로 초기화한 뒤 접근합니다.
 
 ---
 
@@ -214,7 +251,13 @@ export interface BuildingObjectSaveData {
    * exportState() 내부에서 반드시 JSON.parse(JSON.stringify(...))로 직렬화 가능 여부를 검증합니다.
    * THREE.Object3D, Map, Set, 함수를 포함하면 안 됩니다.
    */
-  runtime: Record<string, unknown> | null;
+  runtime: BuildingRuntimeSaveData | null;
+}
+
+export interface BuildingRuntimeSaveData {
+  version: number;
+  kind: string;
+  data: Record<string, unknown>;
 }
 ```
 
@@ -254,12 +297,21 @@ task_2
 현재는 정확한 복원이 우선입니다. 모든 환경 오브젝트의 논리 상태를 저장합니다.
 
 ```typescript
-export interface EnvironmentManagerSaveData {
-  mode: "snapshot" | "seed-delta";
+export type EnvironmentManagerSaveData =
+  | EnvironmentSnapshotSaveData
+  | EnvironmentSeedDeltaSaveData;
+
+export interface EnvironmentSnapshotSaveData {
+  mode: "snapshot";
   idCounter: number;
   objects: EnvironmentObjectSaveData[];
-  generation?: EnvironmentGenerationSaveData;
-  modifiedObjects?: EnvironmentObjectDeltaSaveData[];
+}
+
+export interface EnvironmentSeedDeltaSaveData {
+  mode: "seed-delta";
+  idCounter: number;
+  generation: EnvironmentGenerationSaveData;
+  modifiedObjects: EnvironmentObjectDeltaSaveData[];
 }
 
 export interface EnvironmentObjectSaveData {
@@ -597,6 +649,8 @@ flowchart TD
 
 `committed` 두 번 쓰기의 IndexedDB 트랜잭션 비용을 줄이려면, 본 데이터를 한 번만 쓰고 `metadata` 키에 `{ slotId, committed, savedAt }`만 별도 저장하는 방식으로 최적화할 수 있습니다. 1차 구현에서는 단순성을 위해 두 번 쓰기를 유지하고, 성능 문제가 관측되면 최적화합니다.
 
+manual save도 가능하면 기존 슬롯을 직접 덮어쓰기보다 임시 슬롯에 먼저 쓴 뒤 성공 시 promote하는 방식을 사용합니다. 예를 들어 `slot_manual_1.tmp`에 저장한 뒤 검증이 끝나면 `slot_manual_1.meta`가 새 데이터를 가리키게 갱신합니다. 이렇게 하면 manual save 중 브라우저가 종료되어도 이전 정상 저장을 fallback으로 유지할 수 있습니다.
+
 로드 실패 정책:
 
 - migration 실패: 새 게임 초기화로 fallback하고 사용자에게 알립니다.
@@ -604,20 +658,129 @@ flowchart TD
 
 ---
 
-## 8. 구현 순서
+## 8. 확장성 보강 설계
+
+이 섹션은 1차 구현 후 시스템이 늘어나도 세이브 구조를 크게 뒤엎지 않기 위한 보강 설계입니다.
+
+### 8.1 확장 슬롯과 도메인별 버전
+
+핵심 시스템은 최상위 필드로 유지하고, 추가 시스템은 `systems` 확장 슬롯에 등록합니다. 각 도메인 데이터는 `SaveEnvelope<T>`로 감싸 개별 `version`을 가집니다.
+
+```mermaid
+flowchart TD
+    A[GameSaveDataV1] --> B[고정 필드]
+    A --> C[systems 확장 슬롯]
+
+    B --> B1[wallet v1]
+    B --> B2[buildings v2]
+    B --> B3[environment v1]
+
+    C --> C1[quest v1]
+    C --> C2[achievement v1]
+    C --> C3[tutorial v1]
+    C --> C4[cityPolicy v1]
+```
+
+이 구조를 사용하면 퀘스트, 업적, 튜토리얼, 도시 정책, NPC 관계 같은 시스템을 추가할 때 `GameSaveDataV1` 전체 구조를 매번 크게 변경하지 않아도 됩니다.
+
+### 8.2 등록 메타데이터 기반 로드 순서
+
+로드 순서는 문서에 적힌 의존성 순서를 따르되, 구현에서는 `phase`, `order`, `dependencies`를 가진 registry로 표현합니다.
+
+```mermaid
+flowchart LR
+    A[core phase] --> B[world phase]
+    B --> C[player phase]
+    C --> D[UI 동기화 이벤트 발행]
+
+    A --> A1[wallet]
+    A --> A2[techLevels]
+    B --> B1[environment]
+    B1 --> B2[buildings]
+    C --> C1[playerSpec]
+    C1 --> C2[inventory]
+
+    D:::note
+    classDef note fill:#f9f,stroke:#999,color:#333
+```
+
+UI 동기화는 저장/복원할 상태가 없으므로 saveable로 등록하지 않습니다. `applyToSystems()` 완료 후 `GameSaveManager`가 직접 이벤트를 발행합니다.
+
+권장 등록 예:
+
+```typescript
+saveManager.register("wallet", walletManager, { phase: "core", order: 10 });
+saveManager.register("techLevels", techTreeSaveable, { phase: "core", order: 20 });
+saveManager.register("environment", envManager, { phase: "world", order: 10 });
+saveManager.register("buildings", buildingManager, {
+  phase: "world",
+  order: 20,
+  dependencies: ["environment"],
+});
+```
+
+이 방식은 `applyToSystems()`가 거대한 하드코딩 순서표가 되는 것을 막아줍니다.
+
+### 8.3 안전한 저장 Promote 흐름
+
+autosave는 A/B 로테이션을 사용하고, manual save는 temp 슬롯 또는 metadata promote 방식을 사용합니다.
+
+```mermaid
+flowchart TD
+    A[저장 요청] --> B[대상 슬롯 결정]
+    B --> C[임시 슬롯에 committed=false 저장]
+    C --> D[직렬화와 저장 완료 검증]
+    D --> E{성공?}
+    E -->|No| F[기존 정상 슬롯 유지]
+    E -->|Yes| G[metadata가 새 슬롯을 가리키게 갱신]
+    G --> H[committed=true 인정]
+```
+
+1차 구현에서는 autosave A/B 로테이션과 `committed` 두 번 쓰기로 시작해도 됩니다. 저장 파일이 커져 성능 문제가 보이면 본문 데이터는 한 번만 쓰고 metadata만 promote하는 방식으로 전환합니다.
+
+### 8.4 Runtime과 Union 타입 명확화
+
+확장성을 위해 `runtime: Record<string, unknown>`처럼 열어두되, 최소한 `version`, `kind`, `data`를 가진 envelope로 감쌉니다.
+
+```typescript
+export type BuildingKind = "UnitProduction" | "DefenseTurret" | "ResourceProduction";
+
+export interface BuildingRuntimeSaveData {
+  version: number;
+  kind: BuildingKind;
+  data: Record<string, unknown>;
+}
+```
+
+새 건물 타입이 추가될 때는 `BuildingKind`에 리터럴을 추가합니다. `| string` 확장은 TypeScript narrowing을 무력화하므로 사용하지 않습니다. 알 수 없는 kind가 로드될 경우 migration 함수에서 fallback 처리합니다.
+
+환경 저장 타입은 `mode`를 기준으로 분기되는 discriminated union으로 유지합니다. 이렇게 하면 `seed-delta`인데 `generation`이 없는 저장 데이터처럼 잘못된 조합을 타입 차원에서 줄일 수 있습니다.
+
+```typescript
+type EnvironmentManagerSaveData =
+  | { mode: "snapshot"; idCounter: number; objects: EnvironmentObjectSaveData[] }
+  | { mode: "seed-delta"; idCounter: number; generation: EnvironmentGenerationSaveData; modifiedObjects: EnvironmentObjectDeltaSaveData[] };
+```
+
+---
+
+## 9. 구현 순서
 
 1차 목표는 정확한 복원입니다.
 
 1. `ISaveable<T>` 정의
-2. `IndexedDbGameStorage` 구현 (`clear()` 포함)
-3. `GameSaveManager` 구현 (`load` / `applyToSystems` / `loadAndApply` 분리)
-4. `WalletManager.exportState/importState` 추가 (신규 `CurrencyType` 기본값 보정 포함)
-5. `TechTreeService` levels 저장/복원 연결 (신규 tech 키 기본값 보정 포함)
-6. `EnvironmentManager` 전체 스냅샷 저장/복원
-7. `BuildingManager` 전체 스냅샷 저장/복원
-8. `SimcityState.Init()`에서 저장 데이터가 있으면 populate 대신 import 실행
-9. autosave dirty flag 연결 + 슬롯 로테이션 적용
-10. 로드 완료 후 UI 이벤트 동기화
+2. `SaveEnvelope<T>`와 `SaveableRegistrationOptions` 정의
+3. `IndexedDbGameStorage` 구현 (`clear()` 포함)
+4. `GameSaveManager` 구현 (`load` / `applyToSystems` / `loadAndApply` 분리)
+5. 등록 메타데이터 기반 로드 순서 정렬
+6. `WalletManager.exportState/importState` 추가 (신규 `CurrencyType` 기본값 보정 포함)
+7. `TechTreeService` levels 저장/복원 연결 (신규 tech 키 기본값 보정 포함)
+8. `EnvironmentManager` 전체 스냅샷 저장/복원
+9. `BuildingManager` 전체 스냅샷 저장/복원
+10. `SimcityState.Init()`에서 저장 데이터가 있으면 populate 대신 import 실행
+11. autosave dirty flag 연결 + 슬롯 로테이션 적용
+12. manual save temp/promote 정책 적용
+13. 로드 완료 후 UI 이벤트 동기화
 
 2차 목표는 환경 저장 최적화입니다.
 
@@ -629,7 +792,7 @@ flowchart TD
 
 ---
 
-## 9. 주의할 점
+## 10. 주의할 점
 
 - 저장 데이터는 반드시 plain JSON이어야 합니다.
 - `THREE.Object3D`, `Vector3`, `Map`, `Set`, 함수, class instance를 그대로 저장하지 않습니다.

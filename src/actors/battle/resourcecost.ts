@@ -2,7 +2,7 @@ import { BaseSpec } from "./basespec";
 import IInventory from "@Glibs/interface/iinven";
 import { ItemId } from "@Glibs/inventory/items/itemdefs";
 import { ActionCostSpec, CostAtom, CostNode, ResourceKey } from "./resourcecosttypes";
-import { ResourceChangedPayload } from "@Glibs/types/globaltypes";
+import { CombatResourceChangedPayload } from "@Glibs/types/globaltypes";
 
 export type CostFailureReason = "NOT_ENOUGH_RESOURCE" | "INVALID_COST";
 
@@ -24,7 +24,7 @@ export type ResourceContext = {
   spec: BaseSpec;
   inventory?: IInventory;
   consumeInventoryItem?: (id: ItemId, count: number) => void;
-  onResourceChanged?: (payload: ResourceChangedPayload) => void;
+  onResourceChanged?: (payload: CombatResourceChangedPayload) => void;
   actorId?: string;
   sourceId?: string;
 };

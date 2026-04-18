@@ -64,9 +64,9 @@ export enum EventTypes {
     Death = "death",
     ActionAttach = "actionattach",
     ActionDettach = "actiondetach",
-    ResourceChanged = "resourcechanged",
+    CombatResourceChanged = "resourcechanged",
     ChangePlayerMode = "chgplayermod",
-    Projectile = "Projectile",
+    SpawnProjectile = "Projectile",
     RegisterTarget = "registertarget",
     DeregisterTarget = "deregistertarget",
     UpdateTargetState = "updatetargetstate",
@@ -84,8 +84,8 @@ export enum EventTypes {
     Food = "food",
     LevelUp = "levelup",
     AddSkillPoint = "addskillp",
-    ResourceChangeRequested = "resourcechangereq",
-    ResourceAmountChanged = "resourceamountchanged",
+    CurrencyChangeRequested = "resourcechangereq",
+    CurrencyAmountChanged = "resourceamountchanged",
 
     // 🎒 6. 아이템 및 상호작용 (Inventory & Interaction)
     Equipment = "Equip",
@@ -198,7 +198,7 @@ export class TargetBox extends THREE.Mesh {
     }
 }
 
-export type ResourceChangedPayload = {
+export type CombatResourceChangedPayload = {
     actorId: string
     key: "hp" | "mp" | "stamina" | "exp"
     prev: number

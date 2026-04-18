@@ -83,7 +83,7 @@ export class Projectile implements ILoop {
   ) {
     eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
 
-    eventCtrl.RegisterEventListener(EventTypes.Projectile, (opt: ProjectileMsg) => {
+    eventCtrl.RegisterEventListener(EventTypes.SpawnProjectile, (opt: ProjectileMsg) => {
       this.AllocateProjPool(opt);
     });
 

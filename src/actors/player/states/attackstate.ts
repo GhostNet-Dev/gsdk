@@ -154,7 +154,7 @@ export abstract class AttackState extends State implements IActorState {
             actorId: "player",
             sourceId: spec.id,
             onResourceChanged: (payload) => {
-                this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", payload)
+                this.eventCtrl.SendEventMessage(EventTypes.CombatResourceChanged + "player", payload)
             },
         })
 

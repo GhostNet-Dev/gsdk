@@ -86,7 +86,7 @@ export class AimRangeAttackState extends AttackState implements IActorState {
 
         ;(itemInfo as Item).trigger(TriggerType.OnFire, { direction: this.attackDir })
 
-        this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
+        this.eventCtrl.SendEventMessage(EventTypes.SpawnProjectile, {
             id: MonsterId.WarhamerTracer,
             ownerSpec: this.baseSpec,
             damage: this.baseSpec.Damage,

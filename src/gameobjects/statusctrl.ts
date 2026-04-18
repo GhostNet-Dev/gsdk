@@ -2,7 +2,7 @@ import { PlayerCtrl } from "@Glibs/actors/player/playerctrl";
 import IEventController from "@Glibs/interface/ievent";
 import { itemDefs } from "@Glibs/inventory/items/itemdefs";
 import { Buff } from "@Glibs/magical/buff/buff";
-import { EventTypes, ResourceChangedPayload } from "@Glibs/types/globaltypes";
+import { EventTypes, CombatResourceChangedPayload } from "@Glibs/types/globaltypes";
 import { MonDrop } from "@Glibs/types/monstertypes";
 import { BuffStatus } from "@Glibs/ux/hud/soul/soulbuffstatus";
 import { DefaultStatusBar } from "@Glibs/ux/hud/soul/soulstatusbar";
@@ -32,7 +32,7 @@ export default class StatusCtrl {
         this.sp.UpdateStatus(toPercent(this.playerCtrl.baseSpec.status.stamina, spMax))
         this.exp.UpdateStatus(toPercent(this.playerCtrl.baseSpec.status.exp, expMax))
 
-        this.eventCtrl.RegisterEventListener(EventTypes.ResourceChanged + "player", (e: ResourceChangedPayload) => {
+        this.eventCtrl.RegisterEventListener(EventTypes.CombatResourceChanged + "player", (e: CombatResourceChangedPayload) => {
             const max = e.max ?? 1
             const percent = toPercent(e.next, max)
             if (e.key == "hp") {

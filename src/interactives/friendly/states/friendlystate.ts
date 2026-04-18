@@ -191,7 +191,7 @@ export class AttackFState extends State implements IActorState {
         this.targetPos.copy(this.target.position)
         this.targetPos.y += 2
         this.attackDir = this.attackDir.subVectors(this.targetPos, this.startPos).normalize()
-        this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
+        this.eventCtrl.SendEventMessage(EventTypes.SpawnProjectile, {
             id: MonsterId.DefaultBall, 
             ownerSpec: this.spec,
             damage: this.spec.Damage,

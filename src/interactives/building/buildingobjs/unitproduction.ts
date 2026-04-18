@@ -39,7 +39,7 @@ export class UnitProduction extends BaseBuilding {
 
     private spawnUnit() {
         if (this.currentUnit) {
-            this.eventCtrl.SendEventMessage(EventTypes.Projectile, { 
+            this.eventCtrl.SendEventMessage(EventTypes.SpawnProjectile, { 
                 type: "spawn", 
                 unitId: this.currentUnit, 
                 pos: this.position.clone().add(new THREE.Vector3(5, 0, 5)) 

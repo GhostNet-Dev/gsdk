@@ -132,7 +132,7 @@ export default class GameManager {
         source: string = "game",
         reason: string = "system"
     ) {
-        this.eventCtrl.SendEventMessage(EventTypes.ResourceChangeRequested, { type, amount, source, reason });
+        this.eventCtrl.SendEventMessage(EventTypes.CurrencyChangeRequested, { type, amount, source, reason });
     }
 
     // =========================================================================

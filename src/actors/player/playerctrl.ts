@@ -482,7 +482,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
             actorId: "player",
             sourceId: spec.id,
             onResourceChanged: (payload) => {
-                this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", payload)
+                this.eventCtrl.SendEventMessage(EventTypes.CombatResourceChanged + "player", payload)
             },
         })
 
@@ -570,7 +570,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         const prev = this.baseSpec.status.stamina
         const success = this.baseSpec.TryConsumeStamina(amount)
         if (success) {
-            this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", {
+            this.eventCtrl.SendEventMessage(EventTypes.CombatResourceChanged + "player", {
                 actorId: "player",
                 key: "stamina",
                 prev,
@@ -586,7 +586,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         const prev = this.baseSpec.status.mana
         const success = this.baseSpec.TryConsumeMana(amount)
         if (success) {
-            this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", {
+            this.eventCtrl.SendEventMessage(EventTypes.CombatResourceChanged + "player", {
                 actorId: "player",
                 key: "mp",
                 prev,
@@ -602,7 +602,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         const prev = this.baseSpec.status.health
         const success = this.baseSpec.TryConsumeHealth(amount)
         if (success) {
-            this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", {
+            this.eventCtrl.SendEventMessage(EventTypes.CombatResourceChanged + "player", {
                 actorId: "player",
                 key: "hp",
                 prev,
@@ -653,7 +653,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.hpRegenAccumulator -= healAmount
         const prev = currentHp
         this.baseSpec.ReceiveCalcHeal(healAmount)
-        this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", {
+        this.eventCtrl.SendEventMessage(EventTypes.CombatResourceChanged + "player", {
             actorId: "player",
             key: "hp",
             prev,
@@ -681,7 +681,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.mpRegenAccumulator -= manaAmount
         const prev = currentMp
         this.baseSpec.ReceiveCalcMana(manaAmount)
-        this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", {
+        this.eventCtrl.SendEventMessage(EventTypes.CombatResourceChanged + "player", {
             actorId: "player",
             key: "mp",
             prev,
@@ -709,7 +709,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.spRegenAccumulator -= staminaAmount
         const prev = currentSp
         this.baseSpec.ReceiveCalcStamina(staminaAmount)
-        this.eventCtrl.SendEventMessage(EventTypes.ResourceChanged + "player", {
+        this.eventCtrl.SendEventMessage(EventTypes.CombatResourceChanged + "player", {
             actorId: "player",
             key: "stamina",
             prev,

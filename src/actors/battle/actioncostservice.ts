@@ -1,6 +1,6 @@
 import IInventory from "@Glibs/interface/iinven"
 import { ItemId } from "@Glibs/inventory/items/itemdefs"
-import { ResourceChangedPayload } from "@Glibs/types/globaltypes"
+import { CombatResourceChangedPayload } from "@Glibs/types/globaltypes"
 import { BaseSpec } from "./basespec"
 import { CombatResourcePool, CostEngine } from "./resourcecost"
 import { ActionCostSpec } from "./resourcecosttypes"
@@ -10,7 +10,7 @@ export type ActionCostConsumeOptions = {
   consumeInventoryItem?: (id: ItemId, count: number) => void
   actorId?: string
   sourceId?: string
-  onResourceChanged?: (payload: ResourceChangedPayload) => void
+  onResourceChanged?: (payload: CombatResourceChangedPayload) => void
 }
 
 export class ActionCostService {

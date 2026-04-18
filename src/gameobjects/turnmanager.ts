@@ -14,7 +14,7 @@ export default class TurnManager {
     this.eventCtrl.RegisterEventListener(EventTypes.RegisterTurnParticipant, this.register);
     this.eventCtrl.RegisterEventListener(EventTypes.DeregisterTurnParticipant, this.unregister);
     this.eventCtrl.RegisterEventListener(EventTypes.TurnNext, this.handleTurnNext);
-    this.eventCtrl.RegisterEventListener(EventTypes.ResourceAmountChanged, this.handleResourceAmountChanged);
+    this.eventCtrl.RegisterEventListener(EventTypes.CurrencyAmountChanged, this.handleResourceAmountChanged);
   }
 
   get Turn() {

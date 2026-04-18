@@ -55,7 +55,7 @@ export class FireballAction implements IActionComponent {
       : defaultRange
 
     this.lastUsed = now
-    this.eventCtrl.SendEventMessage(EventTypes.Projectile, {
+    this.eventCtrl.SendEventMessage(EventTypes.SpawnProjectile, {
       id: MonsterId.Fireball,
       ownerSpec: baseSpec,
       damage,
