@@ -11,6 +11,8 @@ import { BuildingMode } from "@Glibs/interactives/building/ibuildingobj";
 import { BuildingInfoBar } from "@Glibs/ux/dialog/buildinginfobar";
 import { CurrencyType } from "@Glibs/inventory/wallet";
 import TurnManager from "./turnmanager";
+import ResourceManager from "./resourcemanager";
+import TurnLogPanel from "@Glibs/ux/turnlog/turnlogpanel";
 
 type LearnedSkillMessage = {
     nodeId: string;
@@ -24,7 +26,9 @@ export default class GameManager {
     // 활성화된 패시브/버프 객체 추적 (key: nodeId, value: Runtime Buff)
     private activeBuffs = new Map<string, Buff>();
     private activeSkills = new Map<string, LearnedSkillMessage>();
+    private resourceManager: ResourceManager;
     private turnManager: TurnManager;
+    private turnLogPanel: TurnLogPanel;
     private buildingManager: BuildingManager;
     private buildingInfoBar: BuildingInfoBar;
 
@@ -34,34 +38,15 @@ export default class GameManager {
         public service: TechTreeService,
         private camera: THREE.Camera, // [추가] 카메라 주입
     ) { 
+        this.resourceManager = new ResourceManager(this.eventCtrl, this.service.ctx.wallet);
         this.turnManager = new TurnManager(this.eventCtrl);
+        this.turnLogPanel = new TurnLogPanel(this.eventCtrl);
         this.buildingManager = new BuildingManager(this.scene, this.eventCtrl, this.service, this.camera);
         this.buildingInfoBar = new BuildingInfoBar(this.eventCtrl);
         
         // [수정] 플레이어 레벨업 이벤트 (건물 업그레이드와 분리됨)
         this.eventCtrl.RegisterEventListener(EventTypes.LevelUp, () => {
-            this.addResource(1, CurrencyType.Exp);
-        })
-        this.eventCtrl.RegisterEventListener(EventTypes.People, (amount: number) => {
-            this.addResource(amount, CurrencyType.People);
-        })
-        this.eventCtrl.RegisterEventListener(EventTypes.Gold, (amount: number) => {
-            this.addResource(amount, CurrencyType.Gold);
-        })
-        this.eventCtrl.RegisterEventListener(EventTypes.Wood, (amount: number) => {
-            this.addResource(amount, CurrencyType.Wood);
-        })
-        this.eventCtrl.RegisterEventListener(EventTypes.Water, (amount: number) => {
-            this.addResource(amount, CurrencyType.Water);
-        })
-        this.eventCtrl.RegisterEventListener(EventTypes.Electric, (amount: number) => {
-            this.addResource(amount, CurrencyType.Electric);
-        })
-        this.eventCtrl.RegisterEventListener(EventTypes.Food, (amount: number) => {
-            this.addResource(amount, CurrencyType.Food);
-        })
-        this.eventCtrl.RegisterEventListener(EventTypes.AddSkillPoint, (point: number) => {
-            this.addPoints(point)
+            this.addResource(1, CurrencyType.Exp, "levelup", "levelup");
         })
 
         // [추가] 건물/기술 업그레이드 요청 처리 (비용 먼저 차감)
@@ -109,11 +94,7 @@ export default class GameManager {
         return taskId !== null;
     }
     public addPoints(amount: number) {
-        // 1. 직접 지갑의 포인트를 증가시킵니다.
-        // WalletManager를 사용하여 포인트를 추가합니다.
-        this.service.ctx.wallet.add(CurrencyType.Points, amount);
-    
-        console.log(`포인트가 추가되었습니다. 현재 포인트: ${this.service.ctx.wallet.getAmount(CurrencyType.Points)}`);
+        this.addResource(amount, CurrencyType.Points, "skill", "reward");
     }
 
     // =========================================================================
@@ -145,15 +126,13 @@ export default class GameManager {
      * @param amount 추가할 양
      * @param type 재화 타입 (기본값: 'points')
      */
-    addResource(amount: number, type: CurrencyType = CurrencyType.Points) {
-        const wallet = this.service.ctx.wallet;
-        
-        wallet.add(type, amount);
-
-        console.log(`[Resource] ${type} +${amount} (Total: ${wallet.getAmount(type)})`);
-        
-        // (선택) UI 갱신을 위한 이벤트 발송
-        // this.eventCtrl.SendEventMessage(EventTypes.UpdateResource, wallet.getWallet());
+    addResource(
+        amount: number,
+        type: CurrencyType = CurrencyType.Points,
+        source: string = "game",
+        reason: string = "system"
+    ) {
+        this.eventCtrl.SendEventMessage(EventTypes.ResourceChangeRequested, { type, amount, source, reason });
     }
 
     // =========================================================================

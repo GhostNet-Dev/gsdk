@@ -6,8 +6,9 @@ import IEventController from '@Glibs/interface/ievent';
 import { EventTypes } from '@Glibs/types/globaltypes';
 import { Loader } from '@Glibs/loader/loader';
 import { Char } from '@Glibs/loader/assettypes';
-import { buildingDefs } from '../../interactives/building/buildingdefs';
+import { BuildingProperty, buildingDefs } from '../../interactives/building/buildingdefs';
 import { PlacementManager } from '../../interactives/placement/placementmanager';
+import { BuildRequirementValidator, validateBuildRequirements } from '../../interactives/building/buildrequirementvalidator';
 
 /* ----------------------------- Helpers ----------------------------- */
 function toU8(a: Uint8Array | Uint8ClampedArray): Uint8Array {
@@ -150,6 +151,7 @@ export default class CustomGround implements IWorldMapObject {
   private lastNodeId?: string;
   private gridSize = 4.0;
   private buildingsWithRange: Array<{ pos: THREE.Vector3, buildRange: number }> = [];
+  private buildRequirementValidator?: BuildRequirementValidator;
 
   constructor(
     private scene: THREE.Scene,
@@ -187,7 +189,12 @@ export default class CustomGround implements IWorldMapObject {
     this.eventCtrl.RegisterEventListener('GridConfirmClick' as any, () => {
       this.confirmBuildingRequest();
     });
+    this.eventCtrl.RegisterEventListener(EventTypes.BuildRequirementValidatorReady, this.setBuildRequirementValidator);
   }
+
+  private setBuildRequirementValidator = (validator: BuildRequirementValidator) => {
+    this.buildRequirementValidator = validator;
+  };
 
   private refreshPlacementRanges() {
     this.buildingsWithRange = PlacementManager.Instance.getBuildRanges();
@@ -475,6 +482,13 @@ export default class CustomGround implements IWorldMapObject {
     const isBaseBuilding = this.lastNodeId === 'cc' || this.lastNodeId === 'CommandCenter';
     if (!isBaseBuilding && !this.checkBuildRange(worldPos)) {
         this.eventCtrl.SendEventMessage(EventTypes.Toast, "건설 지원 범위 밖입니다.");
+        return;
+    }
+
+    const property = this.getBuildingProperty(this.lastNodeId);
+    const requirements = validateBuildRequirements(this.buildRequirementValidator, property, worldPos);
+    if (!requirements.ok) {
+        this.eventCtrl.SendEventMessage(EventTypes.Toast, requirements.reason);
         return;
     }
 
@@ -1310,11 +1324,7 @@ export default class CustomGround implements IWorldMapObject {
 
     // [추가] buildRange를 위한 grid overlay 생성 및 업데이트
     // buildingDefs는 Record<string, BuildingProperty> 타입이지만, nodeId가 def의 키와 매칭되어야 합니다.
-    let property = nodeId ? (buildingDefs as any)[nodeId] : null;
-    if (!property && nodeId) {
-        // [보강] nodeId가 키값이 아닐 경우(예: 'cc')를 위해 id 필드 검색 추가
-        property = Object.values(buildingDefs).find(p => p.id === nodeId);
-    }
+    const property = this.getBuildingProperty(nodeId);
 
     const worldPosCenter = this.obj.localToWorld(this.highlightMesh.position.clone());
     if (property && property.buildRange) {
@@ -1330,11 +1340,12 @@ export default class CustomGround implements IWorldMapObject {
     // 최초 건물(지휘 본부)만 건설 제한에서 완전히 자유로움
     const isInRange = this.checkBuildRange(worldPosCenter);
     const isBaseBuilding = nodeId === 'cc' || nodeId === 'CommandCenter';
+    const requirements = validateBuildRequirements(this.buildRequirementValidator, property, worldPosCenter);
     
-    // 1순위: 점유(빨간색), 2순위: 범위 밖(빨간색), 3순위: 정상(기본 초록색)
+    // 1순위: 점유(빨간색), 2순위: 범위 밖(빨간색), 3순위: 자원 조건 실패(빨간색), 4순위: 정상(기본 초록색)
     let finalColor = color;
-    if (isOccupied || (!isInRange && !isBaseBuilding)) {
-        finalColor = new THREE.Color(0xff0000); // 점유됨 또는 범위 밖: 빨강
+    if (isOccupied || (!isInRange && !isBaseBuilding) || !requirements.ok) {
+        finalColor = new THREE.Color(0xff0000); // 점유됨, 범위 밖 또는 자원 조건 실패: 빨강
     }
 
     if (this.highlightMesh.material instanceof THREE.MeshBasicMaterial) {
@@ -1380,6 +1391,11 @@ export default class CustomGround implements IWorldMapObject {
     return PlacementManager.Instance.isInBuildRange(pos);
   }
 
+  private getBuildingProperty(nodeId?: string): BuildingProperty | undefined {
+    if (!nodeId) return undefined;
+    return buildingDefs[nodeId] ?? Object.values(buildingDefs).find(p => p.id === nodeId);
+  }
+
   Delete(...param: any) {
     this.Dispose();
   }
@@ -1390,6 +1406,7 @@ export default class CustomGround implements IWorldMapObject {
     this.eventCtrl.DeregisterEventListener(EventTypes.HideGrid);
     this.eventCtrl.DeregisterEventListener(EventTypes.HighlightGrid);
     this.eventCtrl.DeregisterEventListener('GridConfirmClick' as any);
+    this.eventCtrl.DeregisterEventListener(EventTypes.BuildRequirementValidatorReady, this.setBuildRequirementValidator);
 
     this.shaderMaterial?.dispose();
     this.geometry?.dispose();

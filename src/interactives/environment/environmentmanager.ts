@@ -8,6 +8,12 @@ import { Tree } from "./environmentobjs/tree";
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise';
 import { PlacementManager } from "@Glibs/interactives/placement/placementmanager";
 
+export type EnvironmentResourceQuery = {
+    environmentIds?: readonly string[];
+    resourceTypes?: readonly string[];
+    minAmount?: number;
+};
+
 type RadialPathPopulateOptions = {
     centerX: number,
     centerZ: number,
@@ -597,6 +603,19 @@ export class EnvironmentManager implements ILoop {
             }
         }
         return results;
+    }
+
+    getResourceObjectsInRange(pos: THREE.Vector3, radius: number, query: EnvironmentResourceQuery = {}): IEnvironmentObject[] {
+        const environmentIds = query.environmentIds ? new Set(query.environmentIds) : undefined;
+        const resourceTypes = query.resourceTypes ? new Set(query.resourceTypes) : undefined;
+        const minAmount = query.minAmount ?? 1;
+
+        return this.getObjectsInRange(pos, radius).filter((obj) => {
+            if (obj.currentAmount < minAmount) return false;
+            if (environmentIds && !environmentIds.has(obj.property.id)) return false;
+            if (resourceTypes && !resourceTypes.has(obj.property.resourceType)) return false;
+            return true;
+        });
     }
 
     update(delta: number) {

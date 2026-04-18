@@ -1,6 +1,7 @@
 import { Char } from "@Glibs/types/assettypes";
 import { BuildingType, BuildingMode } from "./ibuildingobj";
 import { CurrencyType } from "@Glibs/inventory/wallet";
+import { EventTypes } from "@Glibs/types/globaltypes";
 
 export interface CommandTemplate {
     id: string;
@@ -20,6 +21,18 @@ export interface ProductionProperty {
     resources: Partial<Record<CurrencyType, number>>; // 생산할 자원 종류와 기본 양
 }
 
+export interface NearbyResourceRequirement {
+    range: number;                       // 건설 위치 기준 탐색 반경
+    environmentIds?: string[];           // 예: pine_tree, gold_node
+    resourceTypes?: EventTypes[];        // 예: EventTypes.Wood, EventTypes.Gold
+    minAmount?: number;                  // 고갈 직전 자원을 제외하고 싶을 때 사용
+    message?: string;                    // 조건 실패 시 UI에 보여줄 메시지
+}
+
+export interface BuildRequirements {
+    nearbyResources?: NearbyResourceRequirement[];
+}
+
 export interface BuildingProperty {
     id: string;
     name: string;
@@ -36,6 +49,7 @@ export interface BuildingProperty {
     provides?: string[];
     desc?: string;
     commands?: CommandTemplate[];
+    buildRequirements?: BuildRequirements;
     production?: ProductionProperty; // [수정] 상세 생산 정보
 }
 
@@ -56,7 +70,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         provides: ["scv"],
         desc: "진영의 핵심 거점입니다.",
         commands: [
-            { id: "spawn_scv", name: "SCV 생산", icon: "🤖", type: "produce", targetId: "scv", shortcut: "S" }
+            // { id: "spawn_scv", name: "SCV 생산", icon: "🤖", type: "produce", targetId: "scv", shortcut: "S" }
         ],
         production: { 
             interval: 10, 
@@ -176,6 +190,16 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         commands: [
             { id: "collect", name: "목재 수집", icon: "🪵", type: "action", shortcut: "C" }
         ],
+        buildRequirements: {
+            nearbyResources: [
+                {
+                    range: 20,
+                    environmentIds: ["pine_tree"],
+                    resourceTypes: [EventTypes.Wood],
+                    message: "제재소는 반경 20 안에 나무가 있어야 건설할 수 있습니다."
+                }
+            ]
+        },
         production: { 
             interval: 5, 
             turns: 1, 
@@ -218,6 +242,16 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         commands: [
             { id: "collect", name: "광물 채굴", icon: "💎", type: "action", shortcut: "M" }
         ],
+        buildRequirements: {
+            nearbyResources: [
+                {
+                    range: 24,
+                    environmentIds: ["gold_node"],
+                    resourceTypes: [EventTypes.Gold],
+                    message: "광산은 반경 24 안에 광물 자원이 있어야 건설할 수 있습니다."
+                }
+            ]
+        },
         production: { 
             interval: 8, 
             turns: 2, 

@@ -132,8 +132,11 @@ export enum EventTypes {
     // 턴제로 호출되는 모듈 등록
     TurnNext = "turnnext",
     TurnEnded = "turnended",
+    TurnReportUpdated = "turnreportupdated",
     RegisterTurnParticipant = "regturnparticipant",
     DeregisterTurnParticipant = "deregturnparticipant",
+    ResourceChangeRequested = "resourcechangereq",
+    ResourceAmountChanged = "resourceamountchanged",
     // resize가 필요한 요소
     RegisterViewer = "regviewer",
 
@@ -174,6 +177,7 @@ export enum EventTypes {
     ShowBuildingInfo = "showbuildinginfo",
     RequestBuilding = "requestbuilding",
     ResponseBuilding = "responsebuilding",
+    BuildRequirementValidatorReady = "buildreqvalidatorready",
     RequestUpgrade = "requestupgrade",
     UpgradeComplete = "upgradecomplete",
 

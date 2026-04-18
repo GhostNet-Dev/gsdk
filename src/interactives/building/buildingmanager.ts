@@ -17,6 +17,7 @@ import { CameraInputPreset } from "@Glibs/systems/camera/orbitbroker";
 import { SelectionPanel } from "@Glibs/ux/selectionpanel/selectionpanel";
 import { PlacementManager } from "@Glibs/interactives/placement/placementmanager";
 import { ITurnParticipant, TurnContext } from "@Glibs/gameobjects/turntypes";
+import { BuildRequirementValidator, validateBuildRequirements } from "./buildrequirementvalidator";
 
 export interface BuildingTask {
   nodeId: string;
@@ -49,6 +50,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
   private selectionPanel: SelectionPanel;
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2();
+  private buildRequirementValidator?: BuildRequirementValidator;
 
   // [최적화] 건물 종류별 템플릿 캐시
   private constructionTemplates: Map<string, THREE.Object3D> = new Map();
@@ -95,12 +97,18 @@ export class BuildingManager implements ILoop, ITurnParticipant {
         this.sendBuildingStatus();
     });
 
+    this.eventCtrl.RegisterEventListener(EventTypes.BuildRequirementValidatorReady, this.setBuildRequirementValidator);
+
     // [추가] 마우스 클릭 이벤트 리스너
     window.addEventListener('pointerdown', this.onPointerDown);
 
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
     this.eventCtrl.SendEventMessage(EventTypes.RegisterTurnParticipant, this);
   }
+
+  private setBuildRequirementValidator = (validator: BuildRequirementValidator) => {
+    this.buildRequirementValidator = validator;
+  };
 
   private onPointerDown = (e: PointerEvent) => {
     const target = e.target as HTMLElement;
@@ -323,6 +331,12 @@ export class BuildingManager implements ILoop, ITurnParticipant {
         this.eventCtrl.SendEventMessage(EventTypes.Toast, reason);
         return null;
       }
+
+      const requirement = validateBuildRequirements(this.buildRequirementValidator, prop, pos);
+      if (!requirement.ok) {
+        this.eventCtrl.SendEventMessage(EventTypes.Toast, requirement.reason);
+        return null;
+      }
     }
 
     // [수정] 테크트리에서 이미 해금(레벨 1 이상)되었다면 추가 비용 차감 방지
@@ -409,7 +423,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
     return taskId;
   }
 
-  async advanceTurn(_ctx?: TurnContext) {
+  async advanceTurn(ctx?: TurnContext) {
     if (this.currentMode !== BuildingMode.Turn) return;
     const buildingsToAdvance = Array.from(this.buildingObjects.values());
 
@@ -420,7 +434,22 @@ export class BuildingManager implements ILoop, ITurnParticipant {
       
       this.updateProgressVisual(task);
 
-      if (task.remainingTurns <= 0) await this.finishBuild(taskId);
+      if (task.remainingTurns <= 0) {
+        await this.finishBuild(taskId);
+        ctx?.log.add({
+          source: this.turnId,
+          kind: "construction",
+          message: `${task.prop.name} 건설이 완료되었습니다.`,
+          data: { nodeId: task.nodeId, taskId },
+        });
+      } else {
+        ctx?.log.add({
+          source: this.turnId,
+          kind: "construction",
+          message: `${task.prop.name} 건설까지 ${task.remainingTurns}턴 남았습니다.`,
+          data: { nodeId: task.nodeId, taskId, remainingTurns: task.remainingTurns },
+        });
+      }
     }
 
     for (const building of buildingsToAdvance) {
