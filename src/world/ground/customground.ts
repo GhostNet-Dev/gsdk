@@ -527,20 +527,20 @@ export default class CustomGround implements IWorldMapObject {
     const worldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
     
     if (this.checkOccupancy(worldPos, this.lastWidth, this.lastDepth)) {
-        this.eventCtrl.SendEventMessage(EventTypes.Toast, "이미 점유된 지역입니다.");
+        this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, "이미 점유된 지역입니다.");
         return;
     }
 
     const isBaseBuilding = this.lastNodeId === 'cc' || this.lastNodeId === 'CommandCenter';
     if (!isBaseBuilding && !this.checkBuildRange(worldPos)) {
-        this.eventCtrl.SendEventMessage(EventTypes.Toast, "건설 지원 범위 밖입니다.");
+        this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, "건설 지원 범위 밖입니다.");
         return;
     }
 
     const property = this.getBuildingProperty(this.lastNodeId);
     const requirements = validateBuildRequirements(this.buildRequirementValidator, property, worldPos);
     if (!requirements.ok) {
-        this.eventCtrl.SendEventMessage(EventTypes.Toast, requirements.reason);
+        this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, requirements.reason);
         return;
     }
 

@@ -313,7 +313,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
     const check = this.canBuild(nodeId);
     if (!check.ok) {
       console.error(`Cannot build ${nodeId}: ${check.reason}`);
-      this.eventCtrl.SendEventMessage(EventTypes.Toast, check.reason);
+      this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, check.reason);
       return null;
     }
 
@@ -328,13 +328,13 @@ export class BuildingManager implements ILoop, ITurnParticipant {
       const placement = PlacementManager.Instance.validatePlacement(pos, prop.size.width, prop.size.depth, isBaseBuilding);
       if (!placement.ok) {
         const reason = placement.reason === 'occupied' ? "이미 점유된 지역입니다." : "건설 지원 범위 밖입니다.";
-        this.eventCtrl.SendEventMessage(EventTypes.Toast, reason);
+        this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, reason);
         return null;
       }
 
       const requirement = validateBuildRequirements(this.buildRequirementValidator, prop, pos);
       if (!requirement.ok) {
-        this.eventCtrl.SendEventMessage(EventTypes.Toast, requirement.reason);
+        this.eventCtrl.SendEventMessage(EventTypes.AlarmNormal, requirement.reason);
         return null;
       }
     }
