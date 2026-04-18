@@ -10,6 +10,7 @@ import { BuildingManager } from "@Glibs/interactives/building/buildingmanager";
 import { BuildingMode } from "@Glibs/interactives/building/ibuildingobj";
 import { BuildingInfoBar } from "@Glibs/ux/dialog/buildinginfobar";
 import { CurrencyType } from "@Glibs/inventory/wallet";
+import TurnManager from "./turnmanager";
 
 type LearnedSkillMessage = {
     nodeId: string;
@@ -23,6 +24,7 @@ export default class GameManager {
     // 활성화된 패시브/버프 객체 추적 (key: nodeId, value: Runtime Buff)
     private activeBuffs = new Map<string, Buff>();
     private activeSkills = new Map<string, LearnedSkillMessage>();
+    private turnManager: TurnManager;
     private buildingManager: BuildingManager;
     private buildingInfoBar: BuildingInfoBar;
 
@@ -32,6 +34,7 @@ export default class GameManager {
         public service: TechTreeService,
         private camera: THREE.Camera, // [추가] 카메라 주입
     ) { 
+        this.turnManager = new TurnManager(this.eventCtrl);
         this.buildingManager = new BuildingManager(this.scene, this.eventCtrl, this.service, this.camera);
         this.buildingInfoBar = new BuildingInfoBar(this.eventCtrl);
         
@@ -95,7 +98,7 @@ export default class GameManager {
      * 다음 턴으로 진행합니다 (턴제 모드일 때 사용).
      */
     nextTurn() {
-        this.buildingManager.advanceTurn();
+        this.eventCtrl.SendEventMessage(EventTypes.TurnNext);
     }
 
     /**

@@ -9,7 +9,28 @@ import { UxLayerIndex } from "../gux";
 type RingStyle = 'none' | 'solid' | 'line';
 type Shape = 'circle' | 'rounded' | 'square' | 'hex';
 type Easing = 'outBack' | 'outCubic';
-type OpenAt = 'center' | 'pointer';
+type OpenAt = 'center' | 'pointer' | 'button';
+type CssLength = number | string;
+type TriggerButtonPositionName =
+  | 'top-left'
+  | 'top-center'
+  | 'top-right'
+  | 'center-left'
+  | 'center'
+  | 'center-right'
+  | 'bottom-left'
+  | 'bottom-center'
+  | 'bottom-right';
+type TriggerButtonPosition =
+  | TriggerButtonPositionName
+  | {
+      top?: CssLength;
+      right?: CssLength;
+      bottom?: CssLength;
+      left?: CssLength;
+      transform?: string;
+    };
+type TriggerButtonMenuOpenAt = 'center' | 'button' | 'pointer';
 
 export type IconDef =
   | string
@@ -23,6 +44,7 @@ export type MenuItemDef =
   | IconDef
   | {
       icon: IconDef;
+      label?: string;
       id?: string;
       ariaLabel?: string;
       hotkey?: string;
@@ -32,6 +54,25 @@ export type MenuItemDef =
       onFocus?: (def: IconDef, index: number) => void;
       data?: any;
     };
+
+export interface RadialMenuTriggerButtonOptions {
+  enabled: boolean;
+  position: TriggerButtonPosition;
+  margin: number;
+  offsetX: number;
+  offsetY: number;
+  size: number;
+  shape?: Shape;
+  icon: IconDef;
+  label?: string;
+  ariaLabel: string;
+  title?: string;
+  className?: string;
+  fontScale: number;
+
+  /** 버튼 클릭 후 메뉴가 열릴 위치 */
+  menuOpenAt: TriggerButtonMenuOpenAt;
+}
 
 /** Center-click 안전 옵션 포함 */
 export interface RadialMenuOptions {
@@ -56,6 +97,8 @@ export interface RadialMenuOptions {
   openAt: OpenAt;
   centerClickThresholdPx: number;
   enableGlobalCenterClick: boolean;
+  enableOutsideClickClose: boolean;
+  triggerButton?: Partial<RadialMenuTriggerButtonOptions>;
 
   // integration
   parent?: HTMLElement;
@@ -175,6 +218,19 @@ const DEFAULT_THEMES: Record<string, { vars: ThemeVars; bg: string }> = {
   },
 };
 
+const DEFAULT_TRIGGER_BUTTON_OPTIONS: RadialMenuTriggerButtonOptions = {
+  enabled: false,
+  position: 'bottom-left',
+  margin: 24,
+  offsetX: 0,
+  offsetY: 0,
+  size: 64,
+  icon: { type: 'text', value: '☰' },
+  ariaLabel: 'Open menu',
+  fontScale: 0.48,
+  menuOpenAt: 'center',
+};
+
 const DEFAULT_OPTIONS: RadialMenuOptions = {
   radius: 160,
   itemSize: 72,
@@ -194,6 +250,8 @@ const DEFAULT_OPTIONS: RadialMenuOptions = {
   openAt: 'center',
   centerClickThresholdPx: 200,
   enableGlobalCenterClick: true,
+  enableOutsideClickClose: true,
+  triggerButton: DEFAULT_TRIGGER_BUTTON_OPTIONS,
 
   parent: undefined,
   injectStyles: true,
@@ -229,17 +287,28 @@ let STYLE_INJECTED = false;
 const CSS_TEXT = `
 .rm-root{position:fixed;inset:0;pointer-events:none;z-index:9999}
 .rm-radial{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:0;height:0;pointer-events:none}
+.rm-trigger{position:fixed;display:inline-flex;align-items:center;justify-content:center;gap:6px;width:64px;height:64px;padding:0;border:1px solid var(--item-border);border-radius:8px;color:var(--item-fg);background:radial-gradient(120% 120% at 30% 30%, var(--item-bg-1), var(--item-bg-2));box-shadow:var(--item-shadow);cursor:pointer;pointer-events:auto;user-select:none;z-index:1;transition:transform .12s ease-out, filter .12s ease-out, opacity .12s ease-out}
+.rm-trigger:hover{filter:brightness(1.08)}
+.rm-trigger:active{transform:scale(0.96)}
+.rm-trigger:focus-visible{outline:2px solid color-mix(in srgb, var(--item-fg) 60%, transparent);outline-offset:3px}
+.rm-trigger-label{font:600 13px/1 system-ui,sans-serif;color:var(--item-fg)}
+.rm-trigger-shape-circle{border-radius:999px}
+.rm-trigger-shape-rounded{border-radius:20px}
+.rm-trigger-shape-square{border-radius:8px}
+.rm-trigger-shape-hex{border-radius:0;clip-path:polygon(25% 6.7%,75% 6.7%,100% 50%,75% 93.3%,25% 93.3%,0% 50%)}
 .rm-radial .rm-ring,.rm-radial .rm-ring2{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:0;height:0;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .25s}
 .rm-radial .rm-ring{box-shadow:var(--ring-glow);background:var(--ring-bg)}
 .rm-radial .rm-ring2{box-shadow:0 0 0 var(--ring-width) var(--ring-stroke) inset}
 .rm-radial.open .rm-ring,.rm-radial.open .rm-ring2{opacity:.85}
 .rm-item{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:72px;height:72px;display:grid;place-items:center;user-select:none;cursor:pointer;border:none;outline:none;color:var(--item-fg);background:radial-gradient(120% 120% at 30% 30%, var(--item-bg-1), var(--item-bg-2));box-shadow:var(--item-shadow);transition:transform .12s ease-out, box-shadow .12s ease-out, opacity .12s, background .2s;pointer-events:auto;border-radius:999px;font-size:0}
+.rm-item.rm-has-label{display:grid;place-items:center;overflow:visible}
 .rm-item:hover{transform:translate(-50%,-50%) scale(1.06)}
 .rm-item:active{transform:translate(-50%,-50%) scale(0.96)}
 .rm-item:focus-visible{box-shadow:0 0 0 2px color-mix(in srgb, var(--item-fg) 60%, transparent), var(--item-shadow)}
 .rm-item.rm-focused{transform:translate(-50%,-50%) scale(1.08)}
 .rm-item[aria-disabled="true"]{opacity:.5;filter:saturate(.7);cursor:not-allowed;pointer-events:none}
 .rm-ic{display:inline-grid;place-items:center}
+.rm-item-label{position:absolute;left:50%;top:calc(100% + 6px);transform:translateX(-50%);display:block;max-width:92px;font:700 11px/1.1 system-ui,-apple-system,Segoe UI,Roboto,Pretendard,Apple SD Gothic Neo,Arial,sans-serif;color:var(--item-fg);text-shadow:0 1px 4px rgba(0,0,0,.75);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .rm-emoji,.rm-text{font-size:36px;line-height:1;color:var(--item-fg)}
 .rm-img{width:70%;height:70%;object-fit:contain;display:block;pointer-events:none;-webkit-user-drag:none;user-drag:none}
 .rm-svg{width:70%;height:70%;display:block;fill:currentColor;color:var(--item-fg)}
@@ -284,6 +353,15 @@ function isCenterClick(x: number, y: number, thresholdPx: number): boolean {
   const dx = x - innerWidth / 2, dy = y - innerHeight / 2;
   return Math.hypot(dx, dy) < thresholdPx * 0.25;
 }
+function cssLength(v: CssLength): string {
+  return typeof v === 'number' ? `${v}px` : v;
+}
+function cssPx(v: number): string {
+  return `${v}px`;
+}
+function cssCalc(base: string, offset: number): string {
+  return offset === 0 ? base : `calc(${base} + ${offset}px)`;
+}
 
 /** 보이는 요소인지 대략 판정 */
 function isVisible(el: Element): boolean {
@@ -307,6 +385,7 @@ type ItemEntry = {
   el: HTMLButtonElement;
   def: IconDef;
   meta: {
+    label?: string;
     id?: string;
     ariaLabel?: string;
     hotkey?: string;
@@ -335,6 +414,8 @@ export class RadialMenuUI implements ILoop {
   private destroyed = false;
 
   private pointerOpenHandler?: (e: PointerEvent) => void;
+  private triggerButton?: HTMLButtonElement;
+  private triggerButtonHandler?: (e: PointerEvent) => void;
   private openWithinEl: HTMLElement | null = null;
   private hardBlocked = false; // 프로그래매틱 강제 차단
 
@@ -342,7 +423,14 @@ export class RadialMenuUI implements ILoop {
     eventCtrl: IEventController,
     options?: Partial<RadialMenuOptions>
   ) {
-    this.opts = { ...DEFAULT_OPTIONS, ...options };
+    this.opts = {
+      ...DEFAULT_OPTIONS,
+      ...options,
+      triggerButton: {
+        ...DEFAULT_TRIGGER_BUTTON_OPTIONS,
+        ...(options?.triggerButton ?? {}),
+      },
+    };
 
     // resolve onlyWhenTargetWithin
     if (typeof this.opts.onlyWhenTargetWithin === 'string') {
@@ -380,27 +468,10 @@ export class RadialMenuUI implements ILoop {
     this.applyTheme(this.opts.theme, this.opts.themeVars, this.opts.pageBg);
     this.applyShape(this.opts.shape);
     this.applyRingStyle(this.opts.ringStyle);
+    this.syncTriggerButton();
 
     // input
-    if (this.opts.enableGlobalCenterClick) {
-      this.pointerOpenHandler = (e: PointerEvent) => {
-        const path = (e.composedPath?.() ?? []) as EventTarget[];
-
-        // 이미 열려 있고, 메뉴 바깥 클릭이면 닫기
-        if (this.isOpen && this.opts.autoCloseOnMiss && !path.includes(this.radial)) { this.close(); return; }
-        if (this.isOpen) return;
-
-        // 열림 가드
-        if (this.shouldBlockOpen(e, path)) return;
-
-        if (this.opts.openAt === 'center') {
-          if (isCenterClick(e.clientX, e.clientY, this.opts.centerClickThresholdPx)) this.open();
-        } else {
-          this.openAt(e.clientX, e.clientY);
-        }
-      };
-      window.addEventListener('pointerdown', this.pointerOpenHandler, { capture: true });
-    }
+    this.syncGlobalPointerHandler();
 
     // keyboard
     window.addEventListener('keydown', (e) => this.onKey(e));
@@ -485,6 +556,7 @@ export class RadialMenuUI implements ILoop {
     if (this.destroyed) return;
     this.destroyed = true;
     if (this.pointerOpenHandler) window.removeEventListener('pointerdown', this.pointerOpenHandler, { capture: true } as any);
+    this.removeTriggerButton();
     this.root.remove();
   }
 
@@ -499,9 +571,9 @@ export class RadialMenuUI implements ILoop {
     normalized.forEach((src, idx) => {
       const icon = (this.isIconDef(src) ? src : src.icon) as IconDef;
       const meta = this.isIconDef(src)
-        ? { id: undefined, ariaLabel: undefined, hotkey: undefined, disabled: false, keepOpen: false }
+        ? { label: undefined, id: undefined, ariaLabel: undefined, hotkey: undefined, disabled: false, keepOpen: false }
         : {
-            id: src.id, ariaLabel: src.ariaLabel, hotkey: src.hotkey, disabled: !!src.disabled,
+            label: src.label, id: src.id, ariaLabel: src.ariaLabel, hotkey: src.hotkey, disabled: !!src.disabled,
             keepOpen: !!src.keepOpen, onSelect: src.onSelect, onFocus: src.onFocus, data: src.data
           };
 
@@ -514,6 +586,14 @@ export class RadialMenuUI implements ILoop {
 
       const node = createIconNode(icon, this.opts.itemSize, this.opts.fontScale);
       el.appendChild(node);
+      if (meta.label) {
+        el.classList.add('rm-has-label');
+        const label = document.createElement('span');
+        label.className = 'rm-item-label';
+        label.textContent = meta.label;
+        label.setAttribute('aria-hidden', 'true');
+        el.appendChild(label);
+      }
 
       el.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -578,6 +658,14 @@ export class RadialMenuUI implements ILoop {
     this.applyFocus(true);
   }
 
+  /** Open with radial centered on the viewport. */
+  openAtCenter() {
+    this.radial.style.left = '50%';
+    this.radial.style.top = '50%';
+    this.radial.style.transform = 'translate(-50%,-50%)';
+    this.open();
+  }
+
   /** Open with radial centered at given page coords. */
   openAt(pageX: number, pageY: number) {
     this.radial.style.left = `${pageX}px`;
@@ -595,7 +683,15 @@ export class RadialMenuUI implements ILoop {
   }
 
   updateOptions(patch: Partial<RadialMenuOptions>) {
+    const prevTriggerButton = this.opts.triggerButton;
     Object.assign(this.opts, patch);
+    if (patch.triggerButton !== undefined) {
+      this.opts.triggerButton = {
+        ...DEFAULT_TRIGGER_BUTTON_OPTIONS,
+        ...(prevTriggerButton ?? {}),
+        ...patch.triggerButton,
+      };
+    }
     if (patch.onlyWhenTargetWithin !== undefined) {
       this.openWithinEl = typeof patch.onlyWhenTargetWithin === 'string'
         ? (document.querySelector(patch.onlyWhenTargetWithin) as HTMLElement | null)
@@ -611,16 +707,241 @@ export class RadialMenuUI implements ILoop {
       this.updateRing(this.opts.radius);
       this.layout(this.opts.radius * this.progress, 0);
     }
+    this.syncTriggerButton();
+    this.syncGlobalPointerHandler();
   }
 
   // ---------- Internals ----------
+  private syncGlobalPointerHandler() {
+    const shouldListen = this.opts.enableGlobalCenterClick || this.opts.enableOutsideClickClose;
+    if (shouldListen && !this.pointerOpenHandler) {
+      this.pointerOpenHandler = (e: PointerEvent) => this.onGlobalPointerDown(e);
+      window.addEventListener('pointerdown', this.pointerOpenHandler, { capture: true });
+      return;
+    }
+    if (!shouldListen && this.pointerOpenHandler) {
+      window.removeEventListener('pointerdown', this.pointerOpenHandler, { capture: true } as any);
+      this.pointerOpenHandler = undefined;
+    }
+  }
+
+  private onGlobalPointerDown(e: PointerEvent) {
+    const path = (e.composedPath?.() ?? []) as EventTarget[];
+    const clickedTrigger = !!this.triggerButton && path.includes(this.triggerButton);
+
+    if (this.isOpen) {
+      if (this.opts.enableOutsideClickClose && this.opts.autoCloseOnMiss && !path.includes(this.radial) && !clickedTrigger) {
+        this.close();
+      }
+      return;
+    }
+
+    if (!this.opts.enableGlobalCenterClick) return;
+    if (this.opts.openAt === 'button') return;
+
+    // 열림 가드
+    if (this.shouldBlockOpen(e, path)) return;
+
+    if (this.opts.openAt === 'center') {
+      if (isCenterClick(e.clientX, e.clientY, this.opts.centerClickThresholdPx)) this.openAtCenter();
+    } else {
+      this.openAt(e.clientX, e.clientY);
+    }
+  }
+
+  private getTriggerButtonOptions(): RadialMenuTriggerButtonOptions {
+    return {
+      ...DEFAULT_TRIGGER_BUTTON_OPTIONS,
+      ...(this.opts.triggerButton ?? {}),
+    };
+  }
+
+  private shouldUseTriggerButton() {
+    const trigger = this.getTriggerButtonOptions();
+    return this.opts.openAt === 'button' || trigger.enabled;
+  }
+
+  private syncTriggerButton() {
+    if (!this.shouldUseTriggerButton()) {
+      this.removeTriggerButton();
+      return;
+    }
+
+    if (!this.triggerButton) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.setAttribute('data-rm-trigger', 'true');
+      this.triggerButtonHandler = (e: PointerEvent) => this.onTriggerButtonPointerDown(e);
+      btn.addEventListener('pointerdown', this.triggerButtonHandler);
+      this.root.appendChild(btn);
+      this.triggerButton = btn;
+    }
+
+    this.applyTriggerButtonOptions();
+  }
+
+  private removeTriggerButton() {
+    if (!this.triggerButton) return;
+    if (this.triggerButtonHandler) this.triggerButton.removeEventListener('pointerdown', this.triggerButtonHandler);
+    this.triggerButton.remove();
+    this.triggerButton = undefined;
+    this.triggerButtonHandler = undefined;
+  }
+
+  private applyTriggerButtonOptions() {
+    if (!this.triggerButton) return;
+
+    const trigger = this.getTriggerButtonOptions();
+    const btn = this.triggerButton;
+    const shape = trigger.shape ?? this.opts.shape;
+    btn.className = trigger.className
+      ? `rm-trigger rm-trigger-shape-${shape} ${trigger.className}`
+      : `rm-trigger rm-trigger-shape-${shape}`;
+    btn.style.width = btn.style.height = cssPx(trigger.size);
+    btn.setAttribute('aria-label', trigger.ariaLabel);
+    if (trigger.title) btn.title = trigger.title;
+    else btn.removeAttribute('title');
+
+    while (btn.firstChild) btn.removeChild(btn.firstChild);
+    btn.appendChild(createIconNode(trigger.icon, trigger.size, trigger.fontScale));
+    if (trigger.label) {
+      const label = document.createElement('span');
+      label.className = 'rm-trigger-label';
+      label.textContent = trigger.label;
+      btn.appendChild(label);
+      btn.style.width = 'auto';
+      btn.style.minWidth = cssPx(trigger.size);
+      btn.style.padding = '0 14px';
+    } else {
+      btn.style.minWidth = '';
+      btn.style.padding = '0';
+    }
+
+    this.applyTriggerButtonPosition(btn, trigger);
+  }
+
+  private applyTriggerButtonPosition(btn: HTMLElement, trigger: RadialMenuTriggerButtonOptions) {
+    btn.style.top = '';
+    btn.style.right = '';
+    btn.style.bottom = '';
+    btn.style.left = '';
+    btn.style.transform = '';
+
+    const pos = trigger.position;
+    if (typeof pos !== 'string') {
+      if (pos.top !== undefined) btn.style.top = cssLength(pos.top);
+      if (pos.right !== undefined) btn.style.right = cssLength(pos.right);
+      if (pos.bottom !== undefined) btn.style.bottom = cssLength(pos.bottom);
+      if (pos.left !== undefined) btn.style.left = cssLength(pos.left);
+      if (pos.transform !== undefined) btn.style.transform = pos.transform;
+      return;
+    }
+
+    const x = trigger.offsetX;
+    const y = trigger.offsetY;
+    const margin = trigger.margin;
+
+    switch (pos) {
+      case 'top-left':
+        btn.style.left = cssPx(margin + x);
+        btn.style.top = cssPx(margin + y);
+        break;
+      case 'top-center':
+        btn.style.left = cssCalc('50%', x);
+        btn.style.top = cssPx(margin + y);
+        btn.style.transform = 'translateX(-50%)';
+        break;
+      case 'top-right':
+        btn.style.right = cssPx(margin - x);
+        btn.style.top = cssPx(margin + y);
+        break;
+      case 'center-left':
+        btn.style.left = cssPx(margin + x);
+        btn.style.top = cssCalc('50%', y);
+        btn.style.transform = 'translateY(-50%)';
+        break;
+      case 'center':
+        btn.style.left = cssCalc('50%', x);
+        btn.style.top = cssCalc('50%', y);
+        btn.style.transform = 'translate(-50%,-50%)';
+        break;
+      case 'center-right':
+        btn.style.right = cssPx(margin - x);
+        btn.style.top = cssCalc('50%', y);
+        btn.style.transform = 'translateY(-50%)';
+        break;
+      case 'bottom-left':
+        btn.style.left = cssPx(margin + x);
+        btn.style.bottom = cssPx(margin - y);
+        break;
+      case 'bottom-center':
+        btn.style.left = cssCalc('50%', x);
+        btn.style.bottom = cssPx(margin - y);
+        btn.style.transform = 'translateX(-50%)';
+        break;
+      case 'bottom-right':
+        btn.style.right = cssPx(margin - x);
+        btn.style.bottom = cssPx(margin - y);
+        break;
+    }
+  }
+
+  private onTriggerButtonPointerDown(e: PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (this.isOpen) {
+      this.close();
+      return;
+    }
+    if (this.shouldBlockTriggerOpen(e)) return;
+
+    const trigger = this.getTriggerButtonOptions();
+    if (trigger.menuOpenAt === 'center') {
+      this.openAtCenter();
+      return;
+    }
+    if (trigger.menuOpenAt === 'pointer') {
+      this.openAt(e.clientX, e.clientY);
+      return;
+    }
+
+    this.openAtTriggerButton();
+  }
+
+  private openAtTriggerButton() {
+    if (!this.triggerButton) {
+      this.openAtCenter();
+      return;
+    }
+
+    const r = this.triggerButton.getBoundingClientRect();
+    this.openAt(r.left + r.width / 2, r.top + r.height / 2);
+  }
+
+  private shouldBlockTriggerOpen(e: PointerEvent): boolean {
+    if (this.hardBlocked) return true;
+
+    const modalCandidates = Array.from(document.querySelectorAll(this.opts.modalOpenQuery));
+    if (modalCandidates.some(isVisible)) return true;
+
+    if (typeof this.opts.openGuard === 'function') {
+      try { if (!this.opts.openGuard(e)) return true; } catch { return true; }
+    }
+
+    return false;
+  }
+
   private applyTheme(name: string, override?: Partial<ThemeVars>, pageBg?: string) {
     const theme = name !== 'custom' ? DEFAULT_THEMES[name] ?? DEFAULT_THEMES['Dark Neon'] : null;
     const vars: ThemeVars = {
       ...(theme ? theme.vars : DEFAULT_THEMES['Dark Neon'].vars),
       ...(override ?? {}),
     } as ThemeVars;
-    for (const [k, v] of Object.entries(vars)) this.radial.style.setProperty(k, v);
+    for (const [k, v] of Object.entries(vars)) {
+      this.root.style.setProperty(k, v);
+      this.radial.style.setProperty(k, v);
+    }
     const bg = pageBg ?? (theme?.bg);
     if (bg) (document.documentElement.style as any).setProperty('--bg', bg);
   }
@@ -729,7 +1050,7 @@ export class RadialMenuUI implements ILoop {
   private getItemDefs(): MenuItemDef[] {
     return this.items.map<MenuItemDef>(({ def, meta }) => {
       const pure =
-        !meta.id && !meta.ariaLabel && !meta.hotkey && !meta.disabled &&
+        !meta.label && !meta.id && !meta.ariaLabel && !meta.hotkey && !meta.disabled &&
         !meta.keepOpen && !meta.onSelect && !meta.onFocus && meta.data === undefined;
       return pure ? def : { icon: def, ...meta };
     });

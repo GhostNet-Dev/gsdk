@@ -129,6 +129,11 @@ export enum EventTypes {
     // 주기적으로 호출되는 함수 등록
     RegisterLoop = "regloop",
     DeregisterLoop = "deregloop",
+    // 턴제로 호출되는 모듈 등록
+    TurnNext = "turnnext",
+    TurnEnded = "turnended",
+    RegisterTurnParticipant = "regturnparticipant",
+    DeregisterTurnParticipant = "deregturnparticipant",
     // resize가 필요한 요소
     RegisterViewer = "regviewer",
 

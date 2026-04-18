@@ -49,7 +49,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 2000,
         scale: 10,
         buildTime: 10,
-        buildTurns: 10,
+        buildTurns: 2,
         size: { width: 5, depth: 5 },
         providesPeople: 15,
         buildRange: 15,

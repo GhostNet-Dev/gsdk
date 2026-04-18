@@ -16,6 +16,7 @@ import { CameraMode } from "@Glibs/systems/camera/cameratypes";
 import { CameraInputPreset } from "@Glibs/systems/camera/orbitbroker";
 import { SelectionPanel } from "@Glibs/ux/selectionpanel/selectionpanel";
 import { PlacementManager } from "@Glibs/interactives/placement/placementmanager";
+import { ITurnParticipant, TurnContext } from "@Glibs/gameobjects/turntypes";
 
 export interface BuildingTask {
   nodeId: string;
@@ -29,8 +30,10 @@ export interface BuildingTask {
   progressMesh?: THREE.Group;
 }
 
-export class BuildingManager implements ILoop {
+export class BuildingManager implements ILoop, ITurnParticipant {
   LoopId: number = 0;
+  readonly turnId = "building";
+  readonly turnOrder = 100;
   private activeTasks: Map<string, BuildingTask> = new Map();
   private buildingObjects: Map<string, IBuildingObject> = new Map();
   private nextTaskId: number = 0;
@@ -96,6 +99,7 @@ export class BuildingManager implements ILoop {
     window.addEventListener('pointerdown', this.onPointerDown);
 
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
+    this.eventCtrl.SendEventMessage(EventTypes.RegisterTurnParticipant, this);
   }
 
   private onPointerDown = (e: PointerEvent) => {
@@ -405,8 +409,10 @@ export class BuildingManager implements ILoop {
     return taskId;
   }
 
-  advanceTurn() {
+  async advanceTurn(_ctx?: TurnContext) {
     if (this.currentMode !== BuildingMode.Turn) return;
+    const buildingsToAdvance = Array.from(this.buildingObjects.values());
+
     for (const [taskId, task] of this.activeTasks.entries()) {
       if (task.isFinished) continue;
       task.remainingTurns--;
@@ -414,10 +420,10 @@ export class BuildingManager implements ILoop {
       
       this.updateProgressVisual(task);
 
-      if (task.remainingTurns <= 0) this.finishBuild(taskId);
+      if (task.remainingTurns <= 0) await this.finishBuild(taskId);
     }
 
-    for (const building of this.buildingObjects.values()) {
+    for (const building of buildingsToAdvance) {
       building.advanceTurn();
     }
   }
