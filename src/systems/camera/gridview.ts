@@ -17,6 +17,7 @@ export default class GridViewCameraStrategy implements ICameraStrategy {
         maxAzimuthAngle: number;
         fov: number;
         screenSpacePanning: boolean;
+        maxDistance: number;
     } | null = null;
     private handle: OrbitControlsHandle | null = null;
 
@@ -36,7 +37,8 @@ export default class GridViewCameraStrategy implements ICameraStrategy {
             minAzimuthAngle: ctrl.minAzimuthAngle,
             maxAzimuthAngle: ctrl.maxAzimuthAngle,
             fov: camera.fov,
-            screenSpacePanning: ctrl.screenSpacePanning
+            screenSpacePanning: ctrl.screenSpacePanning,
+            maxDistance: ctrl.maxDistance
         };
 
         camera.fov = 30;
@@ -44,7 +46,7 @@ export default class GridViewCameraStrategy implements ICameraStrategy {
 
         const fixedPolarAngle = Math.PI / 8;
         const fixedAzimuthAngle = Math.PI / 4;
-        const distance = 200;
+        const distance = 400;
 
         ctrl.enabled = true;
         ctrl.enablePan = true;
@@ -57,6 +59,7 @@ export default class GridViewCameraStrategy implements ICameraStrategy {
         ctrl.maxPolarAngle = fixedPolarAngle;
         ctrl.minAzimuthAngle = fixedAzimuthAngle;
         ctrl.maxAzimuthAngle = fixedAzimuthAngle;
+        ctrl.maxDistance = 800;
         broker.setInputPreset(CameraInputPreset.RtsPan);
 
         const target = ctrl.target;
@@ -86,6 +89,7 @@ export default class GridViewCameraStrategy implements ICameraStrategy {
         ctrl.maxPolarAngle = this.savedSettings.maxPolarAngle;
         ctrl.minAzimuthAngle = this.savedSettings.minAzimuthAngle;
         ctrl.maxAzimuthAngle = this.savedSettings.maxAzimuthAngle;
+        ctrl.maxDistance = this.savedSettings.maxDistance;
 
         ctrl.update();
         this.savedSettings = null;

@@ -356,13 +356,16 @@ faction이 전략 은하에 제공하는 정보:
 // strategicgalaxy/strategicfleetstate.ts 에 정의
 export type StrategicFleetState = {
   id: string;
+  name?: string;
   factionId: FactionId;
   currentPlanetId: string;
   targetPlanetId?: string;
   routeId?: string;          // 이동 중일 때 사용 중인 항로
-  mission: "patrol" | "escort" | "blockade" | "reinforce" | "raid";
+  mission: "idle" | "patrol" | "escort" | "blockade" | "reinforce" | "raid" | "attack" | "repair";
   strength: number;
   readiness: number;
+  hullRatio: number;
+  supply: number;
   etaTurns?: number;         // 목표 행성까지 남은 턴 수
   linkedFleetWorldId?: string; // 전술 전투 런타임과 연결된 FleetWorld ID
 };
@@ -404,6 +407,398 @@ export type GalaxyPlanetViewModel = {
 
 이 view model은 `StrategicGalaxyManager` 또는 별도 projection 함수가 만듭니다. `world/galaxy`는 이 값을 표시만 합니다.
 
+## Strategic Galaxy Mode
+
+`strategicgalaxy` 모드는 은하 지도를 보면서 행성, 항로, 진영 영향력, 전략 함대 상태를 확인하고 명령을 내리는 작전 화면입니다.
+
+핵심 목표:
+
+```txt
+- 우주 맵에서 행성과 항로를 보여준다.
+- 행성을 선택하면 상세 정보를 보여준다.
+- 행성/항로/함대 상태를 보고 공격, 이동, 정비, 방어, 봉쇄 명령을 내린다.
+- 명령 결과를 턴 처리에서 계산하고 view model 갱신 이벤트로 UI를 갱신한다.
+- 전술 전투가 필요할 때만 gameobjects/fleet 런타임으로 진입한다.
+```
+
+### 우주 맵 표시
+
+`world/galaxy`는 전략 은하 view model을 받아 시각화합니다.
+
+필요한 표시 요소:
+
+```txt
+- 행성 노드
+- 행성 이름과 진영 색상
+- 선택된 행성 focus ring
+- 인접 행성 강조
+- 항로 연결선
+- 전선/경합 항로 강조
+- 봉쇄 항로 표시
+- 교역 가치 또는 traffic 표시
+- 행성별 주둔 함대 아이콘
+- 이동 중인 함대의 route progress 표시
+- 위험도, 요충지, 특수 자원 badge
+```
+
+표현 책임은 `world/galaxy`에 두되, 어떤 행성이 경합 상태인지, 어떤 항로가 봉쇄 상태인지, 어떤 함대가 주둔 중인지는 `StrategicGalaxyManager`가 만든 view model에서 받아옵니다.
+
+### 행성 선택과 상세 정보
+
+행성을 선택하면 상세 패널을 열고 다음 정보를 표시합니다.
+
+```txt
+개요
+- 행성 이름
+- 설명
+- 현재 장악 진영
+- 경합 여부
+- 경제력, 산업력, 방어력, 인구
+- 안정도와 봉쇄 수치
+- 특수 자원
+
+진영
+- faction influence 비율
+- 장악/경합 상태
+- 인접 적대 진영 압박
+- 최근 영향력 변화
+
+함대
+- 주둔 함대 목록
+- 이동 중인 아군/적군 함대
+- 함대 전력, 준비도, hullRatio, supply
+- 실행 가능한 함대 명령
+
+항로
+- 연결된 행성
+- traffic
+- security
+- blockadeLevel
+- tradeValue
+- 이동 가능 여부
+
+시장
+- 수요
+- 공급
+- 포화도
+- 가격 압력
+- 특수 자원 배분
+
+로그
+- 최근 턴 변화
+- 전투 결과
+- 봉쇄/정비/이동 완료 기록
+```
+
+권장 상세 view model:
+
+```ts
+export type StrategicPlanetDetailViewModel = {
+  planet: GalaxyPlanetViewModel;
+  stability: number;
+  blockadeLevel: number;
+  influence: Record<FactionId, number>;
+  stationedFleets: StrategicFleetViewModel[];
+  incomingFleets: StrategicFleetViewModel[];
+  routes: StrategicRouteViewModel[];
+  market: PlanetMarketState;
+  recentLogs: StrategicGalaxyLogEntry[];
+  availableCommands: StrategicPlanetCommandViewModel[];
+};
+
+export type StrategicFleetViewModel = {
+  id: string;
+  name: string;
+  factionId: FactionId;
+  currentPlanetId: string;
+  targetPlanetId?: string;
+  mission: StrategicFleetState["mission"];
+  strength: number;
+  readiness: number;
+  hullRatio: number;
+  supply: number;
+  etaTurns?: number;
+  canReceiveOrders: boolean;
+};
+
+export type StrategicRouteViewModel = {
+  id: string;
+  fromPlanetId: string;
+  toPlanetId: string;
+  traffic: number;
+  security: number;
+  blockadeLevel: number;
+  tradeValue: number;
+  passable: boolean;
+};
+
+export type StrategicPlanetCommandViewModel = {
+  id: string;
+  label: string;
+  kind: "move" | "attack" | "defend" | "patrol" | "blockade" | "escort" | "reinforce" | "repair";
+  enabled: boolean;
+  disabledReason?: string;
+  preview?: string;
+};
+
+export type StrategicGalaxyLogEntry = {
+  turn: number;
+  source: "planet" | "route" | "fleet" | "faction" | "market";
+  message: string;
+};
+```
+
+### 행성 명령
+
+행성 상세 패널에서는 현재 선택 상태에 따라 가능한 명령만 보여줍니다.
+
+기본 명령:
+
+```txt
+이동
+- 선택한 아군 함대를 이 행성으로 이동시킨다.
+- 항로 연결, ETA, 위험도를 표시한다.
+
+공격
+- 적 함대 또는 적대 행성 방어군을 공격한다.
+- 예상 승률, 예상 손실, 전투 발생 조건을 표시한다.
+
+방어 배치
+- 함대를 행성 방어 임무로 전환한다.
+- 행성 defense와 security에 보정치를 준다.
+
+초계
+- 주변 항로 security를 높인다.
+- 매복과 약탈 위험을 낮춘다.
+
+봉쇄
+- 적 행성의 tradeValue, supply, stability에 압박을 준다.
+- 전쟁 또는 적대 관계일 때만 허용한다.
+
+호위
+- 특정 교역 항로 또는 이동 중인 아군 함대를 보호한다.
+
+증원
+- 경합 행성 또는 방어가 약한 아군 행성으로 함대를 보낸다.
+
+정비
+- 조선소, 산업 행성, 아군 기지에서 hull, readiness, supply를 회복한다.
+
+전술 전투 진입
+- 교전 조건이 충족되면 FleetWorldOptions를 만들어 gameobjects/fleet 전투로 진입한다.
+```
+
+명령은 UI 상태가 아니라 저장 가능한 전략 명령으로 관리합니다.
+
+```ts
+export type StrategicFleetOrder =
+  | StrategicFleetMoveOrder
+  | StrategicFleetAttackOrder
+  | StrategicFleetMaintenanceOrder
+  | StrategicFleetMissionOrder;
+
+export type StrategicFleetMoveOrder = {
+  type: "move";
+  fleetId: string;
+  fromPlanetId: string;
+  toPlanetId: string;
+  routeIds: string[];
+  etaTurns: number;
+};
+
+export type StrategicFleetAttackOrder = {
+  type: "attack";
+  fleetId: string;
+  targetPlanetId?: string;
+  targetFleetId?: string;
+  estimatedWinRate: number;
+  riskLevel: number;
+};
+
+export type StrategicFleetMaintenanceOrder = {
+  type: "maintenance";
+  fleetId: string;
+  planetId: string;
+  kind: "repairHull" | "restoreReadiness" | "resupply" | "refit" | "merge" | "split";
+  cost: Partial<Record<CurrencyType, number>>;
+  durationTurns: number;
+};
+
+export type StrategicFleetMissionOrder = {
+  type: "mission";
+  fleetId: string;
+  mission: StrategicFleetState["mission"];
+  planetId?: string;
+  routeId?: string;
+};
+```
+
+### 공격 명령 흐름
+
+공격 명령은 바로 전술 전투로 들어가지 않고 전략 명령으로 먼저 저장합니다.
+
+```txt
+1. 아군 함대를 선택한다.
+2. 목표 행성 또는 적 함대를 선택한다.
+3. 항로 연결 여부를 확인한다.
+4. ETA, 위험도, 예상 승률, 예상 손실을 표시한다.
+5. 공격 명령을 확정한다.
+6. StrategicFleetState.mission을 "attack"으로 설정한다.
+7. 턴 진행 중 이동과 교전 조건을 계산한다.
+8. 전투가 필요하면 FleetWorldOptions를 만든다.
+9. gameobjects/fleet 전술 전투를 실행한다.
+10. battle result를 StrategicFleetState와 StrategicPlanetState에 반영한다.
+```
+
+공격 가능 조건:
+
+```txt
+- 선택된 아군 함대가 있다.
+- 목표가 적대 진영, 전쟁 상태, 또는 공격 가능한 중립 목표다.
+- 함대 readiness가 최소 기준 이상이다.
+- 목표까지 이동 가능한 항로가 있다.
+- 함대가 정비 중이거나 이미 다른 고정 임무를 수행 중이지 않다.
+- 봉쇄나 route security 때문에 이동 불가 상태가 아니다.
+```
+
+### 함대 정비
+
+함대 정비는 전략 모드에서 중요한 회복/준비도 관리 기능입니다.
+
+정비로 회복할 수 있는 값:
+
+```txt
+- hullRatio
+- readiness
+- supply
+- 무기 재장전 상태
+- 손상 함선 수
+- 함대 편성 효율
+```
+
+정비 가능 조건:
+
+```txt
+- 현재 행성이 아군 또는 정비 가능한 중립 행성이다.
+- 행성 industry가 충분하거나 shipyardContract 같은 특수 자원이 있다.
+- 행성이 심한 봉쇄 상태가 아니다.
+- 필요한 자원 또는 진영 treasury가 충분하다.
+- 함대가 전투 중이거나 이동 중이 아니다.
+```
+
+정비 명령 종류:
+
+```txt
+repairHull
+- hullRatio를 회복한다.
+
+restoreReadiness
+- readiness를 회복한다.
+
+resupply
+- supply를 회복한다.
+
+refit
+- 함대의 기본 편대, doctrine, 함선 구성을 조정한다.
+
+merge
+- 같은 행성의 아군 함대를 합친다.
+
+split
+- 함대를 여러 임무 단위로 나눈다.
+```
+
+### 이동과 항로
+
+전략 은하에서 함대 이동은 항로 기반입니다.
+
+```txt
+- 연결된 행성으로만 이동한다.
+- 긴 이동은 여러 route를 통과하는 path로 계산한다.
+- route distance, security, blockadeLevel로 ETA와 위험도를 계산한다.
+- 적대 항로를 통과하면 매복, 지연, 소모, 전투가 발생할 수 있다.
+- 이동 중인 함대는 currentPlanetId와 routeId, targetPlanetId를 함께 가진다.
+- 도착하면 routeId를 비우고 currentPlanetId를 갱신한다.
+```
+
+경로 미리보기에는 다음 정보를 표시합니다.
+
+```txt
+- 도착 예정 턴
+- 통과 항로 목록
+- 평균 security
+- 봉쇄 위험
+- 예상 supply 소모
+- 적 함대 조우 가능성
+```
+
+### 예측과 미리보기
+
+전략 명령은 확정 전에 결과를 예측해서 보여주는 것이 좋습니다.
+
+```txt
+공격 미리보기
+- 예상 승률
+- 예상 손실
+- 전투 발생 위치
+- 승리 시 행성 영향력 변화
+- 패배 시 readiness 손실
+
+이동 미리보기
+- ETA
+- route 위험도
+- supply 소모
+- 도착 후 가능한 임무
+
+정비 미리보기
+- 비용
+- 소요 턴
+- 완료 후 hullRatio/readiness/supply
+
+봉쇄 미리보기
+- 대상 행성 tradeValue 감소
+- stability 압박
+- 적 supply 감소
+- 외교 관계 악화 가능성
+```
+
+예:
+
+```txt
+Atlas 공격
+- 도착: 2턴 후
+- 예상 승률: 64%
+- 위험: Hades 항로 봉쇄 +18%
+- 승리 시: Atlas contested 해제 가능
+- 패배 시: Alpha Fleet readiness -40%
+```
+
+### 권장 UI 구조
+
+행성 상세 패널은 탭 구조를 권장합니다.
+
+```txt
+개요
+- 행성 기본 정보, 진영, 자원, 주요 스탯
+
+진영
+- influence 비율, 장악/경합 상태, 관계
+
+함대
+- 주둔 함대, 이동 중인 함대, 선택/공격/정비 명령
+
+항로
+- 연결 행성, traffic, security, blockade, tradeValue
+
+시장
+- 수요, 공급, 가격 압력, 특수 자원
+
+로그
+- 최근 턴 변화, 전투 결과, 봉쇄/정비 완료 기록
+```
+
+1차 UI는 `개요`와 `함대` 탭만 구현해도 충분합니다. 이후 전투, 교역, 진영 시스템이 붙을 때 나머지 탭을 확장합니다.
+
 ## 턴 처리
 
 전략 은하 시스템은 도시와 진영, 함대 결과를 모아 행성 상태를 갱신합니다.
@@ -414,8 +809,13 @@ export type GalaxyPlanetViewModel = {
 3. 도시별 localInfluence contribution을 계산한다.
 4. factionInfluence와 controllingFactionId를 갱신한다.
 5. 항로 traffic, tradeValue, security, blockade를 갱신한다.
-6. 전략 함대 이동과 임무 효과를 처리한다.
-7. galaxy view model 갱신 이벤트를 발행한다.
+6. 전략 함대 이동 ETA와 route progress를 처리한다.
+7. 정비, 보급, refit 진행도를 처리한다.
+8. 초계, 호위, 봉쇄, 증원 같은 전략 임무 효과를 적용한다.
+9. 공격 명령과 적대 함대 조우를 보고 전투 발생 조건을 확인한다.
+10. 필요한 경우 FleetWorld 전술 전투 입력 데이터를 만든다.
+11. 전투 결과가 있으면 StrategicFleetState와 StrategicPlanetState에 반영한다.
+12. galaxy view model 갱신 이벤트를 발행한다.
 ```
 
 권장 이벤트:
@@ -437,5 +837,10 @@ GalaxyViewModelUpdated
 4. `RivalCityManager`의 도시 output을 받아 localInfluence를 계산한다.
 5. `FactionManager`의 factionId와 정책을 받아 factionInfluence를 계산한다.
 6. `world/galaxy`로 넘길 view model 타입을 정의한다.
-7. 실제 렌더링 연결은 view model 이벤트만 먼저 발행하고 후속 단계로 둔다.
+7. strategicgalaxy mode에서 우주 맵을 표시하고 행성 선택 이벤트를 연결한다.
+8. 선택 행성 상세 패널에 개요와 함대 탭을 표시한다.
+9. `StrategicFleetState`와 주둔 함대 목록을 view model에 포함한다.
+10. 이동 명령과 정비 명령을 먼저 구현한다.
+11. 공격 명령은 예상 승률/위험도 preview부터 구현한다.
+12. 전투 발생 시 `gameobjects/fleet`의 `FleetWorldOptions`로 투영하는 adapter를 추가한다.
 ```
