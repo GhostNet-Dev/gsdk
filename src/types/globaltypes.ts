@@ -20,57 +20,39 @@ export enum AppMode {
 }
 
 export enum EventTypes {
-    // play를 제어한다. 0 정지, n: n배속
-    TimeCtrl = "time",
-    // ui에 전달할 정보들이다. health, coin등등이 있다. 
-    UiInfo = "uiinfo",
+    // 🎮 1. 입력 및 컨트롤 (Input & Control)
     KeyDown = "keydown",
     KeyUp = "keyup",
     Input = "input",
     InputButtonEnable = "inputbtnenable",
     InputHookOnce = "inputhookonce",
     InputHookRemove = "inputhookremove",
+    JoypadOn = "joypadon",
+    JoypadOff = "joypadoff",
+    SetControlSource = "setcontrolsource",
+    IssueControllableCommand = "issuectrlcmd",
+    IssueControllableGroupCommand = "issuectrlgroupcmd",
 
-    CtrlObj = "ctrlObj",
-    CtrlObjOff = "ctrlObjOff",
+    // 🎥 2. 카메라 및 뷰포트 (Camera & View)
     OrbitControlsOnOff = "orbitcontrols",
     CameraMode = "cameramode",
     CameraInputPreset = "camerainputpreset",
     CameraTrackTarget = "cameratracktarget",
     AimOverlay = "aimoverlay",
 
-    // bloom효과를 제거해야하는 객체를 등록
-    SetNonGlow = "nonglow",
-    SetGlow = "glow",
-    Outline = "outline",
+    // 🏗️ 3. 건설 및 그리드 (Building & Grid)
+    ShowGrid = "showgrid",
+    HideGrid = "hidegrid",
+    HighlightGrid = "highlightgrid",
+    GridArrowClick = "gridarrowclick",
+    ShowBuildingInfo = "showbuildinginfo",
+    RequestBuilding = "requestbuilding",
+    ResponseBuilding = "responsebuilding",
+    BuildRequirementValidatorReady = "buildreqvalidatorready",
+    RequestUpgrade = "requestupgrade",
+    UpgradeComplete = "upgradecomplete",
 
-    Equipment = "Equip",
-    Unequipment = "unequip",
-    // item이 drop 해야될 때 
-    Drop = "drop",
-    DirectDrop = "directdrop",
-    Pickup = "pickup",
-    Reward = "reward",
-    // item이 사용되는 때
-    UseItem = "useitem",
-    DiscardItem = "discarditem",
-
-    BrickInfo = "bsize",
-    TerrainInfo = "tsize",
-
-    //reward
-    Exp = "exp",
-    People = "people",
-    Gold = "gold",
-    Wood = "wood",
-    Stone = "stone",
-    Water = "water",
-    Electric = "electric",
-    Food = "food",
-    LevelUp = "levelup",
-    AddSkillPoint = "addskillp",
-
-    // Battle
+    // ⚔️ 4. 전투 및 스킬 (Combat & Skills)
     Attack = "attack",
     AreaOfEffect = "AOE",
     UpdateBuff = "updatebuff",
@@ -83,31 +65,79 @@ export enum EventTypes {
     ActionAttach = "actionattach",
     ActionDettach = "actiondetach",
     ResourceChanged = "resourcechanged",
-    // player와 상호작용하는 객체 Attackable, Interatable
-    AddInteractive = "addinter",
-    DelInteractive = "delinter",
-    // 상호작용에 의해 Player 모드 변경 
     ChangePlayerMode = "chgplayermod",
-    // player와 상호작용하는 객체 interatable
-    CheckInteraction = "checkinter",
-    DoInteraction = "dointer",
-    ActiveInteraction = "actinter",
-
-    SceneClear = "clear",
-    Reload = "reload",
-    AppMode = "appmode",
-    PlayMode = "playmode",
-    PlayerStatus = "playerstatus",
     Projectile = "Projectile",
     RegisterTarget = "registertarget",
     DeregisterTarget = "deregistertarget",
     UpdateTargetState = "updatetargetstate",
     UpdateTargetObject = "updatetargetobject",
     RegisterTargetSystem = "registertargetsystem",
-    JoypadOn = "joypadon",
-    JoypadOff = "joypadoff",
 
-    // Message
+    // 💰 5. 자원 및 보상 (Resources & Rewards)
+    Exp = "exp",
+    People = "people",
+    Gold = "gold",
+    Wood = "wood",
+    Stone = "stone",
+    Water = "water",
+    Electric = "electric",
+    Food = "food",
+    LevelUp = "levelup",
+    AddSkillPoint = "addskillp",
+    ResourceChangeRequested = "resourcechangereq",
+    ResourceAmountChanged = "resourceamountchanged",
+
+    // 🎒 6. 아이템 및 상호작용 (Inventory & Interaction)
+    Equipment = "Equip",
+    Unequipment = "unequip",
+    Drop = "drop",
+    DirectDrop = "directdrop",
+    Pickup = "pickup",
+    Reward = "reward",
+    UseItem = "useitem",
+    DiscardItem = "discarditem",
+    AddInteractive = "addinter",
+    DelInteractive = "delinter",
+    CheckInteraction = "checkinter",
+    DoInteraction = "dointer",
+    ActiveInteraction = "actinter",
+    CampfireCtrl = "campfire",
+    CampfireInteract = "campfireinter",
+    FlameCtrl = "flamectrl",
+    FlameInteract = "flameinter",
+
+    // 🔄 7. 게임 루프 및 턴 시스템 (Game Loop & Turn System)
+    TimeCtrl = "time",
+    RegisterLoop = "regloop",
+    DeregisterLoop = "deregloop",
+    TurnNext = "turnnext",
+    TurnEnded = "turnended",
+    TurnReportUpdated = "turnreportupdated",
+    RegisterTurnParticipant = "regturnparticipant",
+    DeregisterTurnParticipant = "deregturnparticipant",
+
+    // 🌍 8. 물리 및 렌더링 (Physics, Rendering & VFX)
+    CtrlObj = "ctrlObj",
+    CtrlObjOff = "ctrlObjOff",
+    SetNonGlow = "nonglow",
+    SetGlow = "glow",
+    Outline = "outline",
+    RegisterLandPhysic = "reglphysic",
+    RegisterPhysic = "regphysic",
+    RegisterPhysicBox = "regphysicb",
+    DeregisterPhysic = "deregphysic",
+    GlobalEffect = "globaleffect",
+    DarkParticle = "darkparticle",
+
+    // 📢 9. UI, 시스템 상태 및 퀘스트 (UI & System Messages)
+    UiInfo = "uiinfo",
+    BrickInfo = "bsize",
+    TerrainInfo = "tsize",
+    SceneClear = "clear",
+    Reload = "reload",
+    AppMode = "appmode",
+    PlayMode = "playmode",
+    PlayerStatus = "playerstatus",
     AlarmWarning = "alarmwarning",
     AlarmNormal = "alarmnormal",
     AlarmBig = "alarmbig",
@@ -119,38 +149,19 @@ export enum EventTypes {
     Spinner = "spin",
     DebugOut = "debugout",
     DebugVar = "debugv",
-
-    // Quest Event
     QuestStateChanged = "queststate",
     QuestProcessChanged = "questpro",
     QuestComplete = "questcomp",
     Confetti = "confetti",
-
-    // 주기적으로 호출되는 함수 등록
-    RegisterLoop = "regloop",
-    DeregisterLoop = "deregloop",
-    // 턴제로 호출되는 모듈 등록
-    TurnNext = "turnnext",
-    TurnEnded = "turnended",
-    TurnReportUpdated = "turnreportupdated",
-    RegisterTurnParticipant = "regturnparticipant",
-    DeregisterTurnParticipant = "deregturnparticipant",
-    ResourceChangeRequested = "resourcechangereq",
-    ResourceAmountChanged = "resourceamountchanged",
-    // resize가 필요한 요소
     RegisterViewer = "regviewer",
+    GameCenter = "gcenter",
 
-    // 물리적인 충돌 검사가 필요한 객체 
-    RegisterLandPhysic = "reglphysic",
-    RegisterPhysic = "regphysic",
-    RegisterPhysicBox = "regphysicb",
-    DeregisterPhysic = "deregphysic",
-
-    // AI를 제어하는 함수들
+    // 🤖 10. AI 에이전트 제어 (AI Agents)
     AgentEpisode = "agentep",
     AgentSave = "agentsv",
     AgentLoad = "agentld",
 
+    // ⏳ 11. 로딩 및 진행도 (Loading)
     LoadingProgress = "loading",
     RegisterLoadingItems = "regloaditems",
     RegisterLoadingCompleteItem = "regcompitems",
@@ -159,44 +170,14 @@ export enum EventTypes {
     LoadingStart = "loadingstart",
     ShowProgress = "showprogress",
 
-    // Sounds
+    // 🎵 12. 사운드 및 환경 (Audio & Environment)
     RegisterSound = "sound",
     RegisterSoundListener = "soundlis",
     PlaySound = "soundplay",
     PlayBGM = "soundbgm",
     StopBGM = "stopbgm",
     AllStopBGM = "allstopbgm",
-    // Environment
     DayNightCtrl = "daynight",
-
-    // Grid
-    ShowGrid = "showgrid",
-    HideGrid = "hidegrid",
-    HighlightGrid = "highlightgrid",
-    GridArrowClick = "gridarrowclick",
-    ShowBuildingInfo = "showbuildinginfo",
-    RequestBuilding = "requestbuilding",
-    ResponseBuilding = "responsebuilding",
-    BuildRequirementValidatorReady = "buildreqvalidatorready",
-    RequestUpgrade = "requestupgrade",
-    UpgradeComplete = "upgradecomplete",
-
-    // VFX
-    GlobalEffect = "globaleffect",
-
-    // Interactor를 제어하는 함수들
-    CampfireCtrl = "campfire",
-    CampfireInteract = "campfireinter",
-    FlameCtrl = "flamectrl",
-    FlameInteract = "flameinter",
-    DarkParticle = "darkparticle",
-
-    // Controllable actor control
-    SetControlSource = "setcontrolsource",
-    IssueControllableCommand = "issuectrlcmd",
-    IssueControllableGroupCommand = "issuectrlgroupcmd",
-
-    GameCenter = "gcenter",
 }
 
 export enum UiInfoType {
