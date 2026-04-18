@@ -7,6 +7,7 @@ import { IEnvironmentObject } from "./ienvironmentobj";
 import { Tree } from "./environmentobjs/tree";
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise';
 import { PlacementManager } from "@Glibs/interactives/placement/placementmanager";
+import { collectCircularGridCellKeys, getFootprintGridCellKeys, hasGridCellOverlap } from "@Glibs/interactives/placement/gridrangeutils";
 
 export type EnvironmentResourceQuery = {
     environmentIds?: readonly string[];
@@ -616,6 +617,26 @@ export class EnvironmentManager implements ILoop {
             if (resourceTypes && !resourceTypes.has(obj.property.resourceType)) return false;
             return true;
         });
+    }
+
+    getResourceObjectsOverlappingGridRange(pos: THREE.Vector3, radius: number, query: EnvironmentResourceQuery = {}): IEnvironmentObject[] {
+        const environmentIds = query.environmentIds ? new Set(query.environmentIds) : undefined;
+        const resourceTypes = query.resourceTypes ? new Set(query.resourceTypes) : undefined;
+        const minAmount = query.minAmount ?? 1;
+        const rangeCells = collectCircularGridCellKeys(pos, radius, this.gridSize);
+        if (rangeCells.size === 0) return [];
+
+        return PlacementManager.Instance.getFootprints('environment').reduce<IEnvironmentObject[]>((matches, footprint) => {
+            const obj = this.envObjects.get(footprint.id);
+            if (!obj || obj.isDepleted) return matches;
+            if (obj.currentAmount < minAmount) return matches;
+            if (environmentIds && !environmentIds.has(obj.property.id)) return matches;
+            if (resourceTypes && !resourceTypes.has(obj.property.resourceType)) return matches;
+
+            const footprintCells = getFootprintGridCellKeys(footprint.pos, footprint.width, footprint.depth, this.gridSize);
+            if (hasGridCellOverlap(rangeCells, footprintCells)) matches.push(obj);
+            return matches;
+        }, []);
     }
 
     update(delta: number) {

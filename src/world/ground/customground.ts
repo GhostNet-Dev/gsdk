@@ -9,6 +9,7 @@ import { Char } from '@Glibs/loader/assettypes';
 import { BuildingProperty, buildingDefs } from '../../interactives/building/buildingdefs';
 import { PlacementManager } from '../../interactives/placement/placementmanager';
 import { BuildRequirementValidator, validateBuildRequirements } from '../../interactives/building/buildrequirementvalidator';
+import { collectCircularGridCells, gridCellCenter, gridCellKey } from '../../interactives/placement/gridrangeutils';
 
 /* ----------------------------- Helpers ----------------------------- */
 function toU8(a: Uint8Array | Uint8ClampedArray): Uint8Array {
@@ -127,6 +128,10 @@ export default class CustomGround implements IWorldMapObject {
   private existingBuildRangeOverlayCapacity = 0;
   private previewBuildRangeOverlay?: THREE.InstancedMesh;
   private previewBuildRangeOverlayCapacity = 0;
+  private existingResourceRangeOverlay?: THREE.InstancedMesh;
+  private existingResourceRangeOverlayCapacity = 0;
+  private previewResourceRangeOverlay?: THREE.InstancedMesh;
+  private previewResourceRangeOverlayCapacity = 0;
 
   // 브러시/스케일
   scale = 0.5;
@@ -179,6 +184,7 @@ export default class CustomGround implements IWorldMapObject {
     this.eventCtrl.RegisterEventListener(EventTypes.ResponseBuilding, (items: any[]) => {
       this.refreshPlacementRanges();
       this.updateExistingBuildRangeOverlay();
+      this.updateExistingResourceRangeOverlay();
       if (this.gridHelper?.visible) this.updateEnvironmentOccupancyOverlay();
 
       if (this.highlightMesh && this.highlightMesh.visible) {
@@ -319,39 +325,75 @@ export default class CustomGround implements IWorldMapObject {
     return this.previewBuildRangeOverlay;
   }
 
-  private collectBuildRangeCells(ranges: Array<{ pos: THREE.Vector3, buildRange: number }>): THREE.Vector3[] {
+  private ensureExistingResourceRangeOverlay(count: number): THREE.InstancedMesh {
+    const capacity = Math.max(1, count);
+    if (this.existingResourceRangeOverlay && this.existingResourceRangeOverlayCapacity >= capacity) {
+      return this.existingResourceRangeOverlay;
+    }
+
+    if (this.existingResourceRangeOverlay) this.disposeMesh(this.existingResourceRangeOverlay);
+
+    this.existingResourceRangeOverlay = this.createCellOverlay(capacity, 0x78ff6d, 0.10);
+    this.existingResourceRangeOverlayCapacity = capacity;
+    return this.existingResourceRangeOverlay;
+  }
+
+  private ensurePreviewResourceRangeOverlay(count: number): THREE.InstancedMesh {
+    const capacity = Math.max(1, count);
+    if (this.previewResourceRangeOverlay && this.previewResourceRangeOverlayCapacity >= capacity) {
+      return this.previewResourceRangeOverlay;
+    }
+
+    if (this.previewResourceRangeOverlay) this.disposeMesh(this.previewResourceRangeOverlay);
+
+    this.previewResourceRangeOverlay = this.createCellOverlay(capacity, 0xa6ff4d, 0.22);
+    this.previewResourceRangeOverlayCapacity = capacity;
+    return this.previewResourceRangeOverlay;
+  }
+
+  private collectCircularRangeCells(ranges: Array<{ pos: THREE.Vector3, radiusWorld: number }>): THREE.Vector3[] {
     if (!this.obj) return [];
 
-    const s = this.gridSize / this.scale;
     const visited = new Set<string>();
     const cells: THREE.Vector3[] = [];
 
     for (const range of ranges) {
-      const providerLocal = this.obj.worldToLocal(range.pos.clone());
-      const baseGx = Math.floor(providerLocal.x / s);
-      const baseGz = Math.floor(providerLocal.z / s);
-      const cellRadius = Math.ceil(range.buildRange);
-      const worldRadius = range.buildRange * this.gridSize;
+      for (const cell of collectCircularGridCells(range.pos, range.radiusWorld, this.gridSize)) {
+        const key = gridCellKey(cell);
+        if (visited.has(key)) continue;
 
-      for (let dx = -cellRadius; dx <= cellRadius; dx++) {
-        for (let dz = -cellRadius; dz <= cellRadius; dz++) {
-          const gx = baseGx + dx;
-          const gz = baseGz + dz;
-          const key = `${gx},${gz}`;
-          if (visited.has(key)) continue;
-
-          const localX = gx * s + s * 0.5;
-          const localZ = gz * s + s * 0.5;
-          const worldCenter = this.obj.localToWorld(new THREE.Vector3(localX, 0, localZ));
-          if (worldCenter.distanceTo(range.pos) > worldRadius) continue;
-
-          visited.add(key);
-          cells.push(new THREE.Vector3(localX, 0, localZ));
-        }
+        const localCenter = this.obj.worldToLocal(gridCellCenter(cell, this.gridSize));
+        visited.add(key);
+        cells.push(new THREE.Vector3(localCenter.x, 0, localCenter.z));
       }
     }
 
     return cells;
+  }
+
+  private collectBuildRangeCells(ranges: Array<{ pos: THREE.Vector3, buildRange: number }>): THREE.Vector3[] {
+    return this.collectCircularRangeCells(
+      ranges.map(range => ({ pos: range.pos, radiusWorld: range.buildRange * this.gridSize }))
+    );
+  }
+
+  private getResourceRange(property?: BuildingProperty): number | undefined {
+    const ranges = [
+      ...(property?.buildRequirements?.nearbyResources?.map(req => req.range) ?? []),
+      property?.production?.collectionRange,
+    ].filter((range): range is number => typeof range === 'number' && Number.isFinite(range) && range > 0);
+
+    return ranges.length > 0 ? Math.max(...ranges) : undefined;
+  }
+
+  private collectExistingResourceRanges(): Array<{ pos: THREE.Vector3, radiusWorld: number }> {
+    return PlacementManager.Instance.getFootprints('building')
+      .filter(footprint => footprint.state !== 'pending')
+      .map(footprint => {
+        const radiusWorld = this.getResourceRange(this.getBuildingProperty(footprint.nodeId));
+        return radiusWorld ? { pos: footprint.pos.clone(), radiusWorld } : undefined;
+      })
+      .filter((range): range is { pos: THREE.Vector3, radiusWorld: number } => !!range);
   }
 
   private writeCellOverlayMatrices(overlay: THREE.InstancedMesh, cells: THREE.Vector3[], y: number) {
@@ -379,14 +421,30 @@ export default class CustomGround implements IWorldMapObject {
     this.writeCellOverlayMatrices(overlay, cells, 0.16);
   }
 
+  private updateExistingResourceRangeOverlay() {
+    const cells = this.collectCircularRangeCells(this.collectExistingResourceRanges());
+    const overlay = this.ensureExistingResourceRangeOverlay(cells.length);
+    this.writeCellOverlayMatrices(overlay, cells, 0.14);
+  }
+
   private updatePreviewBuildRangeOverlay(pos: THREE.Vector3, buildRange: number) {
     const cells = this.collectBuildRangeCells([{ pos, buildRange }]);
     const overlay = this.ensurePreviewBuildRangeOverlay(cells.length);
     this.writeCellOverlayMatrices(overlay, cells, 0.18);
   }
 
+  private updatePreviewResourceRangeOverlay(pos: THREE.Vector3, radiusWorld: number) {
+    const cells = this.collectCircularRangeCells([{ pos, radiusWorld }]);
+    const overlay = this.ensurePreviewResourceRangeOverlay(cells.length);
+    this.writeCellOverlayMatrices(overlay, cells, 0.20);
+  }
+
   private hidePreviewBuildRangeOverlay() {
     if (this.previewBuildRangeOverlay) this.previewBuildRangeOverlay.visible = false;
+  }
+
+  private hidePreviewResourceRangeOverlay() {
+    if (this.previewResourceRangeOverlay) this.previewResourceRangeOverlay.visible = false;
   }
 
   private onPointerDown = (e: PointerEvent) => {
@@ -410,14 +468,11 @@ export default class CustomGround implements IWorldMapObject {
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
 
-    console.log('[Arrow] arrowGroup children:', this.arrowGroup.children.length, '| mouse:', this.mouse.x.toFixed(3), this.mouse.y.toFixed(3));
 
     const intersectsArrow = this.raycaster.intersectObjects(this.arrowGroup.children, true);
-    console.log('[Arrow] intersectsArrow count:', intersectsArrow.length, intersectsArrow.map(i => i.object.name));
     if (intersectsArrow.length > 0) {
         const arrow = intersectsArrow[0].object;
         const dir = arrow.name.split('_').pop();
-        console.log('[Arrow] HIT → dir:', dir, '| object.name:', arrow.name);
 
         const worldDelta = new THREE.Vector3();
         if (dir === 'N') worldDelta.z = -this.gridSize;
@@ -447,13 +502,11 @@ export default class CustomGround implements IWorldMapObject {
 
     const intersectsHighlight = this.raycaster.intersectObject(this.highlightMesh);
     if (intersectsHighlight.length > 0) {
-        console.log('[Arrow] MISS → highlight mesh 클릭');
         return;
     }
 
     const intersectsGround = this.raycaster.intersectObject(this.obj);
     if (intersectsGround.length > 0) {
-        console.log('[Arrow] MISS → ground 클릭');
         const oldWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
         this.HighlightGrid(intersectsGround[0].point, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
         const newWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
@@ -464,7 +517,6 @@ export default class CustomGround implements IWorldMapObject {
         return;
     }
 
-    console.log('[Arrow] MISS → 하늘 클릭 (HideGrid)');
     // 캔버스를 클릭했지만 지면(Ground)을 빗맞춘 경우 (예: 하늘 클릭) 배치 취소 및 종료
     this.eventCtrl.SendEventMessage(EventTypes.HideGrid);
   }
@@ -1232,12 +1284,15 @@ export default class CustomGround implements IWorldMapObject {
       }
       if (this.gridHelper) this.gridHelper.visible = true;
       this.updateExistingBuildRangeOverlay();
+      this.updateExistingResourceRangeOverlay();
       this.updateEnvironmentOccupancyOverlay();
     } else {
       if (this.gridHelper) this.gridHelper.visible = false;
       if (this.environmentOccupancyOverlay) this.environmentOccupancyOverlay.visible = false;
       if (this.existingBuildRangeOverlay) this.existingBuildRangeOverlay.visible = false;
       if (this.previewBuildRangeOverlay) this.previewBuildRangeOverlay.visible = false;
+      if (this.existingResourceRangeOverlay) this.existingResourceRangeOverlay.visible = false;
+      if (this.previewResourceRangeOverlay) this.previewResourceRangeOverlay.visible = false;
       this.ClearHighlight();
     }
   }
@@ -1321,6 +1376,7 @@ export default class CustomGround implements IWorldMapObject {
     this.highlightMesh.visible = true;
 
     if (this.existingBuildRangeOverlay) this.existingBuildRangeOverlay.visible = true;
+    if (this.existingResourceRangeOverlay) this.existingResourceRangeOverlay.visible = true;
 
     // [추가] buildRange를 위한 grid overlay 생성 및 업데이트
     // buildingDefs는 Record<string, BuildingProperty> 타입이지만, nodeId가 def의 키와 매칭되어야 합니다.
@@ -1331,6 +1387,13 @@ export default class CustomGround implements IWorldMapObject {
         this.updatePreviewBuildRangeOverlay(worldPosCenter, property.buildRange);
     } else {
         this.hidePreviewBuildRangeOverlay();
+    }
+
+    const resourceRange = this.getResourceRange(property);
+    if (resourceRange) {
+        this.updatePreviewResourceRangeOverlay(worldPosCenter, resourceRange);
+    } else {
+        this.hidePreviewResourceRangeOverlay();
     }
 
     // 점유 상태 체크 및 색상 변경
@@ -1379,6 +1442,8 @@ export default class CustomGround implements IWorldMapObject {
     if (this.highlightMesh) this.highlightMesh.visible = false;
     if (this.previewBuildRangeOverlay) this.previewBuildRangeOverlay.visible = false;
     if (this.existingBuildRangeOverlay) this.existingBuildRangeOverlay.visible = false;
+    if (this.previewResourceRangeOverlay) this.previewResourceRangeOverlay.visible = false;
+    if (this.existingResourceRangeOverlay) this.existingResourceRangeOverlay.visible = false;
     if (this.environmentOccupancyOverlay) this.environmentOccupancyOverlay.visible = false;
     if (this.arrowGroup) this.arrowGroup.visible = false;
   }
@@ -1417,6 +1482,8 @@ export default class CustomGround implements IWorldMapObject {
     }
     if (this.existingBuildRangeOverlay) this.disposeMesh(this.existingBuildRangeOverlay);
     if (this.previewBuildRangeOverlay) this.disposeMesh(this.previewBuildRangeOverlay);
+    if (this.existingResourceRangeOverlay) this.disposeMesh(this.existingResourceRangeOverlay);
+    if (this.previewResourceRangeOverlay) this.disposeMesh(this.previewResourceRangeOverlay);
     if (this.highlightMesh) {
       this.highlightMesh.geometry.dispose();
       (this.highlightMesh.material as THREE.Material).dispose();

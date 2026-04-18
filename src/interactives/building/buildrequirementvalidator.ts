@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { BuildingProperty } from "./buildingdefs";
 
 export interface BuildRequirementResourceQuery {
-  getResourceObjectsInRange(
+  getResourceObjectsOverlappingGridRange(
     pos: THREE.Vector3,
     radius: number,
     query?: {
@@ -26,7 +26,7 @@ export class BuildRequirementValidator {
     if (!pos || !nearbyRequirements || nearbyRequirements.length === 0) return { ok: true };
 
     for (const req of nearbyRequirements) {
-      const matches = this.resourceQuery.getResourceObjectsInRange(pos, req.range, {
+      const matches = this.resourceQuery.getResourceObjectsOverlappingGridRange(pos, req.range, {
         environmentIds: req.environmentIds,
         resourceTypes: req.resourceTypes,
         minAmount: req.minAmount,

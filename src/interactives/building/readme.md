@@ -115,6 +115,15 @@ buildRequirements: {
 
 `environmentIds`와 `resourceTypes`를 함께 지정하면 두 조건을 모두 만족하는 환경 자원만 인정합니다.
 
+### 그리드 범위 표시
+
+건설 배치 중에는 두 종류의 범위가 그리드 위에 함께 표시됩니다.
+
+* `buildRange`: 건물을 지을 수 있게 해주는 지원 범위입니다. 기존 건물과 현재 배치 미리보기 모두 청록색 계열로 표시됩니다.
+* `production.collectionRange` / `buildRequirements.nearbyResources[].range`: 제재소나 광산처럼 주변 자원이 필요한 건물의 자원 수집/요구 범위입니다. 기존 완성 건물과 현재 배치 미리보기 모두 연두색 계열로 표시됩니다.
+
+자원 범위는 `production.collectionRange`와 `nearbyResources` 조건 중 가장 큰 `range` 값을 사용합니다. 실제 건설 가능 여부는 자원 오브젝트의 그리드 footprint와 자원 범위 그리드 셀이 하나라도 겹치는지로 판정합니다. 클릭 차단과 미리보기 색상은 같은 `BuildRequirementValidator` 결과를 사용하므로 최종 착공 판정과 같은 기준으로 동작합니다.
+
 현재 적용된 조건은 다음과 같습니다.
 
 * `LumberMill`: 반경 20 안에 목재 자원인 `pine_tree`가 있어야 건설 가능

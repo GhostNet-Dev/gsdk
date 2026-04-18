@@ -19,6 +19,8 @@ export interface ProductionProperty {
     interval: number;                    // 시간제 모드일 때 생산 주기 (초)
     turns: number;                       // 턴제 모드일 때 생산 주기 (턴 수)
     resources: Partial<Record<CurrencyType, number>>; // 생산할 자원 종류와 기본 양
+    collectionRange?: number;            // 주변 환경 자원 수집 반경 (월드 단위)
+    collectionEfficiency?: number;       // 주변 환경 자원 채집 효율
 }
 
 export interface NearbyResourceRequirement {
@@ -203,6 +205,8 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         production: { 
             interval: 5, 
             turns: 1, 
+            collectionRange: 20,
+            collectionEfficiency: 0.5,
             resources: { [CurrencyType.Wood]: 20 } 
         }
     },
@@ -255,6 +259,8 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         production: { 
             interval: 8, 
             turns: 2, 
+            collectionRange: 24,
+            collectionEfficiency: 0.5,
             resources: { [CurrencyType.Gems]: 1, [CurrencyType.Materials]: 15 } 
         }
     },
