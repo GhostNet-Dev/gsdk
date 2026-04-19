@@ -54,6 +54,11 @@ export default class TurnManager {
       log: {
         add: (entry) => this.addLog(report, entry),
       },
+      shared: {
+        factionModifiers: {},
+        cityOutputs: {},
+        planetOutputs: {},
+      },
     };
 
     let completed = false;

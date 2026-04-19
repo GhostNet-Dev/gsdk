@@ -3,6 +3,30 @@ import * as THREE from "three";
 
 export type FactionKey = "alliance" | "empire" | "guild" | "neutral";
 
+export const GalaxyPlanetAssetKey = {
+  AmberBands: "amberBands",
+  RoseSpots: "roseSpots",
+  AzureIce: "azureIce",
+  BasaltCracks: "basaltCracks",
+  CobaltSwirl: "cobaltSwirl",
+  GoldenRings: "goldenRings",
+  GreenGlow: "greenGlow",
+  DarkRock: "darkRock",
+  VoidMatter: "voidMatter",
+  SolarFlare: "solarFlare",
+} as const;
+
+export type GalaxyPlanetAssetKey =
+  typeof GalaxyPlanetAssetKey[keyof typeof GalaxyPlanetAssetKey];
+
+export const GalaxyRingTextureKey = {
+  Aurora: "aurora",
+  Prism: "prism",
+} as const;
+
+export type GalaxyRingTextureKey =
+  typeof GalaxyRingTextureKey[keyof typeof GalaxyRingTextureKey];
+
 export interface PlanetStats {
   economy: number;
   industry: number;
@@ -13,28 +37,41 @@ export interface PlanetStats {
 }
 
 export interface PlanetRingDef {
-  textureKey: string;
+  textureKey: GalaxyRingTextureKey;
   tiltX?: number;
   tiltY?: number;
 }
 
-export interface PlanetDef {
-  id: string;
+export interface PlanetDef<TPlanetId extends string = string> {
+  id: TPlanetId;
   name: string;
-  faction: FactionKey;
+  factionId: FactionKey;
   radius: number;
-  assetKey: string;
+  assetKey: GalaxyPlanetAssetKey;
   ring?: PlanetRingDef;
   stats: PlanetStats;
   description: string;
-  links?: string[];
+  links?: TPlanetId[];
   position?: [number, number, number];
   manualPosition?: [number, number, number];
 }
 
-export interface GalaxyMapDef {
-  selectedPlanetId: string;
-  planets: PlanetDef[];
+export interface GalaxyRouteDef<
+  TPlanetId extends string = string,
+  TRouteId extends string = string,
+> {
+  id: TRouteId;
+  fromPlanetId: TPlanetId;
+  toPlanetId: TPlanetId;
+}
+
+export interface GalaxyMapDef<
+  TPlanetId extends string = string,
+  TRouteId extends string = string,
+> {
+  selectedPlanetId: TPlanetId;
+  planets: PlanetDef<TPlanetId>[];
+  routes?: GalaxyRouteDef<TPlanetId, TRouteId>[];
 }
 
 export interface GalaxyLayoutOptions {

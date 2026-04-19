@@ -1,6 +1,6 @@
 import { Char } from "@Glibs/types/assettypes";
 import { BuildingType, BuildingMode } from "./ibuildingobj";
-import { CurrencyType } from "@Glibs/inventory/wallet";
+import { CostVector, CurrencyType } from "@Glibs/inventory/wallet";
 import { EventTypes } from "@Glibs/types/globaltypes";
 
 export interface CommandTemplate {
@@ -32,6 +32,7 @@ export interface NearbyResourceRequirement {
 }
 
 export interface BuildRequirements {
+    cost?: CostVector;
     nearbyResources?: NearbyResourceRequirement[];
 }
 

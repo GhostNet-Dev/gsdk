@@ -16,8 +16,10 @@ import { CameraMode } from "@Glibs/systems/camera/cameratypes";
 import { CameraInputPreset } from "@Glibs/systems/camera/orbitbroker";
 import { SelectionPanel } from "@Glibs/ux/selectionpanel/selectionpanel";
 import { PlacementManager } from "@Glibs/interactives/placement/placementmanager";
-import { ITurnParticipant, TurnContext } from "@Glibs/gameobjects/turntypes";
+import { CityScore, FactionId, ITurnParticipant, TurnContext } from "@Glibs/gameobjects/turntypes";
+import { CurrencyType } from "@Glibs/inventory/wallet";
 import { BuildRequirementValidator, validateBuildRequirements } from "./buildrequirementvalidator";
+import { StrategicPlanetId } from "@Glibs/gameobjects/strategicgalaxy/strategicgalaxytypes";
 
 export interface BuildingTask {
   nodeId: string;
@@ -44,6 +46,9 @@ export class BuildingManager implements ILoop, ITurnParticipant {
   private currentGuideNodeId: string | null = null;
   private latestGuidePos: THREE.Vector3 = new THREE.Vector3(); // 최신 스냅 위치 저장
   private loader = new Loader();
+
+  playerCityPlanetId: StrategicPlanetId = StrategicPlanetId.Eden;
+  playerCityFactionId: FactionId = FactionId.Alliance;
 
   // [추가] 선택된 건물 및 UI
   private selectedBuilding: IBuildingObject | null = null;
@@ -455,6 +460,50 @@ export class BuildingManager implements ILoop, ITurnParticipant {
     for (const building of buildingsToAdvance) {
       building.advanceTurn();
     }
+
+    if (ctx?.shared) {
+      const { score, resourceOutput } = this.computeCityScore();
+      ctx.shared.cityOutputs["player-city"] = {
+        cityId: "player-city",
+        planetId: this.playerCityPlanetId,
+        factionId: this.playerCityFactionId,
+        isPlayer: true,
+        score,
+        resourceOutput,
+        specialResourceOutput: {},
+        activePolicies: [],
+      };
+    }
+  }
+
+  private computeCityScore(): {
+    score: CityScore;
+    resourceOutput: Partial<Record<CurrencyType, number>>;
+  } {
+    let economy = 0, production = 0, population = 0;
+    const resourceOutput: Partial<Record<CurrencyType, number>> = {};
+
+    for (const building of this.buildingObjects.values()) {
+      const prop = building.property;
+
+      if (prop.providesPeople) population += prop.providesPeople * Math.max(1, building.level);
+
+      if (prop.production?.resources) {
+        for (const [res, amount] of Object.entries(prop.production.resources)) {
+          const key = res as CurrencyType;
+          const produced = (amount ?? 0) * Math.max(1, building.level);
+          resourceOutput[key] = (resourceOutput[key] ?? 0) + produced;
+          if (key === CurrencyType.Gold) economy += produced;
+          else production += produced;
+        }
+      }
+    }
+
+    const total = economy + production + population;
+    return {
+      score: { total, economy, production, population, research: 0, prestige: 0 },
+      resourceOutput,
+    };
   }
 
   private async finishBuild(taskId: string) {

@@ -4,6 +4,8 @@ import {
   GalaxyContext,
   GalaxyMapDef,
   GalaxyPlanetNetworkOptions,
+  GalaxyPlanetAssetKey,
+  GalaxyRingTextureKey,
   PlanetDef,
   PlanetInfoViewModel
 } from "./galaxytypes";
@@ -17,7 +19,7 @@ type PlanetGroup = THREE.Group & {
     index: number;
     id: string;
     name: string;
-    faction: FactionKey;
+    factionId: FactionKey;
     stats: PlanetDef["stats"];
     description: string;
     definition: PlanetDef;
@@ -448,7 +450,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
   private buildMarkers(): void {
     this.planets.forEach((planet, i) => {
       const r = planet.userData.radius;
-      const color = FACTION_DEFS[planet.userData.faction].color;
+      const color = FACTION_DEFS[planet.userData.factionId].color;
 
       const outer = this.createMarkerRing(r * 1.95, color, 0.24);
       outer.rotation.x = -Math.PI * 0.5;
@@ -566,26 +568,63 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       accent2: "#415ed2",
       accent3: "#dac6ff"
     });
+    const texGreen = this.createPlanetTexture({
+      base: "#2c8f65",
+      mode: "swirl",
+      accent1: "#d6ffe7",
+      accent2: "#44d58a",
+      accent3: "#0c4f3c"
+    });
+    const texDark = this.createPlanetTexture({
+      base: "#3c3644",
+      mode: "cracks",
+      accent1: "#a79ab7",
+      accent2: "#15121a",
+      accent3: "#6c566f"
+    });
+    const texVoid = this.createPlanetTexture({
+      base: "#1a1530",
+      mode: "spots",
+      accent1: "#9e84ff",
+      accent2: "#05040d",
+      accent3: "#3d2d6f"
+    });
+    const texSolar = this.createPlanetTexture({
+      base: "#d9742e",
+      mode: "bands",
+      accent1: "#fff3b0",
+      accent2: "#ff9b45",
+      accent3: "#7d2418"
+    });
 
     const ringTexA = this.createRingTexture(["#ffffff", "#dabdff", "#6d6686", "#aef5e9", "#ffffff"]);
     const ringTexB = this.createRingTexture(["#fff2d5", "#ffc7dd", "#8ba8ff", "#d7f8ff", "#ffffff"]);
 
-    const planetAssetCatalog = {
-      amberBands: { texture: texJovian, emissive: 0x5a3218, glowColor: 0xffb97c },
-      roseSpots: { texture: texPink, emissive: 0x7d2252, glowColor: 0xff8fd6 },
-      azureIce: { texture: texIce, emissive: 0x1a7b95, glowColor: 0x97f5ff },
-      basaltCracks: { texture: texRock, emissive: 0x53382a, glowColor: 0xffcb9d },
-      cobaltSwirl: { texture: texCloud, emissive: 0x2f4ea8, glowColor: 0xc1d2ff }
-    } as const;
+    const planetAssetCatalog: Record<GalaxyPlanetAssetKey, {
+      texture: THREE.Texture;
+      emissive: number;
+      glowColor: number;
+    }> = {
+      [GalaxyPlanetAssetKey.AmberBands]: { texture: texJovian, emissive: 0x5a3218, glowColor: 0xffb97c },
+      [GalaxyPlanetAssetKey.RoseSpots]: { texture: texPink, emissive: 0x7d2252, glowColor: 0xff8fd6 },
+      [GalaxyPlanetAssetKey.AzureIce]: { texture: texIce, emissive: 0x1a7b95, glowColor: 0x97f5ff },
+      [GalaxyPlanetAssetKey.BasaltCracks]: { texture: texRock, emissive: 0x53382a, glowColor: 0xffcb9d },
+      [GalaxyPlanetAssetKey.CobaltSwirl]: { texture: texCloud, emissive: 0x2f4ea8, glowColor: 0xc1d2ff },
+      [GalaxyPlanetAssetKey.GoldenRings]: { texture: texJovian, emissive: 0x6f431b, glowColor: 0xffd36f },
+      [GalaxyPlanetAssetKey.GreenGlow]: { texture: texGreen, emissive: 0x146f4f, glowColor: 0x8cffbd },
+      [GalaxyPlanetAssetKey.DarkRock]: { texture: texDark, emissive: 0x211829, glowColor: 0xa88bbf },
+      [GalaxyPlanetAssetKey.VoidMatter]: { texture: texVoid, emissive: 0x160c3f, glowColor: 0xa98cff },
+      [GalaxyPlanetAssetKey.SolarFlare]: { texture: texSolar, emissive: 0x7d2e10, glowColor: 0xffca62 }
+    };
 
-    const ringCatalog = {
-      aurora: ringTexA,
-      prism: ringTexB
-    } as const;
+    const ringCatalog: Record<GalaxyRingTextureKey, THREE.Texture> = {
+      [GalaxyRingTextureKey.Aurora]: ringTexA,
+      [GalaxyRingTextureKey.Prism]: ringTexB
+    };
 
     mapDef.planets.forEach((def, i) => {
-      const asset = planetAssetCatalog[def.assetKey as keyof typeof planetAssetCatalog];
-      const ringTexture = def.ring ? ringCatalog[def.ring.textureKey as keyof typeof ringCatalog] : null;
+      const asset = planetAssetCatalog[def.assetKey];
+      const ringTexture = def.ring ? ringCatalog[def.ring.textureKey] : null;
 
       const planet = this.createPlanet({
         radius: def.radius,
@@ -602,7 +641,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       planet.userData.index = i;
       planet.userData.id = def.id;
       planet.userData.name = def.name;
-      planet.userData.faction = def.faction;
+      planet.userData.factionId = def.factionId;
       planet.userData.stats = def.stats;
       planet.userData.description = def.description;
       planet.userData.definition = def;
@@ -612,13 +651,13 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       planet.userData.targetAlpha = 1;
       planet.userData.visualAlpha = 1;
 
-      const factionColor = FACTION_DEFS[def.faction].color;
+      const factionColor = FACTION_DEFS[def.factionId].color;
       const flag = this.createFactionFlag(factionColor, starTexture, def.radius);
       flag.position.set(0, def.radius, 0);
       planet.add(flag);
       planet.userData.flag = flag;
 
-      const label = this.makeTextSprite(def.name, FACTION_DEFS[def.faction].text, this.options!.label.fontSize!);
+      const label = this.makeTextSprite(def.name, FACTION_DEFS[def.factionId].text, this.options!.label.fontSize!);
       label.position.copy(planet.position).add(new THREE.Vector3(0, -def.radius - this.options!.label.offset!, 0));
       label.userData.planetIndex = i;
       label.userData.alpha = 1;
@@ -630,7 +669,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       this.root.add(planet);
     });
 
-    this.linePairs = this.buildLinePairsFromPlanets(mapDef.planets);
+    this.linePairs = this.buildLinePairsFromMapDef(mapDef);
     this.adjacency = this.buildAdjacency(mapDef.planets, this.linePairs);
     this.chokepointScores = this.computeBetweennessCentrality(this.adjacency);
     this.selectedPlanetIndex = Math.max(0, mapDef.planets.findIndex((p) => p.id === mapDef.selectedPlanetId));
@@ -649,7 +688,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
 
   private refreshSelectedDecor(): void {
     const selected = this.planets[this.selectedPlanetIndex];
-    const color = FACTION_DEFS[selected.userData.faction].color;
+    const color = FACTION_DEFS[selected.userData.factionId].color;
     const radius = selected.userData.radius;
 
     (this.selectedOuter.material as THREE.MeshBasicMaterial).color.setHex(color);
@@ -683,7 +722,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       const mesh = marker as THREE.Mesh;
       const planetIndex = (mesh.userData as any).planetIndex;
       const planet = this.planets[planetIndex];
-      const color = FACTION_DEFS[planet.userData.faction].color;
+      const color = FACTION_DEFS[planet.userData.factionId].color;
 
       mesh.position.set(
         planet.position.x,
@@ -814,7 +853,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
 
   private buildPlanetInfo(index: number): PlanetInfoViewModel {
     const planet = this.planets[index];
-    const faction = FACTION_DEFS[planet.userData.faction];
+    const faction = FACTION_DEFS[planet.userData.factionId];
     const stats = planet.userData.stats;
     const neighbors = [...this.adjacency[index]].map(i => ({
       name: this.planets[i].userData.name,
@@ -1016,6 +1055,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
   private resolveGalaxyMap(mapDef: GalaxyMapDef): GalaxyMapDef {
     const resolved: GalaxyMapDef = {
       selectedPlanetId: mapDef.selectedPlanetId,
+      routes: mapDef.routes?.map((route) => ({ ...route })),
       planets: mapDef.planets.map((planet) => ({
         ...planet,
         links: [...(planet.links ?? [])],
@@ -1031,7 +1071,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     }
 
     const positions = this.generateRadialMindMapLayout(
-      resolved.planets,
+      resolved,
       resolved.selectedPlanetId
     );
 
@@ -1043,8 +1083,9 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     return resolved;
   }
 
-  private generateRadialMindMapLayout(planetsDef: PlanetDef[], preferredRootId: string): THREE.Vector3[] {
-    const adjacency = this.buildAdjacencyFromDefs(planetsDef);
+  private generateRadialMindMapLayout(mapDef: GalaxyMapDef, preferredRootId: string): THREE.Vector3[] {
+    const planetsDef = mapDef.planets;
+    const adjacency = this.buildAdjacencyFromMapDef(mapDef);
     const n = planetsDef.length;
     const idToIndex = new Map(planetsDef.map((p, i) => [p.id, i]));
     const orderMap = new Map(planetsDef.map((p, i) => [p.id, i]));
@@ -1132,23 +1173,47 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     return positions;
   }
 
-  private buildAdjacencyFromDefs(planetsDef: PlanetDef[]): Array<Set<number>> {
-    const idToIndex = new Map(planetsDef.map((p, i) => [p.id, i]));
-    const adjacency = Array.from({ length: planetsDef.length }, () => new Set<number>());
-
-    planetsDef.forEach((planet, i) => {
-      (planet.links ?? []).forEach((targetId) => {
-        const j = idToIndex.get(targetId);
-        if (j == null || i === j) return;
-        adjacency[i].add(j);
-        adjacency[j].add(i);
-      });
-    });
-
-    return adjacency;
+  private buildAdjacencyFromMapDef(mapDef: GalaxyMapDef): Array<Set<number>> {
+    return this.buildAdjacency(mapDef.planets, this.buildLinePairsFromMapDef(mapDef));
   }
 
-  private buildLinePairsFromPlanets(planetsDef: PlanetDef[]): Array<[number, number]> {
+  private buildLinePairsFromMapDef(mapDef: GalaxyMapDef): Array<[number, number]> {
+    if (mapDef.routes && mapDef.routes.length > 0) {
+      return this.buildLinePairsFromRoutes(mapDef);
+    }
+    return this.buildLinePairsFromPlanetLinks(mapDef.planets);
+  }
+
+  private buildLinePairsFromRoutes(mapDef: GalaxyMapDef): Array<[number, number]> {
+    const idToIndex = new Map(mapDef.planets.map((p, i) => [p.id, i]));
+    const edgeSet = new Set<string>();
+    const pairs: Array<[number, number]> = [];
+
+    for (const route of mapDef.routes ?? []) {
+      const fromIndex = idToIndex.get(route.fromPlanetId);
+      const toIndex = idToIndex.get(route.toPlanetId);
+
+      if (fromIndex == null || toIndex == null) {
+        console.warn(
+          `[GalaxyPlanetNetwork] Route endpoint missing: ${route.id} (${route.fromPlanetId} -> ${route.toPlanetId})`
+        );
+        continue;
+      }
+      if (fromIndex === toIndex) continue;
+
+      const a = Math.min(fromIndex, toIndex);
+      const b = Math.max(fromIndex, toIndex);
+      const key = `${a}:${b}`;
+
+      if (edgeSet.has(key)) continue;
+      edgeSet.add(key);
+      pairs.push([a, b]);
+    }
+
+    return pairs;
+  }
+
+  private buildLinePairsFromPlanetLinks(planetsDef: PlanetDef[]): Array<[number, number]> {
     const idToIndex = new Map(planetsDef.map((p, i) => [p.id, i]));
     const edgeSet = new Set<string>();
     const pairs: Array<[number, number]> = [];
@@ -1246,8 +1311,8 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
   }
 
   private getEdgeFrontColor(aIdx: number, bIdx: number): number {
-    const fa = this.planets[aIdx].userData.faction;
-    const fb = this.planets[bIdx].userData.faction;
+    const fa = this.planets[aIdx].userData.factionId;
+    const fb = this.planets[bIdx].userData.factionId;
     const ca = FACTION_DEFS[fa].color;
     const cb = FACTION_DEFS[fb].color;
     return fa === fb ? ca : this.mixHex(ca, cb, 0.5);
@@ -1725,4 +1790,3 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     material.dispose();
   }
 }
-

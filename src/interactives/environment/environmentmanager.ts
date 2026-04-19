@@ -733,6 +733,30 @@ export class EnvironmentManager implements ILoop {
         }
     }
 
+    detachFromScene(): void {
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this);
+        for (const meshes of this.instancedMeshes.values()) {
+            for (const mesh of meshes) {
+                mesh.parent?.remove(mesh);
+            }
+        }
+        for (const envObj of this.envObjectsArray) {
+            if (envObj.mesh) envObj.mesh.parent?.remove(envObj.mesh);
+        }
+    }
+
+    attachToScene(scene: THREE.Scene): void {
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
+        for (const meshes of this.instancedMeshes.values()) {
+            for (const mesh of meshes) {
+                if (!mesh.parent) scene.add(mesh);
+            }
+        }
+        for (const envObj of this.envObjectsArray) {
+            if (envObj.mesh && !envObj.mesh.parent) scene.add(envObj.mesh);
+        }
+    }
+
     private _cellKey(x: number, z: number): string {
         return `${Math.floor(x / this.SPATIAL_CELL_SIZE)},${Math.floor(z / this.SPATIAL_CELL_SIZE)}`;
     }

@@ -19,6 +19,13 @@ export enum AppMode {
     EditCity,
 }
 
+export const GameModeId = {
+    Simcity: "simcity",
+    Galaxy: "galaxy",
+} as const;
+
+export type GameModeId = typeof GameModeId[keyof typeof GameModeId];
+
 export enum EventTypes {
     // 🎮 1. 입력 및 컨트롤 (Input & Control)
     KeyDown = "keydown",
@@ -115,6 +122,14 @@ export enum EventTypes {
     TurnReportUpdated = "turnreportupdated",
     RegisterTurnParticipant = "regturnparticipant",
     DeregisterTurnParticipant = "deregturnparticipant",
+    FactionStateChanged = "factionstatechanged",
+    RivalCityStateChanged = "rivalcitystatechanged",
+    PlanetStateChanged = "planetstatechanged",
+    RouteStateChanged = "routestatechanged",
+    StrategicGalaxyUpdated = "strategicgalaxyupdated",
+    GalaxyViewModelUpdated = "galaxyviewmodelupdated",
+    StrategicFleetStateChanged = "strategicfleetstatechanged",
+    StrategicFleetOrderRequested = "strategicfleetorderrequested",
 
     // 🌍 8. 물리 및 렌더링 (Physics, Rendering & VFX)
     CtrlObj = "ctrlObj",
