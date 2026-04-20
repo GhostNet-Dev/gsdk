@@ -1,4 +1,5 @@
 import IEventController from "@Glibs/interface/ievent";
+import { CurrencyType } from "@Glibs/inventory/wallet";
 import * as THREE from "three";
 
 export type FactionKey = "alliance" | "empire" | "guild" | "neutral";
@@ -36,6 +37,28 @@ export interface PlanetStats {
   resource: string;
 }
 
+export interface GalaxyResourceBonusViewModel {
+  type: CurrencyType;
+  label: string;
+  multiplier: number;
+  percentText: string;
+}
+
+export interface GalaxySpecialResourceViewModel {
+  id: string;
+  label: string;
+  amount?: number;
+}
+
+export interface GalaxyMarketResourceViewModel {
+  type: CurrencyType;
+  label: string;
+  supply: number;
+  demand: number;
+  pricePressure: number;
+  pricePressureText: string;
+}
+
 export interface PlanetRingDef {
   textureKey: GalaxyRingTextureKey;
   tiltX?: number;
@@ -50,6 +73,12 @@ export interface PlanetDef<TPlanetId extends string = string> {
   assetKey: GalaxyPlanetAssetKey;
   ring?: PlanetRingDef;
   stats: PlanetStats;
+  resourceBonuses?: GalaxyResourceBonusViewModel[];
+  specialResources?: GalaxySpecialResourceViewModel[];
+  marketResources?: GalaxyMarketResourceViewModel[];
+  cityCount?: number;
+  stability?: number;
+  blockadeLevel?: number;
   description: string;
   links?: TPlanetId[];
   position?: [number, number, number];
@@ -114,6 +143,7 @@ export interface CameraRigAdapter {
   target: THREE.Vector3;
   minDistance?: number;
   maxDistance?: number;
+  domElement?: HTMLElement;
   update?: () => void;
 }
 
@@ -136,12 +166,14 @@ export interface PlanetInfoViewModel {
   factionBorderColor: string;
   isChokepoint: boolean;
   subtitle: string;
-  economy: number;
-  industry: number;
-  defense: number;
   fleet: number;
-  population: number;
   resource: string;
+  resourceBonuses: GalaxyResourceBonusViewModel[];
+  specialResources: GalaxySpecialResourceViewModel[];
+  marketResources: GalaxyMarketResourceViewModel[];
+  cityCount: number;
+  stability: number;
+  blockadeLevel: number;
   degree: number;
   chokeScore: number;
   description: string;

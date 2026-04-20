@@ -1,7 +1,7 @@
 import { GalaxyPlanetVisualDef, StrategicPlanetId } from "./strategicgalaxytypes";
 import { GalaxyPlanetAssetKey, GalaxyRingTextureKey } from "@Glibs/world/galaxy/galaxytypes";
 
-export const DefaultStrategicGalaxySelectedPlanetId = StrategicPlanetId.Eden;
+export const DefaultStrategicGalaxySelectedPlanetId = StrategicPlanetId.Atlas;
 
 export const galaxyPlanetVisualDefs: Partial<Record<StrategicPlanetId, GalaxyPlanetVisualDef>> = {
   [StrategicPlanetId.Sirius]: {

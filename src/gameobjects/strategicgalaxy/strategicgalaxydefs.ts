@@ -11,7 +11,7 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef> = {
     description: "은하의 중앙 관문. 모든 주요 항로가 이곳을 통과한다.",
     defaultFactionId: "guild",
     profileId: "gateworld",
-    routeIds: ["atlas-hephaestus", "atlas-athena", "atlas-eden", "atlas-hades"],
+    routeIds: ["atlas-hephaestus", "atlas-athena", "atlas-hades"],
     citySlots: 3,
     resourceBias: {
       [CurrencyType.Gold]: 1.3,
@@ -77,7 +77,7 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef> = {
     description: "풍요로운 생태계를 가진 Alliance의 식량 성계.",
     defaultFactionId: "alliance",
     profileId: "biosphere",
-    routeIds: ["atlas-eden", "eden-vega"],
+    routeIds: ["eden-vega"],
     citySlots: 3,
     resourceBias: {
       [CurrencyType.Food]: 1.5,
@@ -231,13 +231,12 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef> = {
 export const strategicRouteDefs: StrategicRouteDef[] = [
   { id: "atlas-hephaestus", fromPlanetId: "atlas",      toPlanetId: "hephaestus", baseDistance: 2 },
   { id: "atlas-athena",     fromPlanetId: "atlas",      toPlanetId: "athena",     baseDistance: 2 },
-  { id: "atlas-eden",       fromPlanetId: "atlas",      toPlanetId: "eden",       baseDistance: 3 },
   { id: "atlas-hades",      fromPlanetId: "atlas",      toPlanetId: "hades",      baseDistance: 3 },
   { id: "hephaestus-selene",fromPlanetId: "hephaestus", toPlanetId: "selene",     baseDistance: 2 },
   { id: "sirius-orion",     fromPlanetId: "sirius",     toPlanetId: "orion",      baseDistance: 2 },
   { id: "sirius-vega",      fromPlanetId: "sirius",     toPlanetId: "vega",       baseDistance: 3 },
   { id: "vega-athena",      fromPlanetId: "vega",       toPlanetId: "athena",     baseDistance: 2 },
-  { id: "eden-vega",        fromPlanetId: "eden",       toPlanetId: "vega",       baseDistance: 3 },
+  { id: "eden-vega",        fromPlanetId: "eden",       toPlanetId: "vega",       baseDistance: 5 },
   { id: "hades-nyx",        fromPlanetId: "hades",      toPlanetId: "nyx",        baseDistance: 2 },
 ];
 

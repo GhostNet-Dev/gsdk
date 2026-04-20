@@ -1,9 +1,12 @@
 import { CurrencyType } from "@Glibs/inventory/wallet";
 import { FactionId } from "@Glibs/gameobjects/turntypes";
 import {
+  GalaxyMarketResourceViewModel,
   GalaxyMapDef,
   GalaxyPlanetAssetKey,
+  GalaxyResourceBonusViewModel,
   GalaxyRingTextureKey,
+  GalaxySpecialResourceViewModel,
 } from "@Glibs/world/galaxy/galaxytypes";
 
 export const StrategicPlanetId = {
@@ -167,6 +170,12 @@ export interface GalaxyPlanetViewModel {
   defense: number;
   population: number;
   resourceLabel: string;
+  resourceBonuses: GalaxyResourceBonusViewModel[];
+  specialResources: GalaxySpecialResourceViewModel[];
+  marketResources: GalaxyMarketResourceViewModel[];
+  cityCount: number;
+  stability: number;
+  blockadeLevel: number;
   controllingFactionId?: FactionId;
   contested: boolean;
   influence: Partial<Record<FactionId, number>>;

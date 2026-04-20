@@ -158,8 +158,8 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.camera = ctx.camera;
     this.renderer = ctx.renderer;
     this.eventCtrl = ctx.eventCtrl;
-    this.interactionDom = ctx.interactionDom ?? ctx.renderer.domElement;
     this.controls = ctx.controls;
+    this.interactionDom = ctx.interactionDom ?? this.controls?.domElement ?? ctx.renderer.domElement;
   }
 
   Create(mapDef: GalaxyMapDef, options: GalaxyPlanetNetworkOptions = {}) {
@@ -855,12 +855,15 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     const planet = this.planets[index];
     const faction = FACTION_DEFS[planet.userData.factionId];
     const stats = planet.userData.stats;
+    const definition = planet.userData.definition;
     const neighbors = [...this.adjacency[index]].map(i => ({
       name: this.planets[i].userData.name,
       id: this.planets[i].userData.id
     }));
     const isChoke = this.chokepointIndices.has(index);
-
+    const fallbackSpecialResources = stats.resource && stats.resource !== "none"
+      ? [{ id: stats.resource, label: stats.resource }]
+      : [];
 
     return {
       id: planet.userData.id,
@@ -873,12 +876,14 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       subtitle: isChoke
         ? "방사형 회랑의 중심을 통제하는 전략적 요충지"
         : "방사형 항로망에서 기능하는 전략 거점",
-      economy: stats.economy,
-      industry: stats.industry,
-      defense: stats.defense,
       fleet: stats.stationedFleet,
-      population: stats.population,
       resource: stats.resource,
+      resourceBonuses: definition.resourceBonuses ?? [],
+      specialResources: definition.specialResources ?? fallbackSpecialResources,
+      marketResources: definition.marketResources ?? [],
+      cityCount: definition.cityCount ?? 0,
+      stability: definition.stability ?? 0,
+      blockadeLevel: definition.blockadeLevel ?? 0,
       degree: planet.userData.degree,
       chokeScore: planet.userData.chokepointScore,
       description: planet.userData.description,
