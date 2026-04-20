@@ -1,4 +1,3 @@
-import * as THREE from "three";
 import IEventController from "@Glibs/interface/ievent";
 import { TechNode } from "@Glibs/techtree/technode";
 import { TechTreeService } from "@Glibs/techtree/techtreeservice";
@@ -6,45 +5,7 @@ import { Buff } from "@Glibs/magical/buff/buff";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { TechTreeKind } from "@Glibs/techtree/techtreedefs";
 import { ActionProperty } from "@Glibs/types/actiontypes";
-import { BuildingManager } from "@Glibs/interactives/building/buildingmanager";
-import { BuildingMode } from "@Glibs/interactives/building/ibuildingobj";
-import { BuildingInfoBar } from "@Glibs/ux/dialog/buildinginfobar";
 import { CurrencyType } from "@Glibs/inventory/wallet";
-import TurnManager from "./turnmanager";
-import ResourceManager from "./resourcemanager";
-import TurnLogPanel from "@Glibs/ux/turnlog/turnlogpanel";
-import { FactionId, parseFactionId } from "./turntypes";
-import { FactionManager } from "./faction/factionmanager";
-import { factionDefs } from "./faction/factiondefs";
-import { RivalCityManager } from "./rivalcity/rivalcitymanager";
-import { StrategicGalaxyManager } from "./strategicgalaxy/strategicgalaxymanager";
-import { strategicPlanetDefs, strategicRouteDefs } from "./strategicgalaxy/strategicgalaxydefs";
-import { FactionState } from "./faction/factiontypes";
-import { RivalCityState } from "./rivalcity/rivalcitytypes";
-import {
-    parseStrategicPlanetId,
-    StrategicPlanetId,
-    StrategicPlanetState,
-    StrategicRouteState,
-} from "./strategicgalaxy/strategicgalaxytypes";
-import { StrategicFleetState } from "./strategicgalaxy/strategicfleetstate";
-import { StrategicFleetManager } from "./strategicgalaxy/strategicfleetmanager";
-
-export const GAME_SAVE_VERSION = 2;
-
-export type GameSaveState = {
-  version: number;
-  turn: number;
-  seed: number;
-  difficulty: "easy" | "normal" | "hard";
-  playerCityPlanetId: StrategicPlanetId;
-  playerCityFactionId: FactionId;
-  factions: FactionState[];
-  rivalCities: RivalCityState[];
-  planets: StrategicPlanetState[];
-  routes: StrategicRouteState[];
-  strategicFleets: StrategicFleetState[];
-};
 
 type LearnedSkillMessage = {
     nodeId: string;
@@ -58,48 +19,11 @@ export default class GameManager {
     // 활성화된 패시브/버프 객체 추적 (key: nodeId, value: Runtime Buff)
     private activeBuffs = new Map<string, Buff>();
     private activeSkills = new Map<string, LearnedSkillMessage>();
-    private resourceManager: ResourceManager;
-    private turnManager: TurnManager;
-    private turnLogPanel: TurnLogPanel;
-    private buildingManager: BuildingManager;
-    private buildingInfoBar: BuildingInfoBar;
-
-    readonly galaxyManager: StrategicGalaxyManager;
-    readonly strategicFleetManager: StrategicFleetManager;
-    readonly factionManager: FactionManager;
-    readonly rivalCityManager: RivalCityManager;
 
     constructor(
-        private scene: THREE.Scene,
         private eventCtrl: IEventController,
         public service: TechTreeService,
-        private camera: THREE.Camera,
     ) {
-        this.resourceManager = new ResourceManager(this.eventCtrl, this.service.ctx.wallet);
-        this.turnManager = new TurnManager(this.eventCtrl);
-        this.turnLogPanel = new TurnLogPanel(this.eventCtrl);
-        this.buildingManager = new BuildingManager(this.scene, this.eventCtrl, this.service, this.camera);
-        this.buildingInfoBar = new BuildingInfoBar(this.eventCtrl);
-
-        // 전략 시뮬레이션 매니저 초기화 순서 (readme 기준)
-        // 1. StrategicGalaxyManager
-        this.galaxyManager = new StrategicGalaxyManager(this.eventCtrl);
-        this.galaxyManager.initialize(Object.values(strategicPlanetDefs), strategicRouteDefs);
-        this.strategicFleetManager = new StrategicFleetManager(this.eventCtrl, this.galaxyManager);
-
-        // 2. FactionManager
-        this.factionManager = new FactionManager(this.eventCtrl, Object.values(factionDefs));
-        this.factionManager.register();
-
-        // 3. RivalCityManager
-        this.rivalCityManager = new RivalCityManager(this.eventCtrl, this.galaxyManager, this.factionManager);
-        this.rivalCityManager.initialize(this.galaxyManager.getCitySeed());
-
-        // 4. TurnManager에 전략 참여자 등록 (BuildingManager는 100, 나머지는 자동 등록됨)
-        this.eventCtrl.SendEventMessage(EventTypes.RegisterTurnParticipant, this.rivalCityManager);
-        this.eventCtrl.SendEventMessage(EventTypes.RegisterTurnParticipant, this.galaxyManager);
-        this.eventCtrl.SendEventMessage(EventTypes.RegisterTurnParticipant, this.strategicFleetManager);
-        
         // [수정] 플레이어 레벨업 이벤트 (건물 업그레이드와 분리됨)
         this.eventCtrl.RegisterEventListener(EventTypes.LevelUp, () => {
             this.addResource(1, CurrencyType.Exp, "levelup", "levelup");
@@ -128,27 +52,6 @@ export default class GameManager {
         });
     }
 
-    /**
-     * 건설 모드를 설정합니다 (Timer 또는 Turn).
-     */
-    setBuildingMode(mode: BuildingMode) {
-        this.buildingManager.setMode(mode);
-    }
-
-    /**
-     * 다음 턴으로 진행합니다 (턴제 모드일 때 사용).
-     */
-    nextTurn() {
-        this.eventCtrl.SendEventMessage(EventTypes.TurnNext);
-    }
-
-    /**
-     * 특정 건물을 건설합니다.
-     */
-    buildBuilding(nodeId: string, pos?: THREE.Vector3): boolean {
-        const taskId = this.buildingManager.startBuild(nodeId, pos);
-        return taskId !== null;
-    }
     public addPoints(amount: number) {
         this.addResource(amount, CurrencyType.Points, "skill", "reward");
     }
@@ -353,60 +256,5 @@ export default class GameManager {
             const node = this.service.index.byId.get(nodeId);
             if (node) this.applyEffect(node, targetLv);
         }
-    }
-
-    exportSave(
-        playerCityPlanetId: StrategicPlanetId = this.buildingManager.playerCityPlanetId,
-        playerCityFactionId: FactionId = this.buildingManager.playerCityFactionId,
-        seed = 0,
-        difficulty: GameSaveState["difficulty"] = "normal",
-    ): GameSaveState {
-        const galaxyState = this.galaxyManager.exportState();
-        return {
-            version: GAME_SAVE_VERSION,
-            turn: this.turnManager.Turn,
-            seed,
-            difficulty,
-            playerCityPlanetId,
-            playerCityFactionId,
-            factions: this.factionManager.exportState(),
-            rivalCities: this.rivalCityManager.exportState(),
-            planets: galaxyState.planets,
-            routes: galaxyState.routes,
-            strategicFleets: galaxyState.fleets,
-        };
-    }
-
-    importSave(state: GameSaveState): void {
-        const migrated = this.migrateSave(state);
-        this.factionManager.importState(migrated.factions);
-        this.rivalCityManager.importState(migrated.rivalCities);
-        this.galaxyManager.importState({
-            planets: migrated.planets,
-            routes: migrated.routes,
-            fleets: migrated.strategicFleets,
-        });
-        this.buildingManager.playerCityPlanetId = migrated.playerCityPlanetId;
-        this.buildingManager.playerCityFactionId = migrated.playerCityFactionId;
-    }
-
-    private migrateSave(state: GameSaveState): GameSaveState {
-        const playerCityFactionId = parseFactionId(state.playerCityFactionId) ?? FactionId.Alliance;
-        const playerCityPlanetId = parseStrategicPlanetId(state.playerCityPlanetId) ?? StrategicPlanetId.Eden;
-        if (state.version < GAME_SAVE_VERSION) {
-            console.warn(`[GameManager] Migrating save ${state.version} -> ${GAME_SAVE_VERSION}`);
-        }
-
-        return {
-            ...state,
-            version: GAME_SAVE_VERSION,
-            playerCityFactionId,
-            playerCityPlanetId,
-            factions: state.factions ?? [],
-            rivalCities: state.rivalCities ?? [],
-            planets: state.planets ?? [],
-            routes: state.routes ?? [],
-            strategicFleets: state.strategicFleets ?? [],
-        };
     }
 }

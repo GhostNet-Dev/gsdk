@@ -103,12 +103,47 @@ export class BuildingManager implements ILoop, ITurnParticipant {
     });
 
     this.eventCtrl.RegisterEventListener(EventTypes.BuildRequirementValidatorReady, this.setBuildRequirementValidator);
+  }
 
-    // [추가] 마우스 클릭 이벤트 리스너
-    window.addEventListener('pointerdown', this.onPointerDown);
-
+  attachToScene(scene: THREE.Scene): void {
+    this.scene = scene;
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
     this.eventCtrl.SendEventMessage(EventTypes.RegisterTurnParticipant, this);
+    window.addEventListener('pointerdown', this.onPointerDown);
+
+    // 기존 건물들 씬에 추가
+    this.buildingObjects.forEach(b => {
+      if (b.mesh && !b.mesh.parent) scene.add(b.mesh);
+    });
+
+    // 건설 중인 객체들 씬에 추가
+    this.activeTasks.forEach(t => {
+      if (t.constructionModel && !t.constructionModel.parent) scene.add(t.constructionModel);
+      if (t.progressMesh && !t.progressMesh.parent) scene.add(t.progressMesh);
+    });
+
+    // 가이드 모델이 있다면 추가
+    if (this.guideModel && !this.guideModel.parent) {
+      scene.add(this.guideModel);
+    }
+  }
+
+  detachFromScene(): void {
+    this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this);
+    this.eventCtrl.SendEventMessage(EventTypes.DeregisterTurnParticipant, this);
+    window.removeEventListener('pointerdown', this.onPointerDown);
+    this.deselectBuilding();
+
+    // 씬에서 제거
+    this.buildingObjects.forEach(b => {
+      if (b.mesh) b.mesh.parent?.remove(b.mesh);
+    });
+    this.activeTasks.forEach(t => {
+      if (t.constructionModel) t.constructionModel.parent?.remove(t.constructionModel);
+      if (t.progressMesh) t.progressMesh.parent?.remove(t.progressMesh);
+    });
+    
+    this.hideGuide(false);
   }
 
   private setBuildRequirementValidator = (validator: BuildRequirementValidator) => {
@@ -171,7 +206,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
   }
 
   private async showGuide(nodeId: string, pos: THREE.Vector3) {
-    this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.Grid);
+    this.eventCtrl.SendEventMessage(EventTypes.CameraInputPreset, CameraInputPreset.Placement);
     
     // 로딩이 시작되기 전, 일단 현재 위치 저장
     this.latestGuidePos.copy(pos);
@@ -236,7 +271,6 @@ export class BuildingManager implements ILoop, ITurnParticipant {
 
     if (restoreCamera) {
       this.eventCtrl.SendEventMessage(EventTypes.CameraInputPreset, CameraInputPreset.Default);
-      this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.Restore);
     }
   }
 
@@ -424,6 +458,11 @@ export class BuildingManager implements ILoop, ITurnParticipant {
         buildRange: prop.buildRange,
       });
     }
+
+    if (pos) {
+      this.eventCtrl.SendEventMessage(EventTypes.HideGrid);
+    }
+    
     this.sendBuildingStatus();
     return taskId;
   }

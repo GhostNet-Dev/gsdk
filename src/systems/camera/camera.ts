@@ -86,7 +86,11 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
             this.setMode(mode)
         })
         eventCtrl.RegisterEventListener(EventTypes.CameraInputPreset, (preset: CameraInputPreset) => {
-            this.broker.setInputPreset(preset)
+            if (preset === CameraInputPreset.Default) {
+                this.broker.setInputPreset(this.getDefaultInputPreset(this.mode))
+            } else {
+                this.broker.setInputPreset(preset)
+            }
         })
         eventCtrl.RegisterEventListener(EventTypes.CameraTrackTarget, (resolver?: () => ICameraTrackTarget | undefined) => {
             this.trackTargetResolver = resolver
@@ -243,7 +247,6 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
     }
 
     setMode(mode: CameraMode) {
-        const prevMode = this.mode
         const requestedMode = mode
 
         if (mode === CameraMode.Restore) {
@@ -251,13 +254,16 @@ export class Camera extends THREE.PerspectiveCamera implements IViewer, ILoop {
         }
 
         if (!this.strategies.has(mode)) return
-        this.previousMode = prevMode;
+
         if (this.mode === mode) {
             if (requestedMode === CameraMode.Restore) {
                 this.broker.setInputPreset(this.getDefaultInputPreset(mode));
             }
             return;
         }
+
+        const prevMode = this.mode
+        this.previousMode = prevMode;
 
         if (mode === CameraMode.AimThirdPerson && prevMode !== CameraMode.AimThirdPerson) {
             this.preAimSnapshot = {

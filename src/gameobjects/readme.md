@@ -16,40 +16,52 @@
 
 ### GameManager
 
-`GameManager`는 게임 상태 흐름의 조립 지점이다.
+`GameManager`는 게임 상태 흐름의 조율 지점이다.
+실제 런타임 객체 생성과 조립은 앱 계층의 factory가 담당하고, `GameManager`는 테크 트리와 효과 적용 흐름만 제어한다.
 
-- `ResourceManager`를 생성한다.
-- `TurnManager`를 생성한다.
-- `TurnLogPanel`을 생성한다.
-- `BuildingManager` 같은 게임 기능 매니저를 생성한다.
-- 경쟁 도시, 진영, 전략 은하 같은 상위 시뮬레이션 매니저를 조립할 수 있다.
-- 다음 턴 요청이 들어오면 `EventTypes.TurnNext` 이벤트를 보낸다.
+- `GameManager`는 factory가 생성한 runtime manager를 소유하지 않는다.
+- `TechTreeService`를 통해 가능한 테크를 조회하고 레벨업/리셋을 처리한다.
+- 테크 효과는 이벤트 기반으로 스킬/버프 런타임에 전달한다.
+- 자원 증감 요청은 `CurrencyChangeRequested` 이벤트로 보낸다.
+- 건설, 턴 진행, 전략 은하, 저장/복원 조립은 앱 계층의 실제 manager와 save service 책임이다.
 
-`GameManager`는 가능하면 자원 계산이나 턴 처리의 세부 로직을 직접 들고 있지 않는다.
+`GameManager`는 자원 계산, 턴 처리, 건설, 전략 시뮬레이션 세부 로직을 직접 들고 있지 않는다.
 대신 이벤트를 통해 각 책임자에게 일을 넘긴다.
 
-#### GameManager 초기화 순서
+#### SimcityGameFactory 초기화 순서
 
-`GameManager.initialize()`는 다음 순서로 매니저를 생성하고 조립한다. 의존 방향이 단방향이 되도록 아래에서 위 방향으로 생성한다.
+앱 계층의 `SimcityGameFactory.create()`는 이 프로젝트의 full Simcity composition root다.
+항상 `Turn`, `Resource`, `TurnLogPanel`, `Building`, `BuildingInfoBar`, `StrategicSimulation`에 필요한 인스턴스를 모두 생성하고, `SimcityGameInstances`로 반환한다.
+변형 구성이 필요해지면 이 factory의 반환 타입을 optional로 흔들지 않고 별도 factory를 둔다.
+현재 구성에서는 다음 순서로 매니저를 생성하고 조립한다.
 
 ```txt
-1. StrategicGalaxyManager 생성
+1. TurnManager 생성
+   - 이후 생성되는 턴 참여자 등록 이벤트를 수신한다.
+
+2. ResourceManager와 UX 패널 생성
+   - 자원 변경 이벤트와 턴 로그/건설 정보 표시를 준비한다.
+
+3. BuildingManager 생성
+   - 플레이어 도시의 건물과 자원 상태를 초기화한다.
+   - 생성자에서 BuildingManager turn participant를 등록한다.
+
+4. StrategicGalaxyManager 생성
    - 행성/항로 정의를 로드한다.
    - city placement seed 목록을 준비한다.
 
-2. FactionManager 생성
-   - 진영 정의를 로드한다.
-   - StrategicGalaxyManager에서 초기 행성 상태를 읽어 faction influence 초기값을 설정한다.
+5. StrategicFleetManager 생성
+   - StrategicGalaxyManager를 참조해 전략 함대 상태를 관리한다.
 
-3. RivalCityManager 생성
+6. FactionManager 생성
+   - 진영 정의를 로드한다.
+   - FactionPreTurnParticipant와 FactionPostTurnParticipant를 등록한다.
+
+7. RivalCityManager 생성
    - StrategicGalaxyManager에서 city placement seed를 받아 도시 상태를 초기화한다.
    - FactionManager에서 진영 정의를 읽어 도시별 초기 factionId를 설정한다.
 
-4. BuildingManager 생성
-   - 플레이어 도시의 건물과 자원 상태를 초기화한다.
-   - playerCityPlanetId와 playerCityFactionId를 설정한다.
-
-5. TurnManager에 참여자 등록
+8. TurnManager에 전략 참여자 등록
    - FactionPreTurnParticipant  (turnOrder: 50)
    - BuildingManager            (turnOrder: 100)
    - RivalCityManager           (turnOrder: 150)
@@ -58,7 +70,7 @@
    - FactionPostTurnParticipant (turnOrder: 250)
 ```
 
-세이브 로드 시에는 각 매니저의 직렬화 상태를 순서대로 복원한 뒤 TurnManager에 재등록한다.
+세이브 로드 시에는 앱 계층의 `SimcityGameSaveService`가 full Simcity 구성 매니저의 직렬화 상태를 조립하고 복원한다.
 
 ### RivalCity
 
@@ -262,28 +274,27 @@ ctx.shared.cityOutputs["player"] = {
 
 플레이어 진영 소속은 게임 시작 시 선택하거나 시나리오 고정값으로 결정한다. 진영 미소속일 경우 `factionId: "neutral"`로 취급한다.
 
-### GameSaveState
+### SimcityGameSaveState
 
-전체 게임 상태는 단일 직렬화 계약으로 저장하고 복원한다. 각 매니저는 자기 도메인 상태만 직렬화하며, `GameManager`가 이를 조립한다.
+전체 게임 상태는 앱 계층의 단일 직렬화 계약으로 저장하고 복원한다. 각 매니저는 자기 도메인 상태만 직렬화하며, `SimcityGameSaveService`가 이를 조립한다.
 
 ```ts
-export type GameSaveState = {
+export type SimcityGameSaveState = {
   version: number;
-  turn: number;
+  turn?: number;
   seed: number;
-  difficulty: "easy" | "normal" | "hard";
-  playerCityPlanetId: string;
-  playerCityFactionId: FactionId;
-  factions: FactionState[];
-  rivalCities: RivalCityState[];
-  planets: StrategicPlanetState[];
-  routes: StrategicRouteState[];
-  strategicFleets: StrategicFleetState[];
-  playerCity: PlayerCityState;
+  difficulty: SimcityGameDifficulty;
+  playerCityPlanetId?: StrategicPlanetId;
+  playerCityFactionId?: FactionId;
+  factions?: FactionState[];
+  rivalCities?: RivalCityState[];
+  planets?: StrategicPlanetState[];
+  routes?: StrategicRouteState[];
+  strategicFleets?: StrategicFleetState[];
 };
 ```
 
-`version` 필드로 저장 포맷 변경 시 마이그레이션을 관리한다.
+`version` 필드로 저장 포맷 변경 시 마이그레이션을 관리한다. 상태 필드는 과거 저장 데이터와 부분 저장 호환을 위해 optional을 유지하지만, main Simcity 런타임의 manager 인스턴스는 필수 구성이다.
 
 ### TurnReport
 
@@ -317,8 +328,8 @@ UI는 자원 변경이나 건물 처리 로직을 직접 알 필요가 없다.
 
 ### 다음 턴 실행
 
-1. UI 또는 게임 로직이 `GameManager.nextTurn()`을 호출한다.
-2. `GameManager`가 `EventTypes.TurnNext` 이벤트를 보낸다.
+1. UI 또는 게임 로직이 `EventTypes.TurnNext` 이벤트를 보낸다.
+2. `TurnManager`가 이벤트를 수신한다.
 3. `TurnManager`가 새 턴 번호를 만들고 `TurnReport`를 초기화한다.
 4. `TurnManager`가 `TurnReportUpdated` 이벤트를 보내 메시지 창을 연다.
 5. 등록된 `ITurnParticipant`들이 순서대로 `advanceTurn(ctx)`를 실행한다.
