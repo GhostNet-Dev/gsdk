@@ -4,6 +4,14 @@ import * as THREE from "three";
 
 export type FactionKey = "alliance" | "empire" | "guild" | "neutral";
 
+export const GalaxyCityKind = {
+  Player: "player",
+  Rival: "rival",
+  Native: "native",
+} as const;
+
+export type GalaxyCityKind = typeof GalaxyCityKind[keyof typeof GalaxyCityKind];
+
 export const GalaxyPlanetAssetKey = {
   AmberBands: "amberBands",
   RoseSpots: "roseSpots",
@@ -59,6 +67,18 @@ export interface GalaxyMarketResourceViewModel {
   pricePressureText: string;
 }
 
+export interface GalaxyCityViewModel {
+  id: string;
+  name: string;
+  kind: GalaxyCityKind;
+  kindLabel: string;
+  factionId: FactionKey;
+  factionLabel: string;
+  cityDefId?: string;
+  score?: number;
+  description?: string;
+}
+
 export interface PlanetRingDef {
   textureKey: GalaxyRingTextureKey;
   tiltX?: number;
@@ -76,6 +96,7 @@ export interface PlanetDef<TPlanetId extends string = string> {
   resourceBonuses?: GalaxyResourceBonusViewModel[];
   specialResources?: GalaxySpecialResourceViewModel[];
   marketResources?: GalaxyMarketResourceViewModel[];
+  cities?: GalaxyCityViewModel[];
   cityCount?: number;
   stability?: number;
   blockadeLevel?: number;
@@ -171,7 +192,9 @@ export interface PlanetInfoViewModel {
   resourceBonuses: GalaxyResourceBonusViewModel[];
   specialResources: GalaxySpecialResourceViewModel[];
   marketResources: GalaxyMarketResourceViewModel[];
+  cities: GalaxyCityViewModel[];
   cityCount: number;
+  selectedCityId?: string;
   stability: number;
   blockadeLevel: number;
   degree: number;

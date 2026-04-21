@@ -2,6 +2,7 @@ import { FactionId } from "@Glibs/gameobjects/turntypes";
 import { CurrencyType } from "@Glibs/inventory/wallet";
 import { getResourceDisplayName } from "@Glibs/gameobjects/resourcetypes";
 import { StrategicFleetState } from "./strategicfleetstate";
+import { GalaxyCityViewModel } from "@Glibs/world/galaxy/galaxytypes";
 import {
   GalaxyPlanetViewModel,
   GalaxyPlanetVisualDef,
@@ -36,6 +37,7 @@ export function buildPlanetViewModel(
   state: StrategicPlanetState,
   visual: GalaxyPlanetVisualDef,
   fleetStrength: number,
+  cities: GalaxyCityViewModel[],
 ): GalaxyPlanetViewModel {
   const controllingFactionId = state.controllingFactionId ?? def.defaultFactionId;
   const specialLabels = def.specialResources.join(", ");
@@ -90,7 +92,8 @@ export function buildPlanetViewModel(
     resourceBonuses,
     specialResources,
     marketResources,
-    cityCount: state.cityIds.length,
+    cities,
+    cityCount: cities.length,
     stability: state.stability,
     blockadeLevel: state.blockadeLevel,
     controllingFactionId: state.controllingFactionId,

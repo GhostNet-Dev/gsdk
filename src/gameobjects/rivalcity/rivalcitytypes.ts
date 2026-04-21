@@ -20,6 +20,27 @@ export type RivalSpecialResourceBag = Partial<Record<RivalSpecialResourceType, n
 
 export type RivalResourceBag = Partial<Record<CurrencyType, number>>;
 
+export const RivalCityDefId = {
+  ForestGuild: "forest_guild",
+  MountainSyndicate: "mountain_syndicate",
+  HarborLeague: "harbor_league",
+  ScholarEnclave: "scholar_enclave",
+  FrontierCommune: "frontier_commune",
+  NativeEnclave: "native_enclave",
+} as const;
+
+export type RivalCityDefId = typeof RivalCityDefId[keyof typeof RivalCityDefId];
+
+export const RivalCityDefIds: readonly RivalCityDefId[] = Object.values(RivalCityDefId);
+
+export function isRivalCityDefId(value: unknown): value is RivalCityDefId {
+  return typeof value === "string" && RivalCityDefIds.includes(value as RivalCityDefId);
+}
+
+export function parseRivalCityDefId(value: unknown): RivalCityDefId | undefined {
+  return isRivalCityDefId(value) ? value : undefined;
+}
+
 // ─── 도시 성향 ────────────────────────────────────────────────────────────────
 
 export type RivalArchetypeId =
@@ -27,7 +48,8 @@ export type RivalArchetypeId =
   | "mountain"
   | "harbor"
   | "scholar"
-  | "frontier";
+  | "frontier"
+  | "native";
 
 export type RivalStrategyId =
   | "expand"
@@ -95,7 +117,7 @@ export interface RivalPolicyState {
 // ─── 도시 정의 ────────────────────────────────────────────────────────────────
 
 export interface RivalCityDef {
-  id: string;
+  id: RivalCityDefId;
   name: string;
   desc: string;
   archetype: RivalArchetypeId;
@@ -115,7 +137,7 @@ export interface RivalCityDef {
 
 export interface RivalCitySeed {
   id: string;
-  cityDefId: string;
+  cityDefId: RivalCityDefId;
   planetId: StrategicPlanetId;
   factionId: FactionId;
   name?: string;
@@ -160,7 +182,7 @@ export interface RivalCityState {
   id: string;
   name: string;
   status: "active" | "bankrupt" | "assimilated";
-  cityDefId: string;
+  cityDefId: RivalCityDefId;
   planetId: StrategicPlanetId;
   factionId: FactionId;
   archetypeId: RivalArchetypeId;

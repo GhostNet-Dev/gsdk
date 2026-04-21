@@ -9,6 +9,7 @@ import {
   RivalCityDef,
   RivalBuildTask,
   RivalScore,
+  parseRivalCityDefId,
 } from "./rivalcitytypes";
 import { rivalCityDefs } from "./rivalcitydefs";
 import { computeBaseProduction, applyBiases, computeSpecialResourceProduction } from "./rivalcityeconomy";
@@ -189,8 +190,9 @@ export class RivalCityManager implements ITurnParticipant {
     this.cities = states.flatMap((s) => {
       const factionId = parseFactionId(s.factionId);
       const planetId = parseStrategicPlanetId(s.planetId);
-      const def = rivalCityDefs[s.cityDefId];
-      if (!factionId || !planetId || !def) {
+      const cityDefId = parseRivalCityDefId(s.cityDefId);
+      const def = cityDefId ? rivalCityDefs[cityDefId] : undefined;
+      if (!factionId || !planetId || !cityDefId || !def) {
         console.warn(`[RivalCityManager] Invalid saved city skipped: ${s.id}`);
         return [];
       }
@@ -206,7 +208,7 @@ export class RivalCityManager implements ITurnParticipant {
         return ok;
       });
 
-      return [{ ...s, factionId, planetId, buildings, buildQueue }];
+      return [{ ...s, cityDefId, factionId, planetId, buildings, buildQueue }];
     });
     for (const city of this.cities) {
       const def = rivalCityDefs[city.cityDefId];

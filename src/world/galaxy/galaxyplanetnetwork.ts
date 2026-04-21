@@ -2,6 +2,7 @@ import * as THREE from "three";
 import {
   FactionKey,
   GalaxyContext,
+  GalaxyCityViewModel,
   GalaxyMapDef,
   GalaxyPlanetNetworkOptions,
   GalaxyPlanetAssetKey,
@@ -57,6 +58,35 @@ type PulseObject = {
   targetAlpha: number;
 };
 
+type CityMarkerObject = {
+  planetIndex: number;
+  cityIndex: number;
+  cityCount: number;
+  city: GalaxyCityViewModel;
+  root: THREE.Group;
+  clickable: THREE.Sprite;
+  surfaceDirection: THREE.Vector3;
+  markerClearance: number;
+  alpha: number;
+  targetAlpha: number;
+};
+
+type CityConnectionObject = {
+  planetIndex: number;
+  fromCityId: string;
+  toCityId: string;
+  line: THREE.Line;
+  lineClearance: number;
+  pointCount: number;
+  alpha: number;
+  targetAlpha: number;
+};
+
+type PickResult = {
+  planet: PlanetGroup;
+  cityId?: string;
+};
+
 const DEFAULT_OPTIONS: Required<GalaxyPlanetNetworkOptions> = {
   placementMode: "optimized",
   layout: {
@@ -108,6 +138,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
   private readonly edgeGroup = new THREE.Group();
   private readonly routePulseGroup = new THREE.Group();
   private readonly markerGroup = new THREE.Group();
+  private readonly cityMarkerGroup = new THREE.Group();
   private readonly selectedGroup = new THREE.Group();
   private readonly chokepointGroup = new THREE.Group();
 
@@ -122,9 +153,12 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
   private chokepointIndices = new Set<number>();
   private edgeObjects: EdgeObject[] = [];
   private routePulses: PulseObject[] = [];
+  private cityMarkers: CityMarkerObject[] = [];
+  private cityConnections: CityConnectionObject[] = [];
   private visiblePlanetSet: Set<number> | null = null;
 
   private selectedPlanetIndex = 0;
+  private selectedCityId?: string;
   private focusMode = false;
   private overviewTarget = new THREE.Vector3();
   private overviewPosition = new THREE.Vector3();
@@ -179,6 +213,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       this.edgeGroup,
       this.routePulseGroup,
       this.markerGroup,
+      this.cityMarkerGroup,
       this.selectedGroup,
       this.chokepointGroup
     );
@@ -186,6 +221,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.injectGalaxyMap(resolved);
     this.buildEdges();
     this.buildMarkers();
+    this.buildCityMarkers();
     this.buildSelectedDecor();
     this.buildChokepointDecor();
     this.computeOverviewState();
@@ -286,6 +322,9 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       (label.material as THREE.SpriteMaterial).opacity = (label.userData as any).alpha;
       label.visible = (label.userData as any).alpha > 0.03;
     });
+
+    this.updateCityMarkers(elapsed);
+    this.updateCityConnections();
   }
 
   dispose(): void {
@@ -303,6 +342,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.edgeGroup.clear();
     this.routePulseGroup.clear();
     this.markerGroup.clear();
+    this.cityMarkerGroup.clear();
     this.selectedGroup.clear();
     this.chokepointGroup.clear();
 
@@ -314,16 +354,19 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.chokepointIndices.clear();
     this.edgeObjects = [];
     this.routePulses = [];
+    this.cityMarkers = [];
+    this.cityConnections = [];
     this.visiblePlanetSet = null;
     this.clickTargets = [];
     this.pointerDownInfo = null;
     this.focusMode = false;
     this.selectedPlanetIndex = 0;
+    this.selectedCityId = undefined;
     this.cameraTween.active = false;
     this.cameraTween.onComplete = undefined;
   }
 
-  focusOnPlanet(indexOrId: number | string): void {
+  focusOnPlanet(indexOrId: number | string, selectedCityId?: string): void {
     const index = typeof indexOrId === "string"
       ? this.planets.findIndex((p) => p.userData.id === indexOrId)
       : indexOrId;
@@ -331,6 +374,9 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     if (index < 0 || index >= this.planets.length) return;
 
     this.selectedPlanetIndex = index;
+    this.selectedCityId = this.getPlanetCityIds(index).includes(selectedCityId ?? "")
+      ? selectedCityId
+      : undefined;
     this.focusMode = true;
     if (this.onFocusModeChanged) this.onFocusModeChanged(true);
     this.applyVisibilityTargets();
@@ -376,8 +422,15 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     });
   }
 
+  selectCity(planetId: string, cityId: string): void {
+    const index = this.planets.findIndex((p) => p.userData.id === planetId);
+    if (index < 0) return;
+    this.focusOnPlanet(index, cityId);
+  }
+
   resetToOverview(): void {
     this.focusMode = false;
+    this.selectedCityId = undefined;
     if (this.onFocusModeChanged) this.onFocusModeChanged(false);
     this.applyVisibilityTargets();
 
@@ -400,6 +453,11 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
 
   private emitSelection(): void {
     this.onSelectionChanged?.(this.getSelectedPlanetInfo());
+  }
+
+  private getPlanetCityIds(index: number): string[] {
+    const cities = this.planets[index]?.userData.definition.cities ?? [];
+    return cities.map((city) => city.id);
   }
 
   private buildSelectedDecor(): void {
@@ -464,6 +522,181 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       inner.userData.baseOpacity = 0.11;
       this.markerGroup.add(inner);
     });
+  }
+
+  private buildCityMarkers(): void {
+    this.cityMarkers = [];
+    this.cityConnections = [];
+
+    this.planets.forEach((planet, planetIndex) => {
+      const cities = planet.userData.definition.cities ?? [];
+      cities.forEach((city, cityIndex) => {
+        const marker = this.createCityMarker(city, planetIndex, cityIndex, cities.length);
+        this.cityMarkerGroup.add(marker.root);
+        this.cityMarkers.push(marker);
+        this.clickTargets.push(marker.clickable);
+      });
+      this.buildCityConnections(planetIndex, cities);
+    });
+  }
+
+  private createCityMarker(
+    city: GalaxyCityViewModel,
+    planetIndex: number,
+    cityIndex: number,
+    cityCount: number,
+  ): CityMarkerObject {
+    const root = new THREE.Group();
+    const count = Math.max(1, cityCount);
+    const angle = (cityIndex / count) * Math.PI * 2 - Math.PI * 0.5;
+    const latitude = Math.PI * 0.22;
+    const surfaceDirection = new THREE.Vector3(
+      Math.cos(angle) * Math.cos(latitude),
+      Math.sin(latitude),
+      Math.sin(angle) * Math.cos(latitude),
+    ).normalize();
+    const planet = this.planets[planetIndex];
+    const markerClearance = planet
+      ? Math.max(0.18, planet.userData.radius * 0.08)
+      : 0.18;
+    const material = new THREE.SpriteMaterial({
+      map: this.createCityMarkerTexture(),
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.88,
+      depthWrite: false,
+    });
+
+    const clickable = new THREE.Sprite(material);
+    clickable.userData.planetIndex = planetIndex;
+    clickable.userData.cityId = city.id;
+    clickable.userData.cityMarker = true;
+    clickable.frustumCulled = false;
+    clickable.renderOrder = 6;
+    root.userData.planetIndex = planetIndex;
+    root.userData.cityId = city.id;
+    root.add(clickable);
+
+    return {
+      planetIndex,
+      cityIndex,
+      cityCount,
+      city,
+      root,
+      clickable,
+      surfaceDirection,
+      markerClearance,
+      alpha: 1,
+      targetAlpha: 1,
+    };
+  }
+
+  private buildCityConnections(
+    planetIndex: number,
+    cities: GalaxyCityViewModel[],
+  ): void {
+    if (cities.length < 2) return;
+
+    for (let i = 0; i < cities.length; i++) {
+      const fromCity = cities[i];
+      const toCity = cities[(i + 1) % cities.length];
+      const geometry = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(),
+        new THREE.Vector3(),
+        new THREE.Vector3(),
+      ]);
+      const material = new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.42,
+        depthWrite: false,
+      });
+      const line = new THREE.Line(geometry, material);
+      line.frustumCulled = false;
+      line.renderOrder = 5;
+      const planet = this.planets[planetIndex];
+      const lineClearance = planet
+        ? Math.max(0.16, planet.userData.radius * 0.065)
+        : 0.16;
+      this.cityMarkerGroup.add(line);
+      this.cityConnections.push({
+        planetIndex,
+        fromCityId: fromCity.id,
+        toCityId: toCity.id,
+        line,
+        lineClearance,
+        pointCount: 20,
+        alpha: 1,
+        targetAlpha: 1,
+      });
+    }
+  }
+
+  private updateCityMarkers(elapsed: number): void {
+    this.cityMarkers.forEach((marker) => {
+      const planet = this.planets[marker.planetIndex];
+      if (!planet) return;
+
+      const surfaceRotation = planet.userData.planetMesh.getWorldQuaternion(new THREE.Quaternion());
+      const direction = marker.surfaceDirection.clone().applyQuaternion(surfaceRotation);
+
+      marker.root.position.copy(
+        planet.position.clone().add(direction.multiplyScalar(planet.userData.radius + marker.markerClearance)),
+      );
+
+      marker.alpha = THREE.MathUtils.lerp(marker.alpha, marker.targetAlpha, 0.12);
+      const selected = marker.city.id === this.selectedCityId;
+      const baseScale = Math.max(0.55, planet.userData.radius * 0.22);
+      const targetScale = baseScale * (selected ? 1.25 : 1.0);
+      const currentScale = marker.clickable.scale.x || targetScale;
+      const nextScale = THREE.MathUtils.lerp(currentScale, targetScale, 0.16);
+      marker.clickable.scale.set(nextScale, nextScale, 1);
+
+      marker.clickable.material.opacity = marker.alpha * (selected ? 1 : 0.72);
+      marker.root.visible = marker.alpha > 0.03;
+    });
+  }
+
+  private updateCityConnections(): void {
+    this.cityConnections.forEach((connection) => {
+      const planet = this.planets[connection.planetIndex];
+      const from = this.findCityMarker(connection.fromCityId);
+      const to = this.findCityMarker(connection.toCityId);
+      if (!planet || !from || !to) return;
+
+      connection.alpha = THREE.MathUtils.lerp(connection.alpha, connection.targetAlpha, 0.12);
+
+      const start = from.root.position.clone();
+      const end = to.root.position.clone();
+      const center = planet.position.clone();
+      const surfaceRotation = planet.userData.planetMesh.getWorldQuaternion(new THREE.Quaternion());
+      const startDir = from.surfaceDirection;
+      const endDir = to.surfaceDirection;
+      const points: THREE.Vector3[] = [];
+
+      for (let i = 0; i <= connection.pointCount; i++) {
+        const t = i / connection.pointCount;
+        const direction = this.interpolateUnitVectors(startDir, endDir, t)
+          .applyQuaternion(surfaceRotation);
+        points.push(
+          center.clone().add(direction.multiplyScalar(planet.userData.radius + connection.lineClearance)),
+        );
+      }
+
+      connection.line.geometry.setFromPoints(points);
+      connection.line.geometry.computeBoundingSphere();
+
+      const selected =
+        connection.fromCityId === this.selectedCityId ||
+        connection.toCityId === this.selectedCityId;
+      const mat = connection.line.material as THREE.LineBasicMaterial;
+      mat.opacity = connection.alpha * (selected ? 0.64 : 0.34);
+      connection.line.visible = mat.opacity > 0.03;
+    });
+  }
+
+  private findCityMarker(cityId: string): CityMarkerObject | undefined {
+    return this.cityMarkers.find((marker) => marker.city.id === cityId);
   }
 
   private buildEdges(): void {
@@ -836,6 +1069,14 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
         this.planets[idx].userData.targetAlpha;
     });
 
+    this.cityMarkers.forEach((marker) => {
+      marker.targetAlpha = this.planets[marker.planetIndex].userData.targetAlpha;
+    });
+
+    this.cityConnections.forEach((connection) => {
+      connection.targetAlpha = this.planets[connection.planetIndex].userData.targetAlpha;
+    });
+
     this.edgeObjects.forEach((edge) => {
       const [a, b] = edge.pair;
       edge.targetAlpha = !this.focusMode
@@ -864,6 +1105,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     const fallbackSpecialResources = stats.resource && stats.resource !== "none"
       ? [{ id: stats.resource, label: stats.resource }]
       : [];
+    const cities = definition.cities ?? [];
 
     return {
       id: planet.userData.id,
@@ -881,7 +1123,9 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       resourceBonuses: definition.resourceBonuses ?? [],
       specialResources: definition.specialResources ?? fallbackSpecialResources,
       marketResources: definition.marketResources ?? [],
-      cityCount: definition.cityCount ?? 0,
+      cities,
+      cityCount: cities.length,
+      selectedCityId: this.selectedCityId,
       stability: definition.stability ?? 0,
       blockadeLevel: definition.blockadeLevel ?? 0,
       degree: planet.userData.degree,
@@ -1018,10 +1262,15 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
 
     if (dx * dx + dy * dy > 16) return;
 
-    const picked = this.pickPlanet(event);
+    const picked = this.pickGalaxyTarget(event);
     if (!picked) return;
 
-    const pickedIndex = picked.userData.index;
+    const pickedIndex = picked.planet.userData.index;
+
+    if (picked.cityId) {
+      this.focusOnPlanet(pickedIndex, picked.cityId);
+      return;
+    }
 
     // If already in focus mode and clicking the SAME planet, return to overview.
     if (this.focusMode && this.selectedPlanetIndex === pickedIndex) {
@@ -1037,7 +1286,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     if (event.key === "Escape") this.resetToOverview();
   };
 
-  private pickPlanet(event: PointerEvent): PlanetGroup | null {
+  private pickGalaxyTarget(event: PointerEvent): PickResult | null {
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -1048,13 +1297,21 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
 
     const hitObject = hits[0].object;
 
+    if (hitObject.userData?.cityMarker) {
+      const planetIndex = hitObject.userData.planetIndex as number;
+      return {
+        planet: this.planets[planetIndex],
+        cityId: hitObject.userData.cityId as string,
+      };
+    }
+
     // 클릭된 객체가 라벨(Sprite)인 경우, userData에 저장된 인덱스로 행성 반환
     if (hitObject.userData && hitObject.userData.planetIndex !== undefined) {
-      return this.planets[hitObject.userData.planetIndex];
+      return { planet: this.planets[hitObject.userData.planetIndex] };
     }
 
     // 클릭된 객체가 행성(Mesh)인 경우, 기존처럼 부모 객체를 반환
-    return hitObject.parent as PlanetGroup;
+    return { planet: hitObject.parent as PlanetGroup };
   }
 
   private resolveGalaxyMap(mapDef: GalaxyMapDef): GalaxyMapDef {
@@ -1064,6 +1321,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       planets: mapDef.planets.map((planet) => ({
         ...planet,
         links: [...(planet.links ?? [])],
+        cities: planet.cities?.map((city) => ({ ...city })),
         stats: { ...planet.stats }
       }))
     };
@@ -1411,6 +1669,56 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
+  }
+
+  private createCityMarkerTexture(): THREE.Texture {
+    const canvas = document.createElement("canvas");
+    canvas.width = 128;
+    canvas.height = 128;
+
+    const ctx = canvas.getContext("2d")!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 46);
+    gradient.addColorStop(0.0, "rgba(255,255,255,1.0)");
+    gradient.addColorStop(0.72, "rgba(255,255,255,0.98)");
+    gradient.addColorStop(0.88, "rgba(255,255,255,0.82)");
+    gradient.addColorStop(1.0, "rgba(255,255,255,0.0)");
+
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(64, 64, 46, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(64, 64, 44, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+
+  private interpolateUnitVectors(from: THREE.Vector3, to: THREE.Vector3, t: number): THREE.Vector3 {
+    const start = from.clone().normalize();
+    const end = to.clone().normalize();
+    const dot = THREE.MathUtils.clamp(start.dot(end), -1, 1);
+
+    if (dot > 0.9995) {
+      return start.lerp(end, t).normalize();
+    }
+
+    const theta = Math.acos(dot);
+    const sinTheta = Math.sin(theta);
+    if (Math.abs(sinTheta) < 0.0001) {
+      return start.lerp(end, t).normalize();
+    }
+
+    const startWeight = Math.sin((1 - t) * theta) / sinTheta;
+    const endWeight = Math.sin(t * theta) / sinTheta;
+
+    return start.multiplyScalar(startWeight).add(end.multiplyScalar(endWeight)).normalize();
   }
 
   private createPlanetTexture(params: {

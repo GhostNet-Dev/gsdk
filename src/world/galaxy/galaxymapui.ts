@@ -6,6 +6,7 @@ const GALAXY_UI_BOTTOM_PANEL_HEIGHT = 360;
 
 const GalaxyMapPanelTab = {
   Summary: "summary",
+  Cities: "cities",
   Resources: "resources",
   Routes: "routes",
 } as const;
@@ -14,6 +15,7 @@ type GalaxyMapPanelTab = typeof GalaxyMapPanelTab[keyof typeof GalaxyMapPanelTab
 
 function parseGalaxyMapPanelTab(value: string | undefined): GalaxyMapPanelTab | undefined {
   if (value === GalaxyMapPanelTab.Summary) return GalaxyMapPanelTab.Summary;
+  if (value === GalaxyMapPanelTab.Cities) return GalaxyMapPanelTab.Cities;
   if (value === GalaxyMapPanelTab.Resources) return GalaxyMapPanelTab.Resources;
   if (value === GalaxyMapPanelTab.Routes) return GalaxyMapPanelTab.Routes;
   return undefined;
@@ -58,9 +60,11 @@ export class GalaxyMapUI {
   private resourceBonusList!: HTMLElement;
   private specialResourceList!: HTMLElement;
   private marketResourceList!: HTMLElement;
+  private cityList!: HTMLElement;
   private planetNeighbors!: HTMLElement;
 
   public onNeighborClick?: (planetId: string) => void;
+  public onCityClick?: (planetId: string, cityId: string) => void;
 
   constructor(container: HTMLElement = document.body) {
     this.ensureStyle();
@@ -86,6 +90,11 @@ export class GalaxyMapUI {
             <ul class="gsm-info-list" data-ref="specialResourceList"></ul>
             <div class="gsm-section-title">설명</div>
             <div class="gsm-desc" data-ref="planetDescription"></div>
+          </section>
+
+          <section class="gsm-tab-panel" data-panel="${GalaxyMapPanelTab.Cities}" role="tabpanel">
+            <div class="gsm-section-title">도시</div>
+            <ul class="gsm-city-list" data-ref="cityList"></ul>
           </section>
 
           <section class="gsm-tab-panel" data-panel="${GalaxyMapPanelTab.Resources}" role="tabpanel">
@@ -114,6 +123,7 @@ export class GalaxyMapUI {
 
         <div class="gsm-tabs" role="tablist" aria-label="행성 정보">
           <button type="button" class="gsm-tab" data-tab="${GalaxyMapPanelTab.Summary}" role="tab">요약</button>
+          <button type="button" class="gsm-tab" data-tab="${GalaxyMapPanelTab.Cities}" role="tab">도시</button>
           <button type="button" class="gsm-tab" data-tab="${GalaxyMapPanelTab.Resources}" role="tab">자원</button>
           <button type="button" class="gsm-tab" data-tab="${GalaxyMapPanelTab.Routes}" role="tab">항로</button>
         </div>
@@ -150,6 +160,10 @@ export class GalaxyMapUI {
     this.renderSpecialResources(info);
     this.renderResourceBonuses(info);
     this.renderMarketResources(info);
+    this.renderCities(info);
+    if (info.selectedCityId) {
+      this.setActiveTab(GalaxyMapPanelTab.Cities);
+    }
 
     const neighborItems = info.neighbors.map((neighbor) => {
       const item = document.createElement("li");
@@ -194,9 +208,11 @@ export class GalaxyMapUI {
     const tabPanel = (tab: GalaxyMapPanelTab) => this.root.querySelector(`[data-panel="${tab}"]`) as HTMLElement;
 
     this.tabButtons.set(GalaxyMapPanelTab.Summary, tabButton(GalaxyMapPanelTab.Summary));
+    this.tabButtons.set(GalaxyMapPanelTab.Cities, tabButton(GalaxyMapPanelTab.Cities));
     this.tabButtons.set(GalaxyMapPanelTab.Resources, tabButton(GalaxyMapPanelTab.Resources));
     this.tabButtons.set(GalaxyMapPanelTab.Routes, tabButton(GalaxyMapPanelTab.Routes));
     this.tabPanels.set(GalaxyMapPanelTab.Summary, tabPanel(GalaxyMapPanelTab.Summary));
+    this.tabPanels.set(GalaxyMapPanelTab.Cities, tabPanel(GalaxyMapPanelTab.Cities));
     this.tabPanels.set(GalaxyMapPanelTab.Resources, tabPanel(GalaxyMapPanelTab.Resources));
     this.tabPanels.set(GalaxyMapPanelTab.Routes, tabPanel(GalaxyMapPanelTab.Routes));
 
@@ -214,7 +230,48 @@ export class GalaxyMapUI {
     this.resourceBonusList = q("resourceBonusList");
     this.specialResourceList = q("specialResourceList");
     this.marketResourceList = q("marketResourceList");
+    this.cityList = q("cityList");
     this.planetNeighbors = q("planetNeighbors");
+  }
+
+  private renderCities(info: PlanetInfoViewModel): void {
+    if (info.cities.length === 0) {
+      this.cityList.replaceChildren(this.createEmptyItem("도시 없음"));
+      return;
+    }
+
+    this.cityList.replaceChildren(...info.cities.map((city) => {
+      const item = document.createElement("li");
+      item.className = "gsm-city-item";
+      if (city.id === info.selectedCityId) item.classList.add("gsm-city-selected");
+      item.tabIndex = 0;
+
+      const main = document.createElement("div");
+      main.className = "gsm-city-main";
+
+      const name = document.createElement("strong");
+      name.textContent = city.name;
+      const kind = document.createElement("span");
+      kind.textContent = city.kindLabel;
+      main.append(name, kind);
+
+      const meta = document.createElement("div");
+      meta.className = "gsm-city-meta";
+      const score = city.score === undefined ? "대기중" : `점수 ${this.formatNumber(city.score)}`;
+      meta.textContent = `${city.factionLabel} / ${score}`;
+
+      item.append(main, meta);
+      item.addEventListener("click", () => {
+        this.onCityClick?.(info.id, city.id);
+      });
+      item.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          this.onCityClick?.(info.id, city.id);
+        }
+      });
+      return item;
+    }));
   }
 
   private renderSpecialResources(info: PlanetInfoViewModel): void {
@@ -331,7 +388,7 @@ export class GalaxyMapUI {
         background:rgba(255,255,255,.06);
       }
       .gsm-tabs {
-        display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px; flex:0 0 auto;
+        display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px; flex:0 0 auto;
         padding:10px 14px 14px; border-top:1px solid rgba(255,255,255,.06); background:rgba(8,12,22,0.72);
       }
       .gsm-tab {
@@ -351,6 +408,19 @@ export class GalaxyMapUI {
         display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid rgba(255,255,255,.06);
       }
       .gsm-info-item strong { text-align:right; color:#f2f7ff; }
+      .gsm-city-list { margin:8px 0 0; padding-left:0; max-height:190px; overflow:auto; font-size:13px; list-style:none; }
+      .gsm-city-item {
+        padding:8px; margin-bottom:6px; border-radius:8px;
+        background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.07);
+        cursor:pointer; outline:none;
+      }
+      .gsm-city-item:hover, .gsm-city-item:focus, .gsm-city-selected {
+        background:rgba(120,175,255,0.16); border-color:rgba(170,210,255,0.32);
+      }
+      .gsm-city-main { display:flex; justify-content:space-between; gap:10px; align-items:center; }
+      .gsm-city-main strong { color:#f2f7ff; overflow-wrap:anywhere; }
+      .gsm-city-main span { color:#b9c7dd; font-size:12px; white-space:nowrap; }
+      .gsm-city-meta { margin-top:4px; color:#aeb8cc; font-size:12px; }
       .gsm-neighbor-list { margin:8px 0 0; padding-left:0; max-height:150px; overflow:auto; font-size:13px; list-style:none; }
       .gsm-neighbor-item { 
         padding: 4px 8px; margin-bottom: 4px; border-radius: 6px; 

@@ -1,10 +1,11 @@
 import { CurrencyType } from "@Glibs/inventory/wallet";
-import { StrategicPlanetDef, StrategicRouteDef } from "./strategicgalaxytypes";
-import { RivalCitySeed } from "@Glibs/gameobjects/rivalcity/rivalcitytypes";
+import { FactionId } from "@Glibs/gameobjects/turntypes";
+import { StrategicPlanetCityKind, StrategicPlanetDef, StrategicRouteDef } from "./strategicgalaxytypes";
+import { RivalCityDefId } from "@Glibs/gameobjects/rivalcity/rivalcitytypes";
 
 // ─── 행성 Gameplay 정의 ───────────────────────────────────────────────────────
 
-export const strategicPlanetDefs: Record<string, StrategicPlanetDef> = {
+export const strategicPlanetDefs: Record<string, StrategicPlanetDef<RivalCityDefId>> = {
   atlas: {
     id: "atlas",
     name: "Atlas",
@@ -13,6 +14,16 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef> = {
     profileId: "gateworld",
     routeIds: ["atlas-hephaestus", "atlas-athena", "atlas-hades"],
     citySlots: 3,
+    cityPlacements: [
+      {
+        id: "rival-atlas-guild",
+        kind: StrategicPlanetCityKind.Rival,
+        cityDefId: RivalCityDefId.HarborLeague,
+        factionId: FactionId.Guild,
+        name: "Atlas Harbor League",
+        startingInfluence: 40,
+      },
+    ],
     resourceBias: {
       [CurrencyType.Gold]: 1.3,
       [CurrencyType.Food]: 1.1,
@@ -35,6 +46,16 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef> = {
     profileId: "industrial",
     routeIds: ["atlas-hephaestus", "hephaestus-selene"],
     citySlots: 2,
+    cityPlacements: [
+      {
+        id: "rival-hephaestus-empire",
+        kind: StrategicPlanetCityKind.Rival,
+        cityDefId: RivalCityDefId.MountainSyndicate,
+        factionId: FactionId.Empire,
+        name: "Hephaestus Mountain Syndicate",
+        startingInfluence: 35,
+      },
+    ],
     resourceBias: {
       [CurrencyType.Materials]: 1.4,
       [CurrencyType.Gems]: 1.2,
@@ -57,6 +78,16 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef> = {
     profileId: "ice-moon",
     routeIds: ["hephaestus-selene"],
     citySlots: 1,
+    cityPlacements: [
+      {
+        id: "rival-selene-frontier",
+        kind: StrategicPlanetCityKind.Rival,
+        cityDefId: RivalCityDefId.FrontierCommune,
+        factionId: FactionId.Guild,
+        name: "Selene Frontier Commune",
+        startingInfluence: 24,
+      },
+    ],
     resourceBias: {
       [CurrencyType.Water]: 1.25,
       [CurrencyType.Electric]: 1.1,
@@ -79,6 +110,30 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef> = {
     profileId: "biosphere",
     routeIds: ["eden-vega"],
     citySlots: 3,
+    cityPlacements: [
+      {
+        id: "player-city",
+        kind: StrategicPlanetCityKind.Player,
+        factionId: FactionId.Alliance,
+        name: "플레이어 도시",
+      },
+      {
+        id: "rival-eden-alliance",
+        kind: StrategicPlanetCityKind.Rival,
+        cityDefId: RivalCityDefId.ForestGuild,
+        factionId: FactionId.Alliance,
+        name: "Eden Forest Guild",
+        startingInfluence: 38,
+      },
+      {
+        id: "native-eden-enclave",
+        kind: StrategicPlanetCityKind.Native,
+        cityDefId: RivalCityDefId.NativeEnclave,
+        factionId: FactionId.Neutral,
+        name: "에덴 원주민 구역",
+        startingInfluence: 22,
+      },
+    ],
     resourceBias: {
       [CurrencyType.Food]: 1.5,
       [CurrencyType.Water]: 1.3,
@@ -101,6 +156,16 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef> = {
     profileId: "frontier",
     routeIds: ["sirius-orion", "sirius-vega"],
     citySlots: 2,
+    cityPlacements: [
+      {
+        id: "rival-sirius-frontier",
+        kind: StrategicPlanetCityKind.Rival,
+        cityDefId: RivalCityDefId.FrontierCommune,
+        factionId: FactionId.Alliance,
+        name: "Sirius Frontier Commune",
+        startingInfluence: 30,
+      },
+    ],
     resourceBias: {
       [CurrencyType.Electric]: 1.2,
     },
@@ -122,6 +187,16 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef> = {
     profileId: "gas-frontier",
     routeIds: ["sirius-orion"],
     citySlots: 1,
+    cityPlacements: [
+      {
+        id: "rival-orion-frontier",
+        kind: StrategicPlanetCityKind.Rival,
+        cityDefId: RivalCityDefId.FrontierCommune,
+        factionId: FactionId.Neutral,
+        name: "Orion Frontier Commune",
+        startingInfluence: 20,
+      },
+    ],
     resourceBias: {
       [CurrencyType.Electric]: 1.25,
       [CurrencyType.Materials]: 1.05,
@@ -144,6 +219,16 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef> = {
     profileId: "trade",
     routeIds: ["sirius-vega", "vega-athena", "eden-vega"],
     citySlots: 3,
+    cityPlacements: [
+      {
+        id: "rival-vega-harbor",
+        kind: StrategicPlanetCityKind.Rival,
+        cityDefId: RivalCityDefId.HarborLeague,
+        factionId: FactionId.Alliance,
+        name: "Vega Harbor League",
+        startingInfluence: 36,
+      },
+    ],
     resourceBias: {
       [CurrencyType.Gold]: 1.2,
       [CurrencyType.Materials]: 1.1,
@@ -166,6 +251,16 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef> = {
     profileId: "research-hub",
     routeIds: ["atlas-athena", "vega-athena"],
     citySlots: 2,
+    cityPlacements: [
+      {
+        id: "rival-athena-scholar",
+        kind: StrategicPlanetCityKind.Rival,
+        cityDefId: RivalCityDefId.ScholarEnclave,
+        factionId: FactionId.Guild,
+        name: "Athena Scholar Enclave",
+        startingInfluence: 34,
+      },
+    ],
     resourceBias: {
       [CurrencyType.Gold]: 1.15,
       [CurrencyType.Electric]: 1.15,
@@ -188,6 +283,16 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef> = {
     profileId: "fortress",
     routeIds: ["atlas-hades", "hades-nyx"],
     citySlots: 2,
+    cityPlacements: [
+      {
+        id: "rival-hades-syndicate",
+        kind: StrategicPlanetCityKind.Rival,
+        cityDefId: RivalCityDefId.MountainSyndicate,
+        factionId: FactionId.Empire,
+        name: "Hades Mountain Syndicate",
+        startingInfluence: 33,
+      },
+    ],
     resourceBias: {
       [CurrencyType.Materials]: 1.3,
       [CurrencyType.Gems]: 1.1,
@@ -210,6 +315,16 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef> = {
     profileId: "dark-matter",
     routeIds: ["hades-nyx"],
     citySlots: 1,
+    cityPlacements: [
+      {
+        id: "rival-nyx-syndicate",
+        kind: StrategicPlanetCityKind.Rival,
+        cityDefId: RivalCityDefId.MountainSyndicate,
+        factionId: FactionId.Empire,
+        name: "Nyx Mountain Syndicate",
+        startingInfluence: 22,
+      },
+    ],
     resourceBias: {
       [CurrencyType.Gems]: 1.2,
       [CurrencyType.Materials]: 1.15,
@@ -238,34 +353,4 @@ export const strategicRouteDefs: StrategicRouteDef[] = [
   { id: "vega-athena",      fromPlanetId: "vega",       toPlanetId: "athena",     baseDistance: 2 },
   { id: "eden-vega",        fromPlanetId: "eden",       toPlanetId: "vega",       baseDistance: 5 },
   { id: "hades-nyx",        fromPlanetId: "hades",      toPlanetId: "nyx",        baseDistance: 2 },
-];
-
-// ─── 초기 경쟁 도시 배치 (city seed) ─────────────────────────────────────────
-// RivalCityManager가 초기화 시 이 목록을 읽어 도시 상태를 만든다.
-
-export const initialRivalCitySeeds: RivalCitySeed[] = [
-  {
-    id: "rival-atlas-guild",
-    cityDefId: "harbor_league",
-    planetId: "atlas",
-    factionId: "guild",
-    name: "Atlas Harbor League",
-    startingInfluence: 40,
-  },
-  {
-    id: "rival-hephaestus-empire",
-    cityDefId: "mountain_syndicate",
-    planetId: "hephaestus",
-    factionId: "empire",
-    name: "Hephaestus Mountain Syndicate",
-    startingInfluence: 35,
-  },
-  {
-    id: "rival-eden-alliance",
-    cityDefId: "forest_guild",
-    planetId: "eden",
-    factionId: "alliance",
-    name: "Eden Forest Guild",
-    startingInfluence: 38,
-  },
 ];

@@ -1,11 +1,11 @@
 import { CurrencyType } from "@Glibs/inventory/wallet";
-import { RivalCityDef, RivalPolicyDef, RivalSpecialResourceType } from "./rivalcitytypes";
+import { RivalCityDef, RivalCityDefId, RivalPolicyDef, RivalSpecialResourceType } from "./rivalcitytypes";
 
 // ─── 도시 정의 ────────────────────────────────────────────────────────────────
 
-export const rivalCityDefs: Record<string, RivalCityDef> = {
+export const rivalCityDefs: Record<RivalCityDefId, RivalCityDef> = {
   forest_guild: {
-    id: "forest_guild",
+    id: RivalCityDefId.ForestGuild,
     name: "Forest Guild",
     desc: "숲과 목재 생산에 강한 경쟁 도시입니다.",
     archetype: "forest",
@@ -41,7 +41,7 @@ export const rivalCityDefs: Record<string, RivalCityDef> = {
   },
 
   mountain_syndicate: {
-    id: "mountain_syndicate",
+    id: RivalCityDefId.MountainSyndicate,
     name: "Mountain Syndicate",
     desc: "자재와 보석 생산이 강하고 고가치 건물을 선호하는 경쟁 도시입니다.",
     archetype: "mountain",
@@ -77,7 +77,7 @@ export const rivalCityDefs: Record<string, RivalCityDef> = {
   },
 
   harbor_league: {
-    id: "harbor_league",
+    id: RivalCityDefId.HarborLeague,
     name: "Harbor League",
     desc: "식량과 골드 흐름이 안정적인 교역 도시입니다.",
     archetype: "harbor",
@@ -113,7 +113,7 @@ export const rivalCityDefs: Record<string, RivalCityDef> = {
   },
 
   scholar_enclave: {
-    id: "scholar_enclave",
+    id: RivalCityDefId.ScholarEnclave,
     name: "Scholar Enclave",
     desc: "원자재 생산은 약하지만 연구와 효율 보너스가 높은 도시입니다.",
     archetype: "scholar",
@@ -149,7 +149,7 @@ export const rivalCityDefs: Record<string, RivalCityDef> = {
   },
 
   frontier_commune: {
-    id: "frontier_commune",
+    id: RivalCityDefId.FrontierCommune,
     name: "Frontier Commune",
     desc: "성장 속도는 빠르지만 장기 점수 효율은 낮은 도시입니다.",
     archetype: "frontier",
@@ -179,6 +179,42 @@ export const rivalCityDefs: Record<string, RivalCityDef> = {
       economy: 0.9,
       population: 1.4,
       research: 0.6,
+      prestige: 0.8,
+    },
+  },
+
+  native_enclave: {
+    id: RivalCityDefId.NativeEnclave,
+    name: "원주민 구역",
+    desc: "외부 진영에 속하지 않은 에덴의 원주민 자치 구역입니다.",
+    archetype: "native",
+    startingResources: {
+      [CurrencyType.Food]: 70,
+      [CurrencyType.Water]: 70,
+      [CurrencyType.Wood]: 40,
+    },
+    startingSpecialResources: { civicTrust: 2 },
+    startingBuildings: ["cc", "supply"],
+    openingBuildOrder: ["supply", "home_b", "watermill"],
+    preferredBuildings: ["supply", "home_b", "watermill"],
+    avoidedBuildings: ["blacksmith", "market"],
+    resourceBias: {
+      [CurrencyType.Food]: 1.2,
+      [CurrencyType.Water]: 1.2,
+      [CurrencyType.Gold]: 0.7,
+    },
+    specialResourceBias: { civicTrust: 1.6 },
+    policyWeights: {
+      housingBoom: 6,
+      resourceExpansion: 5,
+      marketDominance: 1,
+      industrialFocus: 1,
+    },
+    scoreWeights: {
+      production: 0.9,
+      economy: 0.7,
+      population: 1.3,
+      research: 0.5,
       prestige: 0.8,
     },
   },

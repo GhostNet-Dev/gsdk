@@ -3,6 +3,7 @@ import { FactionId } from "@Glibs/gameobjects/turntypes";
 import {
   GalaxyMarketResourceViewModel,
   GalaxyMapDef,
+  GalaxyCityViewModel,
   GalaxyPlanetAssetKey,
   GalaxyResourceBonusViewModel,
   GalaxyRingTextureKey,
@@ -89,7 +90,25 @@ export interface StrategicPlanetStats {
   marketScale: number;
 }
 
-export interface StrategicPlanetDef {
+export const StrategicPlanetCityKind = {
+  Player: "player",
+  Rival: "rival",
+  Native: "native",
+} as const;
+
+export type StrategicPlanetCityKind =
+  typeof StrategicPlanetCityKind[keyof typeof StrategicPlanetCityKind];
+
+export interface StrategicPlanetCityPlacement<TCityDefId extends string = string> {
+  id: string;
+  kind: StrategicPlanetCityKind;
+  factionId: FactionId;
+  name?: string;
+  cityDefId?: TCityDefId;
+  startingInfluence?: number;
+}
+
+export interface StrategicPlanetDef<TCityDefId extends string = string> {
   id: StrategicPlanetId;
   name: string;
   description: string;
@@ -97,6 +116,7 @@ export interface StrategicPlanetDef {
   profileId: string;
   routeIds: StrategicRouteId[];
   citySlots: number;
+  cityPlacements?: StrategicPlanetCityPlacement<TCityDefId>[];
   resourceBias: Partial<Record<CurrencyType, number>>;
   specialResources: StrategicPlanetSpecialResourceType[];
   baseStats: StrategicPlanetStats;
@@ -173,6 +193,7 @@ export interface GalaxyPlanetViewModel {
   resourceBonuses: GalaxyResourceBonusViewModel[];
   specialResources: GalaxySpecialResourceViewModel[];
   marketResources: GalaxyMarketResourceViewModel[];
+  cities: GalaxyCityViewModel[];
   cityCount: number;
   stability: number;
   blockadeLevel: number;
