@@ -118,6 +118,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
 
     // 건설 중인 객체들 씬에 추가
     this.activeTasks.forEach(t => {
+      if (t.isFinished) return;
       if (t.constructionModel && !t.constructionModel.parent) scene.add(t.constructionModel);
       if (t.progressMesh && !t.progressMesh.parent) scene.add(t.progressMesh);
     });
@@ -554,8 +555,14 @@ export class BuildingManager implements ILoop, ITurnParticipant {
     task.isFinished = true;
     PlacementManager.Instance.unregisterFootprint(taskId);
 
-    if (task.constructionModel) this.scene.remove(task.constructionModel);
-    if (task.progressMesh) this.scene.remove(task.progressMesh);
+    if (task.constructionModel) {
+      task.constructionModel.parent?.remove(task.constructionModel);
+      task.constructionModel = undefined;
+    }
+    if (task.progressMesh) {
+      this.disposeProgressMesh(task.progressMesh);
+      task.progressMesh = undefined;
+    }
 
     if ((this.service.levels[task.nodeId] ?? 0) === 0) {
       this.service.addLevel(task.nodeId);
@@ -618,6 +625,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
         console.error(`Failed to create building object for ${task.nodeId}:`, err);
       }
     }
+    this.activeTasks.delete(taskId);
     this.sendBuildingStatus();
   }
 
@@ -661,5 +669,19 @@ export class BuildingManager implements ILoop, ITurnParticipant {
 
     group.userData = { innerRadius, outerRadius };
     return group;
+  }
+
+  private disposeProgressMesh(progressMesh: THREE.Group): void {
+    progressMesh.parent?.remove(progressMesh);
+    progressMesh.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+
+      child.geometry.dispose();
+      if (Array.isArray(child.material)) {
+        child.material.forEach((material) => material.dispose());
+        return;
+      }
+      child.material.dispose();
+    });
   }
 }

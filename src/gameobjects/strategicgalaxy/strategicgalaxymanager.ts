@@ -15,6 +15,7 @@ import {
   StrategicPlanetId,
   StrategicPlanetCityKind,
   StrategicPlanetCityPlacement,
+  StrategicCityPlacement,
   parseStrategicPlanetId,
   parseStrategicRouteId,
 } from "./strategicgalaxytypes";
@@ -25,19 +26,6 @@ import { updateMarketFromCityOutputs } from "./trademarket";
 import { strategicRouteDefs } from "./strategicgalaxydefs";
 import { DefaultStrategicGalaxySelectedPlanetId, galaxyPlanetVisualDefs } from "./strategicgalaxymapdefs";
 import { GalaxyCityKind, GalaxyCityViewModel, GalaxyPlanetAssetKey } from "@Glibs/world/galaxy/galaxytypes";
-
-interface StrategicCityPlacement {
-  id: string;
-  name: string;
-  planetId: string;
-  factionId: FactionId;
-  kind: GalaxyCityKind;
-  kindLabel: string;
-  factionLabel: string;
-  cityDefId?: RivalCityDefId;
-  score?: number;
-  description?: string;
-}
 
 export interface StrategicPlayerCityPlacement {
   id: string;
@@ -79,7 +67,7 @@ export class StrategicGalaxyManager implements ITurnParticipant {
   private planetStates = new Map<string, StrategicPlanetState>();
   private routeStates = new Map<string, StrategicRouteState>();
   private fleetStates = new Map<string, StrategicFleetState>();
-  private cityPlacements = new Map<string, StrategicCityPlacement>();
+  private cityPlacements = new Map<string, StrategicCityPlacement<RivalCityDefId>>();
   private latestCityOutputs: Record<string, CityTurnOutput> = {};
   private visualDefs: Partial<Record<string, GalaxyPlanetVisualDef>> = galaxyPlanetVisualDefs;
 
@@ -255,6 +243,21 @@ export class StrategicGalaxyManager implements ITurnParticipant {
     return def?.resourceBias ?? {};
   }
 
+  getCityPlacement(cityId: string): StrategicCityPlacement<RivalCityDefId> | undefined {
+    const placement = this.cityPlacements.get(cityId);
+    return placement ? { ...placement } : undefined;
+  }
+
+  getPlanetDef(planetId: StrategicPlanetId): StrategicPlanetDef | undefined {
+    const def = this.planetDefs.get(planetId);
+    return def ? { ...def } : undefined;
+  }
+
+  getLatestCityOutput(cityId: string): CityTurnOutput | undefined {
+    const output = this.latestCityOutputs[cityId];
+    return output ? { ...output } : undefined;
+  }
+
   getViewModel(): GalaxyPlanetViewModel[] {
     const result: GalaxyPlanetViewModel[] = [];
 
@@ -394,7 +397,10 @@ export class StrategicGalaxyManager implements ITurnParticipant {
     }
   }
 
-  private createRivalCityPlacement(seed: RivalCitySeed, score?: number): StrategicCityPlacement {
+  private createRivalCityPlacement(
+    seed: RivalCitySeed,
+    score?: number,
+  ): StrategicCityPlacement<RivalCityDefId> {
     const def = rivalCityDefs[seed.cityDefId];
     const kind = seed.cityDefId === RivalCityDefId.NativeEnclave
       ? GalaxyCityKind.Native

@@ -108,12 +108,12 @@ export class RivalCityManager implements ITurnParticipant {
 
       if (completed.length > 0) {
         city.buildings = applyCompletedBuildings(city.buildings, completed, ctx.turn);
-        for (const buildingId of completed) {
-          const bDef = this.buildingDefMap.get(buildingId);
+        for (const task of completed) {
+          const bDef = this.buildingDefMap.get(task.buildingId);
           ctx.log.add({
             source: "rival",
             kind: "rival",
-            message: `[${city.name}] ${bDef?.name ?? buildingId} 건설 완료`,
+            message: `[${city.name}] ${bDef?.name ?? task.buildingId} 건설 완료`,
           });
         }
       }
@@ -184,6 +184,11 @@ export class RivalCityManager implements ITurnParticipant {
 
   exportState(): RivalCityState[] {
     return this.cities.map((c) => ({ ...c }));
+  }
+
+  getCityState(cityId: string): RivalCityState | undefined {
+    const city = this.cities.find((candidate) => candidate.id === cityId);
+    return city ? { ...city } : undefined;
   }
 
   importState(states: RivalCityState[]): void {

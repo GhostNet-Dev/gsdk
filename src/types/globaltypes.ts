@@ -22,6 +22,7 @@ export enum AppMode {
 export const GameModeId = {
     Simcity: "simcity",
     Galaxy: "galaxy",
+    RivalCityView: "rival-city-view",
 } as const;
 
 export type GameModeId = typeof GameModeId[keyof typeof GameModeId];

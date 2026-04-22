@@ -8,6 +8,8 @@ import { Tree } from "./environmentobjs/tree";
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise';
 import { PlacementManager } from "@Glibs/interactives/placement/placementmanager";
 import { collectCircularGridCellKeys, getFootprintGridCellKeys, hasGridCellOverlap } from "@Glibs/interactives/placement/gridrangeutils";
+import { createRadialEnvironmentPattern } from "./radialenvironmentpattern";
+import { packVisibleInstances } from "./instancecullingutils";
 
 export type EnvironmentResourceQuery = {
     environmentIds?: readonly string[];
@@ -185,38 +187,37 @@ export class EnvironmentManager implements ILoop {
         await this._ensureInstancedMesh(nodeId);
 
         const occupiedKeys = new Set<string>();
-        const pos = new THREE.Vector3();
         const offsetX = (prop.size.width % 2 !== 0) ? this.gridSize * 0.5 : 0;
         const offsetZ = (prop.size.depth % 2 !== 0) ? this.gridSize * 0.5 : 0;
         const minGridX = Math.ceil((minX - offsetX) / this.gridSize);
         const maxGridX = Math.floor((maxX - offsetX) / this.gridSize);
         const minGridZ = Math.ceil((minZ - offsetZ) / this.gridSize);
         const maxGridZ = Math.floor((maxZ - offsetZ) / this.gridSize);
-        const roadAngleOffset = options.roadAngleOffset ?? -Math.PI / 2;
 
-        for (let gridX = minGridX; gridX <= maxGridX; gridX++) {
-            for (let gridZ = minGridZ; gridZ <= maxGridZ; gridZ++) {
-                const key = `${gridX},${gridZ}`;
-                if (occupiedKeys.has(key)) continue;
+        const cells = createRadialEnvironmentPattern({
+            centerX: center.x,
+            centerZ: center.z,
+            minGridX,
+            maxGridX,
+            minGridZ,
+            maxGridZ,
+            gridSize: this.gridSize,
+            footprintWidth: prop.size.width,
+            footprintDepth: prop.size.depth,
+            density: options.density,
+            threshold: options.threshold,
+            noiseScale: options.noiseScale,
+            clearingRadius: options.clearingRadius,
+            roadCount: options.roadCount,
+            roadWidth: options.roadWidth,
+            roadAngleOffset: options.roadAngleOffset,
+            noise: this.noise,
+            occupied: occupiedKeys,
+        });
 
-                this._setPlacementAlignedPosition(pos, gridX, gridZ, prop);
-                if (this._isInsideRadialPathOpening(pos, {
-                    centerX: center.x,
-                    centerZ: center.z,
-                    clearingRadius: options.clearingRadius,
-                    roadCount: options.roadCount,
-                    roadWidth: options.roadWidth,
-                    roadAngleOffset,
-                })) {
-                    continue;
-                }
-
-                const nv = (this.noise.noise(pos.x / options.noiseScale, pos.z / options.noiseScale, 0) + 1) / 2;
-                if (nv <= options.threshold || Math.random() >= options.density) continue;
-
-                occupiedKeys.add(key);
-                this._spawnInstanced(nodeId, pos);
-            }
+        for (const cell of cells) {
+            for (const key of cell.cells) occupiedKeys.add(key);
+            this._spawnInstanced(nodeId, cell.position);
         }
 
         this.rebuildClusters(nodeId);
@@ -246,38 +247,37 @@ export class EnvironmentManager implements ILoop {
         await this._ensureInstancedMesh(nodeId);
 
         const occupiedKeys = new Set<string>();
-        const pos = new THREE.Vector3();
         const prop = environmentDefs[nodeId];
         if (!prop) throw new Error(`Unknown nodeId: ${nodeId}`);
 
-        for (let x = 0; x < width; x += this.gridSize) {
-            for (let z = 0; z < depth; z += this.gridSize) {
-                const worldX = startX + x;
-                const worldZ = startZ + z;
-                const gridX = Math.round(worldX / this.gridSize);
-                const gridZ = Math.round(worldZ / this.gridSize);
-                const key = `${gridX},${gridZ}`;
+        const minGridX = Math.round(startX / this.gridSize);
+        const maxGridX = Math.round((startX + width - this.gridSize) / this.gridSize);
+        const minGridZ = Math.round(startZ / this.gridSize);
+        const maxGridZ = Math.round((startZ + depth - this.gridSize) / this.gridSize);
+        const cells = createRadialEnvironmentPattern({
+            centerX,
+            centerZ,
+            minGridX,
+            maxGridX,
+            minGridZ,
+            maxGridZ,
+            gridSize: this.gridSize,
+            footprintWidth: prop.size.width,
+            footprintDepth: prop.size.depth,
+            density,
+            threshold,
+            noiseScale,
+            clearingRadius,
+            roadCount,
+            roadWidth,
+            roadAngleOffset,
+            noise: this.noise,
+            occupied: occupiedKeys,
+        });
 
-                if (occupiedKeys.has(key)) continue;
-
-                this._setPlacementAlignedPosition(pos, gridX, gridZ, prop);
-                if (this._isInsideRadialPathOpening(pos, {
-                    centerX,
-                    centerZ,
-                    clearingRadius,
-                    roadCount,
-                    roadWidth,
-                    roadAngleOffset,
-                })) {
-                    continue;
-                }
-
-                const nv = (this.noise.noise(worldX / noiseScale, worldZ / noiseScale, 0) + 1) / 2;
-                if (nv <= threshold || Math.random() >= density) continue;
-
-                occupiedKeys.add(key);
-                this._spawnInstanced(nodeId, pos);
-            }
+        for (const cell of cells) {
+            for (const key of cell.cells) occupiedKeys.add(key);
+            this._spawnInstanced(nodeId, cell.position);
         }
 
         this.rebuildClusters(nodeId);
@@ -473,39 +473,6 @@ export class EnvironmentManager implements ILoop {
         return snapped;
     }
 
-    private _isInsideRadialPathOpening(pos: THREE.Vector3, options: {
-        centerX: number,
-        centerZ: number,
-        clearingRadius: number,
-        roadCount: number,
-        roadWidth: number,
-        roadAngleOffset: number,
-    }): boolean {
-        const dx = pos.x - options.centerX;
-        const dz = pos.z - options.centerZ;
-        const distSq = dx * dx + dz * dz;
-
-        if (distSq <= options.clearingRadius * options.clearingRadius) return true;
-        if (options.roadCount <= 0 || options.roadWidth <= 0) return false;
-
-        const halfRoadWidth = options.roadWidth * 0.5;
-        const angleStep = Math.PI * 2 / options.roadCount;
-
-        for (let i = 0; i < options.roadCount; i++) {
-            const angle = options.roadAngleOffset + angleStep * i;
-            const dirX = Math.cos(angle);
-            const dirZ = Math.sin(angle);
-            const forward = dx * dirX + dz * dirZ;
-
-            if (forward < options.clearingRadius) continue;
-
-            const side = Math.abs(dx * dirZ - dz * dirX);
-            if (side <= halfRoadWidth) return true;
-        }
-
-        return false;
-    }
-
     private _computeInstanceCullRadius(parts: THREE.InstancedMesh[], prop: EnvironmentProperty): number {
         let radius = Math.max(prop.size.width, prop.size.depth, 1);
         const maxRandomScale = prop.randomScaleRange?.[1] ?? 1;
@@ -669,54 +636,34 @@ export class EnvironmentManager implements ILoop {
                 if (!parts || !clusters || !matrices || !indexMap || !slotToLogical || !logicalToSlot) return;
                 const instanceRadius = this.instanceCullRadius.get(nodeId) ?? 2.0;
 
-                let visCache = this._clusterVisibility.get(nodeId);
-                if (!visCache || visCache.length !== clusters.length) {
-                    visCache = new Array(clusters.length).fill(-1);
-                    this._clusterVisibility.set(nodeId, visCache);
+                let visCacheRaw = this._clusterVisibility.get(nodeId);
+                if (!visCacheRaw || visCacheRaw.length !== clusters.length) {
+                    visCacheRaw = new Array(clusters.length).fill(-1);
+                    this._clusterVisibility.set(nodeId, visCacheRaw);
                 }
-
-                let anyChanged = false;
-
-                for (let ci = 0; ci < clusters.length; ci++) {
-                    const cluster = clusters[ci];
-                    this._cullSphere.set(cluster.center, cluster.radius);
-                    const nowVisible = this._frustum.intersectsSphere(this._cullSphere) ? 1 : 0;
-
-                    if (visCache[ci] === nowVisible) continue;
-                    visCache[ci] = nowVisible;
-                    anyChanged = true;
-                }
-
-                if (!anyChanged && !moved && !rotated) return;
-
-                // 가시 클러스터의 non-depleted 인스턴스를 [0, N) 슬롯에 팩킹
-                // inst.count = N → GPU는 N개 인스턴스만 vertex shader 실행 (시야 밖 완전 생략)
-                let slot = 0;
-                logicalToSlot.fill(-1);
-                for (let ci = 0; ci < clusters.length; ci++) {
-                    if (visCache[ci] !== 1) continue;
-                    const indices = clusters[ci].indices;
-                    for (let k = 0; k < indices.length; k++) {
-                        const logIdx = indices[k];
-                        const obj = indexMap.get(logIdx);
-                        if (!obj || obj.isDepleted) continue;
-                        this._cullSphere.set(obj.position, instanceRadius);
-                        if (!this._frustum.intersectsSphere(this._cullSphere)) continue;
-                        this._tempMatrix.fromArray(matrices, logIdx * 16);
-                        parts.forEach(p => p.setMatrixAt(slot, this._tempMatrix));
-                        slotToLogical[slot] = logIdx;
-                        logicalToSlot[logIdx] = slot;
-                        slot++;
-                    }
-                }
+                const visCache = visCacheRaw;
 
                 const prevCount = this._visibleCount.get(nodeId) ?? 0;
-                this._visibleCount.set(nodeId, slot);
-                parts.forEach(p => {
-                    p.count = slot;
-                    // 실제 변경이 있을 때만 GPU 업로드
-                    p.instanceMatrix.needsUpdate = slot !== prevCount || anyChanged;
-                });
+                const newCount = packVisibleInstances(
+                    this._frustum,
+                    clusters,
+                    matrices,
+                    parts,
+                    slotToLogical,
+                    logicalToSlot,
+                    visCache,
+                    instanceRadius,
+                    prevCount,
+                    this._cullSphere,
+                    this._tempMatrix,
+                    (logIdx) => {
+                        const obj = indexMap.get(logIdx);
+                        return !!obj && !obj.isDepleted;
+                    },
+                    undefined,
+                    true,
+                );
+                this._visibleCount.set(nodeId, newCount);
             });
 
             this._dirtyNodes.clear();

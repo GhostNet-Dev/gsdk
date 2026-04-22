@@ -124,6 +124,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
   readonly Type = MapEntryType.GalaxyPlanetNetwork;
   public onSelectionChanged?: (info: PlanetInfoViewModel) => void;
   public onFocusModeChanged?: (focused: boolean) => void;
+  public onCityActivated?: (planetId: string, cityId: string) => void;
 
   private readonly scene: THREE.Scene;
   private readonly camera: THREE.PerspectiveCamera;
@@ -1268,7 +1269,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     const pickedIndex = picked.planet.userData.index;
 
     if (picked.cityId) {
-      this.focusOnPlanet(pickedIndex, picked.cityId);
+      this.onCityActivated?.(picked.planet.userData.id, picked.cityId);
       return;
     }
 

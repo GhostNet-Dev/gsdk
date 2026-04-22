@@ -646,6 +646,7 @@ export class RadialMenuUI implements ILoop {
   }
 
   open() {
+    if (this.items.length === 0) return;
     if (this.isOpen) return;
     this.isOpen = true;
     this.t0 = performance.now();
@@ -965,7 +966,8 @@ export class RadialMenuUI implements ILoop {
   }
 
   private layout(r: number, rot = 0) {
-    const N = Math.max(1, this.items.length);
+    const N = this.items.length;
+    if (N === 0) return;
     const step = (Math.PI * 2) / N;
     const base = (this.opts.startAngleDeg * Math.PI / 180) + rot;
     for (let i = 0; i < N; i++) {
@@ -1008,6 +1010,7 @@ export class RadialMenuUI implements ILoop {
 
   private moveFocus(delta: number) {
     const N = this.items.length;
+    if (N === 0) return;
     this.focusIndex = (this.focusIndex + delta + N) % N;
     this.applyFocus(true);
     const it = this.items[this.focusIndex];

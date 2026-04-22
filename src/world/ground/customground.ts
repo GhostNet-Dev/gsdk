@@ -134,7 +134,7 @@ export default class CustomGround implements IWorldMapObject {
   private previewResourceRangeOverlayCapacity = 0;
 
   // 브러시/스케일
-  scale = 0.5;
+  scale = 1;
   radius = 50 / this.scale;
   depth = 3 / this.scale;
   falloff = 3 / this.scale;
@@ -157,44 +157,49 @@ export default class CustomGround implements IWorldMapObject {
   private gridSize = 4.0;
   private buildingsWithRange: Array<{ pos: THREE.Vector3, buildRange: number }> = [];
   private buildRequirementValidator?: BuildRequirementValidator;
+  private readonly showGridListener = () => {
+    window.addEventListener('pointerdown', this.onPointerDown);
+    this.ToggleGrid(true)
+  };
+  private readonly hideGridListener = () => {
+    window.removeEventListener('pointerdown', this.onPointerDown);
+    this.ToggleGrid(false)
+  };
+  private readonly highlightGridListener = (data: { pos: THREE.Vector3, width: number, depth: number, color?: THREE.Color, nodeId?: string }) => {
+    this.lastNodeId = data.nodeId
+    this.HighlightGrid(data.pos, data.width, data.depth, data.color, data.nodeId);
+    
+    // [추가] 초기 배치 시 BuildingManager 가이드 위치 동기화
+    if (this.highlightMesh) {
+        const snappedWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
+        this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { dir: 'SYNC', delta: new THREE.Vector3(), pos: snappedWorldPos });
+    }
+  };
+  private readonly responseBuildingListener = (_items: any[]) => {
+    this.refreshPlacementRanges();
+    this.updateExistingBuildRangeOverlay();
+    this.updateExistingResourceRangeOverlay();
+    if (this.gridHelper?.visible) this.updateEnvironmentOccupancyOverlay();
+
+    if (this.highlightMesh && this.highlightMesh.visible) {
+      const worldPosCenter = this.obj.localToWorld(this.highlightMesh.position.clone());
+      this.HighlightGrid(worldPosCenter, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
+    }
+  };
+  private readonly gridConfirmListener = () => {
+    this.confirmBuildingRequest();
+  };
 
   constructor(
     private scene: THREE.Scene,
     private eventCtrl: IEventController,
     private camera: THREE.Camera, 
   ) { 
-    this.eventCtrl.RegisterEventListener(EventTypes.ShowGrid, () => {
-      window.addEventListener('pointerdown', this.onPointerDown);
-      this.ToggleGrid(true)
-    });
-    this.eventCtrl.RegisterEventListener(EventTypes.HideGrid, () => {
-      window.removeEventListener('pointerdown', this.onPointerDown);
-      this.ToggleGrid(false)
-    });
-    this.eventCtrl.RegisterEventListener(EventTypes.HighlightGrid, (data: { pos: THREE.Vector3, width: number, depth: number, color?: THREE.Color, nodeId?: string }) => {
-      this.lastNodeId = data.nodeId
-      this.HighlightGrid(data.pos, data.width, data.depth, data.color, data.nodeId);
-      
-      // [추가] 초기 배치 시 BuildingManager 가이드 위치 동기화
-      if (this.highlightMesh) {
-          const snappedWorldPos = this.obj.localToWorld(this.highlightMesh.position.clone());
-          this.eventCtrl.SendEventMessage(EventTypes.GridArrowClick, { dir: 'SYNC', delta: new THREE.Vector3(), pos: snappedWorldPos });
-      }
-    });
-    this.eventCtrl.RegisterEventListener(EventTypes.ResponseBuilding, (items: any[]) => {
-      this.refreshPlacementRanges();
-      this.updateExistingBuildRangeOverlay();
-      this.updateExistingResourceRangeOverlay();
-      if (this.gridHelper?.visible) this.updateEnvironmentOccupancyOverlay();
-
-      if (this.highlightMesh && this.highlightMesh.visible) {
-        const worldPosCenter = this.obj.localToWorld(this.highlightMesh.position.clone());
-        this.HighlightGrid(worldPosCenter, this.lastWidth, this.lastDepth, this.lastColor, this.lastNodeId);
-      }
-    });
-    this.eventCtrl.RegisterEventListener('GridConfirmClick' as any, () => {
-      this.confirmBuildingRequest();
-    });
+    this.eventCtrl.RegisterEventListener(EventTypes.ShowGrid, this.showGridListener);
+    this.eventCtrl.RegisterEventListener(EventTypes.HideGrid, this.hideGridListener);
+    this.eventCtrl.RegisterEventListener(EventTypes.HighlightGrid, this.highlightGridListener);
+    this.eventCtrl.RegisterEventListener(EventTypes.ResponseBuilding, this.responseBuildingListener);
+    this.eventCtrl.RegisterEventListener('GridConfirmClick' as any, this.gridConfirmListener);
     this.eventCtrl.RegisterEventListener(EventTypes.BuildRequirementValidatorReady, this.setBuildRequirementValidator);
   }
 
@@ -1467,10 +1472,12 @@ export default class CustomGround implements IWorldMapObject {
 
   /* -------------------------------- 정리 -------------------------------- */
   Dispose() {
-    this.eventCtrl.DeregisterEventListener(EventTypes.ShowGrid);
-    this.eventCtrl.DeregisterEventListener(EventTypes.HideGrid);
-    this.eventCtrl.DeregisterEventListener(EventTypes.HighlightGrid);
-    this.eventCtrl.DeregisterEventListener('GridConfirmClick' as any);
+    window.removeEventListener('pointerdown', this.onPointerDown);
+    this.eventCtrl.DeregisterEventListener(EventTypes.ShowGrid, this.showGridListener);
+    this.eventCtrl.DeregisterEventListener(EventTypes.HideGrid, this.hideGridListener);
+    this.eventCtrl.DeregisterEventListener(EventTypes.HighlightGrid, this.highlightGridListener);
+    this.eventCtrl.DeregisterEventListener(EventTypes.ResponseBuilding, this.responseBuildingListener);
+    this.eventCtrl.DeregisterEventListener('GridConfirmClick' as any, this.gridConfirmListener);
     this.eventCtrl.DeregisterEventListener(EventTypes.BuildRequirementValidatorReady, this.setBuildRequirementValidator);
 
     this.shaderMaterial?.dispose();

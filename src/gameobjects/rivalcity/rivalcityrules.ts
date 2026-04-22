@@ -2,16 +2,16 @@ import { RivalBuildTask, RivalBuildingState, RivalResourceBag } from "./rivalcit
 
 export interface BuildQueueResult {
   updated: RivalBuildTask[];
-  completed: string[];
+  completed: RivalBuildTask[];
 }
 
 export function advanceBuildQueue(tasks: RivalBuildTask[]): BuildQueueResult {
   const updated: RivalBuildTask[] = [];
-  const completed: string[] = [];
+  const completed: RivalBuildTask[] = [];
 
   for (const task of tasks) {
     if (task.remainingTurns <= 1) {
-      completed.push(task.buildingId);
+      completed.push(task);
     } else {
       updated.push({ ...task, remainingTurns: task.remainingTurns - 1 });
     }
@@ -22,12 +22,13 @@ export function advanceBuildQueue(tasks: RivalBuildTask[]): BuildQueueResult {
 
 export function applyCompletedBuildings(
   existing: RivalBuildingState[],
-  completedBuildingIds: string[],
+  completedTasks: RivalBuildTask[],
   turn: number,
 ): RivalBuildingState[] {
   const result = [...existing];
 
-  for (const buildingId of completedBuildingIds) {
+  for (const task of completedTasks) {
+    const buildingId = task.buildingId;
     const sameKind = result.filter((b) => b.buildingId === buildingId);
     const existing2 = sameKind.length > 0 ? sameKind[sameKind.length - 1] : null;
 
@@ -35,7 +36,7 @@ export function applyCompletedBuildings(
       existing2.level += 1;
     } else {
       result.push({
-        id: `${buildingId}-${turn}-${Math.random().toString(36).slice(2, 7)}`,
+        id: `${buildingId}:${task.id}`,
         buildingId,
         level: 1,
         builtTurn: turn,

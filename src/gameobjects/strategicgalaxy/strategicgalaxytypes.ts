@@ -79,6 +79,34 @@ export type StrategicPlanetSpecialResourceBag = Partial<
   Record<StrategicPlanetSpecialResourceType, number>
 >;
 
+export const StrategicPlanetProfileId = {
+  Gateworld: "gateworld",
+  Industrial: "industrial",
+  IceMoon: "ice-moon",
+  Biosphere: "biosphere",
+  Frontier: "frontier",
+  GasFrontier: "gas-frontier",
+  Trade: "trade",
+  ResearchHub: "research-hub",
+  Fortress: "fortress",
+  DarkMatter: "dark-matter",
+} as const;
+
+export type StrategicPlanetProfileId =
+  typeof StrategicPlanetProfileId[keyof typeof StrategicPlanetProfileId];
+
+export const StrategicPlanetProfileIds: readonly StrategicPlanetProfileId[] =
+  Object.values(StrategicPlanetProfileId);
+
+export function isStrategicPlanetProfileId(value: unknown): value is StrategicPlanetProfileId {
+  return typeof value === "string"
+    && StrategicPlanetProfileIds.includes(value as StrategicPlanetProfileId);
+}
+
+export function parseStrategicPlanetProfileId(value: unknown): StrategicPlanetProfileId | undefined {
+  return isStrategicPlanetProfileId(value) ? value : undefined;
+}
+
 // ─── 행성 정의 ────────────────────────────────────────────────────────────────
 
 export interface StrategicPlanetStats {
@@ -113,13 +141,26 @@ export interface StrategicPlanetDef<TCityDefId extends string = string> {
   name: string;
   description: string;
   defaultFactionId: FactionId;
-  profileId: string;
+  profileId: StrategicPlanetProfileId;
   routeIds: StrategicRouteId[];
   citySlots: number;
   cityPlacements?: StrategicPlanetCityPlacement<TCityDefId>[];
   resourceBias: Partial<Record<CurrencyType, number>>;
   specialResources: StrategicPlanetSpecialResourceType[];
   baseStats: StrategicPlanetStats;
+}
+
+export interface StrategicCityPlacement<TCityDefId extends string = string> {
+  id: string;
+  name: string;
+  planetId: StrategicPlanetId;
+  factionId: FactionId;
+  kind: StrategicPlanetCityKind;
+  kindLabel: string;
+  factionLabel: string;
+  cityDefId?: TCityDefId;
+  score?: number;
+  description?: string;
 }
 
 export interface GalaxyPlanetVisualDef {
