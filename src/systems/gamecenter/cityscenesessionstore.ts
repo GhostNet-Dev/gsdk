@@ -5,8 +5,14 @@ export interface CitySceneSelection {
   cityId: string;
 }
 
+export interface GalaxyReturnFocus {
+  planetId: StrategicPlanetId;
+  cityId?: string;
+}
+
 class CitySceneSessionStoreImpl { 
   private selection?: CitySceneSelection;
+  private galaxyReturnFocus?: GalaxyReturnFocus;
 
   setSelection(selection: CitySceneSelection): void {
     this.selection = { ...selection };
@@ -18,6 +24,20 @@ class CitySceneSessionStoreImpl {
 
   clearSelection(): void {
     this.selection = undefined;
+  }
+
+  setGalaxyReturnFocus(focus: GalaxyReturnFocus): void {
+    this.galaxyReturnFocus = { ...focus };
+  }
+
+  consumeGalaxyReturnFocus(): GalaxyReturnFocus | undefined {
+    const focus = this.galaxyReturnFocus ? { ...this.galaxyReturnFocus } : undefined;
+    this.clearGalaxyReturnFocus();
+    return focus;
+  }
+
+  clearGalaxyReturnFocus(): void {
+    this.galaxyReturnFocus = undefined;
   }
 }
 

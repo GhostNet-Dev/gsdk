@@ -46,7 +46,7 @@ export function scoreCandidates(
     const policyWeight = def.policyWeights[activePolicyForBuilding(buildingId) as keyof typeof def.policyWeights] ?? 1;
     score += policyWeight * 2;
 
-    const factionBias = factionModifier?.cityPolicyBias[buildingId] ?? 0;
+    const factionBias = factionModifier?.cityPolicyBias[activePolicyForBuilding(buildingId)] ?? 0;
     score += factionBias * 10;
 
     const planetBonusScore = Object.values(planetBonus).reduce((a, b) => a + b, 0);
@@ -109,12 +109,15 @@ function toRivalResourceBag(cost: CostVector): RivalResourceBag {
 
 function activePolicyForBuilding(buildingId: string): string {
   const map: Record<string, string> = {
-    lumbermill: "resourceExpansion",
-    mine:       "industrialFocus",
-    blacksmith: "industrialFocus",
-    market:     "marketDominance",
-    home_b:     "housingBoom",
-    supply:     "housingBoom",
+    lumbermill:     "resourceExpansion",
+    mine:           "industrialFocus",
+    blacksmith:     "industrialFocus",
+    market:         "marketDominance",
+    home_b:         "housingBoom",
+    supply:         "housingBoom",
+    tower_a:        "defensiveFortification",
+    tower_b:        "defensiveFortification",
+    tower_catapult: "defensiveFortification",
   };
   return map[buildingId] ?? "";
 }

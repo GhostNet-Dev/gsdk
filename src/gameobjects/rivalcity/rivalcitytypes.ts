@@ -86,7 +86,8 @@ export type RivalPolicyId =
   | "industrialFocus"
   | "marketDominance"
   | "researchInvestment"
-  | "landmarkRace";
+  | "landmarkRace"
+  | "defensiveFortification";
 
 export interface RivalPolicyRequirement {
   minBuildings?: Record<string, number>;

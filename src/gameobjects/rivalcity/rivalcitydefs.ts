@@ -53,7 +53,7 @@ export const rivalCityDefs: Record<RivalCityDefId, RivalCityDef> = {
     startingSpecialResources: { crystal: 1 },
     startingBuildings: ["cc", "mine"],
     openingBuildOrder: ["mine", "blacksmith", "mine", "market"],
-    preferredBuildings: ["mine", "blacksmith", "home_b"],
+    preferredBuildings: ["mine", "blacksmith", "home_b", "tower_a"],
     avoidedBuildings: ["watermill", "supply"],
     resourceBias: {
       [CurrencyType.Materials]: 1.4,
@@ -66,6 +66,7 @@ export const rivalCityDefs: Record<RivalCityDefId, RivalCityDef> = {
       landmarkRace: 5,
       resourceExpansion: 3,
       marketDominance: 2,
+      defensiveFortification: 6,
     },
     scoreWeights: {
       production: 1.2,
@@ -173,6 +174,7 @@ export const rivalCityDefs: Record<RivalCityDefId, RivalCityDef> = {
       resourceExpansion: 7,
       marketDominance: 2,
       industrialFocus: 1,
+      defensiveFortification: 3,
     },
     scoreWeights: {
       production: 1.1,
@@ -312,6 +314,16 @@ export const rivalPolicyDefs: Record<string, RivalPolicyDef> = {
     requirements: { minTurn: 5 },
     effects: [
       { kind: "scoreWeight", target: "prestige", value: 2.0 },
+    ],
+  },
+  defensiveFortification: {
+    id: "defensiveFortification",
+    name: "방어 요새화",
+    durationTurns: 8,
+    effects: [
+      { kind: "buildPreference", target: "tower_a",        value: 2.0 },
+      { kind: "buildPreference", target: "tower_b",        value: 1.8 },
+      { kind: "buildPreference", target: "tower_catapult", value: 1.5 },
     ],
   },
 };
