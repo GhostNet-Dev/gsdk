@@ -3,9 +3,11 @@ import { ImprovedNoise } from "three/examples/jsm/math/ImprovedNoise";
 import { FactionId } from "@Glibs/gameobjects/turntypes";
 import { RivalCityManager } from "@Glibs/gameobjects/rivalcity/rivalcitymanager";
 import {
+  RivalArchetypeId,
   RivalBuildingState,
   RivalCityState,
 } from "@Glibs/gameobjects/rivalcity/rivalcitytypes";
+import { rivalCityDefs } from "@Glibs/gameobjects/rivalcity/rivalcitydefs";
 import { StrategicGalaxyManager } from "@Glibs/gameobjects/strategicgalaxy/strategicgalaxymanager";
 import {
   StrategicPlanetDef,
@@ -16,6 +18,7 @@ import { EnvironmentType, environmentDefs } from "@Glibs/interactives/environmen
 import { createRadialEnvironmentPattern } from "@Glibs/interactives/environment/radialenvironmentpattern";
 import { getFootprintGridCellKeys, hasGridCellOverlap } from "@Glibs/interactives/placement/gridrangeutils";
 import { Char } from "@Glibs/loader/assettypes";
+import { CurrencyType } from "@Glibs/inventory/wallet";
 import { CitySceneSelection } from "@Glibs/systems/gamecenter/cityscenesessionstore";
 import { mulberry32, seedFromCityId } from "@Glibs/helper/seededrandom";
 import {
@@ -39,6 +42,8 @@ const NATURAL_FOREST_ROAD_ANGLE_OFFSET = -Math.PI / 2;
 const NATURAL_FOREST_DENSITY = 0.6;
 const NATURAL_FOREST_NOISE_SCALE = 40;
 const NATURAL_FOREST_NOISE_THRESHOLD = 0.5;
+const NATURAL_FOREST_MIN_DENSITY = 0.15;
+const NATURAL_FOREST_MAX_DENSITY = 0.85;
 const CORE_ANCHOR = { x: -1, z: -1 };
 const TOWN_CENTER = { x: 0, z: 0 };
 const FOREST_POCKET_CENTER = { x: -10, z: 6 };
@@ -93,6 +98,26 @@ const PROFILE_NATURAL_FOREST_COUNTS: Record<StrategicPlanetProfileId, number> = 
   [StrategicPlanetProfileId.DarkMatter]: 0,
 };
 const PROFILE_NATURAL_FOREST_ENABLED = PROFILE_NATURAL_FOREST_COUNTS;
+const NATURAL_FOREST_PROFILE_DENSITY_MULTIPLIERS: Record<StrategicPlanetProfileId, number> = {
+  [StrategicPlanetProfileId.Gateworld]: 0.85,
+  [StrategicPlanetProfileId.Industrial]: 1,
+  [StrategicPlanetProfileId.IceMoon]: 1,
+  [StrategicPlanetProfileId.Biosphere]: 1.15,
+  [StrategicPlanetProfileId.Frontier]: 0.95,
+  [StrategicPlanetProfileId.GasFrontier]: 1,
+  [StrategicPlanetProfileId.Trade]: 0.8,
+  [StrategicPlanetProfileId.ResearchHub]: 0.75,
+  [StrategicPlanetProfileId.Fortress]: 1,
+  [StrategicPlanetProfileId.DarkMatter]: 1,
+};
+const NATURAL_FOREST_ARCHETYPE_DENSITY_MULTIPLIERS: Record<RivalArchetypeId, number> = {
+  forest: 1.2,
+  mountain: 0.65,
+  harbor: 0.85,
+  scholar: 0.75,
+  frontier: 1.05,
+  native: 1.1,
+};
 
 type BuildingEntry = {
   key: string;
@@ -138,7 +163,7 @@ export class CitySceneService {
     const cityOutput = this.deps.galaxyManager.getLatestCityOutput(selection.cityId);
     const ground = this.buildGroundTheme(planetDef);
     const objects = this.buildLayoutSnapshot(selection, cityState);
-    const environment = this.buildNpcEnvironmentSnapshot(selection, planetDef, objects);
+    const environment = this.buildNpcEnvironmentSnapshot(selection, planetDef, cityState, objects);
     const cameraTarget = objects.find((object) => object.kind === ReadonlyCityObjectKind.CivicCore)?.position
       ?? objects[0]?.position
       ?? new THREE.Vector3();
@@ -220,6 +245,7 @@ export class CitySceneService {
   private buildNpcEnvironmentSnapshot(
     selection: CitySceneSelection,
     planetDef: StrategicPlanetDef,
+    cityState: RivalCityState,
     objects: ReadonlyCityObjectSnapshot[],
   ): NpcEnvironmentObjectSnapshot[] {
     const occupied = new Set<string>();
@@ -275,9 +301,10 @@ export class CitySceneService {
       });
     });
 
-    const naturalForest = this.placeNaturalRadialForest(selection.cityId, planetDef.profileId, occupied);
+    const naturalForestDensity = this.resolveNaturalForestDensity(planetDef, cityState);
+    const naturalForest = this.placeNaturalRadialForest(selection.cityId, planetDef, cityState, occupied);
     environment.push(...naturalForest);
-    debugSources.push(`natural:pine_tree:${naturalForest.length}`);
+    debugSources.push(`natural:pine_tree:${naturalForest.length}:density=${naturalForestDensity.toFixed(3)}`);
 
     console.log(
       `[CitySceneService] npcEnv city=${selection.cityId} profile=${planetDef.profileId} ` +
@@ -291,9 +318,11 @@ export class CitySceneService {
 
   private placeNaturalRadialForest(
     cityId: string,
-    profileId: StrategicPlanetProfileId,
+    planetDef: StrategicPlanetDef,
+    cityState: RivalCityState,
     occupied: CellOccupancy,
   ): NpcEnvironmentObjectSnapshot[] {
+    const profileId = planetDef.profileId;
     const naturalForestEnabled = PROFILE_NATURAL_FOREST_ENABLED[profileId] > 0;
     if (!naturalForestEnabled) {
       return [];
@@ -313,7 +342,7 @@ export class CitySceneService {
       gridSize: GRID_SIZE,
       footprintWidth: prop.size.width,
       footprintDepth: prop.size.depth,
-      density: NATURAL_FOREST_DENSITY,
+      density: this.resolveNaturalForestDensity(planetDef, cityState),
       threshold: NATURAL_FOREST_NOISE_THRESHOLD,
       noiseScale: NATURAL_FOREST_NOISE_SCALE,
       clearingRadius: NATURAL_FOREST_CLEARING_RADIUS,
@@ -339,6 +368,28 @@ export class CitySceneService {
     }
 
     return results;
+  }
+
+  private resolveNaturalForestDensity(
+    planetDef: StrategicPlanetDef,
+    cityState: RivalCityState,
+  ): number {
+    const cityDef = rivalCityDefs[cityState.cityDefId];
+    const profileMultiplier = NATURAL_FOREST_PROFILE_DENSITY_MULTIPLIERS[planetDef.profileId];
+    const planetWoodBias = planetDef.resourceBias[CurrencyType.Wood] ?? 1;
+    const cityWoodBias = cityDef.resourceBias[CurrencyType.Wood] ?? 1;
+    const archetypeMultiplier = NATURAL_FOREST_ARCHETYPE_DENSITY_MULTIPLIERS[cityState.archetypeId];
+    const density = NATURAL_FOREST_DENSITY
+      * profileMultiplier
+      * planetWoodBias
+      * cityWoodBias
+      * archetypeMultiplier;
+
+    return THREE.MathUtils.clamp(
+      density,
+      NATURAL_FOREST_MIN_DENSITY,
+      NATURAL_FOREST_MAX_DENSITY,
+    );
   }
 
   private placeEnvironmentCluster(
