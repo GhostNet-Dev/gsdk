@@ -155,6 +155,7 @@ export default class CustomGround implements IWorldMapObject {
 
   private lastNodeId?: string;
   private gridSize = 4.0;
+  private useBeachSlope = true;
   private buildingsWithRange: Array<{ pos: THREE.Vector3, buildRange: number }> = [];
   private buildRequirementValidator?: BuildRequirementValidator;
   private readonly showGridListener = () => {
@@ -570,6 +571,7 @@ export default class CustomGround implements IWorldMapObject {
     planeSize,                          // legacy (정사각)
     texelDensity = 4,                       // 단일 값으로 X/Z 공통 설정
     texelDensityX, texelDensityZ,       // 개별 설정
+    useBeachSlope = true,               // 경사면 생성 여부
   }: {
     color?: THREE.Color;
     width?: number; height?: number;
@@ -578,6 +580,7 @@ export default class CustomGround implements IWorldMapObject {
     planeSize?: number;                 // legacy
     texelDensity?: number;
     texelDensityX?: number; texelDensityZ?: number;
+    useBeachSlope?: boolean;
   } = {}) {
     // --- 크기/세그먼트 구성 ---
     if (planeSize !== undefined) {
@@ -617,6 +620,8 @@ export default class CustomGround implements IWorldMapObject {
     }
     this._applyBlendMapToTexture();
 
+    this.useBeachSlope = useBeachSlope;
+
     // --- 지오메트리 생성 ---
     this._rebuildGeometry();
 
@@ -627,7 +632,9 @@ export default class CustomGround implements IWorldMapObject {
     ground.userData.mapObj = this;
 
     this.obj = ground;
-    this.applyBeachSlope(); // 기본 옵션으로 자동 적용
+    if (this.useBeachSlope) {
+      this.applyBeachSlope();
+    }
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLandPhysic, this.obj);
     return ground;
   }
@@ -747,13 +754,16 @@ export default class CustomGround implements IWorldMapObject {
     this.depth = 3 / this.scale;
     this.falloff = 3 / this.scale;
 
+    this.useBeachSlope = (data as any).useBeachSlope ?? true;
     this.scene.add(this.obj);
-    this.applyBeachSlope();
+    if (this.useBeachSlope) {
+      this.applyBeachSlope();
+    }
     this.eventCtrl.SendEventMessage(EventTypes.RegisterLandPhysic, this.obj);
     callback?.(this.obj, this.Type);
   }
 
-  Save(): CustomGroundData & { mapWidth?: number; mapHeight?: number; segW?: number; segH?: number; texelDensityX?: number; texelDensityZ?: number } {
+  Save(): CustomGroundData & { mapWidth?: number; mapHeight?: number; segW?: number; segH?: number; texelDensityX?: number; texelDensityZ?: number; useBeachSlope?: boolean } {
     const map = this.blendMap;
     const srcTex = toU8(map.image.data as Uint8Array | Uint8ClampedArray);
     const textureData = Array.from(srcTex);
@@ -774,6 +784,7 @@ export default class CustomGround implements IWorldMapObject {
       segH: this.segmentsZ,
       texelDensityX: this.texelDensityX,
       texelDensityZ: this.texelDensityZ,
+      useBeachSlope: this.useBeachSlope,
     };
   }
 

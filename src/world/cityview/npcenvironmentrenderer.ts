@@ -80,7 +80,6 @@ export class NpcEnvironmentRenderer implements ILoop {
     if (shouldLog) {
       const pos = this.camera.position;
       const fov = this.camera instanceof THREE.PerspectiveCamera ? `fov=${this.camera.fov}` : 'ortho';
-      console.log(`[NpcEnvRenderer] frame=${this._frameCount} force=${force} changed=${changed} ${fov} pos=(${pos.x.toFixed(1)},${pos.y.toFixed(1)},${pos.z.toFixed(1)})`);
     }
 
     if (!force && !changed) {
@@ -155,12 +154,6 @@ export class NpcEnvironmentRenderer implements ILoop {
     const partRadius = this.computePartRadius(parts);
     const instanceCullRadius = partRadius * maxScale * 1.1;
     const geomCenter = this.computeGeomCenter(parts);
-    console.log(
-      `[NpcEnvRenderer] batch=${nodeId} instances=${objects.length} parts=${parts.length} clusters=${clusters.length} ` +
-      `bounds=${this.formatObjectBounds(objects)} first=${this.formatVector(objects[0].position)} ` +
-      `last=${this.formatVector(objects[objects.length - 1].position)} ` +
-      `geomCenter=${this.formatVector(geomCenter)} partRadius=${partRadius.toFixed(2)} cullRadius=${instanceCullRadius.toFixed(2)}`,
-    );
     return {
       nodeId,
       parts,
@@ -271,10 +264,6 @@ export class NpcEnvironmentRenderer implements ILoop {
       true,
     );
     const visibleClusters = batch.clusterVisibilityCache.reduce((count, visible) => count + (visible === 1 ? 1 : 0), 0);
-    console.log(
-      `[NpcEnvRenderer] packed batch=${batch.nodeId} visible=${batch.visibleCount}/${batch.baseMatrices.length / 16} ` +
-      `prev=${previousVisibleCount} visibleClusters=${visibleClusters}/${batch.clusters.length} partCounts=${batch.parts.map((part) => part.count).join("|")}`,
-    );
   }
 
   private hasCameraChanged(): boolean {

@@ -79,8 +79,6 @@ export function packVisibleInstances(
       if (!debugSampled) {
         debugSampled = true;
         const pos = new THREE.Vector3().setFromMatrixPosition(scratchMatrix);
-        console.log(`[packVisible] geomCenterLocal=${geomCenterLocal ? `(${geomCenterLocal.x.toFixed(2)},${geomCenterLocal.y.toFixed(2)},${geomCenterLocal.z.toFixed(2)})` : 'none'}`);
-        console.log(`[packVisible] sample inst pos=(${pos.x.toFixed(1)},${pos.y.toFixed(1)},${pos.z.toFixed(1)}) sphere.center=(${scratchSphere.center.x.toFixed(1)},${scratchSphere.center.y.toFixed(1)},${scratchSphere.center.z.toFixed(1)}) r=${scratchSphere.radius.toFixed(2)} passes=${passes}`);
       }
 
       if (!passes) {
@@ -94,7 +92,6 @@ export function packVisibleInstances(
       slot++;
     }
   }
-  console.log(`[packVisible] visClusterInstances=${totalInVisibleClusters} packed=${slot} perInstanceCulled=${perInstanceCulled} geomCenterUsed=${!!geomCenterLocal}`);
 
   const needsUpdate = slot !== prevVisibleCount || anyClusterChanged || forceRepack;
   parts.forEach(p => {
