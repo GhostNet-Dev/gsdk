@@ -2,6 +2,10 @@ import { Char } from "@Glibs/types/assettypes";
 import { BuildingType, BuildingMode } from "./ibuildingobj";
 import { CostVector, CurrencyType } from "@Glibs/inventory/wallet";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { ProjectileWeaponDef } from "@Glibs/actors/controllable/controllabletypes";
+import { shipWeaponDefs } from "@Glibs/actors/controllable/samples/shipweapondefs";
+import { TargetKind } from "@Glibs/systems/targeting/targettypes";
+import { StatKey } from "@Glibs/inventory/stat/stattypes";
 
 export interface CommandTemplate {
     id: string;
@@ -36,6 +40,13 @@ export interface BuildRequirements {
     nearbyResources?: NearbyResourceRequirement[];
 }
 
+export interface BuildingCombatProperty {
+    stats?: Partial<Record<StatKey, number>>;
+    weapons?: ProjectileWeaponDef[];
+    targetKinds?: TargetKind[];
+    autoAttack?: boolean;
+}
+
 export interface BuildingProperty {
     id: string;
     name: string;
@@ -54,6 +65,7 @@ export interface BuildingProperty {
     commands?: CommandTemplate[];
     buildRequirements?: BuildRequirements;
     production?: ProductionProperty; // [수정] 상세 생산 정보
+    combat?: BuildingCombatProperty;
 }
 
 export const buildingDefs: Record<string, BuildingProperty> = {
@@ -293,6 +305,12 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         buildTurns: 5,
         size: { width: 2, depth: 2 },
         desc: "화살로 적을 공격하는 방어 시설입니다.",
+        combat: {
+            autoAttack: true,
+            targetKinds: ["ship", "unit"],
+            stats: { attackRanged: 14, attackRange: 90, defense: 8 },
+            weapons: [shipWeaponDefs.AllySupportGun]
+        },
         commands: [
             // { id: "stop", name: "정지", icon: "🛑", type: "action", shortcut: "S" },
             // { id: "attack", name: "공격", icon: "⚔️", type: "action", shortcut: "A" }
@@ -310,6 +328,12 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         buildTurns: 6,
         size: { width: 2, depth: 2 },
         desc: "더 높은 체력을 가진 방어 탑입니다.",
+        combat: {
+            autoAttack: true,
+            targetKinds: ["ship", "unit"],
+            stats: { attackRanged: 18, attackRange: 130, defense: 12 },
+            weapons: [shipWeaponDefs.ScoutLaser]
+        },
         commands: [
             // { id: "stop", name: "정지", icon: "🛑", type: "action", shortcut: "S" },
             // { id: "attack", name: "공격", icon: "⚔️", type: "action", shortcut: "A" }
@@ -327,6 +351,12 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         buildTurns: 8,
         size: { width: 3, depth: 3 },
         desc: "강력한 바위를 던져 광역 피해를 줍니다.",
+        combat: {
+            autoAttack: true,
+            targetKinds: ["ship", "unit"],
+            stats: { attackRanged: 32, attackRange: 180, defense: 16 },
+            weapons: [shipWeaponDefs.FighterAutocannon]
+        },
         commands: [
             // { id: "stop", name: "정지", icon: "🛑", type: "action", shortcut: "S" },
             // { id: "attack", name: "공격", icon: "⚔️", type: "action", shortcut: "A" }

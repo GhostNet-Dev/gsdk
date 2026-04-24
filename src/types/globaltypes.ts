@@ -81,6 +81,7 @@ export enum EventTypes {
     DeregisterTarget = "deregistertarget",
     UpdateTargetState = "updatetargetstate",
     UpdateTargetObject = "updatetargetobject",
+    RequestTargetSystem = "requesttargetsystem",
     RegisterTargetSystem = "registertargetsystem",
 
     // 💰 5. 자원 및 보상 (Resources & Rewards)

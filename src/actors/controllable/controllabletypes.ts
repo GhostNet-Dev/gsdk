@@ -19,7 +19,7 @@ export type ModeProfile = {
 
 export type ModeProfileMap = Partial<Record<ControllableMode, ModeProfile>>
 
-export type ShipProjectileDef = {
+export type ProjectileWeaponDef = {
   id: MonsterId
   name?: string
   damageMultiplier?: number
@@ -34,6 +34,8 @@ export type ShipProjectileDef = {
   turnSpeed?: number
   energyCostPerSec?: number
 }
+
+export type ShipProjectileDef = ProjectileWeaponDef
 
 export type ControllableRole = "ship" | "ally"
 export type ControlSource = "manual" | "ai" | "hybrid"
@@ -70,7 +72,7 @@ export type ControllableProperty = {
   model: Char
   scale: number
   stats?: Partial<Record<StatKey, number>>
-  weapons?: ShipProjectileDef[]
+  weapons?: ProjectileWeaponDef[]
   weaponSwitchDurationSec?: number
   modeSwitchDurationSec?: number
   actions?: ActionDef[]

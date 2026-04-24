@@ -604,6 +604,23 @@ export class BuildingManager implements ILoop, ITurnParticipant {
             buildingObj.level = 1; // 기본 레벨 1 설정
             this.buildingObjects.set(id, buildingObj);
             model.userData.buildingId = id;
+            model.userData.teamId = this.playerCityFactionId;
+            model.userData.targetMeta = {
+              id,
+              teamId: this.playerCityFactionId,
+              factionId: this.playerCityFactionId,
+              kind: "structure",
+            };
+            this.eventCtrl.SendEventMessage(EventTypes.RegisterTarget, {
+              id,
+              object: model,
+              teamId: this.playerCityFactionId,
+              factionId: this.playerCityFactionId,
+              kind: "structure",
+              alive: true,
+              targetable: true,
+              collidable: true,
+            });
             PlacementManager.Instance.registerFootprint({
               id,
               source: 'building',

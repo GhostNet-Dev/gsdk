@@ -34,7 +34,9 @@ export default class OptPhysics implements IGPhysic {
             this.octreenode = new OctreeNode(OctreeNode.computeWorldBounds(obj, 100))
         })
         eventCtrl.RegisterEventListener(EventTypes.RegisterPhysic, (obj: THREE.Object3D, raycastOn = false, box3: THREE.Box3) => {
-            if (this.targetObjs.findIndex(o => o.uuid == obj.uuid) < 0) this.targetObjs.push(obj)
+            if (obj.userData.excludeFromPhysicsTargets !== true && this.targetObjs.findIndex(o => o.uuid == obj.uuid) < 0) {
+                this.targetObjs.push(obj)
+            }
             const spatialObj: SpatialObject = {
                 id: obj.uuid, object3d: obj, box: box3 ?? new THREE.Box3().setFromObject(obj), raycastOn
             }
@@ -46,8 +48,9 @@ export default class OptPhysics implements IGPhysic {
         })
         eventCtrl.RegisterEventListener(EventTypes.DeregisterPhysic, (obj: THREE.Object3D) => {
             const spatialObj = obj.userData.spatialObj
-            this.octreenode!.remove(spatialObj)
-            this.targetObjs.splice(this.targetObjs.findIndex(o => o.uuid == obj.uuid), 1)
+            if (spatialObj) this.octreenode!.remove(spatialObj)
+            const targetIndex = this.targetObjs.findIndex(o => o.uuid == obj.uuid)
+            if (targetIndex >= 0) this.targetObjs.splice(targetIndex, 1)
         })
     }
     visualizeBox3(box: THREE.Box3, color: number = 0xff0000) {

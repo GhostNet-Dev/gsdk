@@ -12,6 +12,7 @@ import {
   StrategicPlanetId,
   StrategicPlanetProfileId,
 } from "@Glibs/gameobjects/strategicgalaxy/strategicgalaxytypes";
+import { BuildingType } from "@Glibs/interactives/building/ibuildingobj";
 import { environmentDefs } from "@Glibs/interactives/environment/environmentdefs";
 import { CitySceneSelection } from "@Glibs/systems/gamecenter/cityscenesessionstore";
 
@@ -30,6 +31,7 @@ export interface ReadonlyCityObjectSnapshot {
   key: string;
   kind: ReadonlyCityObjectKind;
   nodeId: string;
+  buildingType: BuildingType;
   assetKey: Char;
   position: THREE.Vector3;
   rotationY: number;

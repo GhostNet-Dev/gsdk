@@ -3,46 +3,83 @@ import { BaseBuilding } from './basebuilding';
 import { BuildingType } from '../ibuildingobj';
 import { ICommand } from '@Glibs/ux/selectionpanel/selectionpanel';
 import { EventTypes } from '@Glibs/types/globaltypes';
+import { BuildingProperty } from '../buildingdefs';
+import IEventController from '@Glibs/interface/ievent';
+import { TargetRecord } from '@Glibs/systems/targeting/targettypes';
+import { TargetRegistrySystem } from '@Glibs/systems/targeting/targetregistrysystem';
+import { ProjectileWeaponController } from '@Glibs/actors/controllable/projectileweaponcontroller';
 
 export class DefenseTurret extends BaseBuilding {
-    private target: THREE.Object3D | null = null;
-    private attackTimer = 0;
-    private readonly attackCooldown = 1.0;
+    private target: TargetRecord | null = null;
     private isAttacking = true;
+    private targetRegistry?: TargetRegistrySystem;
+    private readonly weaponController = new ProjectileWeaponController();
 
     constructor(
         id: string,
-        property: any,
+        property: BuildingProperty,
         position: THREE.Vector3,
         mesh: THREE.Object3D,
-        eventCtrl: any
+        eventCtrl: IEventController
     ) {
         super(id, BuildingType.DefenseTurret, property, position, mesh, eventCtrl);
+        this.weaponController.configure({
+            eventEmitter: (msg) => this.eventCtrl.SendEventMessage(EventTypes.SpawnProjectile, msg),
+            ownerSpec: this.baseSpec,
+            ownerObject: this.mesh,
+        });
+        this.eventCtrl.RegisterEventListener(EventTypes.RegisterTargetSystem, this.setTargetRegistry);
+        this.eventCtrl.SendEventMessage(EventTypes.RequestTargetSystem);
     }
 
     protected onUpdate(delta: number): void {
         if (this.isUpgrading || !this.isAttacking) return;
-        this.attackTimer += delta;
+        this.weaponController.update(delta);
 
-        if (!this.target) {
+        if (!this.isValidTarget(this.target)) {
             this.findTarget();
         }
 
         if (this.target) {
-            const lookPos = this.target.position.clone();
+            const lookPos = this.target.object.position.clone();
             lookPos.y = this.mesh.position.y;
             this.mesh.lookAt(lookPos);
-
-            if (this.attackTimer >= this.attackCooldown) {
-                this.shoot();
-                this.attackTimer = 0;
-            }
+            this.shoot();
         }
     }
 
-    private findTarget() { }
+    destroy(): void {
+        this.eventCtrl.DeregisterEventListener(EventTypes.RegisterTargetSystem, this.setTargetRegistry);
+        super.destroy();
+    }
+
+    private setTargetRegistry = (targetRegistry?: TargetRegistrySystem) => {
+        if (!targetRegistry) return;
+        this.targetRegistry = targetRegistry;
+    };
+
+    private findTarget() {
+        const registry = this.targetRegistry;
+        const weapon = this.property.combat?.weapons?.[0];
+        if (!registry || !weapon) {
+            this.target = null;
+            return;
+        }
+
+        this.target = registry.findNearestHostile(this.id, this.getAttackRange(), {
+            aliveOnly: true,
+            targetableOnly: true,
+            collidableOnly: true,
+            kinds: this.property.combat?.targetKinds ?? ["ship", "unit"],
+        }) ?? null;
+    }
+
     private shoot() {
-        console.log(`[Turret ${this.id}] Shooting!`);
+        if (!this.target) return;
+        const weapon = this.property.combat?.weapons?.[0];
+        this.weaponController.fireAtTarget(this.target.object, weapon, {
+            defaultRange: this.baseSpec.AttackRange,
+        });
     }
 
     startProduction(targetId?: string) {
@@ -81,6 +118,20 @@ export class DefenseTurret extends BaseBuilding {
     }
 
     protected getSpecificProgress(): number | undefined {
-        return (this.isAttacking && this.target) ? (this.attackTimer / this.attackCooldown) : undefined;
+        const weapon = this.property.combat?.weapons?.[0];
+        return (this.isAttacking && this.target)
+            ? this.weaponController.getCooldownProgress(weapon)
+            : undefined;
+    }
+
+    private getAttackRange(): number {
+        const weapon = this.property.combat?.weapons?.[0];
+        return this.weaponController.getEffectiveRange(weapon, this.baseSpec.AttackRange);
+    }
+
+    private isValidTarget(target: TargetRecord | null): target is TargetRecord {
+        if (!target?.alive || !target.targetable || !target.collidable) return false;
+        if (this.mesh.position.distanceToSquared(target.object.position) > this.getAttackRange() ** 2) return false;
+        return this.targetRegistry?.isHostile(this.id, target.id) ?? false;
     }
 }

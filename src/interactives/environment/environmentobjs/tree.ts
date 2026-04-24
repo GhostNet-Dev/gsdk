@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { IEnvironmentObject } from '../ienvironmentobj';
 import { EnvironmentProperty } from '../environmentdefs';
 import IEventController from '@Glibs/interface/ievent';
-import { EventTypes } from '@Glibs/types/globaltypes';
+import { StaticColliderRegistry } from '../staticcolliderregistry';
 
 export class Tree implements IEnvironmentObject {
     currentAmount: number;
@@ -14,18 +14,13 @@ export class Tree implements IEnvironmentObject {
         public readonly position: THREE.Vector3,
         public readonly mesh: THREE.Object3D | null,
         private eventCtrl: IEventController,
+        public readonly collider: THREE.Object3D | null = null,
+        private colliderRegistry?: StaticColliderRegistry,
         public instanceIndex?: number,
         public instancedMeshParts?: THREE.InstancedMesh[],
         public baseMatrix?: THREE.Matrix4
     ) {
         this.currentAmount = property.initialAmount;
-        
-        // Step 2: 물리 등록 (RegisterPhysic)
-        // 지형이 아닌 일반 오브젝트이므로 RegisterPhysic를 사용합니다.
-        // 메쉬의 크기를 기반으로 물리 엔진에 등록 요청을 보냅니다.
-        if (this.mesh) {
-            this.eventCtrl.SendEventMessage(EventTypes.RegisterPhysic, this.mesh);
-        }
     }
 
     update(delta: number) {
@@ -92,9 +87,9 @@ export class Tree implements IEnvironmentObject {
             });
         }
 
-        // Step 2: 물리 제거 (DeregisterPhysic)
+        this.colliderRegistry?.unregister(this.id);
+
         if (this.mesh) {
-            this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, this.mesh);
             this.mesh.visible = false;
         }
     }
@@ -108,9 +103,7 @@ export class Tree implements IEnvironmentObject {
             });
         }
 
-        if (this.mesh) {
-            this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, this.mesh);
-            this.mesh.parent?.remove(this.mesh);
-        }
+        this.colliderRegistry?.unregister(this.id);
+        this.mesh?.parent?.remove(this.mesh);
     }
 }

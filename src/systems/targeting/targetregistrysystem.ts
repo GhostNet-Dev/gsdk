@@ -32,6 +32,9 @@ export class TargetRegistrySystem {
     this.eventCtrl.RegisterEventListener(EventTypes.UpdateTargetObject, (id: string, object: THREE.Object3D) => {
       this.updateObject(id, object)
     })
+    this.eventCtrl.RegisterEventListener(EventTypes.RequestTargetSystem, () => {
+      this.eventCtrl.SendEventMessage(EventTypes.RegisterTargetSystem, this)
+    })
     this.eventCtrl.SendEventMessage(EventTypes.RegisterTargetSystem, this)
   }
 

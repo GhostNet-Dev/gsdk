@@ -6,6 +6,7 @@ export interface IEnvironmentObject {
     readonly property: EnvironmentProperty;
     readonly position: THREE.Vector3;
     readonly mesh: THREE.Object3D | null;
+    readonly collider: THREE.Object3D | null;
     
     // InstancedMesh 지원을 위한 속성
     instanceIndex?: number;

@@ -4,17 +4,23 @@ import { BuildingProperty } from '../buildingdefs';
 import { ISelectionData, ICommand } from '@Glibs/ux/selectionpanel/selectionpanel';
 import IEventController from '@Glibs/interface/ievent';
 import { EventTypes } from '@Glibs/types/globaltypes';
+import { BaseSpec } from '@Glibs/actors/battle/basespec';
+import { AttackOption, AttackType } from '@Glibs/types/playertypes';
+import { DamageKind } from '@Glibs/actors/battle/damagepacket';
+import { ActionContext, IActionComponent, IActionUser } from '@Glibs/types/actiontypes';
 
 /**
  * 모든 건물의 공통 로직을 처리하는 추상 클래스
  */
-export abstract class BaseBuilding implements IBuildingObject {
+export abstract class BaseBuilding implements IBuildingObject, IActionUser {
     public level: number = 1;
+    public readonly baseSpec: BaseSpec;
     protected isUpgrading: boolean = false;
     protected upgradeTimer: number = 0;
     protected upgradeTime: number = 0;
     protected currentHp: number;
     protected currentMode: BuildingMode = BuildingMode.Timer;
+    protected isDestroyed: boolean = false;
 
     // 자원 생산 관련 내부 상태 (상속 클래스와의 이름 충돌 방지를 위해 명확히 정의)
     protected resourceProductionTimer: number = 0;
@@ -29,7 +35,31 @@ export abstract class BaseBuilding implements IBuildingObject {
         public readonly eventCtrl: IEventController
     ) {
         if (this.mesh) this.mesh.position.copy(position);
-        this.currentHp = this.property.hp;
+        this.mesh.name = this.id;
+        this.baseSpec = new BaseSpec({
+            attackRanged: 0,
+            attackRange: 1,
+            defense: 0,
+            ...(this.property.combat?.stats ?? {}),
+            hp: this.property.hp,
+        }, this);
+        this.baseSpec.lastUsedWeaponMode = 'ranged';
+        this.currentHp = this.baseSpec.Health;
+        this.eventCtrl.RegisterEventListener(EventTypes.Attack + this.id, this.onAttacked);
+    }
+
+    get objs() {
+        return this.mesh;
+    }
+
+    applyAction(action: IActionComponent, context?: ActionContext): void {
+        action.apply?.(this, context);
+        action.activate?.(this, context);
+    }
+
+    removeAction(action: IActionComponent, context?: ActionContext): void {
+        action.deactivate?.(this, context);
+        action.remove?.(this);
     }
 
     /**
@@ -46,6 +76,8 @@ export abstract class BaseBuilding implements IBuildingObject {
      * 공통 업데이트 로직 (업그레이드 및 자동 생산)
      */
     update(delta: number): void {
+        if (this.isDestroyed) return;
+
         if (this.isUpgrading && this.currentMode === BuildingMode.Timer) {
             this.upgradeTimer += delta;
             if (this.upgradeTimer >= this.upgradeTime) {
@@ -63,6 +95,8 @@ export abstract class BaseBuilding implements IBuildingObject {
      * 턴 진행 로직 (업그레이드 및 자동 생산)
      */
     advanceTurn(): void {
+        if (this.isDestroyed) return;
+
         if (this.isUpgrading && this.currentMode === BuildingMode.Turn) {
             this.upgradeTimer += 1; 
             if (this.upgradeTimer >= this.upgradeTime) {
@@ -149,14 +183,63 @@ export abstract class BaseBuilding implements IBuildingObject {
         console.log(`[${this.property.name}] Upgrade complete! New Level: ${this.level}`);
         
         // HP 회복 또는 능력치 상승 로직 추가 가능
-        this.currentHp = this.property.hp; 
+        this.baseSpec.status.health = this.property.hp;
+        this.currentHp = this.baseSpec.Health; 
 
         // 전역 테크트리 레벨업 완료 알림 (데이터 동기화 및 효과 적용)
         this.eventCtrl.SendEventMessage(EventTypes.UpgradeComplete, this.property.id);
     }
 
     destroy(): void {
+        if (this.isDestroyed) return;
+        this.isDestroyed = true;
+        this.eventCtrl.DeregisterEventListener(EventTypes.Attack + this.id, this.onAttacked);
+        this.eventCtrl.SendEventMessage(EventTypes.UpdateTargetState, {
+            id: this.id,
+            alive: false,
+            targetable: false,
+            collidable: false,
+        });
         if (this.mesh.parent) this.mesh.parent.remove(this.mesh);
+    }
+
+    private onAttacked = (opts: AttackOption[] = []) => {
+        if (this.isDestroyed) return;
+
+        for (const opt of opts) {
+            const damage = Math.max(0, opt.damage ?? 0);
+            if (damage <= 0) continue;
+            const kind = this.resolveDamageKind(opt.type);
+
+            this.baseSpec.ReceiveDamage({
+                amount: this.applyDefense(damage, kind, opt.spec),
+                kind,
+                sourceSpec: opt.spec,
+                sourceId: opt.obj?.name,
+                targetId: this.id,
+                hitPoint: opt.targetPoint,
+                tags: ["building"],
+            });
+        }
+
+        this.currentHp = this.baseSpec.Health;
+        if (this.currentHp <= 0) {
+            this.destroy();
+        }
+    };
+
+    private resolveDamageKind(type: AttackType): DamageKind {
+        if (type === AttackType.Magic0) return "magic";
+        return "physical";
+    }
+
+    private applyDefense(amount: number, kind: DamageKind, sourceSpec?: BaseSpec): number {
+        if (kind === "true") return amount;
+        const defKey = kind === "magic" ? "magicDefense" : "defense";
+        const defense = this.baseSpec.stats.getStat(defKey);
+        const penetration = sourceSpec?.stats.getStat("penetration") ?? 0;
+        const effectiveDefense = Math.max(0, defense - penetration);
+        return amount * (100 / (100 + effectiveDefense));
     }
 
     /**

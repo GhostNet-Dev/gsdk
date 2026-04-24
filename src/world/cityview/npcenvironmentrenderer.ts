@@ -5,6 +5,13 @@ import { InstanceCullingCluster, packVisibleInstances } from "@Glibs/interactive
 import { NpcEnvironmentNodeId, NpcEnvironmentObjectSnapshot } from "./cityviewtypes";
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import {
+  getEnvironmentCollisionCenter,
+  getEnvironmentCollisionSize,
+  isEnvironmentCollisionEnabled,
+  StaticColliderKind,
+  StaticColliderRegistry,
+} from "@Glibs/interactives/environment/staticcolliderregistry";
 
 type EnvironmentBatch = {
   nodeId: NpcEnvironmentNodeId;
@@ -35,13 +42,16 @@ export class NpcEnvironmentRenderer implements ILoop {
   private readonly scratchSphere = new THREE.Sphere();
   private readonly lastCameraPosition = new THREE.Vector3(Infinity, Infinity, Infinity);
   private readonly lastCameraQuaternion = new THREE.Quaternion(0, 0, 0, 0);
+  private readonly colliderRegistry?: StaticColliderRegistry;
 
   constructor(
     private readonly loader: Loader,
     private readonly camera: THREE.Camera,
     private readonly eventCtrl: IEventController,
+    private readonly collisionEnabled = false,
   ) {
     this.root.name = "npc-environment-runtime";
+    this.colliderRegistry = collisionEnabled ? new StaticColliderRegistry(eventCtrl) : undefined;
   }
 
   async render(snapshot: readonly NpcEnvironmentObjectSnapshot[]): Promise<void> {
@@ -53,6 +63,7 @@ export class NpcEnvironmentRenderer implements ILoop {
       if (!batch) continue;
       this.batches.push(batch);
       batch.parts.forEach((part) => this.root.add(part));
+      this.registerEnvironmentColliders(nodeId, objects);
     }
 
   }
@@ -266,12 +277,33 @@ export class NpcEnvironmentRenderer implements ILoop {
     const visibleClusters = batch.clusterVisibilityCache.reduce((count, visible) => count + (visible === 1 ? 1 : 0), 0);
   }
 
+  private registerEnvironmentColliders(
+    nodeId: NpcEnvironmentNodeId,
+    objects: readonly NpcEnvironmentObjectSnapshot[],
+  ): void {
+    if (!this.collisionEnabled || !this.colliderRegistry) return;
+
+    const prop = environmentDefs[nodeId];
+    if (!isEnvironmentCollisionEnabled(prop)) return;
+
+    for (const object of objects) {
+      this.colliderRegistry.registerBoxCollider({
+        id: object.key,
+        kind: StaticColliderKind.Environment,
+        position: getEnvironmentCollisionCenter(object.position, prop, object.scale),
+        size: getEnvironmentCollisionSize(prop, undefined, object.scale),
+        raycastOn: false,
+      });
+    }
+  }
+
   private hasCameraChanged(): boolean {
     return this.camera.position.distanceToSquared(this.lastCameraPosition) > 0.0001
       || 1 - Math.abs(this.camera.quaternion.dot(this.lastCameraQuaternion)) > 0.000001;
   }
 
   private clearRoot(): void {
+    this.colliderRegistry?.clear();
     this.root.clear();
     for (const batch of this.batches) {
       for (const part of batch.parts) {

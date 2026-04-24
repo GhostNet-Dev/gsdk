@@ -214,7 +214,7 @@ export class ProjectileCtrl implements IActionUser {
     );
 
     if (obj != null) {
-      const k = obj.target.name;
+      const k = this.getTargetEventId(obj.target);
       const v = {
         type: AttackType.RangedShot,
         spec: VirtualActorFactory.createFusionActor(this.creatorSpec!, [this.baseSpec]),
@@ -225,7 +225,7 @@ export class ProjectileCtrl implements IActionUser {
       const normal = (obj as any).normal ?? new THREE.Vector3().subVectors(obj.hitPoint, obj.target.position).normalize();
       this.projectile.hit?.(obj.hitPoint, normal);
 
-      if (this.getCollisionTargets().includes(obj.target)) {
+      if (k && this.getCollisionTargets().includes(obj.target)) {
         this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [v]);
       }
       return true;
@@ -250,7 +250,7 @@ export class ProjectileCtrl implements IActionUser {
     this.position.copy(hit.hitPoint);
     this.projectile.update(this.position);
 
-    const k = hit.target.name;
+    const k = this.getTargetEventId(hit.target);
     const v = {
       type: AttackType.RangedShot,
       spec: VirtualActorFactory.createFusionActor(this.creatorSpec!, [this.baseSpec]),
@@ -261,7 +261,7 @@ export class ProjectileCtrl implements IActionUser {
     const normal = (hit as any).normal ?? new THREE.Vector3().subVectors(hit.hitPoint, hit.target.position).normalize();
     this.projectile.hit?.(hit.hitPoint, normal);
 
-    if (this.getCollisionTargets().includes(hit.target)) {
+    if (k && this.getCollisionTargets().includes(hit.target)) {
       this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [v]);
     }
   }
@@ -466,6 +466,16 @@ export class ProjectileCtrl implements IActionUser {
   }
 
   private getCollisionTargets() {
+    const ownerObj = this.creatorSpec?.Owner?.objs as THREE.Object3D | undefined
+    const ownerRecord = ownerObj ? this.targetRegistry.getByObject(ownerObj) : undefined
+    if (ownerRecord?.teamId) {
+      return this.targetRegistry.getObjectsForTeam(ownerRecord.teamId, "enemy", {
+        aliveOnly: true,
+        targetableOnly: true,
+        collidableOnly: true,
+      })
+    }
+
     return this.targetRegistry.getObjects({
       aliveOnly: true,
       targetableOnly: true,
@@ -485,5 +495,9 @@ export class ProjectileCtrl implements IActionUser {
       targetableOnly: true,
       collidableOnly: true,
     })
+  }
+
+  private getTargetEventId(target: THREE.Object3D): string | undefined {
+    return this.targetRegistry.getByObject(target)?.id || target.name || undefined
   }
 }

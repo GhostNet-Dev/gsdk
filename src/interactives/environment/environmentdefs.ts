@@ -18,6 +18,11 @@ export interface EnvironmentProperty {
     regenerationRate?: number; // 턴당 회복량 (옵션)
     randomRotation?: boolean;
     randomScaleRange?: [number, number]; // [min, max]
+    collision?: {
+        enabled?: boolean;
+        height?: number;
+        footprintScale?: number;
+    };
 }
 
 export const environmentDefs: Record<string, EnvironmentProperty> = {

@@ -8,6 +8,7 @@ import { DamageKind, DamagePacket } from "@Glibs/actors/battle/damagepacket"
 import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { ShipProjectileDef } from "../controllabletypes"
 import { FleetWeaponDoctrine } from "@Glibs/gameobjects/fleet/fleet"
+import { ProjectileWeaponController } from "../projectileweaponcontroller"
 
 export interface IFighterShipRuntime extends IControllableRuntime {
   getCollisionObject(): THREE.Object3D
@@ -108,7 +109,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private readonly formationReference = new THREE.Vector3(0, 0, 1)
   private readonly availableWeapons: ShipProjectileDef[]
   private equippedWeapon?: ShipProjectileDef
-  private equippedWeaponCooldown = 0
+  private readonly weaponController = new ProjectileWeaponController()
   private switching = false
   private switchElapsed = 0
   private readonly switchDuration: number
@@ -121,7 +122,6 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private readonly tmpMuzzleWorld = new THREE.Vector3()
   private readonly tmpShootDirection = new THREE.Vector3()
   private readonly raycaster = new THREE.Raycaster()
-  private projectileEmitter?: (msg: ProjectileMsg) => void
   private ownerSpec?: BaseSpec
   private teamId?: string
   private findNearestEnemy?: (sourceId: string, maxDistance: number) => FighterShipRuntime | undefined
@@ -235,12 +235,16 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   configureCombat(options: FighterShipCombatOptions): void {
-    this.projectileEmitter = options.eventEmitter
     this.ownerSpec = options.ownerSpec
     if (this.ownerSpec) {
       this.ownerSpec.lastUsedWeaponMode = "ranged"
       this.ownerSpec.status.health = this.hull
     }
+    this.weaponController.configure({
+      eventEmitter: options.eventEmitter,
+      ownerSpec: options.ownerSpec,
+      ownerObject: this.mesh,
+    })
     this.teamId = options.teamId
     this.findNearestEnemy = options.findNearestEnemy
     this.onDestroyed = options.onDestroyed
@@ -403,7 +407,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
     this.hull = this.getHull()
     if (this.hull <= 0) return
     this.logIntentTransitions()
-    this.equippedWeaponCooldown = Math.max(0, this.equippedWeaponCooldown - delta)
+    this.weaponController.update(delta)
     this.updateWeaponSwitch(delta)
     this.updateModeSwitch(delta)
     const navigationActive = this.updateNavigation(delta)
@@ -532,7 +536,6 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   }
 
   private fireAtTarget(target: FighterShipRuntime) {
-    if (!this.projectileEmitter || !this.ownerSpec) return
     if (this.energy <= 1) return
     const weapon = this.equippedWeapon
     if (!weapon || this.switching) return
@@ -542,28 +545,12 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
       return
     }
 
-    if (this.equippedWeaponCooldown > 0) return
-
-    const muzzleOffset = weapon.muzzleOffset ?? { x: 0, y: 0.4, z: 2.2 }
-    this.tmpMuzzleWorld.copy(muzzleOffset as THREE.Vector3).applyQuaternion(this.mesh.quaternion).add(this.mesh.position)
-    this.tmpShootDirection.copy(target.mesh.position).sub(this.tmpMuzzleWorld)
-    if (this.tmpShootDirection.lengthSq() <= 0.0001) return
-    this.tmpShootDirection.normalize()
-
-    this.projectileEmitter({
-      id: weapon.id,
-      ownerSpec: this.ownerSpec,
-      damage: this.ownerSpec.Damage * (weapon.damageMultiplier ?? 1) * this.getModeDamageMultiplier(),
-      src: this.tmpMuzzleWorld.clone(),
-      dir: this.tmpShootDirection.clone(),
-      homing: weapon.homing,
-      range: this.getEffectiveWeaponRange(weapon),
-      hitscan: weapon.hitscan ?? true,
-      tracerLife: weapon.tracerLife ?? 0.18,
-      tracerRange: weapon.tracerRange,
-      useRaycast: weapon.useRaycast ?? true,
+    this.weaponController.fireAtTarget(target.mesh, weapon, {
+      defaultRange: this.attackRange,
+      rangeMultiplier: this.getActiveModeProfile().attackRangeMultiplier ?? 1,
+      damageMultiplier: this.getModeDamageMultiplier(),
+      cooldownMultiplier: this.getWeaponCooldownMultiplier(),
     })
-    this.equippedWeaponCooldown = Math.max(0.05, (weapon.fireCooldownSec ?? 0.45) * this.getWeaponCooldownMultiplier())
   }
 
   private isFiringLaneClear(target: FighterShipRuntime): boolean {
@@ -774,7 +761,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   private completeWeaponSwitch(weapon?: ShipProjectileDef, completed = false) {
     if (weapon) {
       this.equippedWeapon = weapon
-      this.equippedWeaponCooldown = 0
+      this.weaponController.reset()
     }
     this.pendingWeapon = undefined
     this.switching = false

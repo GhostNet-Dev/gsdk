@@ -224,6 +224,7 @@ export class CitySceneService {
         key: entry.key,
         kind: entry.kind,
         nodeId: entry.nodeId,
+        buildingType: entry.prop.type,
         assetKey: entry.kind === ReadonlyCityObjectKind.ConstructionSite
           ? Char.KaykitMedHexagonBuildingsNeutralPackBuildingScaffolding
           : entry.prop.assetKey,

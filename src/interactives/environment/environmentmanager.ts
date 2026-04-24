@@ -10,6 +10,13 @@ import { PlacementManager } from "@Glibs/interactives/placement/placementmanager
 import { collectCircularGridCellKeys, getFootprintGridCellKeys, hasGridCellOverlap } from "@Glibs/interactives/placement/gridrangeutils";
 import { createRadialEnvironmentPattern } from "./radialenvironmentpattern";
 import { packVisibleInstances } from "./instancecullingutils";
+import {
+    getEnvironmentCollisionCenter,
+    getEnvironmentCollisionSize,
+    isEnvironmentCollisionEnabled,
+    StaticColliderKind,
+    StaticColliderRegistry,
+} from "./staticcolliderregistry";
 
 export type EnvironmentResourceQuery = {
     environmentIds?: readonly string[];
@@ -53,6 +60,7 @@ export class EnvironmentManager implements ILoop {
 
     private loader = new Loader();
     private noise = new ImprovedNoise();
+    private colliderRegistry: StaticColliderRegistry;
     private gridSize = 4.0;
     private readonly MAX_INSTANCES = 10000;
 
@@ -90,6 +98,9 @@ export class EnvironmentManager implements ILoop {
     private _spawnQuat = new THREE.Quaternion();
     private _spawnScale = new THREE.Vector3();
     private _spawnMatrix = new THREE.Matrix4();
+    private _colliderScale = new THREE.Vector3();
+    private _colliderQuat = new THREE.Quaternion();
+    private _colliderPos = new THREE.Vector3();
 
     // 고유 ID 카운터
     private static _idCounter = 0;
@@ -101,6 +112,7 @@ export class EnvironmentManager implements ILoop {
         private camera: THREE.Camera
     ) {
         EnvironmentManager._instance = this;
+        this.colliderRegistry = new StaticColliderRegistry(this.eventCtrl);
         this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
 
         this.eventCtrl.RegisterEventListener(EventTypes.ResponseBuilding, (_data: any) => { });
@@ -329,7 +341,19 @@ export class EnvironmentManager implements ILoop {
         this.nextInstanceIndex.set(nodeId, index + 1);
 
         const id = EnvironmentManager._nextId();
-        const envObj = new Tree(id, prop, pos.clone(), null, this.eventCtrl, index, parts, this._spawnMatrix.clone());
+        const collider = this._registerEnvironmentCollider(id, prop, pos, s);
+        const envObj = new Tree(
+            id,
+            prop,
+            pos.clone(),
+            null,
+            this.eventCtrl,
+            collider,
+            this.colliderRegistry,
+            index,
+            parts,
+            this._spawnMatrix.clone(),
+        );
         this.envObjects.set(id, envObj);
         this.envObjectsArray.push(envObj);
         indexMap.set(index, envObj);
@@ -407,7 +431,8 @@ export class EnvironmentManager implements ILoop {
                 this.scene.add(model);
 
                 const id = EnvironmentManager._nextId();
-                const envObj = new Tree(id, prop, alignedPos, model, this.eventCtrl);
+                const collider = this._registerEnvironmentCollider(id, prop, alignedPos, s);
+                const envObj = new Tree(id, prop, alignedPos, model, this.eventCtrl, collider, this.colliderRegistry);
                 this.envObjects.set(id, envObj);
                 this.envObjectsArray.push(envObj);
                 PlacementManager.Instance.registerFootprint({
@@ -456,6 +481,23 @@ export class EnvironmentManager implements ILoop {
             }
         });
         return parts;
+    }
+
+    private _registerEnvironmentCollider(
+        id: string,
+        prop: EnvironmentProperty,
+        pos: THREE.Vector3,
+        scale: number,
+    ): THREE.Object3D | null {
+        if (!isEnvironmentCollisionEnabled(prop)) return null;
+
+        return this.colliderRegistry.registerBoxCollider({
+            id,
+            kind: StaticColliderKind.Environment,
+            position: getEnvironmentCollisionCenter(pos, prop, scale),
+            size: getEnvironmentCollisionSize(prop, this.gridSize, scale),
+            raycastOn: false,
+        });
     }
 
     private _setPlacementAlignedPosition(target: THREE.Vector3, gridX: number, gridZ: number, prop: EnvironmentProperty) {
@@ -682,6 +724,7 @@ export class EnvironmentManager implements ILoop {
 
     detachFromScene(): void {
         this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this);
+        this.colliderRegistry.clear();
         for (const meshes of this.instancedMeshes.values()) {
             for (const mesh of meshes) {
                 mesh.parent?.remove(mesh);
@@ -702,6 +745,28 @@ export class EnvironmentManager implements ILoop {
         for (const envObj of this.envObjectsArray) {
             if (envObj.mesh && !envObj.mesh.parent) scene.add(envObj.mesh);
         }
+        this._registerActiveEnvironmentColliders();
+    }
+
+    private _registerActiveEnvironmentColliders(): void {
+        for (const envObj of this.envObjectsArray) {
+            if (envObj.isDepleted) continue;
+            this._registerEnvironmentCollider(
+                envObj.id,
+                envObj.property,
+                envObj.position,
+                this._getEnvironmentObjectScale(envObj),
+            );
+        }
+    }
+
+    private _getEnvironmentObjectScale(envObj: IEnvironmentObject): number {
+        if (envObj.mesh) return envObj.mesh.scale.x;
+        if (envObj.baseMatrix) {
+            envObj.baseMatrix.decompose(this._colliderPos, this._colliderQuat, this._colliderScale);
+            return this._colliderScale.x;
+        }
+        return envObj.property.scale;
     }
 
     private _cellKey(x: number, z: number): string {
