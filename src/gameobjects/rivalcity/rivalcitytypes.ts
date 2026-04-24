@@ -186,6 +186,7 @@ export interface RivalCityState {
   cityDefId: RivalCityDefId;
   planetId: StrategicPlanetId;
   factionId: FactionId;
+  originalFactionId?: FactionId;
   archetypeId: RivalArchetypeId;
   strategy: RivalStrategyId;
   turn: number;

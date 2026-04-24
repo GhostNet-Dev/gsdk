@@ -3,6 +3,7 @@ import { FactionId } from "@Glibs/gameobjects/turntypes";
 import {
   GalaxyMarketResourceViewModel,
   GalaxyMapDef,
+  GalaxyPlanetCommandViewModel,
   GalaxyCityViewModel,
   GalaxyPlanetAssetKey,
   GalaxyResourceBonusViewModel,
@@ -155,6 +156,7 @@ export interface StrategicCityPlacement<TCityDefId extends string = string> {
   name: string;
   planetId: StrategicPlanetId;
   factionId: FactionId;
+  originalFactionId?: FactionId;
   kind: StrategicPlanetCityKind;
   kindLabel: string;
   factionLabel: string;
@@ -196,6 +198,7 @@ export interface PlanetMarketState {
 export interface StrategicPlanetState {
   id: StrategicPlanetId;
   factionInfluence: Partial<Record<FactionId, number>>;
+  flagFactionId?: FactionId;
   controllingFactionId?: FactionId;
   contested: boolean;
   cityIds: string[];
@@ -235,9 +238,11 @@ export interface GalaxyPlanetViewModel {
   specialResources: GalaxySpecialResourceViewModel[];
   marketResources: GalaxyMarketResourceViewModel[];
   cities: GalaxyCityViewModel[];
+  availableCommands: StrategicPlanetCommandViewModel[];
   cityCount: number;
   stability: number;
   blockadeLevel: number;
+  flagFactionId?: FactionId;
   controllingFactionId?: FactionId;
   contested: boolean;
   influence: Partial<Record<FactionId, number>>;
@@ -275,12 +280,12 @@ export interface StrategicRouteViewModel {
 }
 
 export interface StrategicPlanetCommandViewModel {
-  id: string;
-  label: string;
-  kind: "move" | "attack" | "defend" | "patrol" | "blockade" | "escort" | "reinforce" | "repair";
-  enabled: boolean;
-  disabledReason?: string;
-  preview?: string;
+  id: GalaxyPlanetCommandViewModel["id"];
+  label: GalaxyPlanetCommandViewModel["label"];
+  kind: GalaxyPlanetCommandViewModel["kind"];
+  enabled: GalaxyPlanetCommandViewModel["enabled"];
+  disabledReason?: GalaxyPlanetCommandViewModel["disabledReason"];
+  preview?: GalaxyPlanetCommandViewModel["preview"];
 }
 
 export interface StrategicGalaxyLogEntry {

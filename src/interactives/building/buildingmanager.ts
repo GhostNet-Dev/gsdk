@@ -48,7 +48,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
   private loader = new Loader();
 
   playerCityPlanetId: StrategicPlanetId = StrategicPlanetId.Eden;
-  playerCityFactionId: FactionId = FactionId.Alliance;
+  playerCityFactionId: FactionId = FactionId.Aetherion;
 
   // [추가] 선택된 건물 및 UI
   private selectedBuilding: IBuildingObject | null = null;

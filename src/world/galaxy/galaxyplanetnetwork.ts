@@ -112,7 +112,7 @@ const DEFAULT_OPTIONS: Required<GalaxyPlanetNetworkOptions> = {
 };
 
 const FACTION_DEFS = {
-  alliance: { color: 0x67c7ff, text: "#8ad6ff", label: "ALLIANCE" },
+  aetherion: { color: 0x67c7ff, text: "#8ad6ff", label: "HOUSE AETHERION" },
   empire:   { color: 0xff7b9e, text: "#ff9db6", label: "EMPIRE" },
   guild:    { color: 0xffc96a, text: "#ffd78d", label: "GUILD" },
   neutral:  { color: 0xb7b9d8, text: "#d2d4ef", label: "NEUTRAL" }
@@ -1125,6 +1125,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       specialResources: definition.specialResources ?? fallbackSpecialResources,
       marketResources: definition.marketResources ?? [],
       cities,
+      availableCommands: definition.availableCommands ?? [],
       cityCount: cities.length,
       selectedCityId: this.selectedCityId,
       stability: definition.stability ?? 0,

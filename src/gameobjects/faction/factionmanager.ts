@@ -88,7 +88,7 @@ export class FactionPostTurnParticipant implements ITurnParticipant {
       for (const [, planetOutput] of Object.entries(ctx.shared.planetOutputs)) {
         const fi = planetOutput.factionInfluence[factionId] ?? 0;
         newScore.influence += fi * 0.1;
-        if (planetOutput.controllingFactionId === factionId) {
+        if (planetOutput.flagFactionId === factionId) {
           newScore.military += 10;
         }
       }

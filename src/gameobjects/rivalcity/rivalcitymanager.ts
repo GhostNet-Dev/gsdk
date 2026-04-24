@@ -1,6 +1,6 @@
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
-import { ITurnParticipant, TurnContext, CityTurnOutput, parseFactionId } from "@Glibs/gameobjects/turntypes";
+import { FactionId, ITurnParticipant, TurnContext, CityTurnOutput, parseFactionId } from "@Glibs/gameobjects/turntypes";
 import { buildingDefs } from "@Glibs/interactives/building/buildingdefs";
 import { FactionManager } from "@Glibs/gameobjects/faction/factionmanager";
 import {
@@ -54,6 +54,7 @@ export class RivalCityManager implements ITurnParticipant {
         cityDefId: seed.cityDefId,
         planetId: seed.planetId,
         factionId: seed.factionId,
+        originalFactionId: seed.factionId,
         archetypeId: def.archetype,
         strategy: "expand",
         turn: 0,
@@ -191,9 +192,20 @@ export class RivalCityManager implements ITurnParticipant {
     return city ? { ...city } : undefined;
   }
 
+  setCityFaction(cityId: string, factionId: FactionId): boolean {
+    const city = this.cities.find((candidate) => candidate.id === cityId);
+    if (!city) return false;
+
+    city.originalFactionId ??= city.factionId;
+    city.factionId = factionId;
+    this.eventCtrl.SendEventMessage(EventTypes.RivalCityStateChanged, this.exportState());
+    return true;
+  }
+
   importState(states: RivalCityState[]): void {
     this.cities = states.flatMap((s) => {
       const factionId = parseFactionId(s.factionId);
+      const originalFactionId = parseFactionId(s.originalFactionId);
       const planetId = parseStrategicPlanetId(s.planetId);
       const cityDefId = parseRivalCityDefId(s.cityDefId);
       const def = cityDefId ? rivalCityDefs[cityDefId] : undefined;
@@ -212,8 +224,15 @@ export class RivalCityManager implements ITurnParticipant {
         if (!ok) console.warn(`[RivalCityManager] Unknown saved build task skipped: ${task.buildingId}`);
         return ok;
       });
-
-      return [{ ...s, cityDefId, factionId, planetId, buildings, buildQueue }];
+      return [{
+        ...s,
+        cityDefId,
+        factionId,
+        originalFactionId: originalFactionId ?? factionId,
+        planetId,
+        buildings,
+        buildQueue,
+      }];
     });
     for (const city of this.cities) {
       const def = rivalCityDefs[city.cityDefId];

@@ -6,6 +6,7 @@ import { RivalCityDefId, RivalCitySeed, RivalCityState, parseRivalCityDefId } fr
 import { rivalCityDefs } from "@Glibs/gameobjects/rivalcity/rivalcitydefs";
 import {
   StrategicPlanetDef,
+  StrategicPlanetCommandViewModel,
   StrategicPlanetState,
   StrategicRouteState,
   StrategicRouteDef,
@@ -25,7 +26,7 @@ import { computeLocalInfluences, computeFactionInfluence, resolveControl } from 
 import { updateMarketFromCityOutputs } from "./trademarket";
 import { strategicRouteDefs } from "./strategicgalaxydefs";
 import { DefaultStrategicGalaxySelectedPlanetId, galaxyPlanetVisualDefs } from "./strategicgalaxymapdefs";
-import { GalaxyCityKind, GalaxyCityViewModel, GalaxyPlanetAssetKey } from "@Glibs/world/galaxy/galaxytypes";
+import { GalaxyCityKind, GalaxyCityViewModel, GalaxyPlanetAssetKey, GalaxyPlanetCommandKind } from "@Glibs/world/galaxy/galaxytypes";
 
 export interface StrategicPlayerCityPlacement {
   id: string;
@@ -35,7 +36,7 @@ export interface StrategicPlayerCityPlacement {
 }
 
 const FACTION_LABELS: Record<FactionId, string> = {
-  [FactionId.Alliance]: "Alliance",
+  [FactionId.Aetherion]: "House Aetherion",
   [FactionId.Empire]: "Empire",
   [FactionId.Guild]: "Guild",
   [FactionId.Neutral]: "Neutral",
@@ -71,7 +72,10 @@ export class StrategicGalaxyManager implements ITurnParticipant {
   private latestCityOutputs: Record<string, CityTurnOutput> = {};
   private visualDefs: Partial<Record<string, GalaxyPlanetVisualDef>> = galaxyPlanetVisualDefs;
 
-  constructor(private eventCtrl: IEventController) {}
+  constructor(private eventCtrl: IEventController) {
+    this.eventCtrl.RegisterEventListener(EventTypes.RivalCityStateChanged, this.handleRivalCityStateChanged);
+    this.eventCtrl.RegisterEventListener(EventTypes.RequestPlanetClaim, this.handlePlanetClaimRequest);
+  }
 
   initialize(planetDefs: StrategicPlanetDef[], routeDefs: StrategicRouteDef[]): void {
     for (const def of planetDefs) {
@@ -133,6 +137,7 @@ export class StrategicGalaxyManager implements ITurnParticipant {
       const planetOutput: PlanetTurnOutput = {
         planetId,
         factionInfluence: { ...state.factionInfluence },
+        flagFactionId: state.flagFactionId,
         controllingFactionId,
         contested,
         resourceBonus: buildResourceBonus(def, state),
@@ -160,9 +165,7 @@ export class StrategicGalaxyManager implements ITurnParticipant {
     // 7. 항로 갱신
     this.updateRoutes(ctx);
 
-    const viewModel = this.getViewModel();
-    this.eventCtrl.SendEventMessage(EventTypes.StrategicGalaxyUpdated, viewModel);
-    this.eventCtrl.SendEventMessage(EventTypes.GalaxyViewModelUpdated, viewModel);
+    this.emitGalaxyViewModel();
   }
 
   getCitySeed(): RivalCitySeed[] {
@@ -210,12 +213,14 @@ export class StrategicGalaxyManager implements ITurnParticipant {
       name,
       planetId: parsedPlanetId,
       factionId,
+      originalFactionId: factionId,
       kind: GalaxyCityKind.Player,
       kindLabel: CITY_KIND_LABELS[GalaxyCityKind.Player],
       factionLabel: FACTION_LABELS[factionId],
       description: "플레이어가 직접 건설하고 운영하는 시작 도시입니다.",
     });
     this.syncCityIdsFromPlacements();
+    this.emitGalaxyViewModel();
   }
 
   registerRivalCityStates(states: RivalCityState[]): void {
@@ -226,16 +231,31 @@ export class StrategicGalaxyManager implements ITurnParticipant {
       const factionId = parseFactionId(state.factionId);
       if (!cityDefId || !planetId || !factionId || !this.planetDefs.has(planetId)) continue;
 
-      this.cityPlacements.set(state.id, this.createRivalCityPlacement({
+      const placement = this.createRivalCityPlacement({
         id: state.id,
         cityDefId,
         planetId,
         factionId,
         name: state.name,
         startingInfluence: state.localInfluence,
-      }, state.score.total));
+      }, state.score.total);
+      placement.originalFactionId = state.originalFactionId ?? factionId;
+      this.cityPlacements.set(state.id, placement);
     }
     this.syncCityIdsFromPlacements();
+    this.emitGalaxyViewModel();
+  }
+
+  setCityFaction(cityId: string, factionId: FactionId): boolean {
+    const placement = this.cityPlacements.get(cityId);
+    if (!placement) return false;
+
+    placement.originalFactionId ??= placement.factionId;
+    placement.factionId = factionId;
+    placement.factionLabel = FACTION_LABELS[factionId];
+    this.syncCityIdsFromPlacements();
+    this.emitGalaxyViewModel();
+    return true;
   }
 
   getPlanetBonus(planetId: string): Partial<Record<CurrencyType, number>> {
@@ -275,7 +295,14 @@ export class StrategicGalaxyManager implements ITurnParticipant {
         .filter((f) => f.currentPlanetId === planetId)
         .reduce((sum, f) => sum + f.strength, 0);
 
-      result.push(buildPlanetViewModel(def, state, visual, fleetStrength, this.buildCitiesForPlanet(planetId)));
+      result.push(buildPlanetViewModel(
+        def,
+        state,
+        visual,
+        fleetStrength,
+        this.buildCitiesForPlanet(planetId),
+        this.buildAvailableCommands(def.id),
+      ));
     }
 
     return result;
@@ -314,6 +341,7 @@ export class StrategicGalaxyManager implements ITurnParticipant {
         specialResources: vm.specialResources,
         marketResources: vm.marketResources,
         cities: vm.cities,
+        availableCommands: vm.availableCommands,
         cityCount: vm.cities.length,
         stability: vm.stability,
         blockadeLevel: vm.blockadeLevel,
@@ -352,6 +380,7 @@ export class StrategicGalaxyManager implements ITurnParticipant {
     for (const p of data.planets) {
       const id = parseStrategicPlanetId(p.id);
       const controllingFactionId = parseFactionId(p.controllingFactionId);
+      const flagFactionId = parseFactionId(p.flagFactionId);
       if (!id || !this.planetDefs.has(id)) {
         console.warn(`[StrategicGalaxyManager] Invalid saved planet skipped: ${p.id}`);
         continue;
@@ -359,6 +388,7 @@ export class StrategicGalaxyManager implements ITurnParticipant {
       this.planetStates.set(id, {
         ...p,
         id,
+        flagFactionId: flagFactionId ?? controllingFactionId ?? this.planetDefs.get(id)?.defaultFactionId,
         controllingFactionId,
         factionInfluence: sanitizeFactionInfluence(p.factionInfluence),
       });
@@ -411,6 +441,7 @@ export class StrategicGalaxyManager implements ITurnParticipant {
       name: seed.name ?? def.name,
       planetId: seed.planetId,
       factionId: seed.factionId,
+      originalFactionId: seed.factionId,
       kind,
       kindLabel: CITY_KIND_LABELS[kind],
       factionLabel: FACTION_LABELS[seed.factionId],
@@ -450,6 +481,7 @@ export class StrategicGalaxyManager implements ITurnParticipant {
         name: placement.name ?? "플레이어 도시",
         planetId: parsedPlanetId,
         factionId,
+        originalFactionId: factionId,
         kind,
         kindLabel: CITY_KIND_LABELS[kind],
         factionLabel: FACTION_LABELS[factionId],
@@ -540,6 +572,7 @@ export class StrategicGalaxyManager implements ITurnParticipant {
     return {
       id: def.id,
       factionInfluence: { [def.defaultFactionId]: 50 },
+      flagFactionId: def.defaultFactionId,
       controllingFactionId: def.defaultFactionId,
       contested: false,
       cityIds: [],
@@ -571,6 +604,75 @@ export class StrategicGalaxyManager implements ITurnParticipant {
       this.eventCtrl.SendEventMessage(EventTypes.RouteStateChanged, route);
     }
     void ctx;
+  }
+
+  private readonly handleRivalCityStateChanged = (states: RivalCityState[]): void => {
+    this.registerRivalCityStates(states);
+  };
+
+  private readonly handlePlanetClaimRequest = (payload: { planetId: StrategicPlanetId; factionId?: FactionId }): void => {
+    const planetId = parseStrategicPlanetId(payload?.planetId);
+    const factionId = parseFactionId(payload?.factionId) ?? this.getPlayerFactionId();
+    if (!planetId) return;
+
+    const command = this.getClaimCommand(planetId, factionId);
+    if (!command.enabled) {
+      this.eventCtrl.SendEventMessage(EventTypes.Toast, "행성 점령", command.disabledReason ?? "행성을 점령할 수 없습니다.");
+      return;
+    }
+
+    const state = this.planetStates.get(planetId);
+    const def = this.planetDefs.get(planetId);
+    if (!state || !def) return;
+
+    state.flagFactionId = factionId;
+    this.eventCtrl.SendEventMessage(EventTypes.Toast, "행성 점령", `[${def.name}]의 공식 깃발이 ${FACTION_LABELS[factionId]}으로 변경되었습니다.`);
+    this.eventCtrl.SendEventMessage(EventTypes.PlanetStateChanged, { ...state });
+    this.emitGalaxyViewModel();
+  };
+
+  private emitGalaxyViewModel(): void {
+    const viewModel = this.getViewModel();
+    this.eventCtrl.SendEventMessage(EventTypes.StrategicGalaxyUpdated, viewModel);
+    this.eventCtrl.SendEventMessage(EventTypes.GalaxyViewModelUpdated, viewModel);
+  }
+
+  private getPlayerFactionId(): FactionId {
+    return this.cityPlacements.get("player-city")?.factionId ?? FactionId.Aetherion;
+  }
+
+  private buildAvailableCommands(planetId: StrategicPlanetId): StrategicPlanetCommandViewModel[] {
+    return [this.getClaimCommand(planetId, this.getPlayerFactionId())];
+  }
+
+  private getClaimCommand(
+    planetId: StrategicPlanetId,
+    factionId: FactionId,
+  ): StrategicPlanetCommandViewModel {
+    const placements = [...this.cityPlacements.values()].filter((placement) => placement.planetId === planetId);
+    const state = this.planetStates.get(planetId);
+    const hasFactionCity = placements.some((placement) => placement.factionId === factionId);
+    const hasOtherFactionCity = placements.some((placement) => placement.factionId !== factionId);
+
+    let disabledReason: string | undefined;
+    if (state?.flagFactionId === factionId) {
+      disabledReason = "이미 House Aetherion의 행성입니다.";
+    } else if (!hasFactionCity) {
+      disabledReason = "이 행성에 House Aetherion 도시가 없습니다.";
+    } else if (hasOtherFactionCity) {
+      disabledReason = "아직 다른 진영 도시가 남아 있습니다.";
+    }
+
+    return {
+      id: "claim",
+      label: "행성 점령",
+      kind: GalaxyPlanetCommandKind.Claim,
+      enabled: disabledReason === undefined,
+      disabledReason,
+      preview: state?.flagFactionId
+        ? `현재 공식 깃발: ${FACTION_LABELS[state.flagFactionId]}`
+        : undefined,
+    };
   }
 }
 

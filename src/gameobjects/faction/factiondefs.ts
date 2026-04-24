@@ -1,11 +1,12 @@
 import { CurrencyType } from "@Glibs/inventory/wallet";
+import { FactionId } from "@Glibs/gameobjects/turntypes";
 import { FactionDef } from "./factiontypes";
 
-export const factionDefs: Record<string, FactionDef> = {
-  alliance: {
-    id: "alliance",
-    name: "Alliance",
-    desc: "균형 성장과 상호 지원을 중시하는 연합입니다.",
+export const factionDefs: Record<FactionId, FactionDef> = {
+  aetherion: {
+    id: FactionId.Aetherion,
+    name: "House Aetherion",
+    desc: "질서와 복구를 중시하며 새로운 영토 개척을 추구하는 귀족 가문입니다.",
     governance: "federation",
     doctrine: "stabilityAndRecovery",
     resourceBias: {
@@ -32,14 +33,14 @@ export const factionDefs: Record<string, FactionDef> = {
     expansionPolicy: "balanced",
     cooperationLevel: 0.8,
     defaultRelations: {
-      empire: "rival",
-      guild: "friendly",
-      neutral: "neutral",
+      [FactionId.Empire]: "rival",
+      [FactionId.Guild]: "friendly",
+      [FactionId.Neutral]: "neutral",
     },
   },
 
   empire: {
-    id: "empire",
+    id: FactionId.Empire,
     name: "Empire",
     desc: "산업 집중과 거점 장악을 중시하는 제국입니다.",
     governance: "empire",
@@ -69,14 +70,14 @@ export const factionDefs: Record<string, FactionDef> = {
     expansionPolicy: "strategicHub",
     cooperationLevel: 0.55,
     defaultRelations: {
-      alliance: "rival",
-      guild: "neutral",
-      neutral: "rival",
+      [FactionId.Aetherion]: "rival",
+      [FactionId.Guild]: "neutral",
+      [FactionId.Neutral]: "rival",
     },
   },
 
   guild: {
-    id: "guild",
+    id: FactionId.Guild,
     name: "Guild",
     desc: "교역망과 시장 영향력을 우선하는 상인 연합입니다.",
     governance: "guild",
@@ -105,14 +106,14 @@ export const factionDefs: Record<string, FactionDef> = {
     expansionPolicy: "wide",
     cooperationLevel: 0.7,
     defaultRelations: {
-      alliance: "friendly",
-      empire: "neutral",
-      neutral: "friendly",
+      [FactionId.Aetherion]: "friendly",
+      [FactionId.Empire]: "neutral",
+      [FactionId.Neutral]: "friendly",
     },
   },
 
   neutral: {
-    id: "neutral",
+    id: FactionId.Neutral,
     name: "Neutral",
     desc: "특정 진영에 속하지 않는 독립 세력입니다.",
     governance: "neutralBloc",
@@ -136,9 +137,9 @@ export const factionDefs: Record<string, FactionDef> = {
     expansionPolicy: "balanced",
     cooperationLevel: 0.4,
     defaultRelations: {
-      alliance: "neutral",
-      empire: "neutral",
-      guild: "neutral",
+      [FactionId.Aetherion]: "neutral",
+      [FactionId.Empire]: "neutral",
+      [FactionId.Guild]: "neutral",
     },
   },
 };

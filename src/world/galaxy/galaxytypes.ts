@@ -1,8 +1,9 @@
 import IEventController from "@Glibs/interface/ievent";
 import { CurrencyType } from "@Glibs/inventory/wallet";
+import { FactionId } from "@Glibs/gameobjects/turntypes";
 import * as THREE from "three";
 
-export type FactionKey = "alliance" | "empire" | "guild" | "neutral";
+export type FactionKey = FactionId;
 
 export const GalaxyCityKind = {
   Player: "player",
@@ -79,6 +80,30 @@ export interface GalaxyCityViewModel {
   description?: string;
 }
 
+export const GalaxyPlanetCommandKind = {
+  Move: "move",
+  Attack: "attack",
+  Defend: "defend",
+  Patrol: "patrol",
+  Blockade: "blockade",
+  Escort: "escort",
+  Reinforce: "reinforce",
+  Repair: "repair",
+  Claim: "claim",
+} as const;
+
+export type GalaxyPlanetCommandKind =
+  typeof GalaxyPlanetCommandKind[keyof typeof GalaxyPlanetCommandKind];
+
+export interface GalaxyPlanetCommandViewModel {
+  id: string;
+  label: string;
+  kind: GalaxyPlanetCommandKind;
+  enabled: boolean;
+  disabledReason?: string;
+  preview?: string;
+}
+
 export interface PlanetRingDef {
   textureKey: GalaxyRingTextureKey;
   tiltX?: number;
@@ -97,6 +122,7 @@ export interface PlanetDef<TPlanetId extends string = string> {
   specialResources?: GalaxySpecialResourceViewModel[];
   marketResources?: GalaxyMarketResourceViewModel[];
   cities?: GalaxyCityViewModel[];
+  availableCommands?: GalaxyPlanetCommandViewModel[];
   cityCount?: number;
   stability?: number;
   blockadeLevel?: number;
@@ -193,6 +219,7 @@ export interface PlanetInfoViewModel {
   specialResources: GalaxySpecialResourceViewModel[];
   marketResources: GalaxyMarketResourceViewModel[];
   cities: GalaxyCityViewModel[];
+  availableCommands: GalaxyPlanetCommandViewModel[];
   cityCount: number;
   selectedCityId?: string;
   stability: number;

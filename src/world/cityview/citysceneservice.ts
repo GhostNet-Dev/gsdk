@@ -53,7 +53,7 @@ const POCKET_SLOT_SPACING = 3;
 const TOWN_SLOT_RINGS = 6;
 const POCKET_SLOT_RINGS = 3;
 const FACTION_LABELS: Record<FactionId, string> = {
-  [FactionId.Alliance]: "Alliance",
+  [FactionId.Aetherion]: "House Aetherion",
   [FactionId.Empire]: "Empire",
   [FactionId.Guild]: "Guild",
   [FactionId.Neutral]: "Neutral",

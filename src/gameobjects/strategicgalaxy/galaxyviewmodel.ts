@@ -6,6 +6,7 @@ import { GalaxyCityViewModel } from "@Glibs/world/galaxy/galaxytypes";
 import {
   GalaxyPlanetViewModel,
   GalaxyPlanetVisualDef,
+  StrategicPlanetCommandViewModel,
   StrategicFleetViewModel,
   StrategicPlanetDef,
   StrategicPlanetSpecialResourceType,
@@ -13,7 +14,7 @@ import {
 } from "./strategicgalaxytypes";
 
 const FACTION_LABELS: Record<string, string> = {
-  alliance: "Alliance",
+  aetherion: "House Aetherion",
   empire: "Empire",
   guild: "Guild",
   neutral: "Neutral",
@@ -38,8 +39,9 @@ export function buildPlanetViewModel(
   visual: GalaxyPlanetVisualDef,
   fleetStrength: number,
   cities: GalaxyCityViewModel[],
+  availableCommands: StrategicPlanetCommandViewModel[],
 ): GalaxyPlanetViewModel {
-  const controllingFactionId = state.controllingFactionId ?? def.defaultFactionId;
+  const displayFactionId = state.flagFactionId ?? state.controllingFactionId ?? def.defaultFactionId;
   const specialLabels = def.specialResources.join(", ");
   const resourceBonuses = Object.values(CurrencyType)
     .map((type) => {
@@ -82,8 +84,8 @@ export function buildPlanetViewModel(
   return {
     id: def.id,
     name: def.name,
-    factionId: controllingFactionId,
-    factionLabel: FACTION_LABELS[controllingFactionId] ?? controllingFactionId,
+    factionId: displayFactionId,
+    factionLabel: FACTION_LABELS[displayFactionId] ?? displayFactionId,
     economy: def.baseStats.economy,
     industry: def.baseStats.industry,
     defense: def.baseStats.defense,
@@ -93,9 +95,11 @@ export function buildPlanetViewModel(
     specialResources,
     marketResources,
     cities,
+    availableCommands,
     cityCount: cities.length,
     stability: state.stability,
     blockadeLevel: state.blockadeLevel,
+    flagFactionId: state.flagFactionId,
     controllingFactionId: state.controllingFactionId,
     contested: state.contested,
     influence: { ...state.factionInfluence },

@@ -23,6 +23,7 @@ export const GameModeId = {
     Simcity: "simcity",
     Galaxy: "galaxy",
     RivalCityView: "rival-city-view",
+    Tutorial: "tutorial",
 } as const;
 
 export type GameModeId = typeof GameModeId[keyof typeof GameModeId];
@@ -131,6 +132,7 @@ export enum EventTypes {
     GalaxyViewModelUpdated = "galaxyviewmodelupdated",
     StrategicFleetStateChanged = "strategicfleetstatechanged",
     StrategicFleetOrderRequested = "strategicfleetorderrequested",
+    RequestPlanetClaim = "requestplanetclaim",
 
     // 🌍 8. 물리 및 렌더링 (Physics, Rendering & VFX)
     CtrlObj = "ctrlObj",

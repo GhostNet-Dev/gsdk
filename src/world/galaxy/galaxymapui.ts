@@ -62,9 +62,11 @@ export class GalaxyMapUI {
   private marketResourceList!: HTMLElement;
   private cityList!: HTMLElement;
   private planetNeighbors!: HTMLElement;
+  private planetCommandList!: HTMLElement;
 
   public onNeighborClick?: (planetId: string) => void;
   public onCityClick?: (planetId: string, cityId: string) => void;
+  public onCommandClick?: (planetId: string, commandId: string) => void;
 
   constructor(container: HTMLElement = document.body) {
     this.ensureStyle();
@@ -86,6 +88,8 @@ export class GalaxyMapUI {
             <div class="gsm-kv"><span>도시 수</span><strong data-ref="planetCityCount">0</strong></div>
             <div class="gsm-kv"><span>안정도</span><strong data-ref="planetStability">0</strong></div>
             <div class="gsm-kv"><span>봉쇄 단계</span><strong data-ref="planetBlockadeLevel">0</strong></div>
+            <div class="gsm-section-title">명령</div>
+            <div class="gsm-command-list" data-ref="planetCommandList"></div>
             <div class="gsm-section-title">특수 자원</div>
             <ul class="gsm-info-list" data-ref="specialResourceList"></ul>
             <div class="gsm-section-title">설명</div>
@@ -112,7 +116,7 @@ export class GalaxyMapUI {
             <ul class="gsm-neighbor-list" data-ref="planetNeighbors"></ul>
             <div class="gsm-section-title">범례</div>
             <div class="gsm-chip-row">
-              <span class="gsm-chip"><span class="gsm-swatch" style="color:#67c7ff;background:#67c7ff;"></span> Alliance</span>
+              <span class="gsm-chip"><span class="gsm-swatch" style="color:#67c7ff;background:#67c7ff;"></span> House Aetherion</span>
               <span class="gsm-chip"><span class="gsm-swatch" style="color:#ff7b9e;background:#ff7b9e;"></span> Empire</span>
               <span class="gsm-chip"><span class="gsm-swatch" style="color:#ffc96a;background:#ffc96a;"></span> Guild</span>
               <span class="gsm-chip"><span class="gsm-swatch" style="color:#b7b9d8;background:#b7b9d8;"></span> Neutral</span>
@@ -161,6 +165,7 @@ export class GalaxyMapUI {
     this.renderResourceBonuses(info);
     this.renderMarketResources(info);
     this.renderCities(info);
+    this.renderCommands(info);
     if (info.selectedCityId) {
       this.setActiveTab(GalaxyMapPanelTab.Cities);
     }
@@ -232,6 +237,7 @@ export class GalaxyMapUI {
     this.marketResourceList = q("marketResourceList");
     this.cityList = q("cityList");
     this.planetNeighbors = q("planetNeighbors");
+    this.planetCommandList = q("planetCommandList");
   }
 
   private renderCities(info: PlanetInfoViewModel): void {
@@ -309,6 +315,28 @@ export class GalaxyMapUI {
     }));
   }
 
+  private renderCommands(info: PlanetInfoViewModel): void {
+    if (info.availableCommands.length === 0) {
+      this.planetCommandList.replaceChildren(this.createEmptyState("사용 가능한 명령이 없습니다."));
+      return;
+    }
+
+    this.planetCommandList.replaceChildren(...info.availableCommands.map((command) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "gsm-command";
+      button.textContent = command.label;
+      button.disabled = !command.enabled;
+      if (command.disabledReason) button.title = command.disabledReason;
+      if (command.preview) button.setAttribute("data-preview", command.preview);
+      button.addEventListener("click", () => {
+        if (!command.enabled) return;
+        this.onCommandClick?.(info.id, command.id);
+      });
+      return button;
+    }));
+  }
+
   private createInfoItem(label: string, value: string): HTMLLIElement {
     const item = document.createElement("li");
     item.className = "gsm-info-item";
@@ -324,6 +352,13 @@ export class GalaxyMapUI {
 
   private createEmptyItem(text: string): HTMLLIElement {
     const item = document.createElement("li");
+    item.className = "gsm-empty";
+    item.textContent = text;
+    return item;
+  }
+
+  private createEmptyState(text: string): HTMLDivElement {
+    const item = document.createElement("div");
     item.className = "gsm-empty";
     item.textContent = text;
     return item;
@@ -421,6 +456,16 @@ export class GalaxyMapUI {
       .gsm-city-main strong { color:#f2f7ff; overflow-wrap:anywhere; }
       .gsm-city-main span { color:#b9c7dd; font-size:12px; white-space:nowrap; }
       .gsm-city-meta { margin-top:4px; color:#aeb8cc; font-size:12px; }
+      .gsm-command-list { display:grid; gap:8px; margin-top:8px; }
+      .gsm-command {
+        width:100%; min-height:38px; padding:8px 10px; border-radius:8px; text-align:left;
+        border:1px solid rgba(255,255,255,.10); background:rgba(120,175,255,.16); color:#f2f7ff;
+        font:700 13px/1.3 Arial,sans-serif; cursor:pointer;
+      }
+      .gsm-command:hover:not(:disabled) { background:rgba(120,175,255,.24); border-color:rgba(170,210,255,.32); }
+      .gsm-command:disabled {
+        background:rgba(255,255,255,.05); color:#93a2bb; border-color:rgba(255,255,255,.08); cursor:not-allowed;
+      }
       .gsm-neighbor-list { margin:8px 0 0; padding-left:0; max-height:150px; overflow:auto; font-size:13px; list-style:none; }
       .gsm-neighbor-item { 
         padding: 4px 8px; margin-bottom: 4px; border-radius: 6px; 

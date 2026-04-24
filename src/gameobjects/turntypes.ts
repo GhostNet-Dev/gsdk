@@ -2,7 +2,7 @@ import IEventController from "@Glibs/interface/ievent";
 import { CurrencyType } from "@Glibs/inventory/wallet";
 
 export const FactionId = {
-  Alliance: "alliance",
+  Aetherion: "aetherion",
   Empire: "empire",
   Guild: "guild",
   Neutral: "neutral",
@@ -52,6 +52,7 @@ export interface CityTurnOutput {
 export interface PlanetTurnOutput {
   planetId: string;
   factionInfluence: Partial<Record<FactionId, number>>;
+  flagFactionId?: FactionId;
   controllingFactionId?: FactionId;
   contested: boolean;
   resourceBonus: Partial<Record<CurrencyType, number>>;
