@@ -29,6 +29,7 @@ export interface IMonsterCtrl {
     get MonsterBox(): MonsterBox
     get Drop(): MonDrop[] | undefined
     Respawning(): void
+    Dispose(): void
     ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number): boolean 
 }
 
@@ -110,10 +111,12 @@ export class Monsters {
     }
 
     ReceiveDemage(z: MonsterSet, damage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number) {
-        if (z && !z.monCtrl.ReceiveDemage(damage, effect, attackRange, knockbackDist)) {
+        if (!z.live) return
+
+        if (!z.monCtrl.ReceiveDemage(damage, effect, attackRange, knockbackDist)) {
             z.live = false
             z.deadtime = new Date().getTime()
-            this.mobCount--
+            this.mobCount = Math.max(0, this.mobCount - 1)
             const property = this.monDb.GetItem(z.monCtrl.MonsterBox.MonId)
             const baseExp = property.stats?.expBonus ?? 0
             const expReward = this.resolveExpReward(baseExp, z.monCtrl.Drop)
@@ -176,13 +179,23 @@ export class Monsters {
     ReleaseMonster() {
         this.monsters.forEach((mon) => {
             mon.forEach((z) => {
+                if (z.live) {
+                    this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, z.monCtrl.MonsterBox)
+                }
                 z.monModel.Visible = false
                 z.live = false
-                this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, z.monCtrl.MonsterBox)
-                this.game.remove(z.monModel.Meshs, z.monCtrl.MonsterBox)
+                z.monCtrl.Dispose()
+                if (z.monModel.Meshs.parent) {
+                    this.game.remove(z.monModel.Meshs)
+                }
+                if (z.monCtrl.MonsterBox.parent) {
+                    this.game.remove(z.monCtrl.MonsterBox)
+                }
             })
             console.log("Release", mon)
         })
+        this.monsters.clear()
+        this.mobCount = 0
         
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
         if (this.respawntimeout != undefined) clearTimeout(this.respawntimeout)
@@ -190,9 +203,8 @@ export class Monsters {
 
     async Spawning(monId: MonsterId, respawn:boolean, monSet?: MonsterSet, pos?: THREE.Vector3) {
         //const zSet = await this.CreateZombie()
-        this.mobCount++
-        if (this.mobCount >= this.maxMob) return
         if (!this.mode) return
+        if (this.mobCount >= this.maxMob) return
         let mon = this.monsters.get(monId)
         if (!mon) {
             mon = []
@@ -218,6 +230,7 @@ export class Monsters {
         }
         monSet.respawn = respawn
         monSet.live = true
+        this.mobCount++
         monSet.monCtrl.Respawning()
 
         monSet.monModel.Visible = true;

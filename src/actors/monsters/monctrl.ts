@@ -27,6 +27,15 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     public pendingAttackRange = 0; // [New] 타격 시 발생한 공격 사거리 임시 보관
     public pendingKnockbackDist = 0; // [New] 명시적인 넉백 거리 보관
     private phybox: MonsterBox
+    private disposed = false
+    private updateBuffEvent = ""
+    private removeBuffEvent = ""
+    private readonly onUpdateBuff = (buff: Buff, level = 0) => {
+        this.baseSpec.Buff(buff, level)
+    }
+    private readonly onRemoveBuff = (buff: Buff) => {
+        this.baseSpec.RemoveBuff(buff)
+    }
     get Drop() { return this.property.drop }
     get MonsterBox() { return this.phybox }
     get Spec() { return this.baseSpec }
@@ -52,15 +61,13 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
 
         this.phybox = new MonsterBox(id, "mon", property.id, geometry, material)
         // if (window.location.hostname == "hons.ghostwebservice.com") 
-            this.phybox.visible = false
+        this.phybox.visible = false
         this.phybox.position.copy(this.zombie.Pos)
 
-        eventCtrl.RegisterEventListener(EventTypes.UpdateBuff + "mon" + id, (buff: Buff, level = 0) => {
-            this.baseSpec.Buff(buff, level)
-        })
-        eventCtrl.RegisterEventListener(EventTypes.RemoveBuff + "mon" + id, (buff: Buff) => {
-            this.baseSpec.RemoveBuff(buff)
-        })
+        this.updateBuffEvent = EventTypes.UpdateBuff + "mon" + id
+        this.removeBuffEvent = EventTypes.RemoveBuff + "mon" + id
+        eventCtrl.RegisterEventListener(this.updateBuffEvent, this.onUpdateBuff)
+        eventCtrl.RegisterEventListener(this.removeBuffEvent, this.onRemoveBuff)
     }
     applyAction(action: IActionComponent, ctx?: ActionContext) {
         action.apply?.(this, ctx)
@@ -69,6 +76,14 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     removeAction(action: IActionComponent, context?: ActionContext | undefined): void {
         action.deactivate?.(this, context)
         action.remove?.(this)
+    }
+    Dispose(): void {
+        if (this.disposed) return
+
+        this.disposed = true
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
+        this.eventCtrl.DeregisterEventListener(this.updateBuffEvent, this.onUpdateBuff)
+        this.eventCtrl.DeregisterEventListener(this.removeBuffEvent, this.onRemoveBuff)
     }
     Respawning() {
         this.baseSpec.ResetStatus()
