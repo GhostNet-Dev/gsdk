@@ -72,6 +72,7 @@ export enum EventTypes {
     RemoveSkill = "removeskill",
     SkillSlotCast = "skillslotcast",
     Death = "death",
+    AllyDeath = "allydeath",
     ActionAttach = "actionattach",
     ActionDettach = "actiondetach",
     CombatResourceChanged = "resourcechanged",
