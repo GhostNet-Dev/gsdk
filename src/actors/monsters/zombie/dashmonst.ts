@@ -7,9 +7,10 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { IActorState, MonsterProperty } from "../monstertypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
-import { DyingZState, HurtZState, IdleZState, JumpZState, MonState } from "./monstate";
+import { DyingZState, GetMonsterAttackTargetId, HurtZState, IdleZState, JumpZState, MonState } from "./monstate";
 import { Buff } from "@Glibs/magical/buff/buff";
 import { buffDefs } from "@Glibs/magical/buff/buffdefs";
+import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 
 type States = Record<string, IActorState>
 
@@ -42,6 +43,7 @@ export class DashAttackState extends MonState implements IActorState {
     attackDamageMin = this.spec.AttackDamageMin
     isAttacking = false
     hitDelay = 0
+    private targetId: string = TargetTeamId.Player
 
     constructor(states: States, zombie: Zombie, gphysic: IGPhysic,
         private eventCtrl: IEventController, spec: BaseSpec
@@ -61,6 +63,7 @@ export class DashAttackState extends MonState implements IActorState {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
     }
     Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
+        this.targetId = GetMonsterAttackTargetId(target)
         const checkHit = this.CheckHit(target)
         if (checkHit != undefined) return checkHit
         const dist = this.zombie.Pos.distanceTo(target.CenterPos)
@@ -92,8 +95,7 @@ export class DashAttackState extends MonState implements IActorState {
         return this
     }
     attack() {
-        console.log("dash attack")
-        this.eventCtrl.SendEventMessage(EventTypes.Attack + "player", [{
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + this.targetId, [{
             type: AttackType.NormalSwing,
             spec: [this.spec],
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
@@ -243,4 +245,3 @@ export class FastDashRunState extends MonState implements IActorState {
         return this
     }
 }
-

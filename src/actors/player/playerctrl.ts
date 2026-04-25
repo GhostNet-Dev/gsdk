@@ -27,6 +27,7 @@ import { Bind } from "@Glibs/types/assettypes";
 import { MonDrop } from "../monsters/monstertypes";
 import { ActionCostSpec } from "@Glibs/actors/battle/resourcecosttypes";
 import { actionCostService } from "@Glibs/actors/battle/actioncostservice";
+import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 
 type LearnedSkillMessage = {
     nodeId: string
@@ -51,6 +52,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     private hpRegenAccumulator = 0
     private mpRegenAccumulator = 0
     private spRegenAccumulator = 0
+    private readonly targetId = TargetTeamId.Player
 
     set lastUsedWeaponMode(mode: 'melee' | 'ranged') {
         this._lastUsedWeaponMode = mode;
@@ -268,6 +270,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
             if (this.currentState != this.DyingSt && this.baseSpec.CheckDie()) {
                 this.currentState = this.DyingSt
                 this.currentState.Init()
+                this.updateTargetState(false)
             }
             
             if (!this.playEnable) return
@@ -336,6 +339,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         this.eventCtrl.SendEventMessage(EventTypes.Outline, this.player.Meshs)
         this.playEnable = true
         this.baseSpec.ResetStatus()
+        this.registerTarget()
         this.eventCtrl.SendEventMessage(EventTypes.PlayerStatus, this.baseSpec.Status)
         this.currentState = this.IdleSt
         this.currentState.Init()
@@ -343,6 +347,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     uninit() {
         this.playEnable = false
         this.currentState.Uninit()
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterTarget, this.targetId)
         this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
     }
     add(...obj: THREE.Object3D[]) {
@@ -360,6 +365,33 @@ export class PlayerCtrl implements ILoop, IActionUser {
             if (dis < minDist) minDist = dis
         }
         return minDist
+    }
+
+    private registerTarget() {
+        this.player.Meshs.name = this.targetId
+        this.player.Meshs.userData.targetMeta = {
+            id: this.targetId,
+            teamId: this.targetId,
+            kind: "unit",
+        }
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterTarget, {
+            id: this.targetId,
+            object: this.player.Meshs,
+            teamId: this.targetId,
+            kind: "unit",
+            alive: true,
+            targetable: true,
+            collidable: true,
+        })
+    }
+
+    private updateTargetState(alive: boolean) {
+        this.eventCtrl.SendEventMessage(EventTypes.UpdateTargetState, {
+            id: this.targetId,
+            alive,
+            targetable: alive,
+            collidable: alive,
+        })
     }
 
     private assignSkillToSlot(skill: LearnedSkillMessage) {

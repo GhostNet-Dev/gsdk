@@ -2,6 +2,13 @@ import * as THREE from "three"
 
 export type TargetKind = "ship" | "unit" | "structure" | "projectile" | "other"
 
+export const TargetTeamId = {
+  Player: "player",
+  Monster: "monster",
+} as const
+
+export type TargetTeamId = typeof TargetTeamId[keyof typeof TargetTeamId]
+
 export type Relation = "ally" | "enemy" | "neutral"
 
 export type TargetRecord = {

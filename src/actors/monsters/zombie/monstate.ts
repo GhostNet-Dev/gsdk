@@ -8,8 +8,14 @@ import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { IActorState } from "../monstertypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { MonsterProperty } from "@Glibs/types/monstertypes";
+import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 
 type States = Record<string, IActorState>
+type MonsterAttackTarget = IPhysicsObject & { TargetId?: string }
+
+export function GetMonsterAttackTargetId(target?: IPhysicsObject) {
+    return (target as MonsterAttackTarget | undefined)?.TargetId ?? TargetTeamId.Player
+}
 
 export function NewDefaultMonsterState(
     id: number,
@@ -260,6 +266,7 @@ export class AttackZState extends MonState implements IActorState {
     attackSpeed = this.spec.AttackSpeed
     attackDamageMax = this.spec.AttackDamageMax
     attackDamageMin = this.spec.AttackDamageMin
+    private targetId: string = TargetTeamId.Player
 
     constructor(states: States, zombie: Zombie, gphysic: IGPhysic,
         private eventCtrl: IEventController, spec: BaseSpec
@@ -284,6 +291,7 @@ export class AttackZState extends MonState implements IActorState {
     QT = new THREE.Quaternion()
 
     Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
+        this.targetId = GetMonsterAttackTargetId(target)
         const checkHit = this.CheckHit(target)
         if (checkHit != undefined) return checkHit
         const dist = this.zombie.Pos.distanceTo(target.Pos)
@@ -318,7 +326,7 @@ export class AttackZState extends MonState implements IActorState {
         return this
     }
     attack() {
-        this.eventCtrl.SendEventMessage(EventTypes.Attack + "player", [{
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + this.targetId, [{
             type: AttackType.NormalSwing,
             spec: this.spec,
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
@@ -360,7 +368,7 @@ export class DyingZState extends MonState implements IActorState {
     Init(): void {
         this.zombie.ChangeAction(ActionType.Dying)
 
-        this.eventCtrl.SendEventMessage(EventTypes.Attack + "player", [{
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + TargetTeamId.Player, [{
             type: AttackType.Exp,
             damage: this.spec.stats.getStat("expBonus"),
             srcMonsterId: this.prop.id,

@@ -13,7 +13,83 @@ import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
 import { StatKey } from "@Glibs/types/stattypes";
 import { Buff } from "@Glibs/magical/buff/buff";
+import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
+import { TargetRecord, TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 
+class MonsterTargetAdapter implements IPhysicsObject {
+    private static readonly fallbackBoxMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1))
+    private target?: TargetRecord
+    private velocity = 0
+    private readonly size = new THREE.Vector3(1, 1, 1)
+    private readonly centerPos = new THREE.Vector3()
+    private readonly headPos = new THREE.Vector3()
+    private readonly box = new THREE.Box3()
+    private isDirty = true
+
+    constructor(private readonly fallback: IPhysicsObject) { }
+
+    set Target(record: TargetRecord | undefined) {
+        if (this.target !== record) {
+            this.target = record
+            this.isDirty = true
+        }
+    }
+    get TargetId() { return this.target?.id ?? TargetTeamId.Player }
+    get Velocity() { return this.velocity }
+    set Velocity(n: number) { this.velocity = n }
+    get Size(): THREE.Vector3 {
+        if (this.isDirty) this.updateCache()
+        return this.target ? this.size : this.fallback.Size
+    }
+    get CBox(): THREE.Mesh { return MonsterTargetAdapter.fallbackBoxMesh }
+    get BoxPos(): THREE.Vector3 { return this.CenterPos }
+    get Box(): THREE.Box3 {
+        if (this.isDirty) this.updateCache()
+        return this.target ? this.box : this.fallback.Box
+    }
+    get HeadPos(): THREE.Vector3 {
+        this.headPos.copy(this.CenterPos)
+        this.headPos.y += this.Size.y / 2
+        return this.headPos
+    }
+    get CenterPos(): THREE.Vector3 {
+        if (this.isDirty) this.updateCache()
+        return this.target ? this.centerPos : this.fallback.CenterPos
+    }
+    get Pos(): THREE.Vector3 { return this.target?.object.position ?? this.fallback.Pos }
+    set Visible(flag: boolean) {
+        const object = this.target?.object
+        if (object) object.visible = flag
+        else this.fallback.Visible = flag
+    }
+    get Meshs(): THREE.Group | THREE.Mesh {
+        const object = this.target?.object
+        if (object instanceof THREE.Group || object instanceof THREE.Mesh) return object
+        return this.fallback.Meshs
+    }
+    get UUID(): string { return this.target?.object.uuid ?? this.fallback.UUID }
+
+    update() {
+        this.isDirty = true
+    }
+
+    private updateCache() {
+        const object = this.target?.object
+        if (!object) {
+            this.isDirty = false
+            return
+        }
+        this.box.setFromObject(object)
+        if (this.box.isEmpty()) {
+            this.size.set(1, 1, 1)
+            this.centerPos.copy(object.position)
+        } else {
+            this.box.getSize(this.size)
+            this.box.getCenter(this.centerPos)
+        }
+        this.isDirty = false
+    }
+}
 
 
 export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
@@ -27,9 +103,22 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     public pendingAttackRange = 0; // [New] 타격 시 발생한 공격 사거리 임시 보관
     public pendingKnockbackDist = 0; // [New] 명시적인 넉백 거리 보관
     private phybox: MonsterBox
+    private readonly targetId: string
+    private readonly targetAdapter: MonsterTargetAdapter
+    private targetRegistry?: TargetRegistrySystem
+    private currentTarget?: TargetRecord
     private disposed = false
     private updateBuffEvent = ""
     private removeBuffEvent = ""
+    private readonly aggroRange = 60
+    private lastSearchTime = 0
+    private readonly searchInterval = 500
+    private readonly tempV1 = new THREE.Vector3()
+    private readonly tempV2 = new THREE.Vector3()
+    private readonly tempV3 = new THREE.Vector3()
+    private readonly setTargetRegistry = (targetRegistry?: TargetRegistrySystem) => {
+        this.targetRegistry = targetRegistry
+    }
     private readonly onUpdateBuff = (buff: Buff, level = 0) => {
         this.baseSpec.Buff(buff, level)
     }
@@ -40,6 +129,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     get MonsterBox() { return this.phybox }
     get Spec() { return this.baseSpec }
     get objs() { return this.zombie.Meshs }
+    get TargetId() { return this.targetId }
 
     constructor(
         id: number,
@@ -50,6 +140,8 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         private property: MonsterProperty,
         private stats: Partial<Record<StatKey, number>>,
     ) {
+        this.targetId = `mon:${property.id}:${id}`
+        this.targetAdapter = new MonsterTargetAdapter(this.player)
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         const size = zombie.Size
         const geometry = new THREE.BoxGeometry(size.x * 2, size.y, size.z)
@@ -68,6 +160,8 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         this.removeBuffEvent = EventTypes.RemoveBuff + "mon" + id
         eventCtrl.RegisterEventListener(this.updateBuffEvent, this.onUpdateBuff)
         eventCtrl.RegisterEventListener(this.removeBuffEvent, this.onRemoveBuff)
+        eventCtrl.RegisterEventListener(EventTypes.RegisterTargetSystem, this.setTargetRegistry)
+        eventCtrl.SendEventMessage(EventTypes.RequestTargetSystem)
     }
     applyAction(action: IActionComponent, ctx?: ActionContext) {
         action.apply?.(this, ctx)
@@ -84,6 +178,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
         this.eventCtrl.DeregisterEventListener(this.updateBuffEvent, this.onUpdateBuff)
         this.eventCtrl.DeregisterEventListener(this.removeBuffEvent, this.onRemoveBuff)
+        this.eventCtrl.DeregisterEventListener(EventTypes.RegisterTargetSystem, this.setTargetRegistry)
     }
     Respawning() {
         this.baseSpec.ResetStatus()
@@ -96,10 +191,12 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     update(delta: number): void {
         if (!this.zombie.Visible) return
 
-        const dist = this.zombie.Pos.distanceTo(this.player.Pos)
+        this.targetAdapter.update()
+        const target = this.resolveTarget()
+        const dist = this.zombie.Pos.distanceTo(target.Pos)
 
         if (this.Spec.Health > 0) {
-            this.dir.subVectors(this.player.CenterPos, this.zombie.CenterPos)
+            this.dir.subVectors(target.CenterPos, this.zombie.CenterPos)
             this.raycast.set(this.zombie.CenterPos, this.dir.normalize())
 
             let find = false
@@ -107,7 +204,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
             // this.instanceBlock.forEach((block) => {
             //     if (block) find = this.CheckVisible(block, dist)
             // })
-            find = this.CheckVisibleMeshs(this.gphysic.GetObjects(), dist)
+            find = this.CheckVisibleMeshs(target, this.gphysic.GetObjects(), dist)
             /*
             if (this.legos.instancedBlock != undefined)
                 find = this.CheckVisible(this.legos.instancedBlock, dist)
@@ -126,7 +223,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
                 this.moveDirection.copy(this.dir)
             }
         }
-        this.currentState = this.currentState.Update(delta, this.moveDirection, this.player)
+        this.currentState = this.currentState.Update(delta, this.moveDirection, target)
 
         this.zombie.update(delta)
 
@@ -157,30 +254,26 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         }
         return false
     }
-    CheckVisibleMeshs(physBox: THREE.Object3D[], dist: number): boolean {
-        return this.getClosestHit(this.player.CenterPos, this.zombie.CenterPos, physBox, this.zombie.Size.x)
-        // this.raycast.far = dist
-        // const intersects = this.raycast.intersectObjects(physBox, false)
-        // if (intersects.length > 0 && intersects[0].distance < dist) {
-        //     return true //keep searching
-        // }
-        // return false
+    CheckVisibleMeshs(target: IPhysicsObject, physBox: THREE.Object3D[], dist: number): boolean {
+        return this.getClosestHit(target.CenterPos, this.zombie.CenterPos, physBox, this.zombie.Size.x, target.Meshs)
     }
     getClosestHit(
         p1: THREE.Vector3,
         p2: THREE.Vector3,
         targets: THREE.Object3D[],
-        radius = 1
+        radius = 1,
+        ignore?: THREE.Object3D
     ) {
         for (const target of targets) {
+            if (ignore && this.isObjectOrChild(target, ignore)) continue
             const center = target.position;
-            const seg = new THREE.Vector3().subVectors(p2, p1);
-            const segDir = seg.clone().normalize();
-            const toCenter = new THREE.Vector3().subVectors(center, p1);
+            const seg = this.tempV1.subVectors(p2, p1);
+            const segDir = this.tempV2.copy(seg).normalize();
+            const toCenter = this.tempV3.subVectors(center, p1);
             const projLen = toCenter.dot(segDir);
 
             // 충돌 지점 계산
-            const closestPoint = p1.clone().add(segDir.clone().multiplyScalar(projLen));
+            const closestPoint = this.tempV1.copy(p1).add(segDir.multiplyScalar(projLen));
             const distToCenter = closestPoint.distanceTo(center);
 
             if (distToCenter <= radius) {
@@ -189,5 +282,45 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         }
 
         return false;
+    }
+
+    private isObjectOrChild(candidate: THREE.Object3D, parent: THREE.Object3D) {
+        let current: THREE.Object3D | null = candidate
+        while (current) {
+            if (current === parent) return true
+            current = current.parent
+        }
+        return false
+    }
+
+    private resolveTarget(): IPhysicsObject {
+        this.currentTarget = this.findRegistryTarget()
+        this.targetAdapter.Target = this.currentTarget
+        return this.targetAdapter
+    }
+
+    private findRegistryTarget(): TargetRecord | undefined {
+        const registry = this.targetRegistry
+        if (!registry) return undefined
+
+        const now = Date.now()
+        const current = this.currentTarget
+        if (this.isValidTarget(current)) {
+            if (now - this.lastSearchTime < this.searchInterval) return current
+        }
+
+        this.lastSearchTime = now
+        return registry.findNearestHostile(this.targetId, this.aggroRange, {
+            aliveOnly: true,
+            targetableOnly: true,
+            collidableOnly: true,
+            kinds: ["unit", "structure"],
+        })
+    }
+
+    private isValidTarget(target?: TargetRecord): target is TargetRecord {
+        if (!target?.alive || !target.targetable || !target.collidable) return false
+        if (this.zombie.Pos.distanceToSquared(target.object.position) > this.aggroRange ** 2) return false
+        return this.targetRegistry?.isHostile(this.targetId, target.id) ?? false
     }
 }

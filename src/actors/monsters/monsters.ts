@@ -15,6 +15,7 @@ import { calculateCompositeDamage } from "../battle/damagecalc";
 import { BaseSpec } from "../battle/basespec";
 import { Zombie } from "./zombie";
 import { itemDefs } from "@Glibs/inventory/items/itemdefs";
+import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 
 export type MonsterSet = {
     monModel: IPhysicsObject,
@@ -23,11 +24,13 @@ export type MonsterSet = {
     respawn: boolean
     deadtime: number
     initPos?: THREE.Vector3
+    attackListener?: (opts: AttackOption[]) => void
 }
 export interface IMonsterCtrl {
     get Spec(): BaseSpec
     get MonsterBox(): MonsterBox
     get Drop(): MonDrop[] | undefined
+    get TargetId(): string
     Respawning(): void
     Dispose(): void
     ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number): boolean 
@@ -73,27 +76,15 @@ export class Monsters {
         eventCtrl.RegisterEventListener(EventTypes.Attack + "mon", (opts: AttackOption[]) => {
             if (!this.mode) return
             opts.forEach((opt) => {
-                let obj = opt.obj as MonsterBox
+                const obj = opt.obj as MonsterBox
                 if (obj == null) return
 
                 const mon = this.monsters.get(obj.MonId)
                 if(!mon) throw new Error("unexpected value");
                 
                 const z = mon[obj.Id]
-                if (!z.live) return
-                if(opt.spec == undefined) throw new Error("unexpected value");
-                const damage = calculateCompositeDamage({
-                    attacker: opt.spec,
-                    defender: z.monCtrl.Spec,
-                })
-                console.log(`calc damage: ${damage}, original damage: ${opt.damage}`)
-
-                // [New] 넉백 정보 전달
-                const isMelee = (opt.type === AttackType.NormalSwing || opt.type === AttackType.FullSwing);
-                const attackRange = isMelee ? (opt.distance ?? 3.5) : undefined;
-                const knockbackDist = (opt.type === AttackType.FullSwing) ? opt.knockbackDistance : undefined;
-
-                this.ReceiveDemage(z, damage.finalDamage, opt.effect, attackRange, knockbackDist)
+                if (!z) return
+                this.ApplyAttack(z, opt)
             })
         })
     }
@@ -131,12 +122,33 @@ export class Monsters {
             
             this.eventCtrl.SendEventMessage(EventTypes.Death, z.monCtrl.MonsterBox.MonId)
             this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, z.monCtrl.MonsterBox)
+            this.eventCtrl.SendEventMessage(EventTypes.UpdateTargetState, {
+                id: z.monCtrl.TargetId,
+                alive: false,
+                targetable: false,
+                collidable: false,
+            })
             this.respawntimeout = setTimeout(() => {
                 if (z.respawn) {
                     this.Spawning(z.monCtrl.MonsterBox.MonId, z.respawn, z, z.initPos)
                 }
             }, THREE.MathUtils.randInt(8000, 15000))
         }
+    }
+    private ApplyAttack(z: MonsterSet, opt: AttackOption) {
+        if (!z.live) return
+        if(opt.spec == undefined) throw new Error("unexpected value");
+        const damage = calculateCompositeDamage({
+            attacker: opt.spec,
+            defender: z.monCtrl.Spec,
+        })
+
+        // [New] 넉백 정보 전달
+        const isMelee = (opt.type === AttackType.NormalSwing || opt.type === AttackType.FullSwing);
+        const attackRange = isMelee ? (opt.distance ?? 3.5) : undefined;
+        const knockbackDist = (opt.type === AttackType.FullSwing) ? opt.knockbackDistance : undefined;
+
+        this.ReceiveDemage(z, damage.finalDamage, opt.effect, attackRange, knockbackDist)
     }
     async RandomDeckMonsters(deck: DeckType) {
         console.log("Start Random Deck---------------", deck.id)
@@ -184,6 +196,11 @@ export class Monsters {
                 }
                 z.monModel.Visible = false
                 z.live = false
+                this.eventCtrl.SendEventMessage(EventTypes.DeregisterTarget, z.monCtrl.TargetId)
+                if (z.attackListener) {
+                    this.eventCtrl.DeregisterEventListener(EventTypes.Attack + z.monCtrl.TargetId, z.attackListener)
+                    z.attackListener = undefined
+                }
                 z.monCtrl.Dispose()
                 if (z.monModel.Meshs.parent) {
                     this.game.remove(z.monModel.Meshs)
@@ -214,6 +231,11 @@ export class Monsters {
         if (!monSet) {
             // called resurrection
             monSet = await this.createMon.Call(monId, mon.length)
+            monSet.attackListener = (opts: AttackOption[]) => {
+                if (!this.mode) return
+                opts.forEach((opt) => this.ApplyAttack(monSet!, opt))
+            }
+            this.eventCtrl.RegisterEventListener(EventTypes.Attack + monSet.monCtrl.TargetId, monSet.attackListener)
             mon.push(monSet)
         }
 
@@ -232,6 +254,21 @@ export class Monsters {
         monSet.live = true
         this.mobCount++
         monSet.monCtrl.Respawning()
+        monSet.monModel.Meshs.name = monSet.monCtrl.TargetId
+        monSet.monModel.Meshs.userData.targetMeta = {
+            id: monSet.monCtrl.TargetId,
+            teamId: TargetTeamId.Monster,
+            kind: "unit",
+        }
+        this.eventCtrl.SendEventMessage(EventTypes.RegisterTarget, {
+            id: monSet.monCtrl.TargetId,
+            object: monSet.monModel.Meshs,
+            teamId: TargetTeamId.Monster,
+            kind: "unit",
+            alive: true,
+            targetable: true,
+            collidable: true,
+        })
 
         monSet.monModel.Visible = true;
         (monSet.monModel as Zombie).NameView(this.nameView)

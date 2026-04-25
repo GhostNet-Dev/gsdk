@@ -3,6 +3,7 @@ import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { TechTreeService } from "@Glibs/techtree/techtreeservice";
 import { BuildingProperty } from "./buildingdefs";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 import { IBuildingObject, BuildingType, BuildingMode } from "./ibuildingobj";
 import { Loader } from "@Glibs/loader/loader";
 import { DefenseTurret } from "./buildingobjs/defenseturret";
@@ -604,17 +605,17 @@ export class BuildingManager implements ILoop, ITurnParticipant {
             buildingObj.level = 1; // 기본 레벨 1 설정
             this.buildingObjects.set(id, buildingObj);
             model.userData.buildingId = id;
-            model.userData.teamId = this.playerCityFactionId;
+            model.userData.teamId = TargetTeamId.Player;
             model.userData.targetMeta = {
               id,
-              teamId: this.playerCityFactionId,
+              teamId: TargetTeamId.Player,
               factionId: this.playerCityFactionId,
               kind: "structure",
             };
             this.eventCtrl.SendEventMessage(EventTypes.RegisterTarget, {
               id,
               object: model,
-              teamId: this.playerCityFactionId,
+              teamId: TargetTeamId.Player,
               factionId: this.playerCityFactionId,
               kind: "structure",
               alive: true,
