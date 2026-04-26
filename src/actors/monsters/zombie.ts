@@ -117,9 +117,7 @@ export class Zombie extends PhysicsObject {
         } else {
             currentAction.setLoop(THREE.LoopRepeat, Infinity)
         }
-        if(speed != undefined) {
-            currentAction.timeScale = animate.duration / speed
-        }
+        currentAction.timeScale = speed != undefined ? animate.duration / speed : 1
         currentAction.reset().fadeIn(fadeTime).play()
 
         this.currentAni = currentAction
@@ -129,9 +127,9 @@ export class Zombie extends PhysicsObject {
         this.currentAni?.stop()
     }
     ChangeAction(action: ActionType, speed?: number) {
-        let clip: THREE.AnimationClip | undefined
+        const clip = this.clipMap.get(action)
         this.currentActionType = action
-        this.changeAnimate(this.clipMap.get(action), speed)
+        this.changeAnimate(clip, speed)
         return clip?.duration
     }
     clock = new THREE.Clock()
@@ -168,7 +166,7 @@ export class Zombie extends PhysicsObject {
             "#fff",
             {
                 scale: 3.2,
-                yOffset: 2.8,
+                yOffset: 2.0,
             },
         )
     }

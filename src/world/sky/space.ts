@@ -46,6 +46,8 @@ export class DeepSpaceMegaRingSystem implements IWorldMapObject, ILoop {
 
   private disposed = false;
   private initialized = false;
+  private loopRegistered = false;
+  private lifecycleVersion = 0;
 
   private options: Required<DeepSpaceMegaRingSystemOptions>;
 
@@ -83,7 +85,7 @@ export class DeepSpaceMegaRingSystem implements IWorldMapObject, ILoop {
         options.cameraStartPosition ?? new THREE.Vector3(0, 5000, 25000),
     };
   }
-  async Create(opts: DeepSpaceMegaRingSystemOptions) {
+  async Create(opts: DeepSpaceMegaRingSystemOptions = {}) {
     this.options ={ ...this.options, ...opts}
     return await this.init()
   }
@@ -92,20 +94,34 @@ export class DeepSpaceMegaRingSystem implements IWorldMapObject, ILoop {
   }
 
   async init() {
-    if (this.initialized || this.disposed) return;
+    if (this.initialized || this.root.children.length > 0) {
+      this.dispose();
+    }
+
+    const version = ++this.lifecycleVersion;
+    this.disposed = false;
 
     const textures = await this.loadTextures();
+    if (version !== this.lifecycleVersion) {
+      this.disposeLoadedTextures(textures);
+      return this.root;
+    }
 
     this.buildSkybox(textures);
     this.buildPlanet(textures);
     this.buildAsteroidBelt();
 
-    this.scene.add(this.root);
+    if (!this.root.parent) {
+      this.scene.add(this.root);
+    }
 
 
     this.initialized = true;
     this.clock.start();
-    this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+    if (!this.loopRegistered) {
+      this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
+      this.loopRegistered = true;
+    }
     return this.root
   }
 
@@ -136,9 +152,15 @@ export class DeepSpaceMegaRingSystem implements IWorldMapObject, ILoop {
   }
 
   dispose(): void {
-    if (this.disposed) return;
+    this.lifecycleVersion++;
+    if (this.disposed && !this.initialized && this.root.children.length === 0) return;
 
-    this.scene.remove(this.root);
+    if (this.loopRegistered) {
+      this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this);
+      this.loopRegistered = false;
+    }
+
+    this.root.parent?.remove(this.root);
 
     this.root.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
@@ -156,7 +178,13 @@ export class DeepSpaceMegaRingSystem implements IWorldMapObject, ILoop {
     });
 
     this.asteroids.clear();
-    this.disposed = true;
+    this.root.clear();
+    this.skybox = undefined;
+    this.planet = undefined;
+    this.ring = undefined;
+    this.clock.stop();
+    this.initialized = false;
+    this.disposed = false;
   }
 
   getRoot(): THREE.Group {
@@ -374,5 +402,11 @@ export class DeepSpaceMegaRingSystem implements IWorldMapObject, ILoop {
     mat.bumpMap?.dispose?.();
 
     material.dispose();
+  }
+
+  private disposeLoadedTextures(textures: LoadedTextures): void {
+    textures.sideTex.dispose();
+    textures.topBottomTex.dispose();
+    textures.planetTex.dispose();
   }
 }

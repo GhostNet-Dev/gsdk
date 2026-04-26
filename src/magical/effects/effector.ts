@@ -127,6 +127,9 @@ export class Effector {
     Complete(type:EffectType) {
         this.effects[type].Complete()
     }
+    CompleteIfEnabled(type: EffectType) {
+        this.effects[type]?.Complete()
+    }
     Update(delta: number, ...arg: any): void {
         this.effects.forEach((e) => {
             e.Update(delta, arg)

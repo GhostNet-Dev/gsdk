@@ -904,7 +904,7 @@ export class FleetWorld {
                 "#ffffff",
                 {
                   scale: Math.max(3, (this.shipFootprints.get(memberId) ?? 6) * 0.45),
-                  yOffset: Math.max(3.6, (this.shipFootprints.get(memberId) ?? 6) * 0.42),
+                  yOffset: Math.max(2.6, (this.shipFootprints.get(memberId) ?? 6) * 0.3),
                 },
               )
             }

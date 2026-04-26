@@ -40,6 +40,7 @@ export enum MapEntryType {
     GalaxySkybox = "GalaxySkybox",
     GalaxyPlanetNetwork = "GalaxyPlanetNetwork",
     SteppedTerrain = "SteppedTerrain",
+    HorizonEnvironment = "HorizonEnvironment",
 }
 
 export enum MapType {

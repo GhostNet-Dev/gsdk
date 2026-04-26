@@ -25,6 +25,7 @@ export const GameModeId = {
     RivalCityView: "rival-city-view",
     Tutorial: "tutorial",
     CityWalk: "city-walk",
+    CityCombat: "city-combat",
 } as const;
 
 export type GameModeId = typeof GameModeId[keyof typeof GameModeId];

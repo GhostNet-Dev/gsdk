@@ -1,6 +1,5 @@
 import IEventController, { ILoop } from '@Glibs/interface/ievent';
 import { IPhysicsObject } from '@Glibs/interface/iobject';
-import { IPostPro } from '@Glibs/systems/postprocess/postpro'
 import { EventTypes } from '@Glibs/types/globaltypes';
 
 export interface IGameMode {
@@ -9,7 +8,6 @@ export interface IGameMode {
     get Objects(): THREE.Object3D[] | THREE.Group[] | THREE.Mesh[]
     Init(): void
     Uninit(): void
-    Renderer(r: IPostPro, delta: number): void
 }
 
 export default class GameCenter {
@@ -57,8 +55,5 @@ export default class GameCenter {
         this.currentMode = obj
         this.curr = mode
         this.eventCtrl.SendEventMessage(EventTypes.LoadingStart, 1)
-    }
-    Renderer(r: IPostPro, delta: number) {
-        this.currentMode?.Renderer(r, delta)
     }
 }

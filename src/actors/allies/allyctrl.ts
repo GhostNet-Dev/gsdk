@@ -239,7 +239,7 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
             aliveOnly: true,
             targetableOnly: true,
             collidableOnly: true,
-            kinds: ["unit"],
+            kinds: ["unit", "structure"],
         })
     }
 

@@ -1,5 +1,6 @@
 import { CurrencyType } from "@Glibs/inventory/wallet";
 import { FactionId } from "@Glibs/gameobjects/turntypes";
+import { MonsterId } from "@Glibs/actors/monsters/monstertypes";
 import {
   GalaxyMarketResourceViewModel,
   GalaxyMapDef,
@@ -149,6 +150,7 @@ export interface StrategicPlanetDef<TCityDefId extends string = string> {
   resourceBias: Partial<Record<CurrencyType, number>>;
   specialResources: StrategicPlanetSpecialResourceType[];
   baseStats: StrategicPlanetStats;
+  combatWaves?: readonly (readonly MonsterId[])[];
 }
 
 export interface StrategicCityPlacement<TCityDefId extends string = string> {

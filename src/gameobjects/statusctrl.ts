@@ -66,6 +66,16 @@ export default class StatusCtrl {
             const curH = this.playerCtrl.baseSpec.status.exp
             this.exp.UpdateStatus(toPercent(curH, exp))
         })
+        this.eventCtrl.RegisterEventListener(EventTypes.PlayerStatus, () => {
+            const hpMax = this.playerCtrl.baseSpec.stats.getStat("hp")
+            const mpMax = this.playerCtrl.baseSpec.stats.getStat("mp")
+            const spMax = this.playerCtrl.baseSpec.stats.getStat("stamina")
+            const expMax = this.playerCtrl.baseSpec.status.maxExp
+            this.heart.UpdateStatus(toPercent(this.playerCtrl.baseSpec.status.health, hpMax))
+            this.mp.UpdateStatus(toPercent(this.playerCtrl.baseSpec.status.mana, mpMax))
+            this.sp.UpdateStatus(toPercent(this.playerCtrl.baseSpec.status.stamina, spMax))
+            this.exp.UpdateStatus(toPercent(this.playerCtrl.baseSpec.status.exp, expMax))
+        })
         this.eventCtrl.RegisterEventListener(EventTypes.UpdateBuff + "player", (buff: Buff) => {
             this.buff.addBuff({
                 id: buff.id,

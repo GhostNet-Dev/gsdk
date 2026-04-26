@@ -43,6 +43,7 @@ export class QuarksVfx implements IEffect {
     Start(pos: THREE.Vector3, callback: Function): void {
         if (!this.loaded) return
         this.endCallback = callback
+        this.obj.visible = true
         this.groups[this.refreshIndex].position.copy(pos)
         this.groups[this.refreshIndex].updateMatrixWorld(true)
         // console.log(pos, this.groups[this.refreshIndex].position, this.obj.position, this.batchRenderer.position)
@@ -58,9 +59,11 @@ export class QuarksVfx implements IEffect {
         this.processFlag++
     }
     Complete(): void {
+        const wasRunning = this.processFlag > 0
         this.totalTime = 0;
-        this.processFlag--;
-        this.endCallback?.()
+        this.processFlag = Math.max(0, this.processFlag - 1);
+        this.obj.visible = false
+        if (wasRunning) this.endCallback?.()
     }
 
     Update(delta: number): void {

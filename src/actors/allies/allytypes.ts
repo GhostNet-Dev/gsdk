@@ -25,6 +25,12 @@ export type AllySet = {
     attackListener?: (opts: AttackOption[]) => void
 }
 
+export type AllySpawnSpec = {
+    allyId: AllyId
+    deckLevel: number
+    offset?: THREE.Vector3
+}
+
 export interface IAllyCtrl {
     get Spec(): BaseSpec
     get AllyBox(): AllyBox

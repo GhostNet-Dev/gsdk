@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { Loader } from "@Glibs/loader/loader";
 import { PhysicsObject } from "@Glibs/interface/iobject";
-import { EffectType } from "@Glibs/types/effecttypes";
+import { EffectType, GlobalEffectType } from "@Glibs/types/effecttypes";
 import IEventController from "@Glibs/interface/ievent";
 import { AppMode, EventTypes } from "@Glibs/types/globaltypes";
 import { EventFlag } from "@Glibs/types/eventtypes";
@@ -135,6 +135,12 @@ export class Player extends PhysicsObject {
 
     Uninit() {
         this.meshs.visible = false
+    }
+
+    ClearTransientEffects() {
+        this.releaseDashsedCircle()
+        this.effector.CompleteIfEnabled(EffectType.BloodExplosion)
+        this.EnableAimPitch(false)
     }
 
     Init(pos: THREE.Vector3 = new THREE.Vector3(0, 0, 0)) {
@@ -409,11 +415,28 @@ export class Player extends PhysicsObject {
         return line;
     }
     releaseDashsedCircle() {
-        if (this.line) this.game.remove(this.line)
+        if (!this.line) return
+        this.game.remove(this.line)
+        this.line.geometry.dispose()
+        const material = this.line.material
+        if (Array.isArray(material)) {
+            material.forEach((m) => m.dispose())
+        } else {
+            material.dispose()
+        }
+        this.line = undefined
+        this.radius = 0
     }
     DamageEffect(damage: number) {
         this.effector.StartEffector(EffectType.BloodExplosion, this.CenterPos)
-        this.effector.StartEffector(EffectType.Status, damage.toString(), "#fff")
+        this.eventCtrl.SendEventMessage(
+            EventTypes.GlobalEffect,
+            GlobalEffectType.FloatingText,
+            this.CenterPos.clone(),
+            damage > 0 ? damage.toString() : "miss",
+            "#fff",
+            { scale: 3.2, yOffset: 2.0 },
+        )
     }
     HealEffect(heal: number) {
         this.effector.StartEffector(EffectType.Status, "+" + heal, "#fff")

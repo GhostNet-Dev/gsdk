@@ -51,13 +51,11 @@ export class DashAttackState extends MonState implements IActorState {
         super(states, zombie, gphysic, spec)
     }
     Init(): void {
-        this.attackTime = this.spec.AttackSpeed
-        this.attackSpeed = this.spec.AttackSpeed
+        this.attackSpeed = this.ChangeAttackAction(ActionType.MonBiteNeck)
         this.attackDamageMax = this.spec.AttackDamageMax
         this.attackDamageMin = this.spec.AttackDamageMin
         this.attackTime = this.attackSpeed
         this.hitDelay = this.attackSpeed * 0.1
-        this.zombie.ChangeAction(ActionType.MonBiteNeck, this.attackSpeed)
     }
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
@@ -66,10 +64,10 @@ export class DashAttackState extends MonState implements IActorState {
         this.targetId = GetMonsterAttackTargetId(target)
         const checkHit = this.CheckHit(target)
         if (checkHit != undefined) return checkHit
-        const dist = this.zombie.Pos.distanceTo(target.CenterPos)
+        const dist = this.GetTargetDistance(target)
         const checkDying = this.CheckDying()
         if (checkDying != undefined) return checkDying
-        if (dist > this.attackDist) {
+        if (dist > this.GetAttackDistance()) {
             const checkRun = this.CheckRun(v)
             if (checkRun != undefined) return checkRun
         }
@@ -99,6 +97,7 @@ export class DashAttackState extends MonState implements IActorState {
             type: AttackType.NormalSwing,
             spec: [this.spec],
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
+            distance: this.GetAttackDistance(),
             obj: this.zombie.Meshs
         }])
     }
@@ -223,7 +222,7 @@ export class FastDashRunState extends MonState implements IActorState {
     Update(delta: number, _: THREE.Vector3, target: IPhysicsObject): IActorState {
         const checkHit = this.CheckHit(target)
         if (checkHit != undefined) return checkHit
-        const dist = this.zombie.Pos.distanceTo(target.CenterPos)
+        const dist = this.GetTargetDistance(target)
         const checkAttack = this.CheckAttack(dist)
         if(checkAttack != undefined) return checkAttack
 

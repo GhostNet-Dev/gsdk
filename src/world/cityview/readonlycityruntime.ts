@@ -21,7 +21,10 @@ export class ReadonlyCityRuntime implements ILoop {
   private readonly colliderRegistry?: StaticColliderRegistry;
   private readonly combatants: ReadonlyCityDefenseCombatant[] = [];
   private readonly registeredTargetIds: string[] = [];
+  private readonly registeredInteractiveObjects: THREE.Object3D[] = [];
+  private readonly destroyedTargetIds = new Set<string>();
   private targetRegistry?: TargetRegistrySystem;
+  private coreTargetId?: string;
 
   constructor(
     private readonly loader: Loader,
@@ -76,16 +79,23 @@ export class ReadonlyCityRuntime implements ILoop {
           targetable: true,
           collidable: true,
         });
+        this.eventCtrl.SendEventMessage(EventTypes.AddInteractive, model);
         this.registeredTargetIds.push(targetId);
+        this.registeredInteractiveObjects.push(model);
 
         const prop = this.resolveBuildingProperty(object.nodeId);
-        if (prop && object.buildingType === BuildingType.DefenseTurret && prop.combat?.autoAttack !== false) {
+        if (!this.coreTargetId || object.kind === ReadonlyCityObjectKind.CivicCore || object.nodeId === "cc") {
+          this.coreTargetId = targetId;
+        }
+        if (prop) {
           this.combatants.push(new ReadonlyCityDefenseCombatant({
             id: targetId,
             property: prop,
             mesh: model,
             eventCtrl: this.eventCtrl,
             targetRegistry: this.targetRegistry,
+            autoAttack: object.buildingType === BuildingType.DefenseTurret && prop.combat?.autoAttack !== false,
+            onDestroyed: (id) => this.destroyedTargetIds.add(id),
           }));
         }
       }
@@ -116,6 +126,18 @@ export class ReadonlyCityRuntime implements ILoop {
     }
   }
 
+  getCoreTargetId(): string | undefined {
+    return this.coreTargetId;
+  }
+
+  isTargetDestroyed(targetId?: string): boolean {
+    return !!targetId && this.destroyedTargetIds.has(targetId);
+  }
+
+  getAliveCombatantCount(): number {
+    return this.combatants.filter((combatant) => combatant.Alive).length;
+  }
+
   dispose(): void {
     this.clearRoot();
     this.eventCtrl?.DeregisterEventListener(EventTypes.RegisterTargetSystem, this.setTargetRegistry);
@@ -128,6 +150,12 @@ export class ReadonlyCityRuntime implements ILoop {
       combatant.dispose();
     }
     this.combatants.length = 0;
+    for (const object of this.registeredInteractiveObjects) {
+      this.eventCtrl?.SendEventMessage(EventTypes.DelInteractive, object);
+    }
+    this.registeredInteractiveObjects.length = 0;
+    this.destroyedTargetIds.clear();
+    this.coreTargetId = undefined;
     for (const targetId of this.registeredTargetIds) {
       this.eventCtrl?.SendEventMessage(EventTypes.DeregisterTarget, targetId);
     }
@@ -184,6 +212,8 @@ interface ReadonlyCityDefenseCombatantOptions {
   mesh: THREE.Object3D;
   eventCtrl: IEventController;
   targetRegistry?: TargetRegistrySystem;
+  autoAttack: boolean;
+  onDestroyed?: (id: string) => void;
 }
 
 class ReadonlyCityDefenseCombatant implements IActionUser {
@@ -191,6 +221,10 @@ class ReadonlyCityDefenseCombatant implements IActionUser {
   private readonly weaponController = new ProjectileWeaponController();
   private target: TargetRecord | null = null;
   private destroyed = false;
+
+  get Alive(): boolean {
+    return !this.destroyed;
+  }
 
   constructor(private readonly options: ReadonlyCityDefenseCombatantOptions) {
     this.options.mesh.name = this.options.id;
@@ -231,6 +265,7 @@ class ReadonlyCityDefenseCombatant implements IActionUser {
   update(delta: number): void {
     if (this.destroyed) return;
     this.weaponController.update(delta);
+    if (!this.options.autoAttack) return;
     if (!this.isValidTarget(this.target)) {
       this.findTarget();
     }
@@ -284,12 +319,14 @@ class ReadonlyCityDefenseCombatant implements IActionUser {
 
     if (this.baseSpec.Health <= 0) {
       this.destroyed = true;
+      this.options.onDestroyed?.(this.options.id);
       this.options.eventCtrl.SendEventMessage(EventTypes.UpdateTargetState, {
         id: this.options.id,
         alive: false,
         targetable: false,
         collidable: false,
       });
+      this.options.eventCtrl.SendEventMessage(EventTypes.DelInteractive, this.options.mesh);
       this.options.mesh.parent?.remove(this.options.mesh);
     }
   };

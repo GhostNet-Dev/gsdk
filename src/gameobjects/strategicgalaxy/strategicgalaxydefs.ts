@@ -2,6 +2,7 @@ import { CurrencyType } from "@Glibs/inventory/wallet";
 import { FactionId } from "@Glibs/gameobjects/turntypes";
 import { StrategicPlanetCityKind, StrategicPlanetDef, StrategicRouteDef } from "./strategicgalaxytypes";
 import { RivalCityDefId } from "@Glibs/gameobjects/rivalcity/rivalcitytypes";
+import { MonsterId } from "@Glibs/actors/monsters/monstertypes";
 
 // ─── 행성 Gameplay 정의 ───────────────────────────────────────────────────────
 
@@ -37,6 +38,11 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef<RivalCityDef
       logistics: 95,
       marketScale: 90,
     },
+    combatWaves: [
+      [MonsterId.Builder, MonsterId.Viking, MonsterId.Builder],
+      [MonsterId.Viking, MonsterId.Golem, MonsterId.Viking],
+      [MonsterId.Golem, MonsterId.Viking, MonsterId.Golem],
+    ],
   },
   hephaestus: {
     id: "hephaestus",
@@ -69,6 +75,11 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef<RivalCityDef
       logistics: 65,
       marketScale: 45,
     },
+    combatWaves: [
+      [MonsterId.Golem, MonsterId.Builder, MonsterId.Golem],
+      [MonsterId.Builder, MonsterId.Golem, MonsterId.Builder],
+      [MonsterId.Golem, MonsterId.BigGolem, MonsterId.Golem],
+    ],
   },
   selene: {
     id: "selene",
@@ -101,6 +112,11 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef<RivalCityDef
       logistics: 52,
       marketScale: 38,
     },
+    combatWaves: [
+      [MonsterId.Skeleton, MonsterId.Snake, MonsterId.Skeleton],
+      [MonsterId.Snake, MonsterId.Skeleton, MonsterId.Bilby],
+      [MonsterId.Bilby, MonsterId.Skeleton, MonsterId.Snake],
+    ],
   },
   eden: {
     id: "eden",
@@ -147,6 +163,11 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef<RivalCityDef
       logistics: 60,
       marketScale: 55,
     },
+    combatWaves: [
+      [MonsterId.Zombie, MonsterId.Birdmon, MonsterId.Zombie],
+      [MonsterId.Birdmon, MonsterId.Snake, MonsterId.Birdmon],
+      [MonsterId.Snake, MonsterId.Birdmon, MonsterId.Zombie],
+    ],
   },
   sirius: {
     id: "sirius",
@@ -178,6 +199,11 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef<RivalCityDef
       logistics: 55,
       marketScale: 40,
     },
+    combatWaves: [
+      [MonsterId.Viking, MonsterId.Zombie, MonsterId.Viking],
+      [MonsterId.WereWolf, MonsterId.Viking, MonsterId.Zombie],
+      [MonsterId.WereWolf, MonsterId.Viking, MonsterId.WereWolf],
+    ],
   },
   orion: {
     id: "orion",
@@ -210,6 +236,11 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef<RivalCityDef
       logistics: 47,
       marketScale: 34,
     },
+    combatWaves: [
+      [MonsterId.Bee, MonsterId.Birdmon, MonsterId.Bee],
+      [MonsterId.Birdmon, MonsterId.Bilby, MonsterId.Bee],
+      [MonsterId.Bee, MonsterId.Birdmon, MonsterId.Bilby],
+    ],
   },
   vega: {
     id: "vega",
@@ -242,6 +273,11 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef<RivalCityDef
       logistics: 72,
       marketScale: 70,
     },
+    combatWaves: [
+      [MonsterId.Crab, MonsterId.Builder, MonsterId.Crab],
+      [MonsterId.Viking, MonsterId.Crab, MonsterId.Builder],
+      [MonsterId.Crab, MonsterId.Viking, MonsterId.Crab],
+    ],
   },
   athena: {
     id: "athena",
@@ -274,6 +310,11 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef<RivalCityDef
       logistics: 76,
       marketScale: 72,
     },
+    combatWaves: [
+      [MonsterId.ToadMage, MonsterId.Skeleton, MonsterId.ToadMage],
+      [MonsterId.Skeleton, MonsterId.KittenMonk, MonsterId.ToadMage],
+      [MonsterId.KittenMonk, MonsterId.ToadMage, MonsterId.KittenMonk],
+    ],
   },
   hades: {
     id: "hades",
@@ -306,6 +347,11 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef<RivalCityDef
       logistics: 48,
       marketScale: 35,
     },
+    combatWaves: [
+      [MonsterId.Golem, MonsterId.Golem, MonsterId.Golem],
+      [MonsterId.Golem, MonsterId.Minotaur, MonsterId.Golem],
+      [MonsterId.Minotaur, MonsterId.BigGolem, MonsterId.Minotaur],
+    ],
   },
   nyx: {
     id: "nyx",
@@ -338,6 +384,11 @@ export const strategicPlanetDefs: Record<string, StrategicPlanetDef<RivalCityDef
       logistics: 34,
       marketScale: 30,
     },
+    combatWaves: [
+      [MonsterId.Skeleton, MonsterId.WereWolf, MonsterId.Skeleton],
+      [MonsterId.WereWolf, MonsterId.Skeleton, MonsterId.WereWolf],
+      [MonsterId.WereWolf, MonsterId.BigGolem, MonsterId.WereWolf],
+    ],
   },
 };
 

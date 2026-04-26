@@ -47,6 +47,7 @@ export class MonsterBox extends THREE.Mesh {
 
 export class Monsters {
     monsters = new Map<MonsterId, MonsterSet[]>()
+    private readonly nextMonsterIds = new Map<MonsterId, number>()
     keytimeout?:NodeJS.Timeout
     respawntimeout?:NodeJS.Timeout
     mode = false
@@ -99,6 +100,12 @@ export class Monsters {
             return { drop: baseDrop, directExp: 0 }
         }
         return { drop: baseDrop, directExp: baseExp }
+    }
+
+    private reserveMonsterId(monId: MonsterId, mon: MonsterSet[]): number {
+        const id = this.nextMonsterIds.get(monId) ?? mon.length
+        this.nextMonsterIds.set(monId, id + 1)
+        return id
     }
 
     ReceiveDemage(z: MonsterSet, damage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number) {
@@ -212,6 +219,7 @@ export class Monsters {
             console.log("Release", mon)
         })
         this.monsters.clear()
+        this.nextMonsterIds.clear()
         this.mobCount = 0
         
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
@@ -230,13 +238,20 @@ export class Monsters {
 
         if (!monSet) {
             // called resurrection
-            monSet = await this.createMon.Call(monId, mon.length)
-            monSet.attackListener = (opts: AttackOption[]) => {
-                if (!this.mode) return
-                opts.forEach((opt) => this.ApplyAttack(monSet!, opt))
+            const reservedId = this.reserveMonsterId(monId, mon)
+
+            try {
+                monSet = await this.createMon.Call(monId, reservedId)
+                monSet.attackListener = (opts: AttackOption[]) => {
+                    if (!this.mode) return
+                    opts.forEach((opt) => this.ApplyAttack(monSet!, opt))
+                }
+                this.eventCtrl.RegisterEventListener(EventTypes.Attack + monSet.monCtrl.TargetId, monSet.attackListener)
+                mon[reservedId] = monSet
+            } catch (error) {
+                delete mon[reservedId]
+                throw error
             }
-            this.eventCtrl.RegisterEventListener(EventTypes.Attack + monSet.monCtrl.TargetId, monSet.attackListener)
-            mon.push(monSet)
         }
 
         if(!pos) {

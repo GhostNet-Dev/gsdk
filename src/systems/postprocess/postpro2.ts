@@ -241,15 +241,15 @@ export class Postpro2 implements IPostPro {
         this._pastelPass = new ShaderPass(PastelColorGradeShader as any)
         // 필요시 초깃값 조정: this._pastelPass.uniforms.saturation.value = 0.88;
         const pastel = this._pastelPass.uniforms;
-        pastel.saturation.value = 0.96;  // 0.90 → 0.96  (채도 덜 깎기)
-        pastel.contrast.value = 1.0;  // 0.95 → 0.99  (거의 원본 대비)
-        pastel.lift.value = 0.01;  // 0.04 → 0.01  (그림자 lifting 최소화)
-        pastel.gammaVal.value = 1.02;  // 1.10 → 1.02  (감마 완화 → 뿌연 중톤 감소)
-        pastel.gain.value = 1.00;  // 0.95 → 1.00  (하이라이트 눌림 해제)
-        pastel.warmth.value = 0.03; // 0.03 → 0.015 (웜톤 절반만)
-        pastel.highlightDesat.value = 0.15;  // 0.35 → 0.20  (하이라이트 탈채 완화)
-        pastel.tint.value.set(1.00, 0.90, 0.86); // (1.00,0.85,0.80) → 살짝 중립화
-        pastel.tintAmount.value = 0.06;  // 0.12 → 0.06  (틴트 반감)
+        pastel.saturation.value = 0.94;
+        pastel.contrast.value = 1.0;
+        pastel.lift.value = 0.02;
+        pastel.gammaVal.value = 1.04;
+        pastel.gain.value = 0.98;
+        pastel.warmth.value = 0.07;  // 웜톤 강화 (R↑ B↓)
+        pastel.highlightDesat.value = 0.18;
+        pastel.tint.value.set(1.00, 0.86, 0.78); // 살구-오렌지 틴트
+        pastel.tintAmount.value = 0.10;  // 틴트 강도 증가
         this.finalComposer.addPass(this._pastelPass)
 
         // ── AA

@@ -17,7 +17,7 @@ export class GlobalEffector {
   private globalEffectTypes: Record<string, any> = {
     SparkVfx: { eventCtrl: this.eventCtrl, scene: this.scene, camera: this.camera },
     FlameVfx: { eventCtrl: this.eventCtrl, scene: this.scene, scale: 0.5, global: true },
-    FloatingTextVfx: { eventCtrl: this.eventCtrl, scene: this.scene },
+    FloatingTextVfx: { eventCtrl: this.eventCtrl, scene: this.scene, camera: this.camera },
   }
   constructor(
     private eventCtrl: IEventController,

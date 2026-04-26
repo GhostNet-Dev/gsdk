@@ -120,7 +120,7 @@ export class AllyModel extends PhysicsObject {
             this.CenterPos.clone(),
             damage > 0 ? damage.toString() : "miss",
             "#aff",
-            { scale: 3.2, yOffset: 2.8 },
+            { scale: 3.2, yOffset: 2.0 },
         )
     }
 

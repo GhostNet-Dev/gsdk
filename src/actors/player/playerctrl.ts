@@ -37,6 +37,8 @@ type LearnedSkillMessage = {
     icon?: string
 }
 
+const DEFAULT_INCOMING_MELEE_ATTACK_RANGE = 3.5
+
 export class PlayerCtrl implements ILoop, IActionUser {
     LoopId = 0
     mode: AppMode = AppMode.Play
@@ -268,6 +270,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
         })
         eventCtrl.RegisterEventListener(EventTypes.Attack + "player", (opts: AttackOption[]) => {
             if (this.currentState != this.DyingSt && this.baseSpec.CheckDie()) {
+                this.currentState.Uninit()
                 this.currentState = this.DyingSt
                 this.currentState.Init()
                 this.updateTargetState(false)
@@ -277,9 +280,12 @@ export class PlayerCtrl implements ILoop, IActionUser {
             opts.forEach((opt) => {
                 if (opt.obj) {
                     // const ret = this.isObjectLookingAt(opt.obj, this.player.CenterPos, 90)
-                    const dis = this.player.CenterPos.distanceTo(opt.obj.position)
+                    const playerPos = this.player.CenterPos
+                    const attackerPos = opt.obj.position
+                    const dis = Math.hypot(playerPos.x - attackerPos.x, playerPos.z - attackerPos.z)
+                    const attackRange = opt.distance ?? DEFAULT_INCOMING_MELEE_ATTACK_RANGE
                     // if (!ret || dis > 3.5) {
-                    if (dis > 3.5) {
+                    if (dis > attackRange) {
                         console.log("out of range")
                         return
                     }
@@ -347,6 +353,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
     uninit() {
         this.playEnable = false
         this.currentState.Uninit()
+        this.player.ClearTransientEffects()
         this.eventCtrl.SendEventMessage(EventTypes.DeregisterTarget, this.targetId)
         this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, this)
     }

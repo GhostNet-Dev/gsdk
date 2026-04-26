@@ -12,9 +12,26 @@ import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 
 type States = Record<string, IActorState>
 type MonsterAttackTarget = IPhysicsObject & { TargetId?: string }
+type MonsterAttackContext = {
+    pendingAttackRange: number
+    pendingKnockbackDist: number
+}
+
+export const DEFAULT_MONSTER_MELEE_ATTACK_RANGE = 3.5
+const DEFAULT_MONSTER_ATTACK_SPEED = 1
 
 export function GetMonsterAttackTargetId(target?: IPhysicsObject) {
     return (target as MonsterAttackTarget | undefined)?.TargetId ?? TargetTeamId.Player
+}
+
+function GetMonsterAttackContext(owner: unknown): MonsterAttackContext | undefined {
+    const candidate = owner as Partial<MonsterAttackContext> | undefined
+    if (
+        typeof candidate?.pendingAttackRange === "number" &&
+        typeof candidate.pendingKnockbackDist === "number"
+    ) {
+        return candidate as MonsterAttackContext
+    }
 }
 
 export function NewDefaultMonsterState(
@@ -38,7 +55,6 @@ export function NewDefaultMonsterState(
 }
 
 export abstract class MonState {
-    attackDist = 3
     constructor(
         public states: States,
         protected zombie: Zombie,
@@ -47,6 +63,28 @@ export abstract class MonState {
     ) { }
 
     abstract Uninit(): void
+
+    protected GetAttackDistance() {
+        if (this.spec.stats.getBaseStat("attackRange") > 0) return this.spec.AttackRange
+        return DEFAULT_MONSTER_MELEE_ATTACK_RANGE
+    }
+
+    protected GetHorizontalDistance(a: THREE.Vector3, b: THREE.Vector3) {
+        const dx = a.x - b.x
+        const dz = a.z - b.z
+        return Math.hypot(dx, dz)
+    }
+
+    protected GetTargetDistance(target: IPhysicsObject) {
+        return this.GetHorizontalDistance(this.zombie.Pos, target.Pos)
+    }
+
+    protected ChangeAttackAction(action: ActionType) {
+        const configuredAttackSpeed = this.spec.AttackSpeed
+        const animationSpeed = configuredAttackSpeed > 0 ? configuredAttackSpeed : undefined
+        const duration = this.zombie.ChangeAction(action, animationSpeed)
+        return animationSpeed ?? duration ?? DEFAULT_MONSTER_ATTACK_SPEED
+    }
 
     CheckRun(v: THREE.Vector3) {
         if (v.x || v.z) {
@@ -76,9 +114,9 @@ export abstract class MonState {
     }
     CheckHit(target: IPhysicsObject) {
         if (this.spec.Status.hit) {
-            const ctrl = this.spec.Owner as any; // MonsterCtrl
-            const attackRange = ctrl.pendingAttackRange;
-            const explicitKbDist = ctrl.pendingKnockbackDist;
+            const ctrl = GetMonsterAttackContext(this.spec.Owner)
+            const attackRange = ctrl?.pendingAttackRange ?? 0
+            const explicitKbDist = ctrl?.pendingKnockbackDist ?? 0
             let knockbackVector: THREE.Vector3 | undefined = undefined;
             
             // 넉백 정보가 있고(근접공격), 공격 사거리 정보가 유효할 때만 계산
@@ -90,7 +128,7 @@ export abstract class MonState {
                 monPos.y = 0;
                 attPos.y = 0;
 
-                const currentDist = monPos.distanceTo(attPos);
+                const currentDist = this.GetHorizontalDistance(monPos, attPos);
                 
                 let pushAmount = 0;
                 if (explicitKbDist > 0) {
@@ -110,8 +148,10 @@ export abstract class MonState {
                 }
                 
                 // 정보 소모
-                ctrl.pendingAttackRange = 0;
-                ctrl.pendingKnockbackDist = 0;
+                if (ctrl) {
+                    ctrl.pendingAttackRange = 0;
+                    ctrl.pendingKnockbackDist = 0;
+                }
             }
 
             this.Uninit();
@@ -120,7 +160,7 @@ export abstract class MonState {
         }
     }
     CheckAttack(dist: number) {
-        if (dist < this.attackDist) {
+        if (dist < this.GetAttackDistance()) {
             this.Uninit()
             this.states.AttackSt.Init()
             return this.states.AttackSt
@@ -274,12 +314,10 @@ export class AttackZState extends MonState implements IActorState {
         super(states, zombie, gphysic, spec)
     }
     Init(): void {
-        this.attackSpeed = this.spec.AttackSpeed
-        this.attackTime = this.spec.AttackSpeed
+        this.attackSpeed = this.ChangeAttackAction(ActionType.Punch)
+        this.attackTime = this.attackSpeed
         this.attackDamageMax = this.spec.AttackDamageMax
         this.attackDamageMin = this.spec.AttackDamageMin
-        const duration = this.zombie.ChangeAction(ActionType.Punch)
-        if (duration != undefined) this.attackSpeed = duration * 0.8
     }
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
@@ -294,10 +332,10 @@ export class AttackZState extends MonState implements IActorState {
         this.targetId = GetMonsterAttackTargetId(target)
         const checkHit = this.CheckHit(target)
         if (checkHit != undefined) return checkHit
-        const dist = this.zombie.Pos.distanceTo(target.Pos)
+        const dist = this.GetTargetDistance(target)
         const checkDying = this.CheckDying()
         if (checkDying != undefined) return checkDying
-        if (dist > this.attackDist) {
+        if (dist > this.GetAttackDistance()) {
             const checkRun = this.CheckRun(v)
             if (checkRun != undefined) return checkRun
         }
@@ -330,6 +368,7 @@ export class AttackZState extends MonState implements IActorState {
             type: AttackType.NormalSwing,
             spec: this.spec,
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
+            distance: this.GetAttackDistance(),
             obj: this.zombie.Meshs
         }])
 
@@ -406,7 +445,7 @@ export class RunZState extends MonState implements IActorState {
         const checkDying = this.CheckDying()
         if (checkDying != undefined) return checkDying
 
-        const dist = this.zombie.Pos.distanceTo(target.Pos)
+        const dist = this.GetTargetDistance(target)
         const checkAttack = this.CheckAttack(dist)
         if(checkAttack != undefined) return checkAttack
 

@@ -8,7 +8,7 @@ const allyStatPresets: Record<AllyId, AllyProperty["stats"]> = {
         mp: 0,
         attackMelee: 18,
         defense: 15,
-        speed: 0.5,
+        speed: 1,
         attackSpeedMelee: 1.5,
     },
     [AllyId.Archer]: {
@@ -16,7 +16,7 @@ const allyStatPresets: Record<AllyId, AllyProperty["stats"]> = {
         mp: 30,
         attackMelee: 14,
         defense: 8,
-        speed: 0.7,
+        speed: 1,
         attackSpeedMelee: 1.0,
     },
     [AllyId.Mage]: {
@@ -24,7 +24,7 @@ const allyStatPresets: Record<AllyId, AllyProperty["stats"]> = {
         mp: 80,
         magicAttack: 24,
         defense: 5,
-        speed: 0.4,
+        speed: 1,
         attackSpeedMelee: 2.0,
     },
 }

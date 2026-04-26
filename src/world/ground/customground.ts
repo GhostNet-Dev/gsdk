@@ -150,7 +150,7 @@ export default class CustomGround implements IWorldMapObject {
   private mouse = new THREE.Vector2();
   private lastWidth = 1;
   private lastDepth = 1;
-  private lastColor = new THREE.Color(0x00ff00);
+  private lastColor = new THREE.Color(0xBAD98A);
   private loader = new Loader();
 
   private lastNodeId?: string;
@@ -232,7 +232,7 @@ export default class CustomGround implements IWorldMapObject {
     const geom = new THREE.PlaneGeometry(1, 1);
     geom.rotateX(-Math.PI / 2);
     const mat = new THREE.MeshBasicMaterial({
-      color: 0xffcc00,
+      color: 0xffe599,
       transparent: true,
       opacity: 0.25,
       side: THREE.DoubleSide,
@@ -313,7 +313,7 @@ export default class CustomGround implements IWorldMapObject {
 
     if (this.existingBuildRangeOverlay) this.disposeMesh(this.existingBuildRangeOverlay);
 
-    this.existingBuildRangeOverlay = this.createCellOverlay(capacity, 0x00ffff, 0.14);
+    this.existingBuildRangeOverlay = this.createCellOverlay(capacity, 0x99e8ff, 0.14);
     this.existingBuildRangeOverlayCapacity = capacity;
     return this.existingBuildRangeOverlay;
   }
@@ -326,7 +326,7 @@ export default class CustomGround implements IWorldMapObject {
 
     if (this.previewBuildRangeOverlay) this.disposeMesh(this.previewBuildRangeOverlay);
 
-    this.previewBuildRangeOverlay = this.createCellOverlay(capacity, 0x00e5ff, 0.24);
+    this.previewBuildRangeOverlay = this.createCellOverlay(capacity, 0xb8f0ff, 0.24);
     this.previewBuildRangeOverlayCapacity = capacity;
     return this.previewBuildRangeOverlay;
   }
@@ -339,7 +339,7 @@ export default class CustomGround implements IWorldMapObject {
 
     if (this.existingResourceRangeOverlay) this.disposeMesh(this.existingResourceRangeOverlay);
 
-    this.existingResourceRangeOverlay = this.createCellOverlay(capacity, 0x78ff6d, 0.10);
+    this.existingResourceRangeOverlay = this.createCellOverlay(capacity, 0xa8f0a0, 0.10);
     this.existingResourceRangeOverlayCapacity = capacity;
     return this.existingResourceRangeOverlay;
   }
@@ -352,7 +352,7 @@ export default class CustomGround implements IWorldMapObject {
 
     if (this.previewResourceRangeOverlay) this.disposeMesh(this.previewResourceRangeOverlay);
 
-    this.previewResourceRangeOverlay = this.createCellOverlay(capacity, 0xa6ff4d, 0.22);
+    this.previewResourceRangeOverlay = this.createCellOverlay(capacity, 0xc4f5a8, 0.22);
     this.previewResourceRangeOverlayCapacity = capacity;
     return this.previewResourceRangeOverlay;
   }
@@ -564,7 +564,7 @@ export default class CustomGround implements IWorldMapObject {
    * planeSize(legacy) 사용 시 정사각형으로 간주하여 planeWidth/Height 및 segments를 동일 값으로 설정합니다.
    */
   Create({
-    color = new THREE.Color(0xA6C954),
+    color = new THREE.Color(0xBAD98A),
     width, height,                      // blendMap 픽셀 해상도 (선택)
     planeWidth = 256 * 1.5, planeHeight = 256 * 3,            // 지오메트리 월드 크기
     segmentsX = 256 * 1.5, segmentsZ = 256 * 3,               // 세그먼트
@@ -938,8 +938,8 @@ export default class CustomGround implements IWorldMapObject {
       profilePower = 1.0,
 
       colorMode = 'sandToGrass',
-      sandColor = new THREE.Color(0xE2CDA5),
-      grassColor = new THREE.Color(0xA6C954),
+      sandColor = new THREE.Color(0xE5D2B0),
+      grassColor = new THREE.Color(0xBAD98A),
       colorNoiseAmp = 0.12,
     } = opts;
 

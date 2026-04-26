@@ -470,7 +470,7 @@ export class EnvironmentManager implements ILoop {
                 geometry.applyMatrix4(child.matrixWorld);
                 geometry.computeBoundingSphere();
                 const inst = new THREE.InstancedMesh(geometry, child.material.clone(), maxCount);
-                inst.castShadow = false;
+                inst.castShadow = true;
                 inst.receiveShadow = false;
                 // frustumCulled=false: Three.js의 메쉬 단위 컬링 비활성화
                 // 대신 inst.count로 실제 가시 인스턴스 수를 제어 → vertex shader 완전 생략

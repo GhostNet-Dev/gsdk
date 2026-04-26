@@ -31,6 +31,7 @@ import { SpaceWarSky } from '../sky/spacewarsky';
 import { GalaxySkybox } from '../sky/galaxybox';
 import { GalaxyPlanetNetwork } from '../galaxy/galaxyplanetnetwork';
 import SteppedTerrain from '../ground/steppedterrain';
+import { HorizonEnvironment } from '../horizon/horizonenv';
 
 
 export default class WorldMap {
@@ -68,7 +69,8 @@ export default class WorldMap {
         SpaceWarSky: SpaceWarSky,
         GalaxySkybox: GalaxySkybox,
         GalaxyPlanetNetwork: GalaxyPlanetNetwork,
-        SteppedTerrain: SteppedTerrain
+        SteppedTerrain: SteppedTerrain,
+        HorizonEnvironment: HorizonEnvironment
     };
     private worldMapTypes: Record<string, any> = {
         CustomGround: { scene: this.scene, eventCtrl: this.eventCtrl, camera: this.camera },
@@ -100,7 +102,8 @@ export default class WorldMap {
             eventCtrl: this.eventCtrl,
             controls: (this.camera as any).controls
         } },
-        SteppedTerrain: { scene: this.scene, eventCtrl: this.eventCtrl }
+        SteppedTerrain: { scene: this.scene, eventCtrl: this.eventCtrl },
+        HorizonEnvironment: { scene: this.scene }
     }
 
     constructor(
@@ -145,7 +148,10 @@ export default class WorldMap {
             mapType != MapEntryType.FenceModular &&
             mapType != MapEntryType.Rain &&
             mapType != MapEntryType.WaterFoamRipples &&
-            mapType != MapEntryType.GalaxyPlanetNetwork)
+            mapType != MapEntryType.GalaxyPlanetNetwork &&
+            mapType != MapEntryType.GalaxySkybox &&
+            mapType != MapEntryType.DeepSpaceMegaRingSystem &&
+            mapType != MapEntryType.HorizonEnvironment)
             this.scene.add(map)
 
         return map
