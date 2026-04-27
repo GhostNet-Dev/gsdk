@@ -8,6 +8,7 @@ import { buildingDefs, BuildingProperty } from "@Glibs/interactives/building/bui
 import { TargetRecord } from "@Glibs/systems/targeting/targettypes";
 import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
 import { ProjectileWeaponController } from "@Glibs/actors/controllable/projectileweaponcontroller";
+import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
@@ -61,6 +62,9 @@ export class ReadonlyCityRuntime implements ILoop {
 
       this.root.add(model);
 
+      model.updateWorldMatrix(true, true);
+      const modelBox = new THREE.Box3().setFromObject(model);
+
       if (object.kind !== ReadonlyCityObjectKind.ConstructionSite && this.eventCtrl) {
         const targetId = object.key;
         model.name = targetId;
@@ -79,6 +83,7 @@ export class ReadonlyCityRuntime implements ILoop {
           alive: true,
           targetable: true,
           collidable: true,
+          bounds: modelBox,
         });
         this.eventCtrl.SendEventMessage(EventTypes.AddInteractive, model);
         this.registeredTargetIds.push(targetId);
@@ -102,12 +107,11 @@ export class ReadonlyCityRuntime implements ILoop {
       }
 
       if (this.collisionEnabled && this.colliderRegistry) {
-        model.updateWorldMatrix(true, true);
         this.colliderRegistry.registerObjectCollider({
           id: object.key,
           kind: StaticColliderKind.CityBuilding,
           object: model,
-          box: new THREE.Box3().setFromObject(model),
+          box: modelBox,
           raycastOn: true,
         });
       }
@@ -238,7 +242,7 @@ class ReadonlyCityDefenseCombatant implements IActionUser {
       ...(this.options.property.combat?.stats ?? {}),
       hp: this.options.property.hp,
     }, this);
-    this.baseSpec.lastUsedWeaponMode = "ranged";
+    this.baseSpec.lastUsedWeaponMode = WeaponMode.Ranged;
     this.weaponController.configure({
       eventEmitter: (msg) => this.options.eventCtrl.SendEventMessage(EventTypes.SpawnProjectile, msg),
       ownerSpec: this.baseSpec,

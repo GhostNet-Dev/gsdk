@@ -1,7 +1,7 @@
 import * as THREE from "three"
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
 import { ProjectileMsg } from "@Glibs/actors/projectile/projectile"
-import { ProjectileWeaponDef } from "./controllabletypes"
+import { ProjectileDamageType, ProjectileWeaponDef } from "@Glibs/actors/projectile/projectiletypes"
 
 export interface ProjectileWeaponControllerConfig {
   eventEmitter?: (msg: ProjectileMsg) => void
@@ -75,6 +75,7 @@ export class ProjectileWeaponController {
       id: weapon.id,
       ownerSpec: this.ownerSpec,
       damage: this.ownerSpec.Damage * (weapon.damageMultiplier ?? 1) * damageMultiplier,
+      damageType: weapon.damageType ?? ProjectileDamageType.Physical,
       src: this.tmpMuzzleWorld.clone(),
       dir: this.tmpShootDirection.clone(),
       homing: weapon.homing,

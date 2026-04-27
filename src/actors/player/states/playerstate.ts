@@ -11,6 +11,7 @@ import { IItem } from "@Glibs/interface/iinven";
 import { AttackItemType } from "@Glibs/types/inventypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
+import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes";
 
 export interface IActorState {
     Init(param?: any): void
@@ -64,17 +65,17 @@ export class State {
                 if (hasMelee && hasDedicatedRanged) {
                     const closestDist = this.playerCtrl.getClosestTargetDistance()
                     if (closestDist <= this.playerCtrl.meleeSwitchDistance) {
-                        this.playerCtrl.lastUsedWeaponMode = 'melee'
+                        this.playerCtrl.lastUsedWeaponMode = WeaponMode.Melee
                         state = this.playerCtrl.ComboMeleeSt
                     } else {
-                        this.playerCtrl.lastUsedWeaponMode = 'ranged'
+                        this.playerCtrl.lastUsedWeaponMode = WeaponMode.Ranged
                         state = rangedItem!.AutoAttack ? this.playerCtrl.RangeAttackSt : this.playerCtrl.RangeAimSt
                     }
                 } else if (hasDedicatedRanged) {
-                    this.playerCtrl.lastUsedWeaponMode = 'ranged'
+                    this.playerCtrl.lastUsedWeaponMode = WeaponMode.Ranged
                     state = rangedItem!.AutoAttack ? this.playerCtrl.RangeAttackSt : this.playerCtrl.RangeAimSt
                 } else {
-                    this.playerCtrl.lastUsedWeaponMode = 'melee'
+                    this.playerCtrl.lastUsedWeaponMode = WeaponMode.Melee
                     state = this.playerCtrl.ComboMeleeSt
                 }
                 this.playerCtrl.player.synchronizeWeaponVisibility(this.playerCtrl.lastUsedWeaponMode);
@@ -140,7 +141,7 @@ export class State {
         const rangedSlotItem = this.baseSpec.GetBindItem(Bind.Weapon_Ranged)
         const meleeSlotItem = this.baseSpec.GetMeleeItem()
         if (meleeSlotItem && rangedSlotItem) {
-            return this.playerCtrl.lastUsedWeaponMode === 'ranged' ? rangedSlotItem : meleeSlotItem
+            return this.playerCtrl.lastUsedWeaponMode === WeaponMode.Ranged ? rangedSlotItem : meleeSlotItem
         }
         return meleeSlotItem ?? rangedSlotItem ?? undefined
     }
@@ -156,26 +157,26 @@ export class State {
 
                 if (hasMelee && hasDedicatedRanged) {
                     if (dis <= this.playerCtrl.meleeSwitchDistance) {
-                        this.playerCtrl.lastUsedWeaponMode = 'melee'
-                        this.playerCtrl.player.synchronizeWeaponVisibility('melee');
+                        this.playerCtrl.lastUsedWeaponMode = WeaponMode.Melee
+                        this.playerCtrl.player.synchronizeWeaponVisibility(WeaponMode.Melee);
                         this.playerCtrl.ComboMeleeSt.Init()
                         return this.playerCtrl.ComboMeleeSt
                     } else {
                         if (!rangedItem?.AutoAttack) return
-                        this.playerCtrl.lastUsedWeaponMode = 'ranged'
-                        this.playerCtrl.player.synchronizeWeaponVisibility('ranged');
+                        this.playerCtrl.lastUsedWeaponMode = WeaponMode.Ranged
+                        this.playerCtrl.player.synchronizeWeaponVisibility(WeaponMode.Ranged);
                         this.playerCtrl.RangeAttackSt.Init()
                         return this.playerCtrl.RangeAttackSt
                     }
                 } else if (hasDedicatedRanged) {
                     if (!rangedItem?.AutoAttack) return
-                    this.playerCtrl.lastUsedWeaponMode = 'ranged'
-                    this.playerCtrl.player.synchronizeWeaponVisibility('ranged');
+                    this.playerCtrl.lastUsedWeaponMode = WeaponMode.Ranged
+                    this.playerCtrl.player.synchronizeWeaponVisibility(WeaponMode.Ranged);
                     this.playerCtrl.RangeAttackSt.Init()
                     return this.playerCtrl.RangeAttackSt
                 } else {
-                    this.playerCtrl.lastUsedWeaponMode = 'melee'
-                    this.playerCtrl.player.synchronizeWeaponVisibility('melee');
+                    this.playerCtrl.lastUsedWeaponMode = WeaponMode.Melee
+                    this.playerCtrl.player.synchronizeWeaponVisibility(WeaponMode.Melee);
                     this.playerCtrl.ComboMeleeSt.Init()
                     return this.playerCtrl.ComboMeleeSt
                 }

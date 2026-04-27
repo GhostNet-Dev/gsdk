@@ -9,6 +9,7 @@ import { IActorState } from "../allytypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { AllyProperty } from "../allytypes";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
+import { ProjectileDamageType } from "@Glibs/actors/projectile/projectiletypes";
 import {
     BuildKnockbackVector,
     GetHorizontalDistance,
@@ -19,6 +20,9 @@ import {
 
 type States = Record<string, IActorState>
 type AllyAttackTarget = IPhysicsObject & { TargetId?: string }
+type RangedTargetValidator = {
+    ValidateRangedAttackTarget?: (targetId: string, attackRange: number) => boolean
+}
 
 export function GetAllyAttackTargetId(target?: IPhysicsObject) {
     return (target as AllyAttackTarget | undefined)?.TargetId ?? TargetTeamId.Monster
@@ -33,11 +37,11 @@ export function NewDefaultAllyState(
     spec: BaseSpec,
 ): IActorState {
     const defSt: States = {}
-    defSt["IdleSt"]   = new IdleAllyState(defSt, allyModel, gphysic, spec)
-    defSt["RunSt"]    = new RunAllyState(defSt, allyModel, gphysic, spec)
-    defSt["AttackSt"] = new AttackAllyState(defSt, allyModel, gphysic, eventCtrl, spec)
-    defSt["JumpSt"]   = new JumpAllyState(defSt, allyModel, gphysic, spec)
-    defSt["HurtSt"]   = new HurtAllyState(defSt, allyModel, gphysic, spec)
+    defSt["IdleSt"]   = new IdleAllyState(defSt, allyModel, prop, gphysic, spec)
+    defSt["RunSt"]    = new RunAllyState(defSt, allyModel, prop, gphysic, spec)
+    defSt["AttackSt"] = new AttackAllyState(defSt, allyModel, prop, gphysic, eventCtrl, spec)
+    defSt["JumpSt"]   = new JumpAllyState(defSt, allyModel, prop, gphysic, spec)
+    defSt["HurtSt"]   = new HurtAllyState(defSt, allyModel, prop, gphysic, spec)
     defSt["DyingSt"]  = new DyingAllyState(defSt, allyModel, prop, gphysic, eventCtrl, spec)
     return defSt.IdleSt
 }
@@ -46,6 +50,7 @@ export abstract class AllyState {
     constructor(
         public states: States,
         protected allyModel: AllyModel,
+        protected property: AllyProperty,
         protected gphysic: IGPhysic,
         protected spec: BaseSpec,
     ) { }
@@ -53,10 +58,17 @@ export abstract class AllyState {
     abstract Uninit(): void
 
     protected GetAttackDistance() {
+        if (this.property.projectileDef?.range != undefined) return this.property.projectileDef.range
         return GetMeleeAttackDistance(this.spec)
     }
 
+    private _cp = new THREE.Vector3()
     protected GetTargetDistance(target: IPhysicsObject) {
+        const bounds: THREE.Box3 | undefined = target.Meshs.userData?.bounds
+        if (bounds) {
+            bounds.clampPoint(this.allyModel.Pos, this._cp)
+            return GetHorizontalDistance(this.allyModel.Pos, this._cp)
+        }
         return GetHorizontalDistance(this.allyModel.Pos, target.Pos)
     }
 
@@ -260,11 +272,12 @@ export class AttackAllyState extends AllyState implements IActorState {
     constructor(
         states: States,
         allyModel: AllyModel,
+        property: AllyProperty,
         gphysic: IGPhysic,
         private eventCtrl: IEventController,
         spec: BaseSpec,
     ) {
-        super(states, allyModel, gphysic, spec)
+        super(states, allyModel, property, gphysic, spec)
     }
 
     Init(): void {
@@ -273,7 +286,7 @@ export class AttackAllyState extends AllyState implements IActorState {
         this.attackTime = this.spec.AttackSpeed
         this.attackDamageMax = this.spec.AttackDamageMax
         this.attackDamageMin = this.spec.AttackDamageMin
-        const duration = this.allyModel.ChangeAction(ActionType.Punch)
+        const duration = this.allyModel.ChangeAction(this.property.attackAction ?? ActionType.Punch)
         if (duration != undefined) this.attackSpeed = duration * 0.8
     }
 
@@ -314,13 +327,18 @@ export class AttackAllyState extends AllyState implements IActorState {
         this.scheduledAttackRange = attackDistance
 
         this.keytimeout = setTimeout(() => {
-            this.attack(this.scheduledTargetId, this.scheduledAttackRange)
+            this.attack(this.scheduledTargetId, this.scheduledAttackRange, target)
         }, this.attackSpeed * 1000 * 0.4)
 
         return this
     }
 
-    private attack(targetId: string, attackDistance: number) {
+    private attack(targetId: string, attackDistance: number, target: IPhysicsObject) {
+        if (this.property.projectileDef) {
+            this.rangedAttack(targetId, attackDistance, target)
+            return
+        }
+
         const validator = GetMeleeTargetValidator(this.spec.Owner)
         const validation = validator?.ValidateMeleeAttackTarget(targetId, attackDistance)
             ?? MeleeValidationResult.InvalidTarget
@@ -340,11 +358,56 @@ export class AttackAllyState extends AllyState implements IActorState {
         }])
         this.attackProcess = false
     }
+
+    private rangedAttack(targetId: string, attackDistance: number, target: IPhysicsObject) {
+        const currentTargetId = GetAllyAttackTargetId(target)
+        const validator = this.spec.Owner as RangedTargetValidator
+        if (
+            currentTargetId !== targetId ||
+            validator.ValidateRangedAttackTarget?.(targetId, attackDistance) !== true
+        ) {
+            this.attackProcess = false
+            return
+        }
+
+        const projectileDef = this.property.projectileDef!
+        const muzzleOffset = projectileDef.muzzleOffset ?? { x: 0, y: 1.2, z: 0.8 }
+        const src = new THREE.Vector3(muzzleOffset.x, muzzleOffset.y, muzzleOffset.z)
+            .applyQuaternion(this.allyModel.Meshs.quaternion)
+            .add(this.allyModel.Pos)
+        const dir = target.CenterPos.clone().sub(src)
+        if (dir.lengthSq() <= 0.0001) {
+            this.attackProcess = false
+            return
+        }
+        dir.normalize()
+
+        const damageType = projectileDef.damageType ?? ProjectileDamageType.Physical
+        const baseDamage = damageType === ProjectileDamageType.Magic
+            ? this.spec.stats.getStat("magicAttack")
+            : this.spec.DamageRanged
+
+        this.eventCtrl.SendEventMessage(EventTypes.SpawnProjectile, {
+            id: projectileDef.id,
+            ownerSpec: this.spec,
+            damage: baseDamage * (projectileDef.damageMultiplier ?? 1),
+            damageType,
+            src,
+            dir,
+            range: projectileDef.range ?? this.spec.AttackRange,
+            homing: projectileDef.homing,
+            hitscan: projectileDef.hitscan,
+            tracerLife: projectileDef.tracerLife,
+            tracerRange: projectileDef.tracerRange,
+            useRaycast: projectileDef.useRaycast,
+        })
+        this.attackProcess = false
+    }
 }
 
 export class IdleAllyState extends AllyState implements IActorState {
-    constructor(state: States, allyModel: AllyModel, gphysic: IGPhysic, spec: BaseSpec) {
-        super(state, allyModel, gphysic, spec)
+    constructor(state: States, allyModel: AllyModel, property: AllyProperty, gphysic: IGPhysic, spec: BaseSpec) {
+        super(state, allyModel, property, gphysic, spec)
         this.Init()
     }
 
@@ -374,7 +437,7 @@ export class DyingAllyState extends AllyState implements IActorState {
         private eventCtrl: IEventController,
         spec: BaseSpec,
     ) {
-        super(states, allyModel, gphysic, spec)
+        super(states, allyModel, prop, gphysic, spec)
     }
 
     Init(): void {

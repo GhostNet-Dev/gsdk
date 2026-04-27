@@ -10,6 +10,7 @@ import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actio
 import { VirtualActorFactory } from "../battle/virtualactorfab";
 import { MonsterId } from "@Glibs/types/monstertypes";
 import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
+import { ProjectileDamageType } from "./projectiletypes";
 
 export class ProjectileCtrl implements IActionUser {
   raycast = new THREE.Raycaster();
@@ -22,6 +23,7 @@ export class ProjectileCtrl implements IActionUser {
   currenttime = 0;
   live = false;
   damage = 1;
+  damageType = ProjectileDamageType.Physical;
   moving = 0;
 
   creatorSpec?: BaseSpec;
@@ -85,6 +87,7 @@ export class ProjectileCtrl implements IActionUser {
     this.tracerRange = undefined;
     this.hasAttacked = false;
     this.useRaycast = false;
+    this.damageType = ProjectileDamageType.Physical;
 
     this.homingActive = false;
     this.homingTarget = null;
@@ -94,6 +97,7 @@ export class ProjectileCtrl implements IActionUser {
     src: THREE.Vector3,
     dir: THREE.Vector3,
     damage: number,
+    damageType: ProjectileDamageType | undefined,
     spec: BaseSpec,
     opt?: { homing?: boolean; hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
   ) {
@@ -109,6 +113,7 @@ export class ProjectileCtrl implements IActionUser {
     this.live = true;
     this.currenttime = 0;
     this.damage = damage;
+    this.damageType = damageType ?? ProjectileDamageType.Physical;
     this.moving = 0;
     this.creatorSpec = spec;
     this.attackDist = Math.max(0.5, this.baseSpec.AttackRange);
@@ -219,6 +224,7 @@ export class ProjectileCtrl implements IActionUser {
         type: AttackType.RangedShot,
         spec: VirtualActorFactory.createFusionActor(this.creatorSpec!, [this.baseSpec]),
         damage: this.damage,
+        damageType: this.damageType,
         obj: obj.target,
       };
 
@@ -255,6 +261,7 @@ export class ProjectileCtrl implements IActionUser {
       type: AttackType.RangedShot,
       spec: VirtualActorFactory.createFusionActor(this.creatorSpec!, [this.baseSpec]),
       damage: this.damage,
+      damageType: this.damageType,
       obj: hit.target,
     };
 

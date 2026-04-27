@@ -13,6 +13,7 @@ import { Buff } from "@Glibs/magical/buff/buff";
 import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
 import { TargetRecord, TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 import { GetHorizontalDistance, MeleeValidationResult, PendingMeleeImpactContext } from "@Glibs/actors/battle/meleecombat";
+import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes";
 
 // 타겟 레코드를 IPhysicsObject로 래핑하여 TargetId를 state machine에 전달
 class AllyTargetAdapter implements IPhysicsObject {
@@ -114,6 +115,7 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
     private readonly aggroRange = 60
     private lastSearchTime = 0
     private readonly searchInterval = 500
+    private readonly _cp = new THREE.Vector3()
 
     private readonly setTargetRegistry = (targetRegistry?: TargetRegistrySystem) => {
         this.targetRegistry = targetRegistry
@@ -141,6 +143,7 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
         private stats: Partial<Record<StatKey, number>>,
     ) {
         this.targetId = `ally:${property.id}:${id}`
+        this.baseSpec.lastUsedWeaponMode = property.projectileDef ? WeaponMode.Ranged : WeaponMode.Melee
 
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
 
@@ -225,9 +228,29 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
         if (!target.alive) return MeleeValidationResult.DeadTarget
         if (!target.targetable || !target.collidable) return MeleeValidationResult.InvalidTarget
 
-        const dist = GetHorizontalDistance(this.allyModel.Pos, target.object.position)
+        let refPos = target.object.position
+        if (target.bounds) {
+            this._cp.copy(this.allyModel.Pos)
+            target.bounds.clampPoint(this._cp, this._cp)
+            refPos = this._cp
+        }
+        const dist = GetHorizontalDistance(this.allyModel.Pos, refPos)
         if (dist > attackRange) return MeleeValidationResult.OutOfRange
         return MeleeValidationResult.InRange
+    }
+
+    ValidateRangedAttackTarget(targetId: string, attackRange: number): boolean {
+        const target = this.currentTarget
+        if (!target || target.id !== targetId) return false
+        if (!target.alive || !target.targetable || !target.collidable) return false
+
+        let refPos = target.object.position
+        if (target.bounds) {
+            this._cp.copy(this.allyModel.Pos)
+            target.bounds.clampPoint(this._cp, this._cp)
+            refPos = this._cp
+        }
+        return GetHorizontalDistance(this.allyModel.Pos, refPos) <= attackRange
     }
 
     private resolveTarget(): IPhysicsObject {

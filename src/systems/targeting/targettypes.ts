@@ -21,6 +21,7 @@ export type TargetRecord = {
   alive: boolean
   targetable: boolean
   collidable: boolean
+  bounds?: THREE.Box3
 }
 
 export type RegisterTargetMsg = {
@@ -33,6 +34,7 @@ export type RegisterTargetMsg = {
   alive?: boolean
   targetable?: boolean
   collidable?: boolean
+  bounds?: THREE.Box3
 }
 
 export type UpdateTargetStateMsg = {

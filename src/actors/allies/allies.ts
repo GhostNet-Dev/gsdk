@@ -194,6 +194,7 @@ export class Allies {
         const damage = calculateCompositeDamage({
             attacker: opt.spec,
             defender: z.allyCtrl.Spec,
+            type: opt.damageType,
         })
 
         const attackRange = IsMeleeAttackType(opt.type) ? opt.distance : undefined

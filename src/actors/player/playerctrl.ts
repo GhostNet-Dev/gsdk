@@ -28,6 +28,7 @@ import { MonDrop } from "../monsters/monstertypes";
 import { ActionCostSpec } from "@Glibs/actors/battle/resourcecosttypes";
 import { actionCostService } from "@Glibs/actors/battle/actioncostservice";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
+import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes";
 
 type LearnedSkillMessage = {
     nodeId: string
@@ -56,14 +57,14 @@ export class PlayerCtrl implements ILoop, IActionUser {
     private spRegenAccumulator = 0
     private readonly targetId = TargetTeamId.Player
 
-    set lastUsedWeaponMode(mode: 'melee' | 'ranged') {
+    set lastUsedWeaponMode(mode: WeaponMode) {
         this._lastUsedWeaponMode = mode;
         if (this.baseSpec) this.baseSpec.lastUsedWeaponMode = mode;
     }
-    get lastUsedWeaponMode(): 'melee' | 'ranged' {
+    get lastUsedWeaponMode(): WeaponMode {
         return this._lastUsedWeaponMode;
     }
-    private _lastUsedWeaponMode: 'melee' | 'ranged' = 'melee';
+    private _lastUsedWeaponMode: WeaponMode = WeaponMode.Melee;
     meleeSwitchDistance = 5
 
     contollerEnable = true
@@ -214,7 +215,7 @@ export class PlayerCtrl implements ILoop, IActionUser {
             (slot.item as Item).activate()
 
             // Update mode based on equipped item
-            this.lastUsedWeaponMode = (slot.item.ItemType === 'rangeattack') ? 'ranged' : 'melee';
+            this.lastUsedWeaponMode = (slot.item.ItemType === 'rangeattack') ? WeaponMode.Ranged : WeaponMode.Melee;
 
             // Visual update
             this.player.ReloadBindingItem(slot.item)
@@ -230,10 +231,10 @@ export class PlayerCtrl implements ILoop, IActionUser {
             this.inventory.UnequipItem(bind);
 
             // If we unequip the current mode weapon, try to switch to the other
-            if (bind === Bind.Weapon_Ranged && this.lastUsedWeaponMode === 'ranged') {
-                this.lastUsedWeaponMode = 'melee';
-            } else if (bind === Bind.Hands_R && this.lastUsedWeaponMode === 'melee') {
-                this.lastUsedWeaponMode = 'ranged';
+            if (bind === Bind.Weapon_Ranged && this.lastUsedWeaponMode === WeaponMode.Ranged) {
+                this.lastUsedWeaponMode = WeaponMode.Melee;
+            } else if (bind === Bind.Hands_R && this.lastUsedWeaponMode === WeaponMode.Melee) {
+                this.lastUsedWeaponMode = WeaponMode.Ranged;
             }
 
             // Visual update

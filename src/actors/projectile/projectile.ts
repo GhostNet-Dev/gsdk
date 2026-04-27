@@ -17,6 +17,7 @@ import { Char } from "@Glibs/types/assettypes";
 import { StreakTracerModel } from "./streaktracer";
 import { EnergyHomingModel } from "./energyhoming";
 import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
+import { ProjectileDamageType } from "./projectiletypes";
 
 export interface IProjectileModel {
   get Meshs():
@@ -37,10 +38,19 @@ type ReleaseAnimatedProjectile = IProjectileModel & {
   isReleaseFinished?: () => boolean;
 };
 
+type ProjectileStartOptions = {
+  homing?: boolean;
+  hitscan?: boolean;
+  tracerLife?: number;
+  tracerRange?: number;
+  useRaycast?: boolean;
+};
+
 export type ProjectileMsg = {
   id: MonsterId;
   ownerSpec: BaseSpec;
   damage: number;
+  damageType?: ProjectileDamageType;
   src: THREE.Vector3;
   dir: THREE.Vector3;
   range: number;
@@ -64,8 +74,9 @@ export type ProjectileSet = {
     src: THREE.Vector3;
     dir: THREE.Vector3;
     damage: number;
+    damageType?: ProjectileDamageType;
     ownerSpec: BaseSpec;
-    opt?: { homing?: boolean; hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean };
+    opt?: ProjectileStartOptions;
   };
 };
 
@@ -78,7 +89,7 @@ export class Projectile implements ILoop {
     private eventCtrl: IEventController,
     private game: THREE.Scene,
     private targetRegistry: TargetRegistrySystem,
-    private loader?: Loader,
+    private loader: Loader,
     private camera?: THREE.Camera
   ) {
     eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this);
@@ -106,7 +117,7 @@ export class Projectile implements ILoop {
       case MonsterId.WarhamerTracer:
         return new StreakTracerModel({ camera: this.camera, eventCtrl: this.eventCtrl });
       case MonsterId.Knife:
-        return new KnifeModel(this.loader?.GetAssets(Char.KayKitAdvDagger));
+        return new KnifeModel(this.loader.GetAssets(Char.KayKitAdvDagger));
       case MonsterId.EnergyHoming:
         return new EnergyHomingModel();
       case MonsterId.DefaultBall:
@@ -172,17 +183,36 @@ export class Projectile implements ILoop {
     damage: number,
     ownerSpec: BaseSpec,
     range: number,
-    opt?: { homing?: boolean; hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
+    opt?: ProjectileStartOptions
+  ): void;
+  AllocateProjPool(
+    id: MonsterId,
+    src: THREE.Vector3,
+    dir: THREE.Vector3,
+    damage: number,
+    damageType: ProjectileDamageType,
+    ownerSpec: BaseSpec,
+    range: number,
+    opt?: ProjectileStartOptions
   ): void;
   AllocateProjPool(
     a: ProjectileMsg | MonsterId,
     src?: THREE.Vector3,
     dir?: THREE.Vector3,
     damage?: number,
-    ownerSpec?: BaseSpec,
-    range?: number,
-    opt?: { homing?: boolean; hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
+    damageTypeOrOwnerSpec?: ProjectileDamageType | BaseSpec,
+    ownerSpecOrRange?: BaseSpec | number,
+    rangeOrOpt?: number | ProjectileStartOptions,
+    opt?: ProjectileStartOptions
   ) {
+    const ownerSpecArg = damageTypeOrOwnerSpec instanceof BaseSpec
+      ? damageTypeOrOwnerSpec
+      : ownerSpecOrRange as BaseSpec
+    const rangeArg = typeof ownerSpecOrRange === "number"
+      ? ownerSpecOrRange
+      : rangeOrOpt as number
+    const optArg = typeof rangeOrOpt === "object" ? rangeOrOpt : opt
+
     const msg: ProjectileMsg =
       typeof a === "object" && "id" in a
         ? a
@@ -191,13 +221,14 @@ export class Projectile implements ILoop {
           src: src!,
           dir: dir!,
           damage: damage!,
-          ownerSpec: ownerSpec!,
-          range: range!,
-          homing: opt?.homing,
-          hitscan: opt?.hitscan,
-          tracerLife: opt?.tracerLife,
-          tracerRange: opt?.tracerRange,
-          useRaycast: opt?.useRaycast,
+          ownerSpec: ownerSpecArg,
+          damageType: typeof damageTypeOrOwnerSpec === "string" ? damageTypeOrOwnerSpec : undefined,
+          range: rangeArg,
+          homing: optArg?.homing,
+          hitscan: optArg?.hitscan,
+          tracerLife: optArg?.tracerLife,
+          tracerRange: optArg?.tracerRange,
+          useRaycast: optArg?.useRaycast,
         } as ProjectileMsg);
 
     const id = msg.id;
@@ -228,6 +259,7 @@ export class Projectile implements ILoop {
           src: msg.src.clone(),
           dir: msg.dir.clone(),
           damage: msg.damage,
+          damageType: msg.damageType,
           ownerSpec: msg.ownerSpec,
           opt: startOpt,
         };
@@ -251,6 +283,7 @@ export class Projectile implements ILoop {
           src: msg.src.clone(),
           dir: msg.dir.clone(),
           damage: msg.damage,
+          damageType: msg.damageType,
           ownerSpec: msg.ownerSpec,
           opt: startOpt,
         };
@@ -264,7 +297,7 @@ export class Projectile implements ILoop {
             const p = set!.pendingStart;
             set!.pendingStart = undefined;
             if (p) {
-              this.startProjectile(set!, p.src, p.dir, p.damage, p.ownerSpec, p.opt);
+              this.startProjectile(set!, p.src, p.dir, p.damage, p.damageType, p.ownerSpec, p.opt);
             }
           })
           .catch((err) => {
@@ -279,7 +312,7 @@ export class Projectile implements ILoop {
     }
 
     // 4) 즉시 start
-    this.startProjectile(set, msg.src, msg.dir, msg.damage, msg.ownerSpec, startOpt);
+    this.startProjectile(set, msg.src, msg.dir, msg.damage, msg.damageType, msg.ownerSpec, startOpt);
   }
 
   private startProjectile(
@@ -287,12 +320,13 @@ export class Projectile implements ILoop {
     src: THREE.Vector3,
     dir: THREE.Vector3,
     damage: number,
+    damageType: ProjectileDamageType | undefined,
     ownerSpec: BaseSpec,
-    opt?: { homing?: boolean; hitscan?: boolean; tracerLife?: number; tracerRange?: number; useRaycast?: boolean }
+    opt?: ProjectileStartOptions
   ) {
     set.releasing = false;
 
-    set.ctrl.start(src, dir, damage, ownerSpec, opt);
+    set.ctrl.start(src, dir, damage, damageType, ownerSpec, opt);
 
     if (set.model.Meshs) this.game.add(set.model.Meshs);
   }

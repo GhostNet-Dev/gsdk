@@ -10,6 +10,7 @@ import { Ani, Bind, Char } from "@Glibs/types/assettypes";
 import { IAsset } from "@Glibs/interface/iasset";
 import IInventory, { IItem } from "@Glibs/interface/iinven";
 import { ActionType } from "./playertypes";
+import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes";
 import { ItemId } from "@Glibs/inventory/items/itemdefs";
 
 
@@ -125,7 +126,7 @@ export class Player extends PhysicsObject {
         }
     }
 
-    synchronizeWeaponVisibility(mode: 'melee' | 'ranged') {
+    synchronizeWeaponVisibility(mode: WeaponMode) {
         const meleeWeapon = this.bindMesh[Bind.Hands_R];
         const rangedWeapon = this.bindMesh[Bind.Weapon_Ranged];
 

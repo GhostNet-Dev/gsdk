@@ -1,5 +1,7 @@
 import { BaseSpec } from "@Glibs/actors/battle/basespec"
 import { CharacterStatus } from "@Glibs/actors/battle/charstatus"
+import { DamageType } from "@Glibs/actors/battle/damageformula"
+import { ProjectileDamageType } from "@Glibs/actors/projectile/projectiletypes"
 import { EffectType } from "@Glibs/types/effecttypes"
 
 export enum AttackType {
@@ -85,6 +87,7 @@ export type PlayMode =
 export type AttackOption = {
     type: AttackType,
     effect?: EffectType,
+    damageType?: DamageType | ProjectileDamageType,
     damage: number
     spec?: BaseSpec,
     targetId?: string

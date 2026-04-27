@@ -1,11 +1,12 @@
 import { StatKey } from "@Glibs/types/stattypes";
 import { BaseSpec } from "./basespec";
 import { DamageFormula, DamageType } from "./damageformula"; // 위에서 만든 모듈 import
+import { ProjectileDamageType } from "@Glibs/actors/projectile/projectiletypes";
 
 export interface DamageContext {
   attacker: BaseSpec;       // source -> attacker로 명칭 변경 제안
   defender: BaseSpec;       // destination -> defender로 명칭 변경 제안
-  type?: DamageType;        // physical | magic
+  type?: DamageType | ProjectileDamageType;        // physical | magic
   skillMultiplier?: number; // 스킬 계수 (기본 1.0)
   isFixedDamage?: boolean;  // 방어 무시 여부 등
 }

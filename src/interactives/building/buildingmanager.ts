@@ -201,6 +201,9 @@ export class BuildingManager implements ILoop, ITurnParticipant {
       factionId: this.playerCityFactionId,
       kind: "structure",
     };
+    model.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(model);
+
     this.eventCtrl.SendEventMessage(EventTypes.RegisterTarget, {
       id: targetId,
       object: model,
@@ -210,14 +213,14 @@ export class BuildingManager implements ILoop, ITurnParticipant {
       alive: true,
       targetable: true,
       collidable: true,
+      bounds: box,
     });
 
-    model.updateWorldMatrix(true, true);
     this.colliderRegistry.registerObjectCollider({
       id: targetId,
       kind: StaticColliderKind.CityBuilding,
       object: model,
-      box: new THREE.Box3().setFromObject(model),
+      box,
       raycastOn: true,
     });
   }

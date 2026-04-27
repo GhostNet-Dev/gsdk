@@ -11,6 +11,7 @@ import { StatFactory } from "./statfactory"
 import { calculateCompositeDamage, DamageContext, DamageResult } from "./damagecalc"
 import { DamageFormula } from "./damageformula"
 import { DamagePacket, DamageResolution, IDamageInterceptor } from "./damagepacket"
+import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes"
 
 export class BaseSpec {
     // 레거시 호환성을 위한 프로퍼티 (필요 없다면 제거 가능)
@@ -31,7 +32,7 @@ export class BaseSpec {
     skillMultiplier = 1
     
     status: CharacterStatus
-    lastUsedWeaponMode: 'melee' | 'ranged' = 'melee'
+    lastUsedWeaponMode: WeaponMode = WeaponMode.Melee
     private damageInterceptors: IDamageInterceptor[] = []
 
     // Getters
@@ -44,11 +45,11 @@ export class BaseSpec {
     }
 
     get AttackSpeed() {
-        return this.lastUsedWeaponMode === 'ranged' ? this.AttackSpeedRanged : this.AttackSpeedMelee;
+        return this.lastUsedWeaponMode === WeaponMode.Ranged ? this.AttackSpeedRanged : this.AttackSpeedMelee;
     }
 
     get AttackRange() {
-        const item = this.lastUsedWeaponMode === 'ranged' ? this.GetRangedItem() : this.GetMeleeItem();
+        const item = this.lastUsedWeaponMode === WeaponMode.Ranged ? this.GetRangedItem() : this.GetMeleeItem();
         return (item?.Stats?.attackRange ?? this.stats.getStat("attackRange")) + 0.5;
     }
     get Speed() { return this.stats.getStat("speed") }
@@ -56,7 +57,7 @@ export class BaseSpec {
     get DamageMelee() { return this.stats.getStat("attackMelee") }
     get DamageRanged() { return this.stats.getStat("attackRanged") }
     get Damage() {
-        return this.lastUsedWeaponMode === 'ranged' ? this.DamageRanged : this.DamageMelee;
+        return this.lastUsedWeaponMode === WeaponMode.Ranged ? this.DamageRanged : this.DamageMelee;
     }
     
     // 레거시 Getter 호환성 유지

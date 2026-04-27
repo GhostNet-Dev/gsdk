@@ -9,6 +9,7 @@ import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { ShipProjectileDef } from "../controllabletypes"
 import { FleetWeaponDoctrine } from "@Glibs/gameobjects/fleet/fleet"
 import { ProjectileWeaponController } from "../projectileweaponcontroller"
+import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes"
 
 export interface IFighterShipRuntime extends IControllableRuntime {
   getCollisionObject(): THREE.Object3D
@@ -237,7 +238,7 @@ export class FighterShipRuntime implements IFighterShipRuntime, ILoop {
   configureCombat(options: FighterShipCombatOptions): void {
     this.ownerSpec = options.ownerSpec
     if (this.ownerSpec) {
-      this.ownerSpec.lastUsedWeaponMode = "ranged"
+      this.ownerSpec.lastUsedWeaponMode = WeaponMode.Ranged
       this.ownerSpec.status.health = this.hull
     }
     this.weaponController.configure({

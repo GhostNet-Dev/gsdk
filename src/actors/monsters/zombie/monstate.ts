@@ -64,7 +64,13 @@ export abstract class MonState {
         return GetHorizontalDistance(a, b)
     }
 
+    private _cp = new THREE.Vector3()
     protected GetTargetDistance(target: IPhysicsObject) {
+        const bounds: THREE.Box3 | undefined = target.Meshs.userData?.bounds
+        if (bounds) {
+            bounds.clampPoint(this.zombie.Pos, this._cp)
+            return this.GetHorizontalDistance(this.zombie.Pos, this._cp)
+        }
         return this.GetHorizontalDistance(this.zombie.Pos, target.Pos)
     }
 

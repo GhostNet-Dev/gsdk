@@ -3,7 +3,9 @@ import { ActionDef, IActionComponent } from "@Glibs/types/actiontypes"
 import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { IActorState } from "../player/states/playerstate"
 import { Char } from "@Glibs/types/assettypes"
-import { MonsterId } from "@Glibs/types/monstertypes"
+import { ProjectileWeaponDef } from "@Glibs/actors/projectile/projectiletypes"
+
+export { ProjectileWeaponDef }
 
 export type ControllableMode = "attack" | "defense" | "navigation" | "exploration"
 
@@ -18,22 +20,6 @@ export type ModeProfile = {
 }
 
 export type ModeProfileMap = Partial<Record<ControllableMode, ModeProfile>>
-
-export type ProjectileWeaponDef = {
-  id: MonsterId
-  name?: string
-  damageMultiplier?: number
-  homing?: boolean
-  range?: number
-  hitscan?: boolean
-  tracerLife?: number
-  tracerRange?: number
-  useRaycast?: boolean
-  muzzleOffset?: { x: number; y: number; z: number }
-  fireCooldownSec?: number
-  turnSpeed?: number
-  energyCostPerSec?: number
-}
 
 export type ShipProjectileDef = ProjectileWeaponDef
 

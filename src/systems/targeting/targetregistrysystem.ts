@@ -55,6 +55,11 @@ export class TargetRegistrySystem {
       alive: msg.alive ?? prev?.alive ?? true,
       targetable: msg.targetable ?? prev?.targetable ?? true,
       collidable: msg.collidable ?? prev?.collidable ?? true,
+      bounds: msg.bounds ?? prev?.bounds,
+    }
+
+    if (record.bounds) {
+      msg.object.userData.bounds = record.bounds
     }
 
     this.byId.set(msg.id, record)

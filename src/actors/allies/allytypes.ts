@@ -1,12 +1,13 @@
 import * as THREE from "three";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
-import { AttackOption } from "@Glibs/types/playertypes";
+import { ActionType, AttackOption } from "@Glibs/types/playertypes";
 import { EffectType } from "@Glibs/types/effecttypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { MeleeValidationResult } from "@Glibs/actors/battle/meleecombat";
 import { StatKey } from "@Glibs/types/stattypes";
 import { Char } from "@Glibs/types/assettypes";
 import { IActorState } from "@Glibs/actors/monsters/monstertypes";
+import { ProjectileWeaponDef } from "@Glibs/actors/projectile/projectiletypes";
 
 export { IActorState }
 
@@ -40,6 +41,7 @@ export interface IAllyCtrl {
     Summoned(): void
     Dispose(): void
     ValidateMeleeAttackTarget(targetId: string, attackRange: number): MeleeValidationResult
+    ValidateRangedAttackTarget(targetId: string, attackRange: number): boolean
     ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number): boolean
 }
 
@@ -60,5 +62,7 @@ export type AllyProperty = {
     id: AllyId
     model: Char
     stats?: Partial<Record<StatKey, number>>
+    projectileDef?: ProjectileWeaponDef
+    attackAction?: ActionType
     idleStates?: (...params: any[]) => IActorState
 }

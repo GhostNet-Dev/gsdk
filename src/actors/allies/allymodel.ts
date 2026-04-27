@@ -70,6 +70,10 @@ export class AllyModel extends PhysicsObject {
         this.clipMap.set(ActionType.Idle, this.asset.GetAnimationClip(Ani.Idle))
         this.clipMap.set(ActionType.Run, this.asset.GetAnimationClip(Ani.Run))
         this.clipMap.set(ActionType.Punch, this.asset.GetAnimationClip(Ani.Punch))
+        this.clipMap.set(ActionType.Bow, this.asset.GetAnimationClip(Ani.Shooting))
+        this.clipMap.set(ActionType.OneHandGun, this.asset.GetAnimationClip(Ani.Shooting))
+        this.clipMap.set(ActionType.MagicH1, this.asset.GetAnimationClip(Ani.MagicH1) ?? this.asset.GetAnimationClip(Ani.Spellcasting))
+        this.clipMap.set(ActionType.Wand, this.asset.GetAnimationClip(Ani.MagicH1) ?? this.asset.GetAnimationClip(Ani.Spellcasting))
         this.clipMap.set(ActionType.Dying, this.asset.GetAnimationClip(Ani.Dying))
         this.clipMap.set(ActionType.MonHurt2, this.asset.GetAnimationClip(Ani.MonHurt2))
 

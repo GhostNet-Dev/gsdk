@@ -80,37 +80,29 @@ export abstract class AttackState extends State implements IActorState {
         const playerPos = this.player.Pos;
         let closestTarget: THREE.Object3D | null = null;
         let minDistance = this.attackDist * rangeMultiplier;
+        const _cp = new THREE.Vector3()
 
-        // 🎯 1. 모든 적 중에서 가장 가까운 대상 찾기
         for (const target of this.playerCtrl.targets) {
-            const dist = target.position.distanceTo(this.player.CenterPos);
+            const bounds: THREE.Box3 | undefined = target.userData.bounds
+            const dist = bounds
+                ? bounds.clampPoint(this.player.CenterPos, _cp).distanceTo(this.player.CenterPos)
+                : target.position.distanceTo(this.player.CenterPos)
             if (dist < minDistance) {
                 minDistance = dist;
                 closestTarget = target;
             }
         }
 
-        // 🎯 2. 범위 내 적이 없으면 종료
         if (!closestTarget) {
             this.attackProcess = false;
             this.detectEnermy = false
             return null;
         }
 
-        // 🔁 3. 가장 가까운 적을 향해 회전
-        // const lookDir = new THREE.Vector3().subVectors(closestTarget.position, playerPos).normalize();
-        // const targetQuat = new THREE.Quaternion().setFromUnitVectors(
-        //     new THREE.Vector3(0, 0, 1),
-        //     lookDir
-        // );
-   
-        // this.player.Meshs.quaternion.slerp(targetQuat, 0.2); // 부드럽게 회전
-        // this.player.Meshs.quaternion.copy(targetQuat); // 부드럽게 회전
-
         this.detectEnermy = true
         this.player.Meshs.lookAt(closestTarget.position.x, playerPos.y, closestTarget.position.z);
         return closestTarget
-    }   
+    }
 
     getTargetsInCone(range: number, angleDegrees: number = 120): THREE.Object3D[] {
         const forward = new THREE.Vector3();
@@ -120,27 +112,31 @@ export abstract class AttackState extends State implements IActorState {
 
         const cosHalfAngle = Math.cos(THREE.MathUtils.degToRad(angleDegrees / 2));
         const result: THREE.Object3D[] = [];
+        const MIN_HIT_RADIUS = 1.0;
+        const _cp = new THREE.Vector3()
 
         for (const target of this.playerCtrl.targets) {
-            const toTarget = new THREE.Vector3().subVectors(target.position, this.player.CenterPos);
-            // We ignore Y difference for horizontal cone check, or keep it if needed.
-            // For now, let's stick to 3D distance but horizontal angle.
-            const dist = toTarget.length();
-            
+            const bounds: THREE.Box3 | undefined = target.userData.bounds
+            let toSurface: THREE.Vector3
+
+            if (bounds) {
+                bounds.clampPoint(this.player.CenterPos, _cp)
+                toSurface = new THREE.Vector3().subVectors(_cp, this.player.CenterPos)
+            } else {
+                toSurface = new THREE.Vector3().subVectors(target.position, this.player.CenterPos)
+            }
+
+            const dist = toSurface.length()
             if (dist > range) continue;
 
-            // 초근접 상태(Overlapping)에서는 각도 검사 생략하고 즉시 적중 처리
-            const MIN_HIT_RADIUS = 1.0; // 캐릭터의 반경 등을 고려하여 조정 (예: this.player.Size.x)
             if (dist <= MIN_HIT_RADIUS) {
                 result.push(target);
                 continue;
             }
 
-            toTarget.y = 0;
-            toTarget.normalize();
-            const dot = forward.dot(toTarget);
-
-            if (dot > cosHalfAngle) {
+            toSurface.y = 0;
+            toSurface.normalize();
+            if (forward.dot(toSurface) > cosHalfAngle) {
                 result.push(target);
             }
         }

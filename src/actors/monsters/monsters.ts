@@ -154,6 +154,7 @@ export class Monsters {
         const damage = calculateCompositeDamage({
             attacker: opt.spec,
             defender: z.monCtrl.Spec,
+            type: opt.damageType,
         })
 
         const attackRange = IsMeleeAttackType(opt.type) ? opt.distance : undefined;
@@ -279,6 +280,8 @@ export class Monsters {
             teamId: TargetTeamId.Monster,
             kind: "unit",
         }
+        monSet.monModel.Meshs.updateWorldMatrix(true, true)
+        const monBox = new THREE.Box3().setFromObject(monSet.monModel.Meshs)
         this.eventCtrl.SendEventMessage(EventTypes.RegisterTarget, {
             id: monSet.monCtrl.TargetId,
             object: monSet.monModel.Meshs,
@@ -287,6 +290,7 @@ export class Monsters {
             alive: true,
             targetable: true,
             collidable: true,
+            bounds: monBox,
         })
 
         monSet.monModel.Visible = true;

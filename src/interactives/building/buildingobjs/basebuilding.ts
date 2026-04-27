@@ -9,6 +9,7 @@ import { AttackOption, AttackType } from '@Glibs/types/playertypes';
 import { DamageKind } from '@Glibs/actors/battle/damagepacket';
 import { ActionContext, IActionComponent, IActionUser } from '@Glibs/types/actiontypes';
 import { BuildingRingProgress, BuildingRingProgressState } from '../buildingringprogress';
+import { WeaponMode } from '@Glibs/actors/projectile/projectiletypes';
 
 /**
  * 모든 건물의 공통 로직을 처리하는 추상 클래스
@@ -45,7 +46,7 @@ export abstract class BaseBuilding implements IBuildingObject, IActionUser {
             ...(this.property.combat?.stats ?? {}),
             hp: this.property.hp,
         }, this);
-        this.baseSpec.lastUsedWeaponMode = 'ranged';
+        this.baseSpec.lastUsedWeaponMode = WeaponMode.Ranged;
         this.currentHp = this.baseSpec.Health;
         this.hpRing = new BuildingRingProgress(this.property.size.width, this.property.size.depth, {
             state: BuildingRingProgressState.Healthy,

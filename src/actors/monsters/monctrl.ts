@@ -117,6 +117,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     private readonly tempV1 = new THREE.Vector3()
     private readonly tempV2 = new THREE.Vector3()
     private readonly tempV3 = new THREE.Vector3()
+    private readonly _cp = new THREE.Vector3()
     private readonly setTargetRegistry = (targetRegistry?: TargetRegistrySystem) => {
         this.targetRegistry = targetRegistry
     }
@@ -255,7 +256,13 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         if (!target.alive) return MeleeValidationResult.DeadTarget
         if (!target.targetable || !target.collidable) return MeleeValidationResult.InvalidTarget
 
-        const dist = GetHorizontalDistance(this.zombie.Pos, target.object.position)
+        let refPos = target.object.position
+        if (target.bounds) {
+            this._cp.copy(this.zombie.Pos)
+            target.bounds.clampPoint(this._cp, this._cp)
+            refPos = this._cp
+        }
+        const dist = GetHorizontalDistance(this.zombie.Pos, refPos)
         if (dist > attackRange) return MeleeValidationResult.OutOfRange
         return MeleeValidationResult.InRange
     }

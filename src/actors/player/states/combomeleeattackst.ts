@@ -292,7 +292,12 @@ export class ComboMeleeState extends AttackState implements IActorState {
 
         if (targets.length > 0) {
             const buckets = new Map<string, AttackOption[]>();
+            const _cp = new THREE.Vector3();
             for (const obj of targets) {
+                const bounds: THREE.Box3 | undefined = obj.userData.bounds;
+                const targetPoint = bounds
+                    ? bounds.clampPoint(this.player.CenterPos, _cp.clone())
+                    : obj.position.clone();
                 const arr = buckets.get(obj.name) ?? [];
                 arr.push({
                     type: AttackType.NormalSwing,
@@ -300,7 +305,7 @@ export class ComboMeleeState extends AttackState implements IActorState {
                     spec: this.baseSpec,
                     obj: this.player.Meshs,
                     targetId: obj.name,
-                    targetPoint: obj.position.clone(),
+                    targetPoint,
                     distance: baseRange,
                     knockbackDistance,
                     attackerObjectId: this.player.UUID,
@@ -314,7 +319,10 @@ export class ComboMeleeState extends AttackState implements IActorState {
                     // We can either raycast again for visual effects or just use target center.
                     const hitPoint = (v[0].targetPoint as THREE.Vector3 | undefined)?.clone()
                         ?? new THREE.Vector3();
-                    const hitNormal = new THREE.Vector3(0, 1, 0);
+                    const hitNormal = new THREE.Vector3()
+                        .subVectors(this.player.CenterPos, hitPoint)
+                        .setY(0)
+                        .normalize();
 
                     this.eventCtrl.SendEventMessage(EventTypes.GlobalEffect, GlobalEffectType.SparkEshSystem, hitPoint, hitNormal, {
                         count: particleCount,
