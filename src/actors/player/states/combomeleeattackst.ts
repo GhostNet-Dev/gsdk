@@ -9,13 +9,14 @@ import { IGPhysic } from "@Glibs/interface/igphysics";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { Bind } from "@Glibs/types/assettypes";
-import { ActionType } from "../playertypes";
+import { ActionType, AttackOption } from "../playertypes";
 import { Item } from "@Glibs/inventory/items/item";
 import { AttackState } from "./attackstate";
 import { KeyType } from "@Glibs/types/eventtypes";
 import { GlobalEffectType } from "@Glibs/types/effecttypes";
 import { CameraMode } from "@Glibs/systems/camera/cameratypes";
 import { ActionCostSpec, cost } from "@Glibs/actors/battle/resourcecosttypes";
+import { CalculatePlayerMeleeKnockbackDistance } from "@Glibs/actors/battle/meleecombat";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
@@ -269,26 +270,40 @@ export class ComboMeleeState extends AttackState implements IActorState {
         );
     }
 
+    private getComboStepInDistance(): number {
+        return this.STEP_IN_SPEED * this.resolved.windupSec * this.STEP_IN_DURATION_RATIO;
+    }
+
     // 충돌/대미지 처리 + [개선] 히트스톱 설정
     private doHit() {
         const dmgMul = this.currentStep.damageMul ?? 1;
         const rangeMul = this.currentStep.rangeMul ?? 1;
         const baseDamage = this.baseSpec.Damage * dmgMul;
         const baseRange = this.attackDist * rangeMul;
+        const isFinisher = this.stepIndex === this.chain.steps.length - 1;
+        const knockbackDistance = CalculatePlayerMeleeKnockbackDistance({
+            attackRange: baseRange,
+            stepInDistance: this.getComboStepInDistance(),
+            isFinisher,
+        });
 
         const targets = this.getTargetsInCone(baseRange);
         let anyHit = false;
 
         if (targets.length > 0) {
-            const buckets = new Map<string, any[]>();
+            const buckets = new Map<string, AttackOption[]>();
             for (const obj of targets) {
                 const arr = buckets.get(obj.name) ?? [];
                 arr.push({
                     type: AttackType.NormalSwing,
                     damage: baseDamage,
                     spec: this.baseSpec,
-                    obj: obj,
-                    distance: baseRange // [New] 현재 공격의 유효 사거리 전달
+                    obj: this.player.Meshs,
+                    targetId: obj.name,
+                    targetPoint: obj.position.clone(),
+                    distance: baseRange,
+                    knockbackDistance,
+                    attackerObjectId: this.player.UUID,
                 });
                 buckets.set(obj.name, arr);
             }
@@ -297,8 +312,8 @@ export class ComboMeleeState extends AttackState implements IActorState {
                     const particleCount = (this.stepIndex == this.chain.steps.length - 1) ? 40 : 20;
                     // Note: hitPoint and hitNormal are no longer easily available without raycast.
                     // We can either raycast again for visual effects or just use target center.
-                    const targetObj = v[0].obj as THREE.Object3D;
-                    const hitPoint = targetObj.position.clone();
+                    const hitPoint = (v[0].targetPoint as THREE.Vector3 | undefined)?.clone()
+                        ?? new THREE.Vector3();
                     const hitNormal = new THREE.Vector3(0, 1, 0);
 
                     this.eventCtrl.SendEventMessage(EventTypes.GlobalEffect, GlobalEffectType.SparkEshSystem, hitPoint, hitNormal, {

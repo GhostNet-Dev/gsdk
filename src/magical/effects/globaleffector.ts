@@ -28,6 +28,10 @@ export class GlobalEffector {
       const eff = this.GetEffectObject(gEffectType)
       eff.Start(...params)
     })
+    eventCtrl.RegisterEventListener(EventTypes.CombatLeave, () => this.completeAll())
+  }
+  completeAll(): void {
+    this.mapObj.forEach((effect) => effect.Complete())
   }
   GetEffectObject(mapType = GlobalEffectType.SparkEshSystem) {
     let obj = this.mapObj.get(mapType)

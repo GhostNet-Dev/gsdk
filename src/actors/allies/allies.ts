@@ -7,11 +7,12 @@ import { IPhysicsObject } from "@Glibs/interface/iobject";
 import IEventController from "@Glibs/interface/ievent";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { EffectType } from "@Glibs/types/effecttypes";
-import { AttackOption, AttackType } from "@Glibs/types/playertypes";
+import { AttackOption } from "@Glibs/types/playertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 import { Loader } from "@Glibs/loader/loader";
 import { calculateCompositeDamage } from "@Glibs/actors/battle/damagecalc";
+import { IsMeleeAttackType, MeleeValidationResult, ValidateReceivedMeleeAttack } from "@Glibs/actors/battle/meleecombat";
 
 export type { AllySet, IAllyCtrl }
 export { AllyBox, AllyId }
@@ -185,15 +186,18 @@ export class Allies {
 
     private ApplyAttack(z: AllySet, opt: AttackOption): void {
         if (!z.live) return
+        if (IsMeleeAttackType(opt.type) && opt.targetId != undefined) {
+            const validation = ValidateReceivedMeleeAttack(opt, z.allyCtrl.TargetId, z.allyModel.Pos, z.live)
+            if (validation !== MeleeValidationResult.InRange) return
+        }
         if (opt.spec == undefined) throw new Error("unexpected value")
         const damage = calculateCompositeDamage({
             attacker: opt.spec,
             defender: z.allyCtrl.Spec,
         })
 
-        const isMelee = (opt.type === AttackType.NormalSwing || opt.type === AttackType.FullSwing)
-        const attackRange = isMelee ? (opt.distance ?? 3.5) : undefined
-        const knockbackDist = (opt.type === AttackType.FullSwing) ? opt.knockbackDistance : undefined
+        const attackRange = IsMeleeAttackType(opt.type) ? opt.distance : undefined
+        const knockbackDist = IsMeleeAttackType(opt.type) ? opt.knockbackDistance : undefined
 
         this.ReceiveDemage(z, damage.finalDamage, opt.effect, attackRange, knockbackDist)
     }

@@ -13,6 +13,7 @@ import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actio
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { AttackOption, AttackType } from "@Glibs/types/playertypes";
 import { DamageKind } from "@Glibs/actors/battle/damagepacket";
+import { BuildingRingProgress, BuildingRingProgressState } from "@Glibs/interactives/building/buildingringprogress";
 
 export class ReadonlyCityRuntime implements ILoop {
   LoopId = 0;
@@ -219,8 +220,10 @@ interface ReadonlyCityDefenseCombatantOptions {
 class ReadonlyCityDefenseCombatant implements IActionUser {
   readonly baseSpec: BaseSpec;
   private readonly weaponController = new ProjectileWeaponController();
+  private readonly hpRing: BuildingRingProgress;
   private target: TargetRecord | null = null;
   private destroyed = false;
+  private listenersDisposed = false;
 
   get Alive(): boolean {
     return !this.destroyed;
@@ -241,7 +244,15 @@ class ReadonlyCityDefenseCombatant implements IActionUser {
       ownerSpec: this.baseSpec,
       ownerObject: this.options.mesh,
     });
+    this.hpRing = new BuildingRingProgress(this.options.property.size.width, this.options.property.size.depth, {
+      state: BuildingRingProgressState.Healthy,
+      visible: false,
+    });
+    this.hpRing.attachToOwnerBase(this.options.mesh);
+    this.updateHpRing();
     this.options.eventCtrl.RegisterEventListener(EventTypes.Attack + this.options.id, this.onAttacked);
+    this.options.eventCtrl.RegisterEventListener(EventTypes.CombatEnter, this.onCombatEnter);
+    this.options.eventCtrl.RegisterEventListener(EventTypes.CombatLeave, this.onCombatLeave);
   }
 
   get objs() {
@@ -280,7 +291,8 @@ class ReadonlyCityDefenseCombatant implements IActionUser {
   }
 
   dispose(): void {
-    this.options.eventCtrl.DeregisterEventListener(EventTypes.Attack + this.options.id, this.onAttacked);
+    this.disposeListeners();
+    this.hpRing.dispose();
     this.options.eventCtrl.SendEventMessage(EventTypes.DeregisterTarget, this.options.id);
   }
 
@@ -317,9 +329,12 @@ class ReadonlyCityDefenseCombatant implements IActionUser {
       });
     }
 
+    this.updateHpRing();
     if (this.baseSpec.Health <= 0) {
       this.destroyed = true;
       this.options.onDestroyed?.(this.options.id);
+      this.disposeListeners();
+      this.hpRing.dispose();
       this.options.eventCtrl.SendEventMessage(EventTypes.UpdateTargetState, {
         id: this.options.id,
         alive: false,
@@ -330,6 +345,35 @@ class ReadonlyCityDefenseCombatant implements IActionUser {
       this.options.mesh.parent?.remove(this.options.mesh);
     }
   };
+
+  private onCombatEnter = (): void => {
+    if (this.destroyed) return;
+    this.hpRing.show();
+  };
+
+  private onCombatLeave = (): void => {
+    this.hpRing.hide();
+  };
+
+  private disposeListeners(): void {
+    if (this.listenersDisposed) return;
+    this.listenersDisposed = true;
+    this.options.eventCtrl.DeregisterEventListener(EventTypes.Attack + this.options.id, this.onAttacked);
+    this.options.eventCtrl.DeregisterEventListener(EventTypes.CombatEnter, this.onCombatEnter);
+    this.options.eventCtrl.DeregisterEventListener(EventTypes.CombatLeave, this.onCombatLeave);
+  }
+
+  private updateHpRing(): void {
+    const ratio = THREE.MathUtils.clamp(this.baseSpec.Health / Math.max(1, this.options.property.hp), 0, 1);
+    this.hpRing.setRatio(ratio);
+    this.hpRing.setState(this.resolveHpRingState(ratio));
+  }
+
+  private resolveHpRingState(ratio: number): BuildingRingProgressState {
+    if (ratio <= 0.3) return BuildingRingProgressState.Critical;
+    if (ratio <= 0.6) return BuildingRingProgressState.Warning;
+    return BuildingRingProgressState.Healthy;
+  }
 
   private getAttackRange(): number {
     return this.weaponController.getEffectiveRange(

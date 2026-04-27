@@ -12,6 +12,7 @@ import { StatKey } from "@Glibs/types/stattypes";
 import { Buff } from "@Glibs/magical/buff/buff";
 import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
 import { TargetRecord, TargetTeamId } from "@Glibs/systems/targeting/targettypes";
+import { GetHorizontalDistance, MeleeValidationResult, PendingMeleeImpactContext } from "@Glibs/actors/battle/meleecombat";
 
 // 타겟 레코드를 IPhysicsObject로 래핑하여 TargetId를 state machine에 전달
 class AllyTargetAdapter implements IPhysicsObject {
@@ -99,8 +100,8 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
     idleState: IActorState
     dir = new THREE.Vector3()
     moveDirection = new THREE.Vector3()
-    public pendingAttackRange = 0
-    public pendingKnockbackDist = 0
+    public pendingAttackRange: PendingMeleeImpactContext["pendingAttackRange"] = 0
+    public pendingKnockbackDist: PendingMeleeImpactContext["pendingKnockbackDist"] = 0
 
     private phybox: AllyBox
     private readonly targetId: string
@@ -216,6 +217,17 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
         this.pendingKnockbackDist = knockbackDist ?? 0
         this.Spec.ReceiveCalcDamage(damage)
         return this.Spec.Health > 0
+    }
+
+    ValidateMeleeAttackTarget(targetId: string, attackRange: number): MeleeValidationResult {
+        const target = this.currentTarget
+        if (!target || target.id !== targetId) return MeleeValidationResult.InvalidTarget
+        if (!target.alive) return MeleeValidationResult.DeadTarget
+        if (!target.targetable || !target.collidable) return MeleeValidationResult.InvalidTarget
+
+        const dist = GetHorizontalDistance(this.allyModel.Pos, target.object.position)
+        if (dist > attackRange) return MeleeValidationResult.OutOfRange
+        return MeleeValidationResult.InRange
     }
 
     private resolveTarget(): IPhysicsObject {

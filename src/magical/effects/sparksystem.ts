@@ -56,7 +56,7 @@ export class SparkVfx implements IEffect, ILoop {
     this.sparks.update(delta, this.camera);
   }
   Complete(): void {
-
+    this.sparks.killAll();
   }
 }
 
@@ -548,6 +548,18 @@ export class SparkSystem extends THREE.Mesh<THREE.InstancedBufferGeometry, THREE
   /** Alive count & activity helpers. */
   getAliveCount(): number { return this.activeCount; }
   isActive(): boolean { return this.activeCount > 0; }
+
+  /** Kill all active particles immediately and hide the mesh. */
+  killAll(): void {
+    for (let k = 0; k < this.activeCount; k++) {
+      const i = this.activeIdx[k];
+      this.alive[i] = 0;
+      this.freeStack[this.freeTop++] = i;
+    }
+    this.activeCount = 0;
+    this.visible = false;
+    this.dirty = true;
+  }
 
   /** Dispose GPU resources. */
   dispose(): void { this.geometry.dispose(); this.material.dispose(); }

@@ -32,6 +32,11 @@ export default class OptPhysics implements IGPhysic {
         eventCtrl.RegisterEventListener(EventTypes.RegisterLandPhysic, (obj: THREE.Mesh<THREE.PlaneGeometry>) => {
             this.planeHeightMap = new PlaneHeightMap(obj)
             this.octreenode = new OctreeNode(OctreeNode.computeWorldBounds(obj, 100))
+            console.info("[OptPhysics] RegisterLandPhysic: reset octree", {
+                name: obj.name,
+                uuid: obj.uuid,
+                bounds: this.formatBox(this.octreenode.boundary),
+            })
         })
         eventCtrl.RegisterEventListener(EventTypes.RegisterPhysic, (obj: THREE.Object3D, raycastOn = false, box3: THREE.Box3) => {
             if (obj.userData.excludeFromPhysicsTargets !== true && this.targetObjs.findIndex(o => o.uuid == obj.uuid) < 0) {
@@ -41,8 +46,16 @@ export default class OptPhysics implements IGPhysic {
                 id: obj.uuid, object3d: obj, box: box3 ?? new THREE.Box3().setFromObject(obj), raycastOn
             }
             // this.visualizeBox3(spatialObj.box)
-            this.octreenode!.insert(spatialObj)
+            const inserted = this.octreenode!.insert(spatialObj)
+            if (!inserted) {
+                console.warn('[OptPhysics] insert 실패 — box가 옥트리 경계 밖에 있습니다', {
+                    id: obj.userData.staticColliderId,
+                    box: this.formatBox(spatialObj.box),
+                    boundary: this.formatBox(this.octreenode!.boundary),
+                })
+            }
             obj.userData.spatialObj = spatialObj
+            this.logStaticColliderRegistration(obj, spatialObj)
         })
         eventCtrl.RegisterEventListener(EventTypes.RegisterPhysicBox, (obj: THREE.Box3, uuid: string, raycastOn = false) => {
         })
@@ -58,6 +71,28 @@ export default class OptPhysics implements IGPhysic {
         const helper = new THREE.Box3Helper(box, color);
         this.scene.add(helper);
         return helper;
+    }
+
+    private logStaticColliderRegistration(obj: THREE.Object3D, spatialObj: SpatialObject) {
+        const kind = obj.userData.staticColliderKind
+        const id = obj.userData.staticColliderId
+        if (kind == undefined && id == undefined) return
+
+        console.info("[OptPhysics] RegisterPhysic static collider", {
+            kind,
+            id,
+            name: obj.name,
+            uuid: obj.uuid,
+            raycastOn: spatialObj.raycastOn,
+            box: this.formatBox(spatialObj.box),
+        })
+    }
+
+    private formatBox(box: THREE.Box3) {
+        return {
+            min: box.min.toArray(),
+            max: box.max.toArray(),
+        }
     }
 
     addPlayer(model: IPhysicsObject): void {

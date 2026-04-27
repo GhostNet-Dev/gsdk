@@ -540,10 +540,11 @@ export class HorizonEnvironment implements IWorldMapObject {
 
     const material = new THREE.MeshLambertMaterial({
       vertexColors: true,
-      transparent: false,
+      transparent: layer.opacity < 1.0,
+      opacity: layer.opacity,
       side: THREE.DoubleSide,
-      depthWrite: true,
-      fog: false
+      depthWrite: layer.opacity >= 1.0,
+      fog: this.options.applyFog
     });
 
     return new THREE.Mesh(geometry, material);
@@ -596,7 +597,7 @@ export class HorizonEnvironment implements IWorldMapObject {
       opacity: layer.opacity,
       side: THREE.DoubleSide,
       depthWrite: false,
-      fog: false
+      fog: this.options.applyFog
     });
 
     const mesh = new THREE.Mesh(geometry, material);

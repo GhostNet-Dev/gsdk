@@ -3,7 +3,7 @@ import { CreateMon } from "./createmon";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { MonDrop, MonsterId } from "@Glibs/types/monstertypes";
 import { EffectType } from "@Glibs/types/effecttypes";
-import { AttackOption, AttackType } from "@Glibs/types/playertypes";
+import { AttackOption } from "@Glibs/types/playertypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { DeckType } from "@Glibs/types/inventypes";
 import IEventController from "@Glibs/interface/ievent";
@@ -12,6 +12,7 @@ import { MonsterDb } from "./monsterdb";
 import { Loader } from "@Glibs/loader/loader";
 import { Effector } from "@Glibs/magical/effects/effector";
 import { calculateCompositeDamage } from "../battle/damagecalc";
+import { IsMeleeAttackType, MeleeValidationResult, ValidateReceivedMeleeAttack } from "../battle/meleecombat";
 import { BaseSpec } from "../battle/basespec";
 import { Zombie } from "./zombie";
 import { itemDefs } from "@Glibs/inventory/items/itemdefs";
@@ -33,6 +34,7 @@ export interface IMonsterCtrl {
     get TargetId(): string
     Respawning(): void
     Dispose(): void
+    ValidateMeleeAttackTarget(targetId: string, attackRange: number): MeleeValidationResult
     ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number): boolean 
 }
 
@@ -144,16 +146,18 @@ export class Monsters {
     }
     private ApplyAttack(z: MonsterSet, opt: AttackOption) {
         if (!z.live) return
+        if (IsMeleeAttackType(opt.type) && opt.targetId != undefined) {
+            const validation = ValidateReceivedMeleeAttack(opt, z.monCtrl.TargetId, z.monModel.Pos, z.live)
+            if (validation !== MeleeValidationResult.InRange) return
+        }
         if(opt.spec == undefined) throw new Error("unexpected value");
         const damage = calculateCompositeDamage({
             attacker: opt.spec,
             defender: z.monCtrl.Spec,
         })
 
-        // [New] 넉백 정보 전달
-        const isMelee = (opt.type === AttackType.NormalSwing || opt.type === AttackType.FullSwing);
-        const attackRange = isMelee ? (opt.distance ?? 3.5) : undefined;
-        const knockbackDist = (opt.type === AttackType.FullSwing) ? opt.knockbackDistance : undefined;
+        const attackRange = IsMeleeAttackType(opt.type) ? opt.distance : undefined;
+        const knockbackDist = IsMeleeAttackType(opt.type) ? opt.knockbackDistance : undefined;
 
         this.ReceiveDemage(z, damage.finalDamage, opt.effect, attackRange, knockbackDist)
     }

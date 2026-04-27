@@ -158,6 +158,7 @@ export default class CustomGround implements IWorldMapObject {
   private useBeachSlope = true;
   private buildingsWithRange: Array<{ pos: THREE.Vector3, buildRange: number }> = [];
   private buildRequirementValidator?: BuildRequirementValidator;
+  private isCombatInputBlocked = false;
   private readonly showGridListener = () => {
     window.addEventListener('pointerdown', this.onPointerDown);
     this.ToggleGrid(true)
@@ -188,7 +189,14 @@ export default class CustomGround implements IWorldMapObject {
     }
   };
   private readonly gridConfirmListener = () => {
+    if (this.isCombatInputBlocked) return;
     this.confirmBuildingRequest();
+  };
+  private readonly blockCombatInput = () => {
+    this.isCombatInputBlocked = true;
+  };
+  private readonly unblockCombatInput = () => {
+    this.isCombatInputBlocked = false;
   };
 
   constructor(
@@ -202,6 +210,8 @@ export default class CustomGround implements IWorldMapObject {
     this.eventCtrl.RegisterEventListener(EventTypes.ResponseBuilding, this.responseBuildingListener);
     this.eventCtrl.RegisterEventListener('GridConfirmClick' as any, this.gridConfirmListener);
     this.eventCtrl.RegisterEventListener(EventTypes.BuildRequirementValidatorReady, this.setBuildRequirementValidator);
+    this.eventCtrl.RegisterEventListener(EventTypes.CombatEnter, this.blockCombatInput);
+    this.eventCtrl.RegisterEventListener(EventTypes.CombatLeave, this.unblockCombatInput);
   }
 
   private setBuildRequirementValidator = (validator: BuildRequirementValidator) => {
@@ -454,6 +464,7 @@ export default class CustomGround implements IWorldMapObject {
   }
 
   private onPointerDown = (e: PointerEvent) => {
+    if (this.isCombatInputBlocked) return;
     if (!this.highlightMesh || !this.highlightMesh.visible || !this.arrowGroup) return;
 
     const target = e.target as HTMLElement;
@@ -1490,6 +1501,8 @@ export default class CustomGround implements IWorldMapObject {
     this.eventCtrl.DeregisterEventListener(EventTypes.ResponseBuilding, this.responseBuildingListener);
     this.eventCtrl.DeregisterEventListener('GridConfirmClick' as any, this.gridConfirmListener);
     this.eventCtrl.DeregisterEventListener(EventTypes.BuildRequirementValidatorReady, this.setBuildRequirementValidator);
+    this.eventCtrl.DeregisterEventListener(EventTypes.CombatEnter, this.blockCombatInput);
+    this.eventCtrl.DeregisterEventListener(EventTypes.CombatLeave, this.unblockCombatInput);
 
     this.shaderMaterial?.dispose();
     this.geometry?.dispose();

@@ -129,6 +129,13 @@ export abstract class AttackState extends State implements IActorState {
             
             if (dist > range) continue;
 
+            // 초근접 상태(Overlapping)에서는 각도 검사 생략하고 즉시 적중 처리
+            const MIN_HIT_RADIUS = 1.0; // 캐릭터의 반경 등을 고려하여 조정 (예: this.player.Size.x)
+            if (dist <= MIN_HIT_RADIUS) {
+                result.push(target);
+                continue;
+            }
+
             toTarget.y = 0;
             toTarget.normalize();
             const dot = forward.dot(toTarget);

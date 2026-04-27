@@ -21,6 +21,8 @@ import { CityScore, FactionId, ITurnParticipant, TurnContext } from "@Glibs/game
 import { CurrencyType } from "@Glibs/inventory/wallet";
 import { BuildRequirementValidator, validateBuildRequirements } from "./buildrequirementvalidator";
 import { StrategicPlanetId } from "@Glibs/gameobjects/strategicgalaxy/strategicgalaxytypes";
+import { StaticColliderKind, StaticColliderRegistry } from "@Glibs/interactives/environment/staticcolliderregistry";
+import { BuildingRingProgress, BuildingRingProgressState } from "./buildingringprogress";
 
 export interface BuildingTask {
   nodeId: string;
@@ -31,7 +33,7 @@ export interface BuildingTask {
   remainingTurns: number;
   isFinished: boolean;
   constructionModel?: THREE.Object3D;
-  progressMesh?: THREE.Group;
+  progressRing?: BuildingRingProgress;
 }
 
 export class BuildingManager implements ILoop, ITurnParticipant {
@@ -47,6 +49,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
   private currentGuideNodeId: string | null = null;
   private latestGuidePos: THREE.Vector3 = new THREE.Vector3(); // 최신 스냅 위치 저장
   private loader = new Loader();
+  private readonly colliderRegistry: StaticColliderRegistry;
 
   playerCityPlanetId: StrategicPlanetId = StrategicPlanetId.Eden;
   playerCityFactionId: FactionId = FactionId.Aetherion;
@@ -57,6 +60,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
   private raycaster = new THREE.Raycaster();
   private mouse = new THREE.Vector2();
   private buildRequirementValidator?: BuildRequirementValidator;
+  private isCombatInputBlocked = false;
 
   // [최적화] 건물 종류별 템플릿 캐시
   private constructionTemplates: Map<string, THREE.Object3D> = new Map();
@@ -68,6 +72,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
     private service: TechTreeService,
     private camera: THREE.Camera
   ) {
+    this.colliderRegistry = new StaticColliderRegistry(this.eventCtrl);
     this.selectionPanel = new SelectionPanel();
 
     this.eventCtrl.RegisterEventListener(EventTypes.RequestBuilding, (data: { nodeId: string, pos: THREE.Vector3 }) => {
@@ -104,6 +109,8 @@ export class BuildingManager implements ILoop, ITurnParticipant {
     });
 
     this.eventCtrl.RegisterEventListener(EventTypes.BuildRequirementValidatorReady, this.setBuildRequirementValidator);
+    this.eventCtrl.RegisterEventListener(EventTypes.CombatEnter, this.blockCombatInput);
+    this.eventCtrl.RegisterEventListener(EventTypes.CombatLeave, this.unblockCombatInput);
   }
 
   attachToScene(scene: THREE.Scene): void {
@@ -113,15 +120,18 @@ export class BuildingManager implements ILoop, ITurnParticipant {
     window.addEventListener('pointerdown', this.onPointerDown);
 
     // 기존 건물들 씬에 추가
-    this.buildingObjects.forEach(b => {
-      if (b.mesh && !b.mesh.parent) scene.add(b.mesh);
+    this.buildingObjects.forEach((buildingObj, id) => {
+      const model = buildingObj.mesh;
+      if (!model) return;
+      if (!model.parent) scene.add(model);
+      this.registerBuildingTargetAndCollider(id, buildingObj, model);
     });
 
     // 건설 중인 객체들 씬에 추가
     this.activeTasks.forEach(t => {
       if (t.isFinished) return;
       if (t.constructionModel && !t.constructionModel.parent) scene.add(t.constructionModel);
-      if (t.progressMesh && !t.progressMesh.parent) scene.add(t.progressMesh);
+      if (t.progressRing && !t.progressRing.object.parent) t.progressRing.addTo(scene);
     });
 
     // 가이드 모델이 있다면 추가
@@ -142,17 +152,79 @@ export class BuildingManager implements ILoop, ITurnParticipant {
     });
     this.activeTasks.forEach(t => {
       if (t.constructionModel) t.constructionModel.parent?.remove(t.constructionModel);
-      if (t.progressMesh) t.progressMesh.parent?.remove(t.progressMesh);
+      if (t.progressRing) t.progressRing.object.parent?.remove(t.progressRing.object);
     });
     
+    this.colliderRegistry.clear();
     this.hideGuide(false);
+  }
+
+  refreshBuildingColliders(): void {
+    let refreshed = 0;
+    this.buildingObjects.forEach((buildingObj, id) => {
+      const model = buildingObj.mesh;
+      if (!model) return;
+      if (!model.parent) this.scene.add(model);
+      this.registerBuildingTargetAndCollider(id, buildingObj, model);
+      refreshed++;
+    });
+
+    console.info("[BuildingManager] refreshBuildingColliders", {
+      count: refreshed,
+    });
   }
 
   private setBuildRequirementValidator = (validator: BuildRequirementValidator) => {
     this.buildRequirementValidator = validator;
   };
 
+  private blockCombatInput = () => {
+    this.isCombatInputBlocked = true;
+    this.deselectBuilding();
+  };
+
+  private unblockCombatInput = () => {
+    this.isCombatInputBlocked = false;
+  };
+
+  private registerBuildingTargetAndCollider(
+    id: string,
+    buildingObj: IBuildingObject,
+    model: THREE.Object3D,
+  ): void {
+    const targetId = buildingObj.id || id;
+    model.userData.buildingId = targetId;
+    model.userData.teamId = TargetTeamId.Player;
+    model.userData.targetMeta = {
+      id: targetId,
+      teamId: TargetTeamId.Player,
+      factionId: this.playerCityFactionId,
+      kind: "structure",
+    };
+    this.eventCtrl.SendEventMessage(EventTypes.RegisterTarget, {
+      id: targetId,
+      object: model,
+      teamId: TargetTeamId.Player,
+      factionId: this.playerCityFactionId,
+      kind: "structure",
+      alive: true,
+      targetable: true,
+      collidable: true,
+    });
+
+    model.updateWorldMatrix(true, true);
+    this.colliderRegistry.registerObjectCollider({
+      id: targetId,
+      kind: StaticColliderKind.CityBuilding,
+      object: model,
+      box: new THREE.Box3().setFromObject(model),
+      raycastOn: true,
+    });
+  }
+
   private onPointerDown = (e: PointerEvent) => {
+    if (this.isCombatInputBlocked) return;
+
     const target = e.target as HTMLElement;
     
     // UI 창이나 HTML 상호작용 요소(버튼 등)를 클릭한 경우 무시
@@ -303,16 +375,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
   }
 
   private updateProgressVisual(task: BuildingTask) {
-    if (!task.progressMesh) return;
-    const ring = task.progressMesh.getObjectByName('ring_progress') as THREE.Mesh;
-    if (ring) {
-      const { innerRadius, outerRadius } = task.progressMesh.userData;
-      ring.geometry.dispose();
-      const thetaLength = task.progress * Math.PI * 2;
-      const newGeom = new THREE.RingGeometry(innerRadius, outerRadius, 64, 1, Math.PI / 2, -thetaLength);
-      newGeom.rotateX(-Math.PI / 2);
-      ring.geometry = newGeom;
-    }
+    task.progressRing?.setRatio(task.progress);
   }
 
   setMode(mode: BuildingMode) {
@@ -389,7 +452,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
     }
 
     let constructionModel: THREE.Object3D | undefined;
-    let progressMesh: THREE.Group | undefined;
+    let progressRing: BuildingRingProgress | undefined;
 
     if (pos) {
       let template = this.constructionTemplates.get(nodeId);
@@ -431,20 +494,22 @@ export class BuildingManager implements ILoop, ITurnParticipant {
         this.scene.add(constructionModel);
       }
 
-      progressMesh = this.createProgressMesh(prop.size.width, prop.size.depth);
-      progressMesh.traverse((child) => {
+      progressRing = new BuildingRingProgress(prop.size.width, prop.size.depth, {
+        state: BuildingRingProgressState.Construction,
+        visible: true,
+      });
+      progressRing.object.traverse((child) => {
         child.raycast = () => { };
       });
-      progressMesh.position.copy(pos);
-      progressMesh.position.y += 0.5;
-      this.scene.add(progressMesh);
+      progressRing.setPosition(pos, 0.5);
+      progressRing.addTo(this.scene);
     }
 
     const taskId = `task_${this.nextTaskId++}`;
     const task: BuildingTask = {
       nodeId, prop, pos, startTime: Date.now(), progress: 0,
       remainingTurns: prop.buildTurns, isFinished: false,
-      constructionModel, progressMesh
+      constructionModel, progressRing
     };
 
     this.activeTasks.set(taskId, task);
@@ -560,9 +625,9 @@ export class BuildingManager implements ILoop, ITurnParticipant {
       task.constructionModel.parent?.remove(task.constructionModel);
       task.constructionModel = undefined;
     }
-    if (task.progressMesh) {
-      this.disposeProgressMesh(task.progressMesh);
-      task.progressMesh = undefined;
+    if (task.progressRing) {
+      task.progressRing.dispose();
+      task.progressRing = undefined;
     }
 
     if ((this.service.levels[task.nodeId] ?? 0) === 0) {
@@ -604,24 +669,8 @@ export class BuildingManager implements ILoop, ITurnParticipant {
             buildingObj.setMode(this.currentMode);
             buildingObj.level = 1; // 기본 레벨 1 설정
             this.buildingObjects.set(id, buildingObj);
-            model.userData.buildingId = id;
-            model.userData.teamId = TargetTeamId.Player;
-            model.userData.targetMeta = {
-              id,
-              teamId: TargetTeamId.Player,
-              factionId: this.playerCityFactionId,
-              kind: "structure",
-            };
-            this.eventCtrl.SendEventMessage(EventTypes.RegisterTarget, {
-              id,
-              object: model,
-              teamId: TargetTeamId.Player,
-              factionId: this.playerCityFactionId,
-              kind: "structure",
-              alive: true,
-              targetable: true,
-              collidable: true,
-            });
+            this.registerBuildingTargetAndCollider(id, buildingObj, model);
+
             PlacementManager.Instance.registerFootprint({
               id,
               source: 'building',
@@ -668,38 +717,4 @@ export class BuildingManager implements ILoop, ITurnParticipant {
     this.eventCtrl.SendEventMessage(EventTypes.ResponseBuilding, [...buildings, ...pending]);
   }
 
-  private createProgressMesh(width: number, depth: number): THREE.Group {
-    const group = new THREE.Group();
-    const radius = Math.max(width, depth) * 2.0;
-    const innerRadius = radius * 0.9;
-    const outerRadius = radius;
-
-    const bgGeom = new THREE.RingGeometry(innerRadius, outerRadius, 64);
-    bgGeom.rotateX(-Math.PI / 2);
-    const bgMat = new THREE.MeshBasicMaterial({ color: 0x222222, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
-    group.add(new THREE.Mesh(bgGeom, bgMat));
-
-    const barMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
-    const bar = new THREE.Mesh(new THREE.BufferGeometry(), barMat);
-    bar.name = 'ring_progress';
-    bar.position.y += 0.01;
-    group.add(bar);
-
-    group.userData = { innerRadius, outerRadius };
-    return group;
-  }
-
-  private disposeProgressMesh(progressMesh: THREE.Group): void {
-    progressMesh.parent?.remove(progressMesh);
-    progressMesh.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
-
-      child.geometry.dispose();
-      if (Array.isArray(child.material)) {
-        child.material.forEach((material) => material.dispose());
-        return;
-      }
-      child.material.dispose();
-    });
-  }
 }

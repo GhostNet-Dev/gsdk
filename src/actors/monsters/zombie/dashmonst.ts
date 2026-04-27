@@ -76,7 +76,7 @@ export class DashAttackState extends MonState implements IActorState {
         if( this.isAttacking) {
             this.hitDelay -= delta
             if(this.hitDelay <= 0) {
-                this.attack()
+                this.attack(target)
                 this.isAttacking = false
             }
             return this
@@ -92,12 +92,17 @@ export class DashAttackState extends MonState implements IActorState {
         this.zombie.ChangeAction(ActionType.MonBiteNeck, this.attackSpeed)
         return this
     }
-    attack() {
+    attack(target: IPhysicsObject) {
+        const attackDistance = this.GetAttackDistance()
+        if (!this.ValidateTargetHit(target, attackDistance)) return
+
         this.eventCtrl.SendEventMessage(EventTypes.Attack + this.targetId, [{
             type: AttackType.NormalSwing,
-            spec: [this.spec],
+            spec: this.spec,
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
-            distance: this.GetAttackDistance(),
+            targetId: this.targetId,
+            distance: attackDistance,
+            attackerObjectId: this.zombie.UUID,
             obj: this.zombie.Meshs
         }])
     }

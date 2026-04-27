@@ -15,6 +15,7 @@ import { StatKey } from "@Glibs/types/stattypes";
 import { Buff } from "@Glibs/magical/buff/buff";
 import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
 import { TargetRecord, TargetTeamId } from "@Glibs/systems/targeting/targettypes";
+import { GetHorizontalDistance, MeleeValidationResult, PendingMeleeImpactContext } from "@Glibs/actors/battle/meleecombat";
 
 class MonsterTargetAdapter implements IPhysicsObject {
     private static readonly fallbackBoxMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1))
@@ -100,8 +101,8 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     raycast = new THREE.Raycaster()
     dir = new THREE.Vector3(0, 0, 0)
     moveDirection = new THREE.Vector3()
-    public pendingAttackRange = 0; // [New] 타격 시 발생한 공격 사거리 임시 보관
-    public pendingKnockbackDist = 0; // [New] 명시적인 넉백 거리 보관
+    public pendingAttackRange: PendingMeleeImpactContext["pendingAttackRange"] = 0;
+    public pendingKnockbackDist: PendingMeleeImpactContext["pendingKnockbackDist"] = 0;
     private phybox: MonsterBox
     private readonly targetId: string
     private readonly targetAdapter: MonsterTargetAdapter
@@ -247,6 +248,18 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         }
         return true
     }
+
+    ValidateMeleeAttackTarget(targetId: string, attackRange: number): MeleeValidationResult {
+        const target = this.currentTarget
+        if (!target || target.id !== targetId) return MeleeValidationResult.InvalidTarget
+        if (!target.alive) return MeleeValidationResult.DeadTarget
+        if (!target.targetable || !target.collidable) return MeleeValidationResult.InvalidTarget
+
+        const dist = GetHorizontalDistance(this.zombie.Pos, target.object.position)
+        if (dist > attackRange) return MeleeValidationResult.OutOfRange
+        return MeleeValidationResult.InRange
+    }
+
     CheckVisible(physBox: THREE.InstancedMesh, dist: number): boolean {
         const intersects = this.raycast.intersectObject(physBox, false)
         if (intersects.length > 0 && intersects[0].distance < dist) {

@@ -25,7 +25,13 @@ export class Drops implements ILoop {
         private player: IPhysicsObject,
         private options?: ItemDropOptions
     ) {
-        eventCtrl.RegisterEventListener(EventTypes.Drop, (pos: THREE.Vector3, 
+        eventCtrl.RegisterEventListener(EventTypes.CombatLeave, () => {
+            for (const item of this.items) {
+                this.scene.remove(item.mesh);
+            }
+            this.items.length = 0;
+        })
+        eventCtrl.RegisterEventListener(EventTypes.Drop, (pos: THREE.Vector3,
             drop: MonDrop[] | undefined
         ) => {
             if (drop && drop.length > 0) {

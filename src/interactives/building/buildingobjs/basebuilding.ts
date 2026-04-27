@@ -8,6 +8,7 @@ import { BaseSpec } from '@Glibs/actors/battle/basespec';
 import { AttackOption, AttackType } from '@Glibs/types/playertypes';
 import { DamageKind } from '@Glibs/actors/battle/damagepacket';
 import { ActionContext, IActionComponent, IActionUser } from '@Glibs/types/actiontypes';
+import { BuildingRingProgress, BuildingRingProgressState } from '../buildingringprogress';
 
 /**
  * 모든 건물의 공통 로직을 처리하는 추상 클래스
@@ -21,6 +22,7 @@ export abstract class BaseBuilding implements IBuildingObject, IActionUser {
     protected currentHp: number;
     protected currentMode: BuildingMode = BuildingMode.Timer;
     protected isDestroyed: boolean = false;
+    private readonly hpRing: BuildingRingProgress;
 
     // 자원 생산 관련 내부 상태 (상속 클래스와의 이름 충돌 방지를 위해 명확히 정의)
     protected resourceProductionTimer: number = 0;
@@ -45,7 +47,15 @@ export abstract class BaseBuilding implements IBuildingObject, IActionUser {
         }, this);
         this.baseSpec.lastUsedWeaponMode = 'ranged';
         this.currentHp = this.baseSpec.Health;
+        this.hpRing = new BuildingRingProgress(this.property.size.width, this.property.size.depth, {
+            state: BuildingRingProgressState.Healthy,
+            visible: false,
+        });
+        this.hpRing.attachToOwnerBase(this.mesh);
+        this.updateHpRing();
         this.eventCtrl.RegisterEventListener(EventTypes.Attack + this.id, this.onAttacked);
+        this.eventCtrl.RegisterEventListener(EventTypes.CombatEnter, this.onCombatEnter);
+        this.eventCtrl.RegisterEventListener(EventTypes.CombatLeave, this.onCombatLeave);
     }
 
     get objs() {
@@ -185,6 +195,7 @@ export abstract class BaseBuilding implements IBuildingObject, IActionUser {
         // HP 회복 또는 능력치 상승 로직 추가 가능
         this.baseSpec.status.health = this.property.hp;
         this.currentHp = this.baseSpec.Health; 
+        this.updateHpRing();
 
         // 전역 테크트리 레벨업 완료 알림 (데이터 동기화 및 효과 적용)
         this.eventCtrl.SendEventMessage(EventTypes.UpgradeComplete, this.property.id);
@@ -194,12 +205,16 @@ export abstract class BaseBuilding implements IBuildingObject, IActionUser {
         if (this.isDestroyed) return;
         this.isDestroyed = true;
         this.eventCtrl.DeregisterEventListener(EventTypes.Attack + this.id, this.onAttacked);
+        this.eventCtrl.DeregisterEventListener(EventTypes.CombatEnter, this.onCombatEnter);
+        this.eventCtrl.DeregisterEventListener(EventTypes.CombatLeave, this.onCombatLeave);
+        this.hpRing.dispose();
         this.eventCtrl.SendEventMessage(EventTypes.UpdateTargetState, {
             id: this.id,
             alive: false,
             targetable: false,
             collidable: false,
         });
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterPhysic, this.mesh);
         if (this.mesh.parent) this.mesh.parent.remove(this.mesh);
     }
 
@@ -223,10 +238,32 @@ export abstract class BaseBuilding implements IBuildingObject, IActionUser {
         }
 
         this.currentHp = this.baseSpec.Health;
+        this.updateHpRing();
         if (this.currentHp <= 0) {
             this.destroy();
         }
     };
+
+    private onCombatEnter = () => {
+        if (this.isDestroyed) return;
+        this.hpRing.show();
+    };
+
+    private onCombatLeave = () => {
+        this.hpRing.hide();
+    };
+
+    private updateHpRing(): void {
+        const ratio = THREE.MathUtils.clamp(this.currentHp / Math.max(1, this.property.hp), 0, 1);
+        this.hpRing.setRatio(ratio);
+        this.hpRing.setState(this.resolveHpRingState(ratio));
+    }
+
+    private resolveHpRingState(ratio: number): BuildingRingProgressState {
+        if (ratio <= 0.3) return BuildingRingProgressState.Critical;
+        if (ratio <= 0.6) return BuildingRingProgressState.Warning;
+        return BuildingRingProgressState.Healthy;
+    }
 
     private resolveDamageKind(type: AttackType): DamageKind {
         if (type === AttackType.Magic0) return "magic";

@@ -3,6 +3,7 @@ import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { AttackOption } from "@Glibs/types/playertypes";
 import { EffectType } from "@Glibs/types/effecttypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
+import { MeleeValidationResult } from "@Glibs/actors/battle/meleecombat";
 import { StatKey } from "@Glibs/types/stattypes";
 import { Char } from "@Glibs/types/assettypes";
 import { IActorState } from "@Glibs/actors/monsters/monstertypes";
@@ -38,6 +39,7 @@ export interface IAllyCtrl {
     get DeckLevel(): number
     Summoned(): void
     Dispose(): void
+    ValidateMeleeAttackTarget(targetId: string, attackRange: number): MeleeValidationResult
     ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number): boolean
 }
 

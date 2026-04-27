@@ -9,7 +9,12 @@ import { UxLayerIndex } from "../gux";
 type RingStyle = 'none' | 'solid' | 'line';
 type Shape = 'circle' | 'rounded' | 'square' | 'hex';
 type Easing = 'outBack' | 'outCubic';
-type OpenAt = 'center' | 'pointer' | 'button';
+export enum RadialMenuOpenMode {
+  Center = 'center',
+  Pointer = 'pointer',
+  Button = 'button',
+  Manual = 'manual',
+}
 type CssLength = number | string;
 type TriggerButtonPositionName =
   | 'top-left'
@@ -94,7 +99,7 @@ export interface RadialMenuOptions {
   spinOnOpen: number;
   easing: Easing;
   autoCloseOnMiss: boolean;
-  openAt: OpenAt;
+  openAt: RadialMenuOpenMode;
   centerClickThresholdPx: number;
   enableGlobalCenterClick: boolean;
   enableOutsideClickClose: boolean;
@@ -247,7 +252,7 @@ const DEFAULT_OPTIONS: RadialMenuOptions = {
   spinOnOpen: 1.6,
   easing: 'outBack',
   autoCloseOnMiss: true,
-  openAt: 'center',
+  openAt: RadialMenuOpenMode.Center,
   centerClickThresholdPx: 200,
   enableGlobalCenterClick: true,
   enableOutsideClickClose: true,
@@ -738,12 +743,13 @@ export class RadialMenuUI implements ILoop {
     }
 
     if (!this.opts.enableGlobalCenterClick) return;
-    if (this.opts.openAt === 'button') return;
+    if (this.opts.openAt === RadialMenuOpenMode.Button) return;
+    if (this.opts.openAt === RadialMenuOpenMode.Manual) return;
 
     // 열림 가드
     if (this.shouldBlockOpen(e, path)) return;
 
-    if (this.opts.openAt === 'center') {
+    if (this.opts.openAt === RadialMenuOpenMode.Center) {
       if (isCenterClick(e.clientX, e.clientY, this.opts.centerClickThresholdPx)) this.openAtCenter();
     } else {
       this.openAt(e.clientX, e.clientY);
@@ -759,7 +765,7 @@ export class RadialMenuUI implements ILoop {
 
   private shouldUseTriggerButton() {
     const trigger = this.getTriggerButtonOptions();
-    return this.opts.openAt === 'button' || trigger.enabled;
+    return this.opts.openAt === RadialMenuOpenMode.Button || trigger.enabled;
   }
 
   private syncTriggerButton() {

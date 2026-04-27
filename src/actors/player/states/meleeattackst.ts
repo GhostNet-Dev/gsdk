@@ -13,6 +13,7 @@ import { IItem } from "@Glibs/interface/iinven";
 import { Item } from "@Glibs/inventory/items/item";
 import { AttackState } from "./attackstate";
 import { ActionCostSpec, cost } from "@Glibs/actors/battle/resourcecosttypes";
+import { CalculatePlayerMeleeKnockbackDistance } from "@Glibs/actors/battle/meleecombat";
 
 const DEFAULT_MELEE_ATTACK_COST: ActionCostSpec = {
     id: "attack.melee.basic",
@@ -53,28 +54,41 @@ export class MeleeAttackState extends AttackState implements IActorState {
         this.player.createDashedCircle(this.attackDist)
     }
 
+    private buildMeleeAttackMessages(targets: THREE.Object3D[]) {
+        const knockbackDistance = CalculatePlayerMeleeKnockbackDistance({
+            attackRange: this.attackDist,
+        })
+        const messages = new Map<string, AttackOption[]>()
+
+        targets.forEach((obj) => {
+            const targetMessages = messages.get(obj.name)
+            const msg: AttackOption = {
+                type: AttackType.NormalSwing,
+                damage: this.baseSpec.Damage,
+                spec: this.baseSpec,
+                obj: this.player.Meshs,
+                targetId: obj.name,
+                distance: this.attackDist,
+                knockbackDistance,
+                attackerObjectId: this.player.UUID,
+            }
+            if (targetMessages == undefined) {
+                messages.set(obj.name, [msg])
+            } else {
+                targetMessages.push(msg)
+            }
+        })
+
+        return messages
+    }
+
     meleeAutoAttack() {
         const closestTarget = this.autoDirection()
         if (closestTarget == null) return
 
         const targets = this.getTargetsInCone(this.attackDist)
         if (targets.length > 0) {
-            const msgs = new Map()
-            targets.forEach((obj) => {
-                const mons = msgs.get(obj.name)
-                const msg: AttackOption = {
-                    type: AttackType.NormalSwing,
-                    damage: this.baseSpec.Damage,
-                    spec: this.baseSpec,
-                    obj: obj,
-                    distance: this.attackDist
-                } 
-                if (mons == undefined) {
-                    msgs.set(obj.name, [msg])
-                } else {
-                    mons.push(msg)
-                }
-            })
+            const msgs = this.buildMeleeAttackMessages(targets)
             msgs.forEach((v, k) => {
                 this.eventCtrl.SendEventMessage(EventTypes.Attack + k, v)
             })
@@ -87,22 +101,7 @@ export class MeleeAttackState extends AttackState implements IActorState {
 
         const targets = this.getTargetsInCone(this.attackDist)
         if (targets.length > 0) {
-            const msgs = new Map()
-            targets.forEach((obj) => {
-                const mons = msgs.get(obj.name)
-                const msg: AttackOption = {
-                    type: AttackType.NormalSwing,
-                    damage: this.baseSpec.Damage,
-                    spec: this.baseSpec,
-                    obj: obj,
-                    distance: this.attackDist
-                } 
-                if (mons == undefined) {
-                    msgs.set(obj.name, [msg])
-                } else {
-                    mons.push(msg)
-                }
-            })
+            const msgs = this.buildMeleeAttackMessages(targets)
             msgs.forEach((v, k) => {
                 this.eventCtrl.SendEventMessage(EventTypes.Attack + k, v)
             })

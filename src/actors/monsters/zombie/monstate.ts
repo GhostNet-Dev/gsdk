@@ -9,29 +9,21 @@ import { IActorState } from "../monstertypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { MonsterProperty } from "@Glibs/types/monstertypes";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
+import {
+    BuildKnockbackVector,
+    GetHorizontalDistance,
+    GetMeleeAttackDistance,
+    GetMeleeTargetValidator,
+    MeleeValidationResult,
+} from "@Glibs/actors/battle/meleecombat";
 
 type States = Record<string, IActorState>
 type MonsterAttackTarget = IPhysicsObject & { TargetId?: string }
-type MonsterAttackContext = {
-    pendingAttackRange: number
-    pendingKnockbackDist: number
-}
 
-export const DEFAULT_MONSTER_MELEE_ATTACK_RANGE = 3.5
 const DEFAULT_MONSTER_ATTACK_SPEED = 1
 
 export function GetMonsterAttackTargetId(target?: IPhysicsObject) {
     return (target as MonsterAttackTarget | undefined)?.TargetId ?? TargetTeamId.Player
-}
-
-function GetMonsterAttackContext(owner: unknown): MonsterAttackContext | undefined {
-    const candidate = owner as Partial<MonsterAttackContext> | undefined
-    if (
-        typeof candidate?.pendingAttackRange === "number" &&
-        typeof candidate.pendingKnockbackDist === "number"
-    ) {
-        return candidate as MonsterAttackContext
-    }
 }
 
 export function NewDefaultMonsterState(
@@ -65,14 +57,11 @@ export abstract class MonState {
     abstract Uninit(): void
 
     protected GetAttackDistance() {
-        if (this.spec.stats.getBaseStat("attackRange") > 0) return this.spec.AttackRange
-        return DEFAULT_MONSTER_MELEE_ATTACK_RANGE
+        return GetMeleeAttackDistance(this.spec)
     }
 
     protected GetHorizontalDistance(a: THREE.Vector3, b: THREE.Vector3) {
-        const dx = a.x - b.x
-        const dz = a.z - b.z
-        return Math.hypot(dx, dz)
+        return GetHorizontalDistance(a, b)
     }
 
     protected GetTargetDistance(target: IPhysicsObject) {
@@ -114,49 +103,24 @@ export abstract class MonState {
     }
     CheckHit(target: IPhysicsObject) {
         if (this.spec.Status.hit) {
-            const ctrl = GetMonsterAttackContext(this.spec.Owner)
+            const ctrl = GetMeleeTargetValidator(this.spec.Owner)
             const attackRange = ctrl?.pendingAttackRange ?? 0
             const explicitKbDist = ctrl?.pendingKnockbackDist ?? 0
-            let knockbackVector: THREE.Vector3 | undefined = undefined;
-            
-            // 넉백 정보가 있고(근접공격), 공격 사거리 정보가 유효할 때만 계산
-            if (attackRange > 0) {
-                const monPos = this.zombie.Pos.clone();
-                const attPos = target.Pos.clone();
-                
-                // [엄격히 적용] 수평 벡터만 추출하여 기울어짐(Tilt) 방지
-                monPos.y = 0;
-                attPos.y = 0;
+            const knockbackVector = BuildKnockbackVector(
+                this.zombie.Pos,
+                target.Pos,
+                attackRange,
+                explicitKbDist,
+            )
 
-                const currentDist = this.GetHorizontalDistance(monPos, attPos);
-                
-                let pushAmount = 0;
-                if (explicitKbDist > 0) {
-                    // 1. FullSwing 등 명시적 넉백 거리가 있는 경우
-                    pushAmount = explicitKbDist;
-                } else {
-                    // 2. NormalSwing: 확실히 뒤로 밀리되, 플레이어의 사거리를 벗어나지 않도록 제한
-                    const desiredPush = Math.max(1.5, attackRange * 0.5);
-                    // 사거리를 벗어나지 않도록 pushAmount 캡핑 (약간의 여유 0.1 남김)
-                    pushAmount = Math.min(desiredPush, Math.max(0, (attackRange - 0.1) - currentDist));
-                }
-                
-                if (pushAmount > 0) {
-                    knockbackVector = new THREE.Vector3().subVectors(monPos, attPos).normalize();
-                    knockbackVector.y = 0; // 한 번 더 보정
-                    knockbackVector.multiplyScalar(pushAmount);
-                }
-                
-                // 정보 소모
-                if (ctrl) {
-                    ctrl.pendingAttackRange = 0;
-                    ctrl.pendingKnockbackDist = 0;
-                }
+            if (ctrl) {
+                ctrl.pendingAttackRange = 0
+                ctrl.pendingKnockbackDist = 0
             }
 
-            this.Uninit();
-            this.states.HurtSt.Init(knockbackVector);
-            return this.states.HurtSt;
+            this.Uninit()
+            this.states.HurtSt.Init(knockbackVector)
+            return this.states.HurtSt
         }
     }
     CheckAttack(dist: number) {
@@ -165,6 +129,24 @@ export abstract class MonState {
             this.states.AttackSt.Init()
             return this.states.AttackSt
         }
+    }
+
+    protected ValidateTargetHit(target: IPhysicsObject, attackDistance: number): boolean {
+        // 1. 초근접 허용치 (Overlap Tolerance)
+        const dist = this.GetTargetDistance(target);
+        const MIN_HIT_RADIUS = 1.0; // 몬스터 모델 반경 등을 고려하여 동적 설정 가능
+
+        if (dist <= MIN_HIT_RADIUS) {
+            return true;
+        }
+
+        // 2. 기존 validator 로직 (사거리, 각도 등 정밀 검사)
+        const targetId = GetMonsterAttackTargetId(target);
+        const validator = GetMeleeTargetValidator(this.spec.Owner);
+        const validation = validator?.ValidateMeleeAttackTarget(targetId, attackDistance)
+            ?? MeleeValidationResult.InvalidTarget;
+
+        return validation === MeleeValidationResult.InRange;
     }
 }
 export class HurtZState extends MonState implements IActorState {
@@ -307,6 +289,8 @@ export class AttackZState extends MonState implements IActorState {
     attackDamageMax = this.spec.AttackDamageMax
     attackDamageMin = this.spec.AttackDamageMin
     private targetId: string = TargetTeamId.Player
+    private scheduledTarget?: IPhysicsObject
+    private scheduledAttackRange = 0
 
     constructor(states: States, zombie: Zombie, gphysic: IGPhysic,
         private eventCtrl: IEventController, spec: BaseSpec
@@ -314,6 +298,7 @@ export class AttackZState extends MonState implements IActorState {
         super(states, zombie, gphysic, spec)
     }
     Init(): void {
+        this.attackProcess = false
         this.attackSpeed = this.ChangeAttackAction(ActionType.Punch)
         this.attackTime = this.attackSpeed
         this.attackDamageMax = this.spec.AttackDamageMax
@@ -321,6 +306,10 @@ export class AttackZState extends MonState implements IActorState {
     }
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
+        this.keytimeout = undefined
+        this.attackProcess = false
+        this.scheduledTarget = undefined
+        this.scheduledAttackRange = 0
     }
 
     ZeroV = new THREE.Vector3(0, 0, 0)
@@ -335,7 +324,8 @@ export class AttackZState extends MonState implements IActorState {
         const dist = this.GetTargetDistance(target)
         const checkDying = this.CheckDying()
         if (checkDying != undefined) return checkDying
-        if (dist > this.GetAttackDistance()) {
+        const attackDistance = this.GetAttackDistance()
+        if (dist > attackDistance) {
             const checkRun = this.CheckRun(v)
             if (checkRun != undefined) return checkRun
         }
@@ -356,19 +346,32 @@ export class AttackZState extends MonState implements IActorState {
         }
         this.attackTime -= this.attackSpeed
         this.attackProcess = true
+        this.scheduledTarget = target
+        this.scheduledAttackRange = attackDistance
 
         this.keytimeout = setTimeout(() => {
-            this.attack()
+            if (this.scheduledTarget) {
+                this.attack(this.scheduledTarget, this.scheduledAttackRange)
+            }
         }, this.attackSpeed * 1000 * 0.4)
 
         return this
     }
-    attack() {
-        this.eventCtrl.SendEventMessage(EventTypes.Attack + this.targetId, [{
+    attack(target: IPhysicsObject, attackDistance: number) {
+        if (!this.ValidateTargetHit(target, attackDistance)) {
+            this.attackProcess = false
+            return
+        }
+
+        const targetId = GetMonsterAttackTargetId(target)
+
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + targetId, [{
             type: AttackType.NormalSwing,
             spec: this.spec,
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
-            distance: this.GetAttackDistance(),
+            targetId,
+            distance: attackDistance,
+            attackerObjectId: this.zombie.UUID,
             obj: this.zombie.Meshs
         }])
 
@@ -474,9 +477,10 @@ export class RunZState extends MonState implements IActorState {
         const moveDis = moveAmount.length();
         // console.log(moveDis, " / ", dis.distance, " / ", dis.move)
 
+        const canMoveWithoutCollision = !dis.obj || (dis.distance > 0 && moveDis < dis.distance);
         if (dis.move) {
             this.zombie.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
-        } else {
+        } else if (canMoveWithoutCollision) {
             this.zombie.Pos.add(moveAmount);
         }
         // if (moveDis < dis.distance) {

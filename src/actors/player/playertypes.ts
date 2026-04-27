@@ -87,7 +87,9 @@ export type AttackOption = {
     effect?: EffectType,
     damage: number
     spec?: BaseSpec,
+    targetId?: string
     distance?: number
+    attackerObjectId?: string
     knockbackDistance?: number
     obj?: THREE.Object3D
     srcMonsterId?: string,

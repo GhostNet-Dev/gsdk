@@ -9,6 +9,13 @@ import { IActorState } from "../allytypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { AllyProperty } from "../allytypes";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
+import {
+    BuildKnockbackVector,
+    GetHorizontalDistance,
+    GetMeleeAttackDistance,
+    GetMeleeTargetValidator,
+    MeleeValidationResult,
+} from "@Glibs/actors/battle/meleecombat";
 
 type States = Record<string, IActorState>
 type AllyAttackTarget = IPhysicsObject & { TargetId?: string }
@@ -36,7 +43,6 @@ export function NewDefaultAllyState(
 }
 
 export abstract class AllyState {
-    attackDist = 3
     constructor(
         public states: States,
         protected allyModel: AllyModel,
@@ -45,6 +51,14 @@ export abstract class AllyState {
     ) { }
 
     abstract Uninit(): void
+
+    protected GetAttackDistance() {
+        return GetMeleeAttackDistance(this.spec)
+    }
+
+    protected GetTargetDistance(target: IPhysicsObject) {
+        return GetHorizontalDistance(this.allyModel.Pos, target.Pos)
+    }
 
     CheckRun(v: THREE.Vector3) {
         if (v.x || v.z) {
@@ -77,34 +91,17 @@ export abstract class AllyState {
 
     CheckHit(target: IPhysicsObject) {
         if (this.spec.Status.hit) {
-            const ctrl = this.spec.Owner as any
-            const attackRange = ctrl.pendingAttackRange as number
-            const explicitKbDist = ctrl.pendingKnockbackDist as number
-            let knockbackVector: THREE.Vector3 | undefined
+            const ctrl = GetMeleeTargetValidator(this.spec.Owner)
+            const attackRange = ctrl?.pendingAttackRange ?? 0
+            const explicitKbDist = ctrl?.pendingKnockbackDist ?? 0
+            const knockbackVector = BuildKnockbackVector(
+                this.allyModel.Pos,
+                target.Pos,
+                attackRange,
+                explicitKbDist,
+            )
 
-            if (attackRange > 0) {
-                const allyPos = this.allyModel.Pos.clone()
-                const attPos = target.Pos.clone()
-                allyPos.y = 0
-                attPos.y = 0
-
-                const currentDist = allyPos.distanceTo(attPos)
-                let pushAmount = 0
-                if (explicitKbDist > 0) {
-                    pushAmount = explicitKbDist
-                } else {
-                    const desiredPush = Math.max(1.5, attackRange * 0.5)
-                    pushAmount = Math.min(desiredPush, Math.max(0, (attackRange - 0.1) - currentDist))
-                }
-
-                if (pushAmount > 0) {
-                    knockbackVector = new THREE.Vector3()
-                        .subVectors(allyPos, attPos)
-                        .normalize()
-                    knockbackVector.y = 0
-                    knockbackVector.multiplyScalar(pushAmount)
-                }
-
+            if (ctrl) {
                 ctrl.pendingAttackRange = 0
                 ctrl.pendingKnockbackDist = 0
             }
@@ -116,7 +113,7 @@ export abstract class AllyState {
     }
 
     CheckAttack(dist: number) {
-        if (dist < this.attackDist) {
+        if (dist < this.GetAttackDistance()) {
             this.Uninit()
             this.states.AttackSt.Init()
             return this.states.AttackSt
@@ -252,6 +249,8 @@ export class AttackAllyState extends AllyState implements IActorState {
     attackDamageMax = this.spec.AttackDamageMax
     attackDamageMin = this.spec.AttackDamageMin
     private targetId: string = TargetTeamId.Monster
+    private scheduledTargetId: string = TargetTeamId.Monster
+    private scheduledAttackRange = 0
 
     ZeroV = new THREE.Vector3()
     YV = new THREE.Vector3(0, 1, 0)
@@ -269,6 +268,7 @@ export class AttackAllyState extends AllyState implements IActorState {
     }
 
     Init(): void {
+        this.attackProcess = false
         this.attackSpeed = this.spec.AttackSpeed
         this.attackTime = this.spec.AttackSpeed
         this.attackDamageMax = this.spec.AttackDamageMax
@@ -279,16 +279,20 @@ export class AttackAllyState extends AllyState implements IActorState {
 
     Uninit(): void {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
+        this.keytimeout = undefined
+        this.attackProcess = false
+        this.scheduledAttackRange = 0
     }
 
     Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
         this.targetId = GetAllyAttackTargetId(target)
         const checkHit = this.CheckHit(target)
         if (checkHit != undefined) return checkHit
-        const dist = this.allyModel.Pos.distanceTo(target.Pos)
+        const dist = this.GetTargetDistance(target)
         const checkDying = this.CheckDying()
         if (checkDying != undefined) return checkDying
-        if (dist > this.attackDist) {
+        const attackDistance = this.GetAttackDistance()
+        if (dist > attackDistance) {
             const checkRun = this.CheckRun(v)
             if (checkRun != undefined) return checkRun
         }
@@ -306,18 +310,31 @@ export class AttackAllyState extends AllyState implements IActorState {
         if (this.attackTime / this.attackSpeed < 1) return this
         this.attackTime -= this.attackSpeed
         this.attackProcess = true
+        this.scheduledTargetId = this.targetId
+        this.scheduledAttackRange = attackDistance
 
         this.keytimeout = setTimeout(() => {
-            this.attack()
+            this.attack(this.scheduledTargetId, this.scheduledAttackRange)
         }, this.attackSpeed * 1000 * 0.4)
 
         return this
     }
 
-    private attack() {
-        this.eventCtrl.SendEventMessage(EventTypes.Attack + this.targetId, [{
+    private attack(targetId: string, attackDistance: number) {
+        const validator = GetMeleeTargetValidator(this.spec.Owner)
+        const validation = validator?.ValidateMeleeAttackTarget(targetId, attackDistance)
+            ?? MeleeValidationResult.InvalidTarget
+        if (validation !== MeleeValidationResult.InRange) {
+            this.attackProcess = false
+            return
+        }
+
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + targetId, [{
             type: AttackType.NormalSwing,
             spec: this.spec,
+            targetId,
+            distance: attackDistance,
+            attackerObjectId: this.allyModel.UUID,
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
             obj: this.allyModel.Meshs,
         }])
@@ -394,7 +411,7 @@ export class RunAllyState extends AllyState implements IActorState {
         const checkDying = this.CheckDying()
         if (checkDying != undefined) return checkDying
 
-        const dist = this.allyModel.Pos.distanceTo(target.Pos)
+        const dist = this.GetTargetDistance(target)
         const checkAttack = this.CheckAttack(dist)
         if (checkAttack != undefined) return checkAttack
 

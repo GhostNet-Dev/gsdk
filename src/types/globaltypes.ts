@@ -78,6 +78,8 @@ export enum EventTypes {
     ActionDettach = "actiondetach",
     CombatResourceChanged = "resourcechanged",
     ChangePlayerMode = "chgplayermod",
+    CombatEnter = "combatenter",
+    CombatLeave = "combatleave",
     SpawnProjectile = "Projectile",
     RegisterTarget = "registertarget",
     DeregisterTarget = "deregistertarget",
