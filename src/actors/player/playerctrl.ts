@@ -29,6 +29,7 @@ import { ActionCostSpec } from "@Glibs/actors/battle/resourcecosttypes";
 import { actionCostService } from "@Glibs/actors/battle/actioncostservice";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes";
+import { calculateCompositeDamage } from "@Glibs/actors/battle/damagecalc";
 
 type LearnedSkillMessage = {
     nodeId: string
@@ -298,6 +299,19 @@ export class PlayerCtrl implements ILoop, IActionUser {
                         this.baseSpec.ReceiveCalcDamage(opt.damage)
                         this.player.DamageEffect(opt.damage)
                         break;
+                    case AttackType.RangedShot: {
+                        if(this.currentState == this.RollSt) break;
+                        const damage = opt.spec
+                            ? calculateCompositeDamage({
+                                attacker: opt.spec,
+                                defender: this.baseSpec,
+                                type: opt.damageType,
+                            }).finalDamage
+                            : opt.damage
+                        this.baseSpec.ReceiveCalcDamage(damage)
+                        this.player.DamageEffect(damage)
+                        break;
+                    }
                     case AttackType.Exp:
                         if(this.baseSpec.ReceiveExp(opt.damage)) {
                             this.eventCtrl.SendEventMessage(EventTypes.LevelUp, this.baseSpec.Status.level)

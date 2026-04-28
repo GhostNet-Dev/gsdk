@@ -4,6 +4,8 @@ import { itemDefs } from "@Glibs/inventory/items/itemdefs"
 import { Char } from "@Glibs/types/assettypes"
 import { MonsterId, MonsterProperty, MonsterType } from "@Glibs/types/monstertypes"
 import { NewDashMonsterState } from "@Glibs/actors/monsters/zombie/dashmonst"
+import { ActionType } from "@Glibs/types/playertypes"
+import { monsterProjectileDefs } from "@Glibs/actors/projectile/projectiledefs"
 
 
 export class MonsterDb {
@@ -158,6 +160,9 @@ export class MonsterDb {
                 { itemId: itemDefs.Leather.id, ratio: 0.5 },
                 { itemId: itemDefs.ToadMageDeck.id, ratio: 0.05 }
             ],
+            stats: baseStatPresets[MonsterId.ToadMage],
+            projectileDef: monsterProjectileDefs.ToadMageEnergyHoming,
+            attackAction: ActionType.MagicH1,
             idleStates: NewDefaultMonsterState,
         })
         this.monDb.set(MonsterId.Viking, {

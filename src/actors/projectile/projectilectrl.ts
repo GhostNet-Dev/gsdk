@@ -11,6 +11,7 @@ import { VirtualActorFactory } from "../battle/virtualactorfab";
 import { MonsterId } from "@Glibs/types/monstertypes";
 import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
 import { ProjectileDamageType } from "./projectiletypes";
+import { GetHorizontalDistanceToBoxSurface } from "@Glibs/actors/battle/meleecombat";
 
 export class ProjectileCtrl implements IActionUser {
   raycast = new THREE.Raycaster();
@@ -63,6 +64,9 @@ export class ProjectileCtrl implements IActionUser {
   private homingActive = false;
   private homingTurnRate = 6.5;
   private homingTarget: THREE.Object3D | null = null;
+  private readonly closestPoint = new THREE.Vector3();
+  private readonly tmpBox = new THREE.Box3();
+  private readonly tmpExpandedBox = new THREE.Box3();
 
 
   applyAction(action: IActionComponent, ctx?: ActionContext) {
@@ -286,7 +290,7 @@ export class ProjectileCtrl implements IActionUser {
     for (const target of checkList) {
       if (this.isOwnerOrSelfTarget(target)) continue;
 
-      const box = new THREE.Box3().setFromObject(target);
+      const box = this.getTargetBounds(target);
       if (box.isEmpty()) continue;
 
       const hitPoint = new THREE.Vector3();
@@ -367,7 +371,7 @@ export class ProjectileCtrl implements IActionUser {
   }
 
   private getTargetRadius(target: THREE.Object3D): number {
-    const box = new THREE.Box3().setFromObject(target);
+    const box = this.getTargetBounds(target);
     if (box.isEmpty()) return 0;
 
     const sphere = box.getBoundingSphere(new THREE.Sphere());
@@ -409,7 +413,7 @@ export class ProjectileCtrl implements IActionUser {
     for (const target of this.getHostileTargets()) {
       if (this.isOwnerOrSelfTarget(target)) continue;
 
-      const dist = this.position.distanceTo(target.position);
+      const dist = this.getHorizontalDistanceToTargetSurface(this.position, target);
       if (dist > this.range) continue;
 
       if (dist < nearestDist) {
@@ -447,10 +451,18 @@ export class ProjectileCtrl implements IActionUser {
     const checkList = (this.isHitscan || this.useRaycast) ? [...targets, ...this.physicList] : targets;
 
     for (const target of checkList) {
-      const dis = p1.distanceTo(target.position);
+      const dis = this.getHorizontalDistanceToTargetSurface(p1, target);
       if (dis > this.range) continue;
 
       if (this.isOwnerOrSelfTarget(target)) continue;
+
+      const boxHit = this.getSegmentBoxHit(p1, p2, target, radius);
+      if (boxHit) {
+        if (!closest || boxHit.distance < closest.distance) {
+          closest = boxHit;
+        }
+        continue;
+      }
 
       const center = target.position;
       const closestPoint = this.getClosestPointOnSegment(p1, p2, center);
@@ -470,6 +482,80 @@ export class ProjectileCtrl implements IActionUser {
     }
 
     return closest;
+  }
+
+  private getTargetBounds(target: THREE.Object3D): THREE.Box3 {
+    const record = this.targetRegistry.getByObject(target);
+    const targetMetaKind = target.userData?.targetMeta?.kind as string | undefined;
+    if (record?.kind === "structure" || targetMetaKind === "structure") {
+      const registryBounds = record?.bounds;
+      if (registryBounds && !registryBounds.isEmpty()) return registryBounds;
+
+      const userBounds = target.userData?.bounds as THREE.Box3 | undefined;
+      if (userBounds && !userBounds.isEmpty()) return userBounds;
+    }
+
+    return this.tmpBox.setFromObject(target);
+  }
+
+  private getHorizontalDistanceToTargetSurface(origin: THREE.Vector3, target: THREE.Object3D): number {
+    const bounds = this.getTargetBounds(target);
+    return GetHorizontalDistanceToBoxSurface(origin, bounds, target.position, this.closestPoint);
+  }
+
+  private getSegmentBoxHit(
+    p1: THREE.Vector3,
+    p2: THREE.Vector3,
+    target: THREE.Object3D,
+    radius: number,
+  ): { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number; normal?: THREE.Vector3 } | null {
+    const bounds = this.getTargetBounds(target);
+    if (bounds.isEmpty()) return null;
+
+    const expandedBox = this.tmpExpandedBox.copy(bounds).expandByScalar(radius);
+    if (expandedBox.containsPoint(p1)) {
+      return {
+        target,
+        hitPoint: p1.clone(),
+        distance: 0,
+        normal: this.getBoxNormal(bounds, p1),
+      };
+    }
+
+    const seg = new THREE.Vector3().subVectors(p2, p1);
+    const segLength = seg.length();
+    if (segLength <= 0.000001) return null;
+
+    const ray = new THREE.Ray(p1, seg.clone().divideScalar(segLength));
+    const hitPoint = new THREE.Vector3();
+    if (!ray.intersectBox(expandedBox, hitPoint)) return null;
+
+    const distance = p1.distanceTo(hitPoint);
+    if (distance > segLength || distance > this.range) return null;
+
+    return {
+      target,
+      hitPoint,
+      distance,
+      normal: this.getBoxNormal(bounds, hitPoint),
+    };
+  }
+
+  private getBoxNormal(box: THREE.Box3, point: THREE.Vector3): THREE.Vector3 {
+    if (box.isEmpty()) return new THREE.Vector3(0, 1, 0);
+
+    const clampedPoint = box.clampPoint(point, new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const halfSize = box.getSize(new THREE.Vector3()).multiplyScalar(0.5);
+    const localHit = clampedPoint.sub(center);
+
+    const dx = halfSize.x > 0 ? Math.abs(localHit.x / halfSize.x) : 0;
+    const dy = halfSize.y > 0 ? Math.abs(localHit.y / halfSize.y) : 0;
+    const dz = halfSize.z > 0 ? Math.abs(localHit.z / halfSize.z) : 0;
+
+    if (dx > dy && dx > dz) return new THREE.Vector3(localHit.x >= 0 ? 1 : -1, 0, 0);
+    if (dy > dz) return new THREE.Vector3(0, localHit.y >= 0 ? 1 : -1, 0);
+    return new THREE.Vector3(0, 0, localHit.z >= 0 ? 1 : -1);
   }
 
   private getCollisionTargets() {

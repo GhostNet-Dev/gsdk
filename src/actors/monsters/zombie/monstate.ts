@@ -9,9 +9,10 @@ import { IActorState } from "../monstertypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { MonsterProperty } from "@Glibs/types/monstertypes";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
+import { ProjectileDamageType } from "@Glibs/actors/projectile/projectiletypes";
 import {
     BuildKnockbackVector,
-    GetHorizontalDistance,
+    GetHorizontalDistanceToBoxSurface,
     GetMeleeAttackDistance,
     GetMeleeTargetValidator,
     MeleeValidationResult,
@@ -19,6 +20,12 @@ import {
 
 type States = Record<string, IActorState>
 type MonsterAttackTarget = IPhysicsObject & { TargetId?: string }
+type MonsterPropertyProvider = {
+    MonsterProperty?: MonsterProperty
+}
+type RangedTargetValidator = {
+    ValidateRangedAttackTarget?: (targetId: string, attackRange: number) => boolean
+}
 
 const DEFAULT_MONSTER_ATTACK_SPEED = 1
 
@@ -56,22 +63,19 @@ export abstract class MonState {
 
     abstract Uninit(): void
 
-    protected GetAttackDistance() {
-        return GetMeleeAttackDistance(this.spec)
+    protected GetMonsterProperty() {
+        return (this.spec.Owner as MonsterPropertyProvider).MonsterProperty
     }
 
-    protected GetHorizontalDistance(a: THREE.Vector3, b: THREE.Vector3) {
-        return GetHorizontalDistance(a, b)
+    protected GetAttackDistance() {
+        const projectileRange = this.GetMonsterProperty()?.projectileDef?.range
+        if (projectileRange != undefined) return projectileRange
+        return GetMeleeAttackDistance(this.spec)
     }
 
     private _cp = new THREE.Vector3()
     protected GetTargetDistance(target: IPhysicsObject) {
-        const bounds: THREE.Box3 | undefined = target.Meshs.userData?.bounds
-        if (bounds) {
-            bounds.clampPoint(this.zombie.Pos, this._cp)
-            return this.GetHorizontalDistance(this.zombie.Pos, this._cp)
-        }
-        return this.GetHorizontalDistance(this.zombie.Pos, target.Pos)
+        return GetHorizontalDistanceToBoxSurface(this.zombie.Pos, target.Box, target.Pos, this._cp)
     }
 
     protected ChangeAttackAction(action: ActionType) {
@@ -296,7 +300,9 @@ export class AttackZState extends MonState implements IActorState {
     attackDamageMin = this.spec.AttackDamageMin
     private targetId: string = TargetTeamId.Player
     private scheduledTarget?: IPhysicsObject
+    private scheduledTargetId: string = TargetTeamId.Player
     private scheduledAttackRange = 0
+    private readonly scheduledLookDir = new THREE.Vector3()
 
     constructor(states: States, zombie: Zombie, gphysic: IGPhysic,
         private eventCtrl: IEventController, spec: BaseSpec
@@ -305,7 +311,7 @@ export class AttackZState extends MonState implements IActorState {
     }
     Init(): void {
         this.attackProcess = false
-        this.attackSpeed = this.ChangeAttackAction(ActionType.Punch)
+        this.attackSpeed = this.ChangeAttackAction(this.GetMonsterProperty()?.attackAction ?? ActionType.Punch)
         this.attackTime = this.attackSpeed
         this.attackDamageMax = this.spec.AttackDamageMax
         this.attackDamageMin = this.spec.AttackDamageMin
@@ -315,7 +321,9 @@ export class AttackZState extends MonState implements IActorState {
         this.keytimeout = undefined
         this.attackProcess = false
         this.scheduledTarget = undefined
+        this.scheduledTargetId = TargetTeamId.Player
         this.scheduledAttackRange = 0
+        this.scheduledLookDir.set(0, 0, 0)
     }
 
     ZeroV = new THREE.Vector3(0, 0, 0)
@@ -336,16 +344,12 @@ export class AttackZState extends MonState implements IActorState {
             if (checkRun != undefined) return checkRun
         }
 
-        const lookDir = v.clone();
-        lookDir.y = 0;
-        if (lookDir.lengthSq() > 0) {
-            const mx = this.MX.lookAt(lookDir, this.ZeroV, this.YV)
-            const qt = this.QT.setFromRotationMatrix(mx)
-            this.zombie.Meshs.quaternion.copy(qt)
+        if(this.attackProcess) {
+            this.applyLookDirection(this.scheduledLookDir)
+            return this
         }
 
-
-        if(this.attackProcess) return this
+        this.applyLookDirection(v)
         this.attackTime += delta
         if (this.attackTime / this.attackSpeed < 1) {
             return this
@@ -353,33 +357,217 @@ export class AttackZState extends MonState implements IActorState {
         this.attackTime -= this.attackSpeed
         this.attackProcess = true
         this.scheduledTarget = target
+        this.scheduledTargetId = this.targetId
         this.scheduledAttackRange = attackDistance
+        this.scheduledLookDir.copy(v)
+        this.scheduledLookDir.y = 0
+        if (this.scheduledLookDir.lengthSq() <= 0.0001) {
+            this.scheduledLookDir.subVectors(target.CenterPos, this.zombie.CenterPos)
+            this.scheduledLookDir.y = 0
+        }
+        this.applyLookDirection(this.scheduledLookDir)
+
+        console.log("[CombatDebug] AttackScheduled", {
+            actor: "monster",
+            actorId: this.zombie.UUID,
+            targetId: this.scheduledTargetId,
+            currentTargetId: GetMonsterAttackTargetId(target),
+            actorPos: {
+                x: this.zombie.Pos.x,
+                y: this.zombie.Pos.y,
+                z: this.zombie.Pos.z,
+            },
+            targetPos: {
+                x: target.Pos.x,
+                y: target.Pos.y,
+                z: target.Pos.z,
+            },
+            distance: dist,
+            attackRange: attackDistance,
+            validation: undefined,
+            boundsEmpty: target.Box.isEmpty(),
+        })
 
         this.keytimeout = setTimeout(() => {
+            this.keytimeout = undefined
             if (this.scheduledTarget) {
-                this.attack(this.scheduledTarget, this.scheduledAttackRange)
+                this.attack(this.scheduledTarget, this.scheduledAttackRange, this.scheduledTargetId)
             }
         }, this.attackSpeed * 1000 * 0.4)
 
         return this
     }
-    attack(target: IPhysicsObject, attackDistance: number) {
-        if (!this.ValidateTargetHit(target, attackDistance)) {
+    private applyLookDirection(direction: THREE.Vector3) {
+        const lookDir = direction.clone();
+        lookDir.y = 0;
+        if (lookDir.lengthSq() > 0) {
+            const mx = this.MX.lookAt(lookDir, this.ZeroV, this.YV)
+            const qt = this.QT.setFromRotationMatrix(mx)
+            this.zombie.Meshs.quaternion.copy(qt)
+        }
+    }
+    attack(target: IPhysicsObject, attackDistance: number, expectedTargetId: string) {
+        if (!this.attackProcess) {
+            console.log("[CombatDebug] AttackCanceled", {
+                actor: "monster",
+                reason: "stale_timeout",
+                actorId: this.zombie.UUID,
+                targetId: expectedTargetId,
+                currentTargetId: GetMonsterAttackTargetId(target),
+                actorPos: {
+                    x: this.zombie.Pos.x,
+                    y: this.zombie.Pos.y,
+                    z: this.zombie.Pos.z,
+                },
+                targetPos: {
+                    x: target.Pos.x,
+                    y: target.Pos.y,
+                    z: target.Pos.z,
+                },
+                distance: this.GetTargetDistance(target),
+                attackRange: attackDistance,
+                validation: MeleeValidationResult.InvalidTarget,
+                boundsEmpty: target.Box.isEmpty(),
+            })
+            return
+        }
+        const targetId = GetMonsterAttackTargetId(target)
+        if (targetId !== expectedTargetId) {
+            console.log("[CombatDebug] AttackCanceled", {
+                actor: "monster",
+                reason: "target_changed_hit",
+                actorId: this.zombie.UUID,
+                targetId: expectedTargetId,
+                currentTargetId: targetId,
+                actorPos: {
+                    x: this.zombie.Pos.x,
+                    y: this.zombie.Pos.y,
+                    z: this.zombie.Pos.z,
+                },
+                targetPos: {
+                    x: target.Pos.x,
+                    y: target.Pos.y,
+                    z: target.Pos.z,
+                },
+                distance: this.GetTargetDistance(target),
+                attackRange: attackDistance,
+                validation: MeleeValidationResult.InvalidTarget,
+                boundsEmpty: target.Box.isEmpty(),
+            })
             this.attackProcess = false
             return
         }
 
-        const targetId = GetMonsterAttackTargetId(target)
+        if (this.GetMonsterProperty()?.projectileDef) {
+            this.rangedAttack(target, attackDistance, expectedTargetId)
+            return
+        }
 
-        this.eventCtrl.SendEventMessage(EventTypes.Attack + targetId, [{
+        if (!this.ValidateTargetHit(target, attackDistance)) {
+            const hitDistance = this.GetTargetDistance(target)
+            console.log("[CombatDebug] AttackCanceled", {
+                actor: "monster",
+                reason: "validator_failed",
+                actorId: this.zombie.UUID,
+                targetId: expectedTargetId,
+                currentTargetId: targetId,
+                actorPos: {
+                    x: this.zombie.Pos.x,
+                    y: this.zombie.Pos.y,
+                    z: this.zombie.Pos.z,
+                },
+                targetPos: {
+                    x: target.Pos.x,
+                    y: target.Pos.y,
+                    z: target.Pos.z,
+                },
+                distance: hitDistance,
+                attackRange: attackDistance,
+                validation: hitDistance > attackDistance
+                    ? MeleeValidationResult.OutOfRange
+                    : MeleeValidationResult.InvalidTarget,
+                boundsEmpty: target.Box.isEmpty(),
+            })
+            this.attackProcess = false
+            return
+        }
+
+        this.eventCtrl.SendEventMessage(EventTypes.Attack + expectedTargetId, [{
             type: AttackType.NormalSwing,
             spec: this.spec,
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
-            targetId,
+            targetId: expectedTargetId,
             distance: attackDistance,
             attackerObjectId: this.zombie.UUID,
             obj: this.zombie.Meshs
         }])
+
+        this.attackProcess = false
+    }
+
+    private rangedAttack(target: IPhysicsObject, attackDistance: number, expectedTargetId: string) {
+        const targetId = GetMonsterAttackTargetId(target)
+        const validator = this.spec.Owner as RangedTargetValidator
+        if (
+            targetId !== expectedTargetId ||
+            validator.ValidateRangedAttackTarget?.(targetId, attackDistance) !== true
+        ) {
+            console.log("[CombatDebug] AttackCanceled", {
+                actor: "monster",
+                reason: targetId !== expectedTargetId ? "target_changed_ranged" : "ranged_validator_failed",
+                actorId: this.zombie.UUID,
+                targetId: expectedTargetId,
+                currentTargetId: targetId,
+                actorPos: {
+                    x: this.zombie.Pos.x,
+                    y: this.zombie.Pos.y,
+                    z: this.zombie.Pos.z,
+                },
+                targetPos: {
+                    x: target.Pos.x,
+                    y: target.Pos.y,
+                    z: target.Pos.z,
+                },
+                distance: this.GetTargetDistance(target),
+                attackRange: attackDistance,
+                validation: undefined,
+                boundsEmpty: target.Box.isEmpty(),
+            })
+            this.attackProcess = false
+            return
+        }
+
+        const projectileDef = this.GetMonsterProperty()!.projectileDef!
+        const muzzleOffset = projectileDef.muzzleOffset ?? { x: 0, y: 1.4, z: 0.8 }
+        const src = new THREE.Vector3(muzzleOffset.x, muzzleOffset.y, muzzleOffset.z)
+            .applyQuaternion(this.zombie.Meshs.quaternion)
+            .add(this.zombie.Pos)
+        const dir = target.CenterPos.clone().sub(src)
+        if (dir.lengthSq() <= 0.0001) {
+            this.attackProcess = false
+            return
+        }
+        dir.normalize()
+
+        const damageType = projectileDef.damageType ?? ProjectileDamageType.Physical
+        const baseDamage = damageType === ProjectileDamageType.Magic
+            ? this.spec.stats.getStat("magicAttack")
+            : this.spec.DamageRanged
+
+        this.eventCtrl.SendEventMessage(EventTypes.SpawnProjectile, {
+            id: projectileDef.id,
+            ownerSpec: this.spec,
+            damage: baseDamage * (projectileDef.damageMultiplier ?? 1),
+            damageType,
+            src,
+            dir,
+            range: projectileDef.range ?? this.spec.AttackRange,
+            homing: projectileDef.homing,
+            hitscan: projectileDef.hitscan,
+            tracerLife: projectileDef.tracerLife,
+            tracerRange: projectileDef.tracerRange,
+            useRaycast: projectileDef.useRaycast,
+        })
 
         this.attackProcess = false
     }

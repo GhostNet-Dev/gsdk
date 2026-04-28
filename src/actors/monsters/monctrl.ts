@@ -14,8 +14,9 @@ import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actio
 import { StatKey } from "@Glibs/types/stattypes";
 import { Buff } from "@Glibs/magical/buff/buff";
 import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
-import { TargetRecord, TargetTeamId } from "@Glibs/systems/targeting/targettypes";
-import { GetHorizontalDistance, MeleeValidationResult, PendingMeleeImpactContext } from "@Glibs/actors/battle/meleecombat";
+import { TargetDistanceMode, TargetRecord, TargetTeamId } from "@Glibs/systems/targeting/targettypes";
+import { GetHorizontalDistanceToBoxSurface, MeleeValidationResult, PendingMeleeImpactContext } from "@Glibs/actors/battle/meleecombat";
+import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes";
 
 class MonsterTargetAdapter implements IPhysicsObject {
     private static readonly fallbackBoxMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1))
@@ -75,12 +76,18 @@ class MonsterTargetAdapter implements IPhysicsObject {
     }
 
     private updateCache() {
-        const object = this.target?.object
+        const target = this.target
+        const object = target?.object
         if (!object) {
+            this.box.makeEmpty()
             this.isDirty = false
             return
         }
-        this.box.setFromObject(object)
+        if (target.kind === "structure" && target.bounds && !target.bounds.isEmpty()) {
+            this.box.copy(target.bounds)
+        } else {
+            this.box.setFromObject(object)
+        }
         if (this.box.isEmpty()) {
             this.size.set(1, 1, 1)
             this.centerPos.copy(object.position)
@@ -118,6 +125,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     private readonly tempV2 = new THREE.Vector3()
     private readonly tempV3 = new THREE.Vector3()
     private readonly _cp = new THREE.Vector3()
+    private readonly targetBounds = new THREE.Box3()
     private readonly setTargetRegistry = (targetRegistry?: TargetRegistrySystem) => {
         this.targetRegistry = targetRegistry
     }
@@ -132,6 +140,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     get Spec() { return this.baseSpec }
     get objs() { return this.zombie.Meshs }
     get TargetId() { return this.targetId }
+    get MonsterProperty() { return this.property }
 
     constructor(
         id: number,
@@ -143,6 +152,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         private stats: Partial<Record<StatKey, number>>,
     ) {
         this.targetId = `mon:${property.id}:${id}`
+        this.baseSpec.lastUsedWeaponMode = property.projectileDef ? WeaponMode.Ranged : WeaponMode.Melee
         this.targetAdapter = new MonsterTargetAdapter(this.player)
         eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this)
         const size = zombie.Size
@@ -256,15 +266,17 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         if (!target.alive) return MeleeValidationResult.DeadTarget
         if (!target.targetable || !target.collidable) return MeleeValidationResult.InvalidTarget
 
-        let refPos = target.object.position
-        if (target.bounds) {
-            this._cp.copy(this.zombie.Pos)
-            target.bounds.clampPoint(this._cp, this._cp)
-            refPos = this._cp
-        }
-        const dist = GetHorizontalDistance(this.zombie.Pos, refPos)
+        const dist = GetHorizontalDistanceToBoxSurface(this.zombie.Pos, this.targetAdapter.Box, target.object.position, this._cp)
         if (dist > attackRange) return MeleeValidationResult.OutOfRange
         return MeleeValidationResult.InRange
+    }
+
+    ValidateRangedAttackTarget(targetId: string, attackRange: number): boolean {
+        const target = this.currentTarget
+        if (!target || target.id !== targetId) return false
+        if (!target.alive || !target.targetable || !target.collidable) return false
+
+        return GetHorizontalDistanceToBoxSurface(this.zombie.Pos, this.targetAdapter.Box, target.object.position, this._cp) <= attackRange
     }
 
     CheckVisible(physBox: THREE.InstancedMesh, dist: number): boolean {
@@ -335,12 +347,22 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
             targetableOnly: true,
             collidableOnly: true,
             kinds: ["unit", "structure"],
+            distanceMode: TargetDistanceMode.BoundsSurface,
         })
     }
 
     private isValidTarget(target?: TargetRecord): target is TargetRecord {
         if (!target?.alive || !target.targetable || !target.collidable) return false
-        if (this.zombie.Pos.distanceToSquared(target.object.position) > this.aggroRange ** 2) return false
+        if (GetHorizontalDistanceToBoxSurface(this.zombie.Pos, this.getTargetBounds(target), target.object.position, this._cp) > this.aggroRange) return false
         return this.targetRegistry?.isHostile(this.targetId, target.id) ?? false
+    }
+
+    private getTargetBounds(target: TargetRecord): THREE.Box3 | undefined {
+        if (target.kind === "structure" && target.bounds && !target.bounds.isEmpty()) {
+            return target.bounds
+        }
+
+        this.targetBounds.setFromObject(target.object)
+        return this.targetBounds.isEmpty() ? undefined : this.targetBounds
     }
 }

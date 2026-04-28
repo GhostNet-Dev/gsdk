@@ -27,3 +27,18 @@ export const allyProjectileDefs = {
     fireCooldownSec: 1.35,
   },
 } satisfies Record<string, ProjectileWeaponDef>
+
+export const monsterProjectileDefs = {
+  ToadMageEnergyHoming: {
+    id: MonsterId.EnergyHoming,
+    name: "Toad mage energy bolt",
+    damageType: ProjectileDamageType.Magic,
+    damageMultiplier: 1,
+    range: 20,
+    hitscan: false,
+    homing: true,
+    useRaycast: false,
+    muzzleOffset: { x: 0, y: 1.6, z: 0.8 },
+    fireCooldownSec: 1.4,
+  },
+} satisfies Record<string, ProjectileWeaponDef>

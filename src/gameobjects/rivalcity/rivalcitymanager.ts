@@ -3,6 +3,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { FactionId, ITurnParticipant, TurnContext, CityTurnOutput, parseFactionId } from "@Glibs/gameobjects/turntypes";
 import { buildingDefs } from "@Glibs/interactives/building/buildingdefs";
 import { FactionManager } from "@Glibs/gameobjects/faction/factionmanager";
+import { MonsterId } from "@Glibs/types/monstertypes";
 import {
   RivalCityState,
   RivalCitySeed,
@@ -15,7 +16,7 @@ import { rivalCityDefs } from "./rivalcitydefs";
 import { computeBaseProduction, applyBiases, computeSpecialResourceProduction } from "./rivalcityeconomy";
 import { advanceBuildQueue, applyCompletedBuildings, addResources, canAfford, deductCost } from "./rivalcityrules";
 import { scoreCandidates, choosePlan, buildingCost } from "./rivalcityplanner";
-import { parseStrategicPlanetId } from "@Glibs/gameobjects/strategicgalaxy/strategicgalaxytypes";
+import { parseStrategicPlanetId, StrategicPlanetId } from "@Glibs/gameobjects/strategicgalaxy/strategicgalaxytypes";
 
 type GalaxyManagerLike = {
   getPlanetBonus(planetId: string): Record<string, number>;
@@ -190,6 +191,22 @@ export class RivalCityManager implements ITurnParticipant {
   getCityState(cityId: string): RivalCityState | undefined {
     const city = this.cities.find((candidate) => candidate.id === cityId);
     return city ? { ...city } : undefined;
+  }
+
+  getArmyDeck(cityId: string): readonly (readonly MonsterId[])[] | undefined {
+    const city = this.cities.find((candidate) => candidate.id === cityId);
+    if (!city) return undefined;
+    return rivalCityDefs[city.cityDefId]?.armyDeck;
+  }
+
+  getMostThreateningCity(planetId: StrategicPlanetId, playerFactionId: FactionId): string | undefined {
+    return [...this.cities]
+      .filter((city) => (
+        city.planetId === planetId &&
+        city.factionId !== playerFactionId &&
+        city.status === "active"
+      ))
+      .sort((a, b) => b.score.total - a.score.total)[0]?.id;
   }
 
   setCityFaction(cityId: string, factionId: FactionId): boolean {

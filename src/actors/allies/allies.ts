@@ -12,7 +12,12 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 import { Loader } from "@Glibs/loader/loader";
 import { calculateCompositeDamage } from "@Glibs/actors/battle/damagecalc";
-import { IsMeleeAttackType, MeleeValidationResult, ValidateReceivedMeleeAttack } from "@Glibs/actors/battle/meleecombat";
+import {
+    GetHorizontalDistanceToBoxSurface,
+    IsMeleeAttackType,
+    MeleeValidationResult,
+    ValidateReceivedMeleeAttack,
+} from "@Glibs/actors/battle/meleecombat";
 
 export type { AllySet, IAllyCtrl }
 export { AllyBox, AllyId }
@@ -153,6 +158,11 @@ export class Allies {
         this.allyCount = 0
     }
 
+    private getMeleeDefenderBounds(box: AllyBox): THREE.Box3 | undefined {
+        const bounds = new THREE.Box3().setFromObject(box)
+        return bounds.isEmpty() ? undefined : bounds
+    }
+
     ReceiveDemage(
         z: AllySet,
         damage: number,
@@ -187,8 +197,33 @@ export class Allies {
     private ApplyAttack(z: AllySet, opt: AttackOption): void {
         if (!z.live) return
         if (IsMeleeAttackType(opt.type) && opt.targetId != undefined) {
-            const validation = ValidateReceivedMeleeAttack(opt, z.allyCtrl.TargetId, z.allyModel.Pos, z.live)
-            if (validation !== MeleeValidationResult.InRange) return
+            const defenderBounds = this.getMeleeDefenderBounds(z.allyCtrl.AllyBox)
+            const validation = ValidateReceivedMeleeAttack(
+                opt,
+                z.allyCtrl.TargetId,
+                z.allyModel.Pos,
+                z.live,
+                defenderBounds,
+            )
+            if (validation !== MeleeValidationResult.InRange) {
+                console.log("[CombatDebug] ReceiveRejected", {
+                    receiver: "ally",
+                    actorId: opt.attackerObjectId,
+                    targetId: opt.targetId,
+                    currentTargetId: z.allyCtrl.TargetId,
+                    actorPos: opt.obj
+                        ? { x: opt.obj.position.x, y: opt.obj.position.y, z: opt.obj.position.z }
+                        : undefined,
+                    targetPos: { x: z.allyModel.Pos.x, y: z.allyModel.Pos.y, z: z.allyModel.Pos.z },
+                    distance: opt.obj
+                        ? GetHorizontalDistanceToBoxSurface(opt.obj.position, defenderBounds, z.allyModel.Pos)
+                        : undefined,
+                    attackRange: opt.distance,
+                    validation,
+                    boundsEmpty: defenderBounds == undefined,
+                })
+                return
+            }
         }
         if (opt.spec == undefined) throw new Error("unexpected value")
         const damage = calculateCompositeDamage({

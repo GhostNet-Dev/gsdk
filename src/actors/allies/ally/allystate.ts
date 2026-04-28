@@ -12,16 +12,20 @@ import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 import { ProjectileDamageType } from "@Glibs/actors/projectile/projectiletypes";
 import {
     BuildKnockbackVector,
-    GetHorizontalDistance,
+    GetHorizontalDistanceToBoxSurface,
     GetMeleeAttackDistance,
     GetMeleeTargetValidator,
     MeleeValidationResult,
 } from "@Glibs/actors/battle/meleecombat";
 
 type States = Record<string, IActorState>
-type AllyAttackTarget = IPhysicsObject & { TargetId?: string }
+type AllyAttackTarget = IPhysicsObject & { TargetId?: string, HasTarget?: boolean }
 type RangedTargetValidator = {
     ValidateRangedAttackTarget?: (targetId: string, attackRange: number) => boolean
+}
+
+function HasAllyAttackTarget(target?: IPhysicsObject) {
+    return (target as AllyAttackTarget | undefined)?.HasTarget !== false
 }
 
 export function GetAllyAttackTargetId(target?: IPhysicsObject) {
@@ -64,12 +68,7 @@ export abstract class AllyState {
 
     private _cp = new THREE.Vector3()
     protected GetTargetDistance(target: IPhysicsObject) {
-        const bounds: THREE.Box3 | undefined = target.Meshs.userData?.bounds
-        if (bounds) {
-            bounds.clampPoint(this.allyModel.Pos, this._cp)
-            return GetHorizontalDistance(this.allyModel.Pos, this._cp)
-        }
-        return GetHorizontalDistance(this.allyModel.Pos, target.Pos)
+        return GetHorizontalDistanceToBoxSurface(this.allyModel.Pos, target.Box, target.Pos, this._cp)
     }
 
     CheckRun(v: THREE.Vector3) {
@@ -124,7 +123,8 @@ export abstract class AllyState {
         }
     }
 
-    CheckAttack(dist: number) {
+    CheckAttack(target: IPhysicsObject, dist: number) {
+        if (!HasAllyAttackTarget(target)) return
         if (dist < this.GetAttackDistance()) {
             this.Uninit()
             this.states.AttackSt.Init()
@@ -263,6 +263,7 @@ export class AttackAllyState extends AllyState implements IActorState {
     private targetId: string = TargetTeamId.Monster
     private scheduledTargetId: string = TargetTeamId.Monster
     private scheduledAttackRange = 0
+    private readonly scheduledLookDir = new THREE.Vector3()
 
     ZeroV = new THREE.Vector3()
     YV = new THREE.Vector3(0, 1, 0)
@@ -294,46 +295,179 @@ export class AttackAllyState extends AllyState implements IActorState {
         if (this.keytimeout != undefined) clearTimeout(this.keytimeout)
         this.keytimeout = undefined
         this.attackProcess = false
+        this.scheduledTargetId = TargetTeamId.Monster
         this.scheduledAttackRange = 0
+        this.scheduledLookDir.set(0, 0, 0)
     }
 
     Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
         this.targetId = GetAllyAttackTargetId(target)
         const checkHit = this.CheckHit(target)
         if (checkHit != undefined) return checkHit
-        const dist = this.GetTargetDistance(target)
         const checkDying = this.CheckDying()
         if (checkDying != undefined) return checkDying
+
+        if (!HasAllyAttackTarget(target)) {
+            console.log("[CombatDebug] AttackCanceled", {
+                actor: "ally",
+                reason: "no_target_update",
+                actorId: this.allyModel.UUID,
+                targetId: this.targetId,
+                currentTargetId: GetAllyAttackTargetId(target),
+                actorPos: {
+                    x: this.allyModel.Pos.x,
+                    y: this.allyModel.Pos.y,
+                    z: this.allyModel.Pos.z,
+                },
+                targetPos: undefined,
+                distance: undefined,
+                attackRange: undefined,
+                validation: MeleeValidationResult.InvalidTarget,
+                boundsEmpty: undefined,
+            })
+            this.Uninit()
+            this.states.IdleSt.Init()
+            return this.states.IdleSt
+        }
+
+        const dist = this.GetTargetDistance(target)
         const attackDistance = this.GetAttackDistance()
         if (dist > attackDistance) {
             const checkRun = this.CheckRun(v)
             if (checkRun != undefined) return checkRun
         }
 
-        const lookDir = v.clone()
-        lookDir.y = 0
-        if (lookDir.lengthSq() > 0) {
-            const mx = this.MX.lookAt(lookDir, this.ZeroV, this.YV)
-            const qt = this.QT.setFromRotationMatrix(mx)
-            this.allyModel.Meshs.quaternion.copy(qt)
+        if (this.attackProcess) {
+            this.applyLookDirection(this.scheduledLookDir)
+            return this
         }
 
-        if (this.attackProcess) return this
+        this.applyLookDirection(v)
         this.attackTime += delta
         if (this.attackTime / this.attackSpeed < 1) return this
         this.attackTime -= this.attackSpeed
         this.attackProcess = true
         this.scheduledTargetId = this.targetId
         this.scheduledAttackRange = attackDistance
+        this.scheduledLookDir.copy(v)
+        this.scheduledLookDir.y = 0
+        if (this.scheduledLookDir.lengthSq() <= 0.0001) {
+            this.scheduledLookDir.subVectors(target.CenterPos, this.allyModel.CenterPos)
+            this.scheduledLookDir.y = 0
+        }
+        this.applyLookDirection(this.scheduledLookDir)
+
+        console.log("[CombatDebug] AttackScheduled", {
+            actor: "ally",
+            actorId: this.allyModel.UUID,
+            targetId: this.scheduledTargetId,
+            currentTargetId: GetAllyAttackTargetId(target),
+            actorPos: {
+                x: this.allyModel.Pos.x,
+                y: this.allyModel.Pos.y,
+                z: this.allyModel.Pos.z,
+            },
+            targetPos: {
+                x: target.Pos.x,
+                y: target.Pos.y,
+                z: target.Pos.z,
+            },
+            distance: dist,
+            attackRange: attackDistance,
+            validation: undefined,
+            boundsEmpty: target.Box.isEmpty(),
+        })
 
         this.keytimeout = setTimeout(() => {
+            this.keytimeout = undefined
             this.attack(this.scheduledTargetId, this.scheduledAttackRange, target)
         }, this.attackSpeed * 1000 * 0.4)
 
         return this
     }
 
+    private applyLookDirection(direction: THREE.Vector3) {
+        const lookDir = direction.clone()
+        lookDir.y = 0
+        if (lookDir.lengthSq() > 0) {
+            const mx = this.MX.lookAt(lookDir, this.ZeroV, this.YV)
+            const qt = this.QT.setFromRotationMatrix(mx)
+            this.allyModel.Meshs.quaternion.copy(qt)
+        }
+    }
+
     private attack(targetId: string, attackDistance: number, target: IPhysicsObject) {
+        if (!this.attackProcess) {
+            console.log("[CombatDebug] AttackCanceled", {
+                actor: "ally",
+                reason: "stale_timeout",
+                actorId: this.allyModel.UUID,
+                targetId,
+                currentTargetId: GetAllyAttackTargetId(target),
+                actorPos: {
+                    x: this.allyModel.Pos.x,
+                    y: this.allyModel.Pos.y,
+                    z: this.allyModel.Pos.z,
+                },
+                targetPos: {
+                    x: target.Pos.x,
+                    y: target.Pos.y,
+                    z: target.Pos.z,
+                },
+                distance: this.GetTargetDistance(target),
+                attackRange: attackDistance,
+                validation: MeleeValidationResult.InvalidTarget,
+                boundsEmpty: target.Box.isEmpty(),
+            })
+            return
+        }
+        if (!HasAllyAttackTarget(target)) {
+            console.log("[CombatDebug] AttackCanceled", {
+                actor: "ally",
+                reason: "no_target_hit",
+                actorId: this.allyModel.UUID,
+                targetId,
+                currentTargetId: GetAllyAttackTargetId(target),
+                actorPos: {
+                    x: this.allyModel.Pos.x,
+                    y: this.allyModel.Pos.y,
+                    z: this.allyModel.Pos.z,
+                },
+                targetPos: undefined,
+                distance: undefined,
+                attackRange: attackDistance,
+                validation: MeleeValidationResult.InvalidTarget,
+                boundsEmpty: undefined,
+            })
+            this.attackProcess = false
+            return
+        }
+        const currentTargetId = GetAllyAttackTargetId(target)
+        if (currentTargetId !== targetId) {
+            console.log("[CombatDebug] AttackCanceled", {
+                actor: "ally",
+                reason: "target_changed_hit",
+                actorId: this.allyModel.UUID,
+                targetId,
+                currentTargetId,
+                actorPos: {
+                    x: this.allyModel.Pos.x,
+                    y: this.allyModel.Pos.y,
+                    z: this.allyModel.Pos.z,
+                },
+                targetPos: {
+                    x: target.Pos.x,
+                    y: target.Pos.y,
+                    z: target.Pos.z,
+                },
+                distance: this.GetTargetDistance(target),
+                attackRange: attackDistance,
+                validation: MeleeValidationResult.InvalidTarget,
+                boundsEmpty: target.Box.isEmpty(),
+            })
+            this.attackProcess = false
+            return
+        }
         if (this.property.projectileDef) {
             this.rangedAttack(targetId, attackDistance, target)
             return
@@ -343,6 +477,27 @@ export class AttackAllyState extends AllyState implements IActorState {
         const validation = validator?.ValidateMeleeAttackTarget(targetId, attackDistance)
             ?? MeleeValidationResult.InvalidTarget
         if (validation !== MeleeValidationResult.InRange) {
+            console.log("[CombatDebug] AttackCanceled", {
+                actor: "ally",
+                reason: "validator_failed",
+                actorId: this.allyModel.UUID,
+                targetId,
+                currentTargetId,
+                actorPos: {
+                    x: this.allyModel.Pos.x,
+                    y: this.allyModel.Pos.y,
+                    z: this.allyModel.Pos.z,
+                },
+                targetPos: {
+                    x: target.Pos.x,
+                    y: target.Pos.y,
+                    z: target.Pos.z,
+                },
+                distance: this.GetTargetDistance(target),
+                attackRange: attackDistance,
+                validation,
+                boundsEmpty: target.Box.isEmpty(),
+            })
             this.attackProcess = false
             return
         }
@@ -366,6 +521,27 @@ export class AttackAllyState extends AllyState implements IActorState {
             currentTargetId !== targetId ||
             validator.ValidateRangedAttackTarget?.(targetId, attackDistance) !== true
         ) {
+            console.log("[CombatDebug] AttackCanceled", {
+                actor: "ally",
+                reason: currentTargetId !== targetId ? "target_changed_ranged" : "ranged_validator_failed",
+                actorId: this.allyModel.UUID,
+                targetId,
+                currentTargetId,
+                actorPos: {
+                    x: this.allyModel.Pos.x,
+                    y: this.allyModel.Pos.y,
+                    z: this.allyModel.Pos.z,
+                },
+                targetPos: {
+                    x: target.Pos.x,
+                    y: target.Pos.y,
+                    z: target.Pos.z,
+                },
+                distance: this.GetTargetDistance(target),
+                attackRange: attackDistance,
+                validation: undefined,
+                boundsEmpty: target.Box.isEmpty(),
+            })
             this.attackProcess = false
             return
         }
@@ -474,8 +650,13 @@ export class RunAllyState extends AllyState implements IActorState {
         const checkDying = this.CheckDying()
         if (checkDying != undefined) return checkDying
 
+        if (!HasAllyAttackTarget(target)) {
+            this.states.IdleSt.Init()
+            return this.states.IdleSt
+        }
+
         const dist = this.GetTargetDistance(target)
-        const checkAttack = this.CheckAttack(dist)
+        const checkAttack = this.CheckAttack(target, dist)
         if (checkAttack != undefined) return checkAttack
 
         if (v.x == 0 && v.z == 0) {

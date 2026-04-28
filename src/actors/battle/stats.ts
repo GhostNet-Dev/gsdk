@@ -105,10 +105,14 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
   },
   [MonsterId.ToadMage]: {
     hp: 100,
+    attackMelee: 4,
+    attackRanged: 0,
     magicAttack: 18,
     intelligence: 15,
     mp: 50,
+    attackRange: 20,
     attackSpeedMelee: 2.0,
+    attackSpeedRanged: 1.4,
   },
   [MonsterId.Viking]: {
     hp: 200,

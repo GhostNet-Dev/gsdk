@@ -1,10 +1,12 @@
 import * as THREE from "three"
 import IEventController from "@Glibs/interface/ievent"
 import { EventTypes } from "@Glibs/types/globaltypes"
+import { GetHorizontalDistanceToBoxSurface } from "@Glibs/actors/battle/meleecombat"
 import { DefaultRelationResolver, RelationResolver } from "./relationresolver"
 import {
   RegisterTargetMsg,
   Relation,
+  TargetDistanceMode,
   TargetQueryOptions,
   TargetRecord,
   UpdateTargetStateMsg,
@@ -15,6 +17,8 @@ type TargetObjectMeta = Partial<RegisterTargetMsg> & { id?: string }
 export class TargetRegistrySystem {
   private readonly byId = new Map<string, TargetRecord>()
   private readonly idByObject = new WeakMap<THREE.Object3D, string>()
+  private readonly closestPoint = new THREE.Vector3()
+  private readonly distanceBox = new THREE.Box3()
 
   constructor(
     private readonly eventCtrl: IEventController,
@@ -44,6 +48,10 @@ export class TargetRegistrySystem {
       this.unindexObject(prev.object)
     }
     const objectMeta = this.getObjectMeta(msg.object)
+    const kind = msg.kind ?? objectMeta?.kind ?? prev?.kind ?? "other"
+    const bounds = kind === "structure"
+      ? msg.bounds ?? prev?.bounds
+      : undefined
 
     const record: TargetRecord = {
       id: msg.id ?? objectMeta?.id ?? prev?.id ?? msg.object.uuid,
@@ -51,15 +59,17 @@ export class TargetRegistrySystem {
       teamId: msg.teamId ?? objectMeta?.teamId ?? prev?.teamId,
       factionId: msg.factionId ?? objectMeta?.factionId ?? prev?.factionId,
       fleetId: msg.fleetId ?? objectMeta?.fleetId ?? prev?.fleetId,
-      kind: msg.kind ?? objectMeta?.kind ?? prev?.kind ?? "other",
+      kind,
       alive: msg.alive ?? prev?.alive ?? true,
       targetable: msg.targetable ?? prev?.targetable ?? true,
       collidable: msg.collidable ?? prev?.collidable ?? true,
-      bounds: msg.bounds ?? prev?.bounds,
+      bounds,
     }
 
     if (record.bounds) {
       msg.object.userData.bounds = record.bounds
+    } else {
+      delete msg.object.userData.bounds
     }
 
     this.byId.set(msg.id, record)
@@ -90,6 +100,11 @@ export class TargetRegistrySystem {
     if (!record) return
     this.unindexObject(record.object)
     record.object = object
+    if (record.kind === "structure" && record.bounds) {
+      object.userData.bounds = record.bounds
+    } else {
+      delete object.userData.bounds
+    }
     this.indexObject(id, object)
   }
 
@@ -146,19 +161,35 @@ export class TargetRegistrySystem {
     if (!source) return undefined
 
     let nearest: TargetRecord | undefined
-    let nearestDistSq = maxDistance * maxDistance
+    let nearestDist = maxDistance
 
     for (const target of this.getTargetsForTeam(source.teamId ?? "", "enemy", options)) {
       if (target.id === sourceId) continue
 
-      const distSq = source.object.position.distanceToSquared(target.object.position)
-      if (distSq >= nearestDistSq) continue
+      const dist = this.getDistance(source.object.position, target, options.distanceMode ?? TargetDistanceMode.Center)
+      if (dist >= nearestDist) continue
 
       nearest = target
-      nearestDistSq = distSq
+      nearestDist = dist
     }
 
     return nearest
+  }
+
+  private getDistance(sourcePos: THREE.Vector3, target: TargetRecord, mode: TargetDistanceMode) {
+    if (mode === TargetDistanceMode.BoundsSurface) {
+      return GetHorizontalDistanceToBoxSurface(sourcePos, this.getDistanceBounds(target), target.object.position, this.closestPoint)
+    }
+    return sourcePos.distanceTo(target.object.position)
+  }
+
+  private getDistanceBounds(target: TargetRecord): THREE.Box3 | undefined {
+    if (target.kind === "structure" && target.bounds && !target.bounds.isEmpty()) {
+      return target.bounds
+    }
+
+    this.distanceBox.setFromObject(target.object)
+    return this.distanceBox.isEmpty() ? undefined : this.distanceBox
   }
 
   private matchesOptions(record: TargetRecord, options: TargetQueryOptions) {

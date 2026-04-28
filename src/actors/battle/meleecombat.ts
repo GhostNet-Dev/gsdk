@@ -43,6 +43,19 @@ export function GetHorizontalDistance(a: THREE.Vector3, b: THREE.Vector3) {
     return Math.hypot(dx, dz)
 }
 
+export function GetHorizontalDistanceToBoxSurface(
+    origin: THREE.Vector3,
+    box: THREE.Box3 | undefined,
+    fallback: THREE.Vector3,
+    closestPoint = new THREE.Vector3(),
+) {
+    if (box && !box.isEmpty()) {
+        box.clampPoint(origin, closestPoint)
+        return GetHorizontalDistance(origin, closestPoint)
+    }
+    return GetHorizontalDistance(origin, fallback)
+}
+
 export function GetMeleeAttackDistance(spec: BaseSpec) {
     if (spec.stats.getBaseStat("attackRange") > 0) return spec.AttackRange
     return DEFAULT_MELEE_ATTACK_RANGE
@@ -105,6 +118,7 @@ export function ValidateReceivedMeleeAttack(
     defenderTargetId: string,
     defenderPos: THREE.Vector3,
     defenderAlive: boolean,
+    defenderBounds?: THREE.Box3,
 ) {
     if (!defenderAlive) return MeleeValidationResult.DeadTarget
     if (!IsMeleeAttackType(attack.type)) return MeleeValidationResult.InvalidTarget
@@ -114,7 +128,7 @@ export function ValidateReceivedMeleeAttack(
     }
     if (!attack.obj) return MeleeValidationResult.InvalidTarget
 
-    const hitDistance = GetHorizontalDistance(attack.obj.position, defenderPos)
+    const hitDistance = GetHorizontalDistanceToBoxSurface(attack.obj.position, defenderBounds, defenderPos)
     if (hitDistance > attack.distance) return MeleeValidationResult.OutOfRange
     return MeleeValidationResult.InRange
 }

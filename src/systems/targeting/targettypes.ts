@@ -11,6 +11,11 @@ export type TargetTeamId = typeof TargetTeamId[keyof typeof TargetTeamId]
 
 export type Relation = "ally" | "enemy" | "neutral"
 
+export enum TargetDistanceMode {
+  Center = "center",
+  BoundsSurface = "bounds_surface",
+}
+
 export type TargetRecord = {
   id: string
   object: THREE.Object3D
@@ -52,4 +57,5 @@ export type TargetQueryOptions = {
   targetableOnly?: boolean
   collidableOnly?: boolean
   kinds?: TargetKind[]
+  distanceMode?: TargetDistanceMode
 }

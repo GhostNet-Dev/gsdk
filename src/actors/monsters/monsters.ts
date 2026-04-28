@@ -12,11 +12,23 @@ import { MonsterDb } from "./monsterdb";
 import { Loader } from "@Glibs/loader/loader";
 import { Effector } from "@Glibs/magical/effects/effector";
 import { calculateCompositeDamage } from "../battle/damagecalc";
-import { IsMeleeAttackType, MeleeValidationResult, ValidateReceivedMeleeAttack } from "../battle/meleecombat";
+import {
+    GetHorizontalDistanceToBoxSurface,
+    IsMeleeAttackType,
+    MeleeValidationResult,
+    ValidateReceivedMeleeAttack,
+} from "../battle/meleecombat";
 import { BaseSpec } from "../battle/basespec";
 import { Zombie } from "./zombie";
 import { itemDefs } from "@Glibs/inventory/items/itemdefs";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
+import { FactionId } from "@Glibs/gameobjects/turntypes";
+
+export type MonsterSpawnOptions = {
+    respawn?: boolean
+    timer?: number
+    teamId?: TargetTeamId | FactionId
+}
 
 export type MonsterSet = {
     monModel: IPhysicsObject,
@@ -35,6 +47,7 @@ export interface IMonsterCtrl {
     Respawning(): void
     Dispose(): void
     ValidateMeleeAttackTarget(targetId: string, attackRange: number): MeleeValidationResult
+    ValidateRangedAttackTarget(targetId: string, attackRange: number): boolean
     ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number): boolean 
 }
 
@@ -110,6 +123,11 @@ export class Monsters {
         return id
     }
 
+    private getMeleeDefenderBounds(box: MonsterBox): THREE.Box3 | undefined {
+        const bounds = new THREE.Box3().setFromObject(box)
+        return bounds.isEmpty() ? undefined : bounds
+    }
+
     ReceiveDemage(z: MonsterSet, damage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number) {
         if (!z.live) return
 
@@ -147,8 +165,33 @@ export class Monsters {
     private ApplyAttack(z: MonsterSet, opt: AttackOption) {
         if (!z.live) return
         if (IsMeleeAttackType(opt.type) && opt.targetId != undefined) {
-            const validation = ValidateReceivedMeleeAttack(opt, z.monCtrl.TargetId, z.monModel.Pos, z.live)
-            if (validation !== MeleeValidationResult.InRange) return
+            const defenderBounds = this.getMeleeDefenderBounds(z.monCtrl.MonsterBox)
+            const validation = ValidateReceivedMeleeAttack(
+                opt,
+                z.monCtrl.TargetId,
+                z.monModel.Pos,
+                z.live,
+                defenderBounds,
+            )
+            if (validation !== MeleeValidationResult.InRange) {
+                console.log("[CombatDebug] ReceiveRejected", {
+                    receiver: "monster",
+                    actorId: opt.attackerObjectId,
+                    targetId: opt.targetId,
+                    currentTargetId: z.monCtrl.TargetId,
+                    actorPos: opt.obj
+                        ? { x: opt.obj.position.x, y: opt.obj.position.y, z: opt.obj.position.z }
+                        : undefined,
+                    targetPos: { x: z.monModel.Pos.x, y: z.monModel.Pos.y, z: z.monModel.Pos.z },
+                    distance: opt.obj
+                        ? GetHorizontalDistanceToBoxSurface(opt.obj.position, defenderBounds, z.monModel.Pos)
+                        : undefined,
+                    attackRange: opt.distance,
+                    validation,
+                    boundsEmpty: defenderBounds == undefined,
+                })
+                return
+            }
         }
         if(opt.spec == undefined) throw new Error("unexpected value");
         const damage = calculateCompositeDamage({
@@ -191,14 +234,18 @@ export class Monsters {
         const set = mon.find((e) => e.live == false && now - e.deadtime > timer)
         return set
     }
-    async CreateMonster(monId: MonsterId, { respawn = false, timer = 5000 }, pos?: THREE.Vector3) {
+    async CreateMonster(
+        monId: MonsterId,
+        { respawn = false, timer = 5000, teamId = TargetTeamId.Monster }: MonsterSpawnOptions = {},
+        pos?: THREE.Vector3,
+    ) {
         let set
         if (!respawn) {
             // respawn 이 트루면 죽을 때 타이머로 부활이 설정되어 있다.
             set = await this.Resurrection(monId, timer)
         }
         console.log("Create", set, this.monsters.get(monId))
-        return this.Spawning(monId, respawn, set, pos)
+        return this.Spawning(monId, respawn, set, pos, teamId)
     }
     ReleaseMonster() {
         this.monsters.forEach((mon) => {
@@ -231,7 +278,13 @@ export class Monsters {
         if (this.respawntimeout != undefined) clearTimeout(this.respawntimeout)
     }
 
-    async Spawning(monId: MonsterId, respawn:boolean, monSet?: MonsterSet, pos?: THREE.Vector3) {
+    async Spawning(
+        monId: MonsterId,
+        respawn: boolean,
+        monSet?: MonsterSet,
+        pos?: THREE.Vector3,
+        teamId: TargetTeamId | FactionId = TargetTeamId.Monster,
+    ) {
         //const zSet = await this.CreateZombie()
         if (!this.mode) return
         if (this.mobCount >= this.maxMob) return
@@ -277,7 +330,7 @@ export class Monsters {
         monSet.monModel.Meshs.name = monSet.monCtrl.TargetId
         monSet.monModel.Meshs.userData.targetMeta = {
             id: monSet.monCtrl.TargetId,
-            teamId: TargetTeamId.Monster,
+            teamId,
             kind: "unit",
         }
         monSet.monModel.Meshs.updateWorldMatrix(true, true)
@@ -285,7 +338,7 @@ export class Monsters {
         this.eventCtrl.SendEventMessage(EventTypes.RegisterTarget, {
             id: monSet.monCtrl.TargetId,
             object: monSet.monModel.Meshs,
-            teamId: TargetTeamId.Monster,
+            teamId,
             kind: "unit",
             alive: true,
             targetable: true,

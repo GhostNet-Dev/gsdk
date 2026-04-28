@@ -78,14 +78,14 @@ export default class OptPhysics implements IGPhysic {
         const id = obj.userData.staticColliderId
         if (kind == undefined && id == undefined) return
 
-        console.info("[OptPhysics] RegisterPhysic static collider", {
-            kind,
-            id,
-            name: obj.name,
-            uuid: obj.uuid,
-            raycastOn: spatialObj.raycastOn,
-            box: this.formatBox(spatialObj.box),
-        })
+        // console.info("[OptPhysics] RegisterPhysic static collider", {
+        //     kind,
+        //     id,
+        //     name: obj.name,
+        //     uuid: obj.uuid,
+        //     raycastOn: spatialObj.raycastOn,
+        //     box: this.formatBox(spatialObj.box),
+        // })
     }
 
     private formatBox(box: THREE.Box3) {

@@ -91,6 +91,7 @@ export class Zombie extends PhysicsObject {
         this.clipMap.set(ActionType.Idle, this.asset.GetAnimationClip(Ani.Idle))
         this.clipMap.set(ActionType.Run, this.asset.GetAnimationClip(Ani.Run))
         this.clipMap.set(ActionType.Punch, this.asset.GetAnimationClip(Ani.Punch))
+        this.clipMap.set(ActionType.MagicH1, this.asset.GetAnimationClip(Ani.MagicH1))
         this.clipMap.set(ActionType.Dying, this.asset.GetAnimationClip(Ani.Dying))
 
         this.clipMap.set(ActionType.MonBiteNeck, this.asset.GetAnimationClip(Ani.MonBiteNeck))

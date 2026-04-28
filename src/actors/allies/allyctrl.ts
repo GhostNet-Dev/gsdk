@@ -11,8 +11,8 @@ import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actio
 import { StatKey } from "@Glibs/types/stattypes";
 import { Buff } from "@Glibs/magical/buff/buff";
 import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
-import { TargetRecord, TargetTeamId } from "@Glibs/systems/targeting/targettypes";
-import { GetHorizontalDistance, MeleeValidationResult, PendingMeleeImpactContext } from "@Glibs/actors/battle/meleecombat";
+import { TargetDistanceMode, TargetRecord, TargetTeamId } from "@Glibs/systems/targeting/targettypes";
+import { GetHorizontalDistanceToBoxSurface, MeleeValidationResult, PendingMeleeImpactContext } from "@Glibs/actors/battle/meleecombat";
 import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes";
 
 // 타겟 레코드를 IPhysicsObject로 래핑하여 TargetId를 state machine에 전달
@@ -29,6 +29,7 @@ class AllyTargetAdapter implements IPhysicsObject {
     // 플레이어 위치를 폴백으로 사용하지 않음: 아군은 타겟 없으면 제자리 대기
     private static readonly ZERO = new THREE.Vector3()
 
+    get HasTarget() { return this.target != undefined }
     get TargetId() { return this.target?.id ?? TargetTeamId.Monster }
 
     set Target(record: TargetRecord | undefined) {
@@ -77,12 +78,20 @@ class AllyTargetAdapter implements IPhysicsObject {
     update() { this.isDirty = true }
 
     private updateCache() {
-        const object = this.target?.object
+        const target = this.target
+        const object = target?.object
         if (!object) {
+            this.box.makeEmpty()
+            this.size.set(1, 1, 1)
+            this.centerPos.copy(AllyTargetAdapter.ZERO)
             this.isDirty = false
             return
         }
-        this.box.setFromObject(object)
+        if (target.kind === "structure" && target.bounds && !target.bounds.isEmpty()) {
+            this.box.copy(target.bounds)
+        } else {
+            this.box.setFromObject(object)
+        }
         if (this.box.isEmpty()) {
             this.size.set(1, 1, 1)
             this.centerPos.copy(object.position)
@@ -116,6 +125,8 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
     private lastSearchTime = 0
     private readonly searchInterval = 500
     private readonly _cp = new THREE.Vector3()
+    private readonly targetBounds = new THREE.Box3()
+    private loggedNoTarget = false
 
     private readonly setTargetRegistry = (targetRegistry?: TargetRegistrySystem) => {
         this.targetRegistry = targetRegistry
@@ -201,8 +212,34 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
         const target = this.resolveTarget()
 
         if (this.Spec.Health > 0) {
-            this.dir.subVectors(target.CenterPos, this.allyModel.CenterPos)
-            this.moveDirection.copy(this.dir.normalize())
+            if (this.currentTarget) {
+                this.loggedNoTarget = false
+                this.dir.subVectors(target.CenterPos, this.allyModel.CenterPos)
+                this.moveDirection.copy(this.dir.normalize())
+            } else {
+                if (!this.loggedNoTarget) {
+                    console.log("[CombatDebug] NoTarget", {
+                        actor: "ally",
+                        actorId: this.targetId,
+                        targetId: undefined,
+                        currentTargetId: undefined,
+                        actorPos: {
+                            x: this.allyModel.Pos.x,
+                            y: this.allyModel.Pos.y,
+                            z: this.allyModel.Pos.z,
+                        },
+                        targetPos: undefined,
+                        distance: undefined,
+                        attackRange: undefined,
+                        validation: undefined,
+                        boundsEmpty: undefined,
+                    })
+                    this.loggedNoTarget = true
+                }
+                this.moveDirection.set(0, 0, 0)
+            }
+        } else {
+            this.moveDirection.set(0, 0, 0)
         }
 
         this.currentState = this.currentState.Update(delta, this.moveDirection, target)
@@ -228,13 +265,7 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
         if (!target.alive) return MeleeValidationResult.DeadTarget
         if (!target.targetable || !target.collidable) return MeleeValidationResult.InvalidTarget
 
-        let refPos = target.object.position
-        if (target.bounds) {
-            this._cp.copy(this.allyModel.Pos)
-            target.bounds.clampPoint(this._cp, this._cp)
-            refPos = this._cp
-        }
-        const dist = GetHorizontalDistance(this.allyModel.Pos, refPos)
+        const dist = GetHorizontalDistanceToBoxSurface(this.allyModel.Pos, this.targetAdapter.Box, target.object.position, this._cp)
         if (dist > attackRange) return MeleeValidationResult.OutOfRange
         return MeleeValidationResult.InRange
     }
@@ -244,18 +275,39 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
         if (!target || target.id !== targetId) return false
         if (!target.alive || !target.targetable || !target.collidable) return false
 
-        let refPos = target.object.position
-        if (target.bounds) {
-            this._cp.copy(this.allyModel.Pos)
-            target.bounds.clampPoint(this._cp, this._cp)
-            refPos = this._cp
-        }
-        return GetHorizontalDistance(this.allyModel.Pos, refPos) <= attackRange
+        return GetHorizontalDistanceToBoxSurface(this.allyModel.Pos, this.targetAdapter.Box, target.object.position, this._cp) <= attackRange
     }
 
     private resolveTarget(): IPhysicsObject {
+        const previousTargetId = this.currentTarget?.id
         this.currentTarget = this.findRegistryTarget()
         this.targetAdapter.Target = this.currentTarget
+        const currentTargetId = this.currentTarget?.id
+        if (previousTargetId !== currentTargetId) {
+            console.log("[CombatDebug] TargetChanged", {
+                actor: "ally",
+                actorId: this.targetId,
+                targetId: currentTargetId,
+                currentTargetId,
+                previousTargetId,
+                actorPos: {
+                    x: this.allyModel.Pos.x,
+                    y: this.allyModel.Pos.y,
+                    z: this.allyModel.Pos.z,
+                },
+                targetPos: this.currentTarget
+                    ? {
+                        x: this.currentTarget.object.position.x,
+                        y: this.currentTarget.object.position.y,
+                        z: this.currentTarget.object.position.z,
+                    }
+                    : undefined,
+                distance: undefined,
+                attackRange: undefined,
+                validation: undefined,
+                boundsEmpty: undefined,
+            })
+        }
         return this.targetAdapter
     }
 
@@ -275,12 +327,22 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
             targetableOnly: true,
             collidableOnly: true,
             kinds: ["unit", "structure"],
+            distanceMode: TargetDistanceMode.BoundsSurface,
         })
     }
 
     private isValidTarget(target?: TargetRecord): target is TargetRecord {
         if (!target?.alive || !target.targetable || !target.collidable) return false
-        if (this.allyModel.Pos.distanceToSquared(target.object.position) > this.aggroRange ** 2) return false
+        if (GetHorizontalDistanceToBoxSurface(this.allyModel.Pos, this.getTargetBounds(target), target.object.position, this._cp) > this.aggroRange) return false
         return this.targetRegistry?.isHostile(this.targetId, target.id) ?? false
+    }
+
+    private getTargetBounds(target: TargetRecord): THREE.Box3 | undefined {
+        if (target.kind === "structure" && target.bounds && !target.bounds.isEmpty()) {
+            return target.bounds
+        }
+
+        this.targetBounds.setFromObject(target.object)
+        return this.targetBounds.isEmpty() ? undefined : this.targetBounds
     }
 }

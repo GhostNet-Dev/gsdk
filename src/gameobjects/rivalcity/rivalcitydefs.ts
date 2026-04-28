@@ -1,4 +1,5 @@
 import { CurrencyType } from "@Glibs/inventory/wallet";
+import { MonsterId } from "@Glibs/types/monstertypes";
 import { RivalCityDef, RivalCityDefId, RivalPolicyDef, RivalSpecialResourceType } from "./rivalcitytypes";
 
 // ─── 도시 정의 ────────────────────────────────────────────────────────────────
@@ -15,6 +16,10 @@ export const rivalCityDefs: Record<RivalCityDefId, RivalCityDef> = {
       [CurrencyType.Gold]: 120,
     },
     startingSpecialResources: { rareWood: 2 },
+    armyDeck: [
+      [MonsterId.Snake, MonsterId.Bilby, MonsterId.Crab],
+      [MonsterId.Birdmon, MonsterId.Snake, MonsterId.Bilby],
+    ],
     startingBuildings: ["cc", "lumbermill"],
     openingBuildOrder: ["lumbermill", "supply", "watermill", "market"],
     preferredBuildings: ["lumbermill", "watermill", "supply", "home_b"],
@@ -51,6 +56,10 @@ export const rivalCityDefs: Record<RivalCityDefId, RivalCityDef> = {
       [CurrencyType.Gold]: 160,
     },
     startingSpecialResources: { crystal: 1 },
+    armyDeck: [
+      [MonsterId.Viking, MonsterId.Golem, MonsterId.Viking],
+      [MonsterId.Golem, MonsterId.Viking, MonsterId.Minotaur],
+    ],
     startingBuildings: ["cc", "mine"],
     openingBuildOrder: ["mine", "blacksmith", "mine", "market"],
     preferredBuildings: ["mine", "blacksmith", "home_b", "tower_a"],
@@ -88,6 +97,10 @@ export const rivalCityDefs: Record<RivalCityDefId, RivalCityDef> = {
       [CurrencyType.Water]: 60,
     },
     startingSpecialResources: { tradeInfluence: 2 },
+    armyDeck: [
+      [MonsterId.DashZombie, MonsterId.Crab, MonsterId.DashZombie],
+      [MonsterId.Crab, MonsterId.DashZombie, MonsterId.Zombie],
+    ],
     startingBuildings: ["cc", "market"],
     openingBuildOrder: ["market", "watermill", "home_b", "market"],
     preferredBuildings: ["market", "watermill", "home_b"],
@@ -124,6 +137,10 @@ export const rivalCityDefs: Record<RivalCityDefId, RivalCityDef> = {
       [CurrencyType.Materials]: 40,
     },
     startingSpecialResources: { knowledge: 2 },
+    armyDeck: [
+      [MonsterId.ToadMage, MonsterId.Skeleton, MonsterId.ToadMage],
+      [MonsterId.Skeleton, MonsterId.ToadMage, MonsterId.Builder],
+    ],
     startingBuildings: ["cc", "blacksmith"],
     openingBuildOrder: ["blacksmith", "home_b", "blacksmith", "market"],
     preferredBuildings: ["blacksmith", "home_b"],
@@ -160,6 +177,10 @@ export const rivalCityDefs: Record<RivalCityDefId, RivalCityDef> = {
       [CurrencyType.Gold]: 20,
     },
     startingSpecialResources: { civicTrust: 1 },
+    armyDeck: [
+      [MonsterId.Zombie, MonsterId.Viking, MonsterId.Skeleton],
+      [MonsterId.Viking, MonsterId.Zombie, MonsterId.DashZombie],
+    ],
     startingBuildings: ["cc", "supply"],
     openingBuildOrder: ["supply", "home_b", "lumbermill", "supply"],
     preferredBuildings: ["supply", "home_b", "lumbermill"],
@@ -196,6 +217,10 @@ export const rivalCityDefs: Record<RivalCityDefId, RivalCityDef> = {
       [CurrencyType.Wood]: 40,
     },
     startingSpecialResources: { civicTrust: 2 },
+    armyDeck: [
+      [MonsterId.Bilby, MonsterId.WereWolf, MonsterId.Snake],
+      [MonsterId.WereWolf, MonsterId.Bilby, MonsterId.Minotaur],
+    ],
     startingBuildings: ["cc", "supply"],
     openingBuildOrder: ["supply", "home_b", "watermill"],
     preferredBuildings: ["supply", "home_b", "watermill"],

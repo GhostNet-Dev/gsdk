@@ -3,6 +3,8 @@ import { StatKey } from "@Glibs/inventory/stat/stattypes"
 import { Char } from "@Glibs/types/assettypes"
 import { ActionDef } from "@Glibs/actions/actiontypes"
 import { IActorState } from "@Glibs/actors/player/states/playerstate"
+import { ActionType } from "@Glibs/types/playertypes"
+import { ProjectileWeaponDef } from "@Glibs/actors/projectile/projectiletypes"
 
 export { IActorState }
 
@@ -65,5 +67,7 @@ export type MonsterProperty = {
     stats?: Partial<Record<StatKey, number>>
     drop?: MonDrop[]
     actions?: ActionDef[],
+    projectileDef?: ProjectileWeaponDef
+    attackAction?: ActionType
     idleStates?: (...params: any) => IActorState
 }

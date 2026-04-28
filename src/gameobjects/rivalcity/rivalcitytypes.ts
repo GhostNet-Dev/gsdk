@@ -4,6 +4,7 @@ import {
   StrategicPlanetId,
   StrategicPlanetSpecialResourceBag,
 } from "@Glibs/gameobjects/strategicgalaxy/strategicgalaxytypes";
+import { MonsterId } from "@Glibs/types/monstertypes";
 
 export type { CityScore };
 
@@ -132,6 +133,7 @@ export interface RivalCityDef {
   specialResourceBias?: Partial<Record<RivalSpecialResourceType, number>>;
   policyWeights: Partial<Record<RivalPolicyId, number>>;
   scoreWeights: RivalScoreWeights;
+  armyDeck?: readonly (readonly MonsterId[])[];
 }
 
 // ─── 도시 배치 seed ───────────────────────────────────────────────────────────
