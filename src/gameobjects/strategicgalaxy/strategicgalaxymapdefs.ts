@@ -1,5 +1,10 @@
 import { GalaxyPlanetVisualDef, StrategicPlanetId } from "./strategicgalaxytypes";
-import { GalaxyPlanetAssetKey, GalaxyRingTextureKey } from "@Glibs/world/galaxy/galaxytypes";
+import {
+  GalaxyPlanetAssetKey,
+  GalaxyRingTextureKey,
+  GalaxySpaceStationInteraction,
+  GalaxySpaceStationKind,
+} from "@Glibs/world/galaxy/galaxytypes";
 
 export const DefaultStrategicGalaxySelectedPlanetId = StrategicPlanetId.Atlas;
 
@@ -28,6 +33,15 @@ export const galaxyPlanetVisualDefs: Partial<Record<StrategicPlanetId, GalaxyPla
     planetId: StrategicPlanetId.Hephaestus,
     radius: 1.12,
     assetKey: GalaxyPlanetAssetKey.AmberBands,
+    spaceStation: {
+      kind: GalaxySpaceStationKind.OrbitalHabitat,
+      interaction: GalaxySpaceStationInteraction.Placeholder,
+      orbit: {
+        radiusMultiplier: 2.2,
+        speedRadPerSec: 0.18,
+        tiltRad: Math.PI / 6,
+      },
+    },
   },
   [StrategicPlanetId.Athena]: {
     planetId: StrategicPlanetId.Athena,

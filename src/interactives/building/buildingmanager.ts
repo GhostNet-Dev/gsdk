@@ -53,6 +53,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
 
   playerCityPlanetId: StrategicPlanetId = StrategicPlanetId.Eden;
   playerCityFactionId: FactionId = FactionId.Aetherion;
+  resourceBiasProvider?: (planetId: StrategicPlanetId) => Partial<Record<CurrencyType, number>>;
 
   // [추가] 선택된 건물 및 UI
   private selectedBuilding: IBuildingObject | null = null;
@@ -591,6 +592,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
   } {
     let economy = 0, production = 0, population = 0;
     const resourceOutput: Partial<Record<CurrencyType, number>> = {};
+    const resourceBias = this.resourceBiasProvider?.(this.playerCityPlanetId) ?? {};
 
     for (const building of this.buildingObjects.values()) {
       const prop = building.property;
@@ -600,7 +602,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
       if (prop.production?.resources) {
         for (const [res, amount] of Object.entries(prop.production.resources)) {
           const key = res as CurrencyType;
-          const produced = (amount ?? 0) * Math.max(1, building.level);
+          const produced = (amount ?? 0) * Math.max(1, building.level) * (resourceBias[key] ?? 1);
           resourceOutput[key] = (resourceOutput[key] ?? 0) + produced;
           if (key === CurrencyType.Gold) economy += produced;
           else production += produced;

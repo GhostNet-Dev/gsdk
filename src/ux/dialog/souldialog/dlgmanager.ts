@@ -11,7 +11,6 @@ let IDSEQ = 0;
 export class DialogManager {
   readonly registry = new DialogRegistry();
   private renderer: RendererAPI;
-  private events?: any;
   // Rain 효과를 유발한 다이얼로그 ID를 추적
   private rainOwnerId: string | null = null;
 
@@ -19,11 +18,10 @@ export class DialogManager {
   private confetti = new ConfettiSystem(this.eventCtrl);
 
   constructor(
-    private eventCtrl: IEventController,
-    opts: { renderer: RendererAPI; events?: any }
+    private readonly eventCtrl: IEventController,
+    opts: { renderer: RendererAPI }
   ) {
     this.renderer = opts.renderer;
-    this.events = opts.events;
   }
 
   open<T>(type: DialogDescriptor['type'], props: T, options?: DialogDescriptor['options']) {
@@ -67,7 +65,7 @@ export class DialogManager {
     const desc: DialogDescriptor = { id, type, props, options };
     this.opened.push({ desc, view, shell });
 
-    view.mount({ manager: this, shell: shell, render: this.renderer, events: this.events }, props);
+    view.mount({ manager: this, shell: shell, render: this.renderer, events: this.eventCtrl }, props);
     return id;
   }
 
@@ -116,6 +114,8 @@ export class DialogManager {
       case 'skill-slots': return '스킬 슬롯 설정';
       case 'building': return '건설 — 기지 확장';
       case 'techtree': return '기술 트리 — 특성 강화';
+      case 'trade': return '무역소';
+      case 'squad': return '부대 편성';
       default: return 'Dialog';
     }
   }

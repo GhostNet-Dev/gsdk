@@ -121,7 +121,7 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
 
         this.render();
         document.addEventListener('pointerdown', this.onGlobalDown, true);
-        this.ctx.events?.RegisterEventListener(EventTypes.GridArrowClick, this.onArrowClick);
+        this.ctx.events.RegisterEventListener(EventTypes.GridArrowClick, this.onArrowClick);
     }
 
     /**
@@ -179,7 +179,14 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
 
         this.displayNodes.forEach(node => {
             const check = this.props.canLevelUp(node.id);
-            const isEnabled = check.ok;
+            let isEnabled = check.ok;
+            let reason = check.reason;
+
+            const prop = node.tech as BuildingProperty;
+            if (!isEnabled && reason === "already at max level" && prop && !prop.isUnique) {
+                isEnabled = true;
+                reason = undefined;
+            }
 
             const slot = createEl(doc, 'button');
             slot.className = 'gnx-build-slot' + (isEnabled ? '' : ' gnx-disabled');
@@ -193,7 +200,7 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
 
             slot.onmouseenter = (e) => {
                 if (this.tip.pinned) return;
-                this.showTooltip(node, isEnabled, check.reason, false, e);
+                this.showTooltip(node, isEnabled, reason, false, e);
             };
             slot.onmousemove = (e) => {
                 if (!this.tip.pinned) this.tip.move(e);
@@ -207,7 +214,7 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
                 e.stopPropagation();
                 this.selectedId = node.id;
                 this.updateSelection();
-                this.showTooltip(node, isEnabled, check.reason, true, e);
+                this.showTooltip(node, isEnabled, reason, true, e);
             };
 
             grid.appendChild(slot);
@@ -226,14 +233,14 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
             return;
         }
 
-        this.ctx.events?.SendEventMessage(EventTypes.ShowGrid);
-        this.ctx.events?.SendEventMessage(EventTypes.HighlightGrid, {
+        this.ctx.events.SendEventMessage(EventTypes.ShowGrid);
+        this.ctx.events.SendEventMessage(EventTypes.HighlightGrid, {
             pos: new THREE.Vector3(0, 0, 0),
             width: prop.size.width,
             depth: prop.size.depth,
             nodeId: node.id
         });
-        this.ctx.events?.SendEventMessage(EventTypes.CameraInputPreset, CameraInputPreset.Placement);
+        this.ctx.events.SendEventMessage(EventTypes.CameraInputPreset, CameraInputPreset.Placement);
 
         // [추가] 하단 정보 바에 선택된 건물 정보 표시
         let costStr = "무료";
@@ -244,7 +251,7 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
                 .join(", ");
         }
         
-        this.ctx.events?.SendEventMessage(EventTypes.ShowBuildingInfo, {
+        this.ctx.events.SendEventMessage(EventTypes.ShowBuildingInfo, {
             name: node.name,
             cost: costStr
         });
@@ -319,6 +326,6 @@ export class BuildingView implements IDialogView<BuildingViewProps> {
     unmount() {
         this.tip.destroy();
         document.removeEventListener('pointerdown', this.onGlobalDown, true);
-        this.ctx.events?.DeregisterEventListener(EventTypes.GridArrowClick, this.onArrowClick);
+        this.ctx.events.DeregisterEventListener(EventTypes.GridArrowClick, this.onArrowClick);
     }
 }

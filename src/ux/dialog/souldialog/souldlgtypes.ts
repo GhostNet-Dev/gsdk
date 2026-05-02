@@ -1,12 +1,14 @@
 // ============================================================================
 // core/types.ts — 공용 타입
 // ============================================================================
+import type IEventController from '@Glibs/interface/ievent';
+
 export type DialogType =
   | 'narrative' | 'confirm' | 'cards' | 'shop'
   | 'quest-log' | 'quest-detail' | 'quest-complete'
   | 'inventory' | 'character'
   | 'input' | 'warning' | 'tutorial' | 'scroll' | 'techtree'
-  | 'skill-slots' | 'building';
+  | 'skill-slots' | 'building' | 'trade' | 'squad';
 
 export interface DialogDescriptor<TProps = any> {
   id: string;
@@ -61,5 +63,5 @@ export interface ViewContext {
   manager: import('./dlgmanager').DialogManager;
   render: RendererAPI;
   shell: RendererShell
-  events?: any; // IEventController 등 외부 이벤트 버스
+  events: IEventController;
 }

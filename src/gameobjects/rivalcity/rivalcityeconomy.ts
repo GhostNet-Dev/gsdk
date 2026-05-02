@@ -35,7 +35,7 @@ export function applyBiases(
 
     const cityBias     = cityDef.resourceBias[key] ?? 1;
     const factionBias  = factionModifier?.resourceBias[key] ?? 1;
-    const planetBias   = 1 + (planetBonus[key] ?? 0);
+    const planetBias   = planetBonus[key] ?? 1;
 
     result[key] = amount * cityBias * factionBias * planetBias;
   }

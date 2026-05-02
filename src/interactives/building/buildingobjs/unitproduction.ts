@@ -2,20 +2,23 @@ import * as THREE from 'three';
 import { BaseBuilding } from './basebuilding';
 import { BuildingType } from '../ibuildingobj';
 import { ICommand } from '@Glibs/ux/selectionpanel/selectionpanel';
-import { EventTypes } from '@Glibs/types/globaltypes';
+import { EventTypes, UnitProducedPayload } from '@Glibs/types/globaltypes';
+import { AllyId } from '@Glibs/actors/allies/allytypes';
+import { BuildingProperty } from '../buildingdefs';
+import IEventController from '@Glibs/interface/ievent';
 
 export class UnitProduction extends BaseBuilding {
     private isProducing = false;
-    private currentUnit: string | null = null;
+    private currentUnit: AllyId | null = null;
     private unitProductionTimer = 0;
     private readonly unitProductionTime = 5.0;
 
     constructor(
         id: string,
-        property: any,
+        property: BuildingProperty,
         position: THREE.Vector3,
         mesh: THREE.Object3D,
-        eventCtrl: any
+        eventCtrl: IEventController
     ) {
         super(id, BuildingType.UnitProduction, property, position, mesh, eventCtrl);
     }
@@ -29,21 +32,21 @@ export class UnitProduction extends BaseBuilding {
         }
     }
 
-    private startProduction(unitId: string) {
+    private startProduction(allyId: AllyId) {
         if (this.isProducing || this.isUpgrading) return;
         this.isProducing = true;
-        this.currentUnit = unitId;
+        this.currentUnit = allyId;
         this.unitProductionTimer = 0;
-        console.log(`[Production] Started: ${unitId}`);
+        console.log(`[Production] Started: ${allyId}`);
     }
 
     private spawnUnit() {
         if (this.currentUnit) {
-            this.eventCtrl.SendEventMessage(EventTypes.SpawnProjectile, { 
-                type: "spawn", 
-                unitId: this.currentUnit, 
-                pos: this.position.clone().add(new THREE.Vector3(5, 0, 5)) 
-            });
+            this.eventCtrl.SendEventMessage(EventTypes.UnitProduced, {
+                allyId: this.currentUnit,
+                count: 1,
+                buildingId: this.id,
+            } satisfies UnitProducedPayload);
         }
         this.isProducing = false;
         this.currentUnit = null;

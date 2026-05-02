@@ -9,6 +9,7 @@ import {
   GalaxyPlanetAssetKey,
   GalaxyResourceBonusViewModel,
   GalaxyRingTextureKey,
+  GalaxySpaceStationDef,
   GalaxySpecialResourceViewModel,
 } from "@Glibs/world/galaxy/galaxytypes";
 
@@ -176,6 +177,7 @@ export interface GalaxyPlanetVisualDef {
     tiltX?: number;
     tiltY?: number;
   };
+  spaceStation?: GalaxySpaceStationDef;
   position?: [number, number, number];
 }
 

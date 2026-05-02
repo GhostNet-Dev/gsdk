@@ -6,15 +6,40 @@ import { ProjectileWeaponDef } from "@Glibs/actors/controllable/controllabletype
 import { shipWeaponDefs } from "@Glibs/actors/controllable/samples/shipweapondefs";
 import { TargetKind } from "@Glibs/systems/targeting/targettypes";
 import { StatKey } from "@Glibs/inventory/stat/stattypes";
+import { AllyId } from "@Glibs/actors/allies/allytypes";
 
-export interface CommandTemplate {
+export type BaseCommandTemplate = {
     id: string;
     name: string;
     icon: string;
     shortcut?: string;
-    type: "produce" | "research" | "action" | "custom";
-    targetId?: string; // 유닛 ID 또는 테크 ID
-}
+};
+
+export type ProduceCommandTemplate = BaseCommandTemplate & {
+    type: "produce";
+    targetId: AllyId;
+};
+
+export type ResearchCommandTemplate = BaseCommandTemplate & {
+    type: "research";
+    targetId: string;
+};
+
+export type ActionCommandTemplate = BaseCommandTemplate & {
+    type: "action";
+    targetId?: string;
+};
+
+export type CustomCommandTemplate = BaseCommandTemplate & {
+    type: "custom";
+    targetId?: string;
+};
+
+export type CommandTemplate =
+    | ProduceCommandTemplate
+    | ResearchCommandTemplate
+    | ActionCommandTemplate
+    | CustomCommandTemplate;
 
 /**
  * [신규] 자원 생산 상세 정의
@@ -68,6 +93,11 @@ export interface BuildingProperty {
     combat?: BuildingCombatProperty;
 }
 
+const BASIC_TURN = 1
+const MEDIUM_TURN = 2
+const LONG_TURN = 3
+
+
 export const buildingDefs: Record<string, BuildingProperty> = {
     CommandCenter: {
         id: "cc",
@@ -78,7 +108,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 2000,
         scale: 10,
         buildTime: 10,
-        buildTurns: 2,
+        buildTurns: BASIC_TURN,
         size: { width: 5, depth: 5 },
         providesPeople: 15,
         buildRange: 15,
@@ -102,7 +132,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 500,
         scale: 10,
         buildTime: 15,
-        buildTurns: 3,
+        buildTurns: BASIC_TURN,
         size: { width: 2, depth: 2 },
         providesPeople: 8,
         desc: "인구수를 늘려주는 주거 시설입니다.",
@@ -117,7 +147,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 700,
         scale: 10,
         buildTime: 20,
-        buildTurns: 4,
+        buildTurns: MEDIUM_TURN,
         size: { width: 3, depth: 3 },
         providesPeople: 12,
         desc: "더 많은 인구를 수용하는 주택입니다.",
@@ -132,12 +162,12 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 1200,
         scale: 10,
         buildTime: 25,
-        buildTurns: 2,
+        buildTurns: BASIC_TURN,
         size: { width: 3, depth: 3 },
-        provides: ["marine", "firebat"],
+        provides: [AllyId.Warrior],
         desc: "지상 보병 유닛을 훈련합니다.",
         commands: [
-            { id: "spawn_marine", name: "해병 훈련", icon: "🔫", type: "produce", targetId: "marine", shortcut: "M" }
+            { id: "spawn_warrior", name: "전사 훈련", icon: "⚔️", type: "produce", targetId: AllyId.Warrior, shortcut: "W" }
         ]
     },
     ArcheryRange: {
@@ -149,12 +179,12 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 1000,
         scale: 10,
         buildTime: 20,
-        buildTurns: 3,
+        buildTurns: BASIC_TURN,
         size: { width: 3, depth: 3 },
-        provides: ["archer"],
+        provides: [AllyId.Archer],
         desc: "원거리 유닛을 훈련합니다.",
         commands: [
-            // { id: "spawn_archer", name: "궁수 훈련", icon: "🏹", type: "produce", targetId: "archer", shortcut: "A" }
+            { id: "spawn_archer", name: "궁수 훈련", icon: "🏹", type: "produce", targetId: AllyId.Archer, shortcut: "A" }
         ]
     },
     Blacksmith: {
@@ -166,7 +196,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 800,
         scale: 10,
         buildTime: 25,
-        buildTurns: 6,
+        buildTurns: MEDIUM_TURN,
         size: { width: 3, depth: 3 },
         desc: "무기와 방어력을 업그레이드합니다.",
         commands: [
@@ -183,7 +213,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 1500,
         scale: 10,
         buildTime: 40,
-        buildTurns: 10,
+        buildTurns: LONG_TURN,
         size: { width: 4, depth: 4 },
         desc: "성스러운 기술을 연구합니다.",
         commands: [
@@ -199,7 +229,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 600,
         scale: 10,
         buildTime: 15,
-        buildTurns: 4,
+        buildTurns: MEDIUM_TURN,
         size: { width: 3, depth: 3 },
         desc: "나무 자원을 가공하여 생산합니다.",
         commands: [
@@ -232,7 +262,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 800,
         scale: 10,
         buildTime: 20,
-        buildTurns: 5,
+        buildTurns: MEDIUM_TURN,
         size: { width: 3, depth: 3 },
         desc: "골드 자원을 생산하는 상업 중심지입니다.",
         commands: [
@@ -253,7 +283,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 1000,
         scale: 10,
         buildTime: 25,
-        buildTurns: 6,
+        buildTurns: MEDIUM_TURN,
         size: { width: 3, depth: 3 },
         desc: "광물 자원을 채굴합니다.",
         commands: [
@@ -286,11 +316,11 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 800,
         scale: 10,
         buildTime: 20,
-        buildTurns: 5,
+        buildTurns: MEDIUM_TURN,
         size: { width: 3, depth: 3 },
-        desc: "영웅이나 특수 유닛을 고용합니다.",
+        desc: "마법 유닛을 고용합니다.",
         commands: [
-            { id: "spawn_hero", name: "영웅 고용", icon: "👑", type: "produce", targetId: "hero", shortcut: "H" }
+            { id: "spawn_mage", name: "마법사 고용", icon: "✨", type: "produce", targetId: AllyId.Mage, shortcut: "M" }
         ]
     },
     TowerA: {
@@ -302,7 +332,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 1000,
         scale: 10,
         buildTime: 20,
-        buildTurns: 5,
+        buildTurns: BASIC_TURN,
         size: { width: 2, depth: 2 },
         desc: "화살로 적을 공격하는 방어 시설입니다.",
         combat: {
@@ -325,7 +355,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 1200,
         scale: 10,
         buildTime: 25,
-        buildTurns: 6,
+        buildTurns: MEDIUM_TURN,
         size: { width: 2, depth: 2 },
         desc: "더 높은 체력을 가진 방어 탑입니다.",
         combat: {
@@ -348,7 +378,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 1500,
         scale: 10,
         buildTime: 35,
-        buildTurns: 8,
+        buildTurns: MEDIUM_TURN,
         size: { width: 3, depth: 3 },
         desc: "강력한 바위를 던져 광역 피해를 줍니다.",
         combat: {
@@ -371,7 +401,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 700,
         scale: 10,
         buildTime: 20,
-        buildTurns: 5,
+        buildTurns: LONG_TURN,
         size: { width: 3, depth: 3 },
         desc: "식량 생산 효율을 높여줍니다.",
         commands: [],
@@ -390,7 +420,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 300,
         scale: 10,
         buildTime: 10,
-        buildTurns: 2,
+        buildTurns: BASIC_TURN,
         size: { width: 1, depth: 1 },
         buildRange: 8,
         desc: "청결한 물을 공급하며 주변에 건물을 지을 수 있는 영역을 제공합니다.",
@@ -410,7 +440,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         hp: 800,
         scale: 10,
         buildTime: 25,
-        buildTurns: 6,
+        buildTurns: MEDIUM_TURN,
         size: { width: 3, depth: 3 },
         desc: "곡물을 가공하여 자원을 생산합니다.",
         commands: [],

@@ -84,6 +84,7 @@ export const GalaxyPlanetCommandKind = {
   Move: "move",
   Attack: "attack",
   Defend: "defend",
+  FleetManagement: "fleet-management",
   Patrol: "patrol",
   Blockade: "blockade",
   Escort: "escort",
@@ -110,6 +111,34 @@ export interface PlanetRingDef {
   tiltY?: number;
 }
 
+export const GalaxySpaceStationKind = {
+  OrbitalHabitat: "orbital-habitat",
+} as const;
+
+export type GalaxySpaceStationKind =
+  typeof GalaxySpaceStationKind[keyof typeof GalaxySpaceStationKind];
+
+export const GalaxySpaceStationInteraction = {
+  Placeholder: "placeholder",
+} as const;
+
+export type GalaxySpaceStationInteraction =
+  typeof GalaxySpaceStationInteraction[keyof typeof GalaxySpaceStationInteraction];
+
+export interface GalaxySpaceStationOrbitDef {
+  radiusMultiplier?: number;
+  speedRadPerSec?: number;
+  phaseRad?: number;
+  tiltRad?: number;
+  yOffset?: number;
+}
+
+export interface GalaxySpaceStationDef {
+  kind: GalaxySpaceStationKind;
+  orbit?: GalaxySpaceStationOrbitDef;
+  interaction?: GalaxySpaceStationInteraction;
+}
+
 export interface PlanetDef<TPlanetId extends string = string> {
   id: TPlanetId;
   name: string;
@@ -117,6 +146,7 @@ export interface PlanetDef<TPlanetId extends string = string> {
   radius: number;
   assetKey: GalaxyPlanetAssetKey;
   ring?: PlanetRingDef;
+  spaceStation?: GalaxySpaceStationDef;
   stats: PlanetStats;
   resourceBonuses?: GalaxyResourceBonusViewModel[];
   specialResources?: GalaxySpecialResourceViewModel[];

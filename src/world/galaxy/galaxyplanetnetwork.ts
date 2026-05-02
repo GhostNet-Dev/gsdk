@@ -7,6 +7,7 @@ import {
   GalaxyPlanetNetworkOptions,
   GalaxyPlanetAssetKey,
   GalaxyRingTextureKey,
+  GalaxySpaceStationDef,
   PlanetDef,
   PlanetInfoViewModel
 } from "./galaxytypes";
@@ -85,6 +86,22 @@ type CityConnectionObject = {
 type PickResult = {
   planet: PlanetGroup;
   cityId?: string;
+  spaceStationPlanetId?: string;
+};
+
+type SpaceStationObject = {
+  planetIndex: number;
+  root: THREE.Group;
+  body: THREE.Group;
+  mats: THREE.MeshStandardMaterial[];
+  orbitRadius: number;
+  orbitSpeed: number;
+  orbitPhase: number;
+  orbitTilt: number;
+  yOffset: number;
+  bodySpinSpeed: number;
+  alpha: number;
+  targetAlpha: number;
 };
 
 const DEFAULT_OPTIONS: Required<GalaxyPlanetNetworkOptions> = {
@@ -125,6 +142,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
   public onSelectionChanged?: (info: PlanetInfoViewModel) => void;
   public onFocusModeChanged?: (focused: boolean) => void;
   public onCityActivated?: (planetId: string, cityId: string) => void;
+  public onSpaceStationActivated?: (planetId: string) => void;
 
   private readonly scene: THREE.Scene;
   private readonly camera: THREE.PerspectiveCamera;
@@ -156,6 +174,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
   private routePulses: PulseObject[] = [];
   private cityMarkers: CityMarkerObject[] = [];
   private cityConnections: CityConnectionObject[] = [];
+  private spaceStations: SpaceStationObject[] = [];
   private visiblePlanetSet: Set<number> | null = null;
 
   private selectedPlanetIndex = 0;
@@ -223,6 +242,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.buildEdges();
     this.buildMarkers();
     this.buildCityMarkers();
+    this.buildSpaceStations();
     this.buildSelectedDecor();
     this.buildChokepointDecor();
     this.computeOverviewState();
@@ -326,6 +346,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
 
     this.updateCityMarkers(elapsed);
     this.updateCityConnections();
+    this.updateSpaceStations(elapsed);
   }
 
   dispose(): void {
@@ -357,6 +378,7 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     this.routePulses = [];
     this.cityMarkers = [];
     this.cityConnections = [];
+    this.spaceStations = [];
     this.visiblePlanetSet = null;
     this.clickTargets = [];
     this.pointerDownInfo = null;
@@ -694,6 +716,136 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       mat.opacity = connection.alpha * (selected ? 0.64 : 0.34);
       connection.line.visible = mat.opacity > 0.03;
     });
+  }
+
+  private buildSpaceStations(): void {
+    this.spaceStations = [];
+
+    this.planets.forEach((planet, planetIndex) => {
+      const stationDef = planet.userData.definition.spaceStation;
+      if (!stationDef) return;
+
+      const station = this.createSpaceStation(stationDef, planetIndex, planet.userData.radius);
+      this.root.add(station.root);
+      this.spaceStations.push(station);
+      station.root.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return;
+        child.userData.spaceStation = true;
+        child.userData.planetIndex = planetIndex;
+        this.clickTargets.push(child);
+      });
+    });
+
+    this.updateSpaceStations(0);
+  }
+
+  private createSpaceStation(
+    stationDef: GalaxySpaceStationDef,
+    planetIndex: number,
+    planetRadius: number,
+  ): SpaceStationObject {
+    const root = new THREE.Group();
+    const body = new THREE.Group();
+    root.add(body);
+
+    const stationScale = Math.max(0.34, planetRadius * 0.24);
+    const orbit = stationDef.orbit;
+    const metalMat = new THREE.MeshStandardMaterial({
+      color: 0xf7fbff,
+      emissive: 0x8ebfff,
+      emissiveIntensity: 0.36,
+      roughness: 0.18,
+      metalness: 0.68,
+      transparent: true,
+      opacity: 1,
+    });
+    const accentMat = new THREE.MeshStandardMaterial({
+      color: 0xc7f4ff,
+      emissive: 0x7eeaff,
+      emissiveIntensity: 1.15,
+      roughness: 0.18,
+      metalness: 0.34,
+      transparent: true,
+      opacity: 1,
+    });
+
+    const hub = new THREE.Mesh(
+      new THREE.CylinderGeometry(stationScale * 0.18, stationScale * 0.18, stationScale * 0.92, 20),
+      metalMat,
+    );
+    hub.renderOrder = 7;
+    body.add(hub);
+
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(stationScale * 0.55, stationScale * 0.055, 12, 44),
+      metalMat,
+    );
+    ring.rotation.x = Math.PI * 0.5;
+    ring.renderOrder = 7;
+    body.add(ring);
+
+    const beacon = new THREE.Mesh(
+      new THREE.SphereGeometry(stationScale * 0.12, 18, 12),
+      accentMat,
+    );
+    beacon.position.set(stationScale * 0.55, 0, 0);
+    beacon.renderOrder = 8;
+    body.add(beacon);
+
+    for (let i = 0; i < 4; i++) {
+      const arm = new THREE.Mesh(
+        new THREE.BoxGeometry(stationScale * 0.88, stationScale * 0.035, stationScale * 0.035),
+        metalMat,
+      );
+      arm.rotation.y = Math.PI * 0.5 * i;
+      arm.renderOrder = 7;
+      body.add(arm);
+    }
+
+    return {
+      planetIndex,
+      root,
+      body,
+      mats: [metalMat, accentMat],
+      orbitRadius: planetRadius * (orbit?.radiusMultiplier ?? 2.2),
+      orbitSpeed: orbit?.speedRadPerSec ?? 0.18,
+      orbitPhase: orbit?.phaseRad ?? planetIndex * 0.73,
+      orbitTilt: orbit?.tiltRad ?? 0,
+      yOffset: orbit?.yOffset ?? 0,
+      bodySpinSpeed: 0.5,
+      alpha: 1,
+      targetAlpha: 1,
+    };
+  }
+
+  private updateSpaceStations(elapsed: number): void {
+    this.spaceStations.forEach((station) => {
+      const planet = this.planets[station.planetIndex];
+      if (!planet) return;
+
+      const angle = elapsed * station.orbitSpeed + station.orbitPhase;
+      const orbitX = Math.cos(angle) * station.orbitRadius;
+      const orbitY = Math.sin(angle) * Math.sin(station.orbitTilt) * station.orbitRadius + station.yOffset;
+      const orbitZ = Math.sin(angle) * Math.cos(station.orbitTilt) * station.orbitRadius;
+
+      station.root.position.set(
+        planet.position.x + orbitX,
+        planet.position.y + orbitY,
+        planet.position.z + orbitZ,
+      );
+      station.root.lookAt(planet.position);
+      station.body.rotation.y = elapsed * station.bodySpinSpeed;
+
+      station.alpha = THREE.MathUtils.lerp(station.alpha, station.targetAlpha, 0.12);
+      this.applySpaceStationOpacity(station, station.alpha);
+    });
+  }
+
+  private applySpaceStationOpacity(station: SpaceStationObject, alpha: number): void {
+    station.mats.forEach((mat) => {
+      mat.opacity = alpha;
+    });
+    station.root.visible = alpha > 0.03;
   }
 
   private findCityMarker(cityId: string): CityMarkerObject | undefined {
@@ -1078,6 +1230,10 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       connection.targetAlpha = this.planets[connection.planetIndex].userData.targetAlpha;
     });
 
+    this.spaceStations.forEach((station) => {
+      station.targetAlpha = this.planets[station.planetIndex].userData.targetAlpha;
+    });
+
     this.edgeObjects.forEach((edge) => {
       const [a, b] = edge.pair;
       edge.targetAlpha = !this.focusMode
@@ -1274,6 +1430,11 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
       return;
     }
 
+    if (picked.spaceStationPlanetId) {
+      this.onSpaceStationActivated?.(picked.spaceStationPlanetId);
+      return;
+    }
+
     // If already in focus mode and clicking the SAME planet, return to overview.
     if (this.focusMode && this.selectedPlanetIndex === pickedIndex) {
       this.resetToOverview();
@@ -1298,6 +1459,14 @@ export class GalaxyPlanetNetwork implements ILoop, IWorldMapObject {
     if (!hits.length) return null;
 
     const hitObject = hits[0].object;
+
+    if (hitObject.userData?.spaceStation) {
+      const planetIndex = hitObject.userData.planetIndex as number;
+      return {
+        planet: this.planets[planetIndex],
+        spaceStationPlanetId: this.planets[planetIndex].userData.id,
+      };
+    }
 
     if (hitObject.userData?.cityMarker) {
       const planetIndex = hitObject.userData.planetIndex as number;

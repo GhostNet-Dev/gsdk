@@ -273,6 +273,17 @@ export class StrategicGalaxyManager implements ITurnParticipant {
     return def ? { ...def } : undefined;
   }
 
+  getPlanetMarketState(planetId: StrategicPlanetId) {
+    const state = this.planetStates.get(planetId);
+    if (!state) return undefined;
+    return {
+      demand: { ...state.market.demand },
+      supply: { ...state.market.supply },
+      saturation: { ...state.market.saturation },
+      pricePressure: { ...state.market.pricePressure },
+    };
+  }
+
   getLatestCityOutput(cityId: string): CityTurnOutput | undefined {
     const output = this.latestCityOutputs[cityId];
     return output ? { ...output } : undefined;
@@ -329,6 +340,7 @@ export class StrategicGalaxyManager implements ITurnParticipant {
         radius: vm.visual.radius * 1.5,
         assetKey: vm.visual.assetKey,
         ring: vm.visual.ring,
+        spaceStation: vm.visual.spaceStation,
         stats: {
           economy: vm.economy,
           industry: vm.industry,
@@ -642,7 +654,29 @@ export class StrategicGalaxyManager implements ITurnParticipant {
   }
 
   private buildAvailableCommands(planetId: StrategicPlanetId): StrategicPlanetCommandViewModel[] {
-    return [this.getClaimCommand(planetId, this.getPlayerFactionId())];
+    return [
+      this.getFleetManagementCommand(planetId),
+      this.getClaimCommand(planetId, this.getPlayerFactionId()),
+    ];
+  }
+
+  private getFleetManagementCommand(planetId: StrategicPlanetId): StrategicPlanetCommandViewModel {
+    const hasSpaceStation = this.visualDefs[planetId]?.spaceStation !== undefined;
+    const stationedFleetCount = [...this.fleetStates.values()]
+      .filter((fleet) => fleet.currentPlanetId === planetId && !fleet.targetPlanetId)
+      .length;
+    const stationText = hasSpaceStation ? "우주정거장 있음" : "우주정거장 없음";
+    const fleetText = stationedFleetCount > 0
+      ? `주둔 함대 ${stationedFleetCount}개`
+      : "주둔 함대 없음";
+
+    return {
+      id: GalaxyPlanetCommandKind.FleetManagement,
+      label: "함대 관리",
+      kind: GalaxyPlanetCommandKind.FleetManagement,
+      enabled: true,
+      preview: `${stationText} · ${fleetText}`,
+    };
   }
 
   private getClaimCommand(

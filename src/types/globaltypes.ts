@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import type { AllyId } from "@Glibs/actors/allies/allytypes";
 
 export enum AppMode {
     Intro,
@@ -22,6 +23,7 @@ export enum AppMode {
 export const GameModeId = {
     Simcity: "simcity",
     Galaxy: "galaxy",
+    FleetManagement: "fleet-management",
     RivalCityView: "rival-city-view",
     Tutorial: "tutorial",
     CityWalk: "city-walk",
@@ -81,6 +83,7 @@ export enum EventTypes {
     CombatEnter = "combatenter",
     CombatLeave = "combatleave",
     SpawnProjectile = "Projectile",
+    UnitProduced = "unitproduced",
     RegisterTarget = "registertarget",
     DeregisterTarget = "deregistertarget",
     UpdateTargetState = "updatetargetstate",
@@ -230,4 +233,10 @@ export type CombatResourceChangedPayload = {
     max?: number
     reason: "cost" | "regen" | "damage" | "item" | "levelup"
     sourceId?: string
+}
+
+export type UnitProducedPayload = {
+    allyId: AllyId
+    count: number
+    buildingId: string
 }
