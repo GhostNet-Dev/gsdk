@@ -320,8 +320,13 @@ export class Monsters {
             monSet.initPos = pos
         }
 
-        while (this.gphysic.Check(monSet.monModel)) {
+        let safetyCounter = 0
+        while (this.gphysic.Check(monSet.monModel) && safetyCounter < 100) {
             monSet.monModel.Meshs.position.y += 0.5
+            safetyCounter++
+        }
+        if (safetyCounter >= 100) {
+            console.error("[Monsters] Infinite loop detected in Spawning! Position:", monSet.monModel.Meshs.position);
         }
         monSet.respawn = respawn
         monSet.live = true

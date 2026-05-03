@@ -28,6 +28,7 @@ export const GameModeId = {
     Tutorial: "tutorial",
     CityWalk: "city-walk",
     CityCombat: "city-combat",
+    TestSimcity: "test-simcity",
 } as const;
 
 export type GameModeId = typeof GameModeId[keyof typeof GameModeId];
@@ -142,6 +143,7 @@ export enum EventTypes {
     StrategicFleetStateChanged = "strategicfleetstatechanged",
     StrategicFleetOrderRequested = "strategicfleetorderrequested",
     RequestPlanetClaim = "requestplanetclaim",
+    RequestBuildSpaceStation = "requestbuildspacestation",
 
     // 🌍 8. 물리 및 렌더링 (Physics, Rendering & VFX)
     CtrlObj = "ctrlObj",

@@ -95,8 +95,13 @@ export class Allies {
             allySet.initPos = pos
         }
 
-        while (this.gphysic.Check(allySet.allyModel)) {
+        let safetyCounter = 0
+        while (this.gphysic.Check(allySet.allyModel) && safetyCounter < 100) {
             allySet.allyModel.Meshs.position.y += 0.5
+            safetyCounter++
+        }
+        if (safetyCounter >= 100) {
+            console.error("[Allies] Infinite loop detected in Summon! Position:", allySet.allyModel.Meshs.position);
         }
 
         allySet.live = true

@@ -29,7 +29,9 @@ export default class LoadingMgr {
         })
     }
     public startProcessing(interval: number = 300): void {
+        console.log(`[LoadingMgr] startProcessing called. Tasks: ${this.taskQueue.length}, interval: ${interval}`);
         if (this.isRunning || this.taskQueue.length === 0) {
+            console.log(`[LoadingMgr] Skip: isRunning=${this.isRunning}, tasks=${this.taskQueue.length}`);
             return; // 이미 실행 중이거나 작업이 없으면 시작하지 않음
         }
 
@@ -50,21 +52,26 @@ export default class LoadingMgr {
         this.updateProgress();
 
         const processNextTask = async () => {
-            if (!this.isRunning) return; // 이미 종료된 경우 중단
+            if (!this.isRunning) {
+                console.log("[LoadingMgr] processNextTask aborted: isRunning is false");
+                return; // 이미 종료된 경우 중단
+            }
 
             // 처리할 작업이 남아있는 경우
             if (this.taskQueue.length > 0) {
                 const task = this.taskQueue.shift(); // 대기열에서 작업 하나를 꺼냄
                 if (task) {
+                    console.log(`[LoadingMgr] Executing task. Remaining in queue: ${this.taskQueue.length}`);
                     // 작업을 실행하고 완료되면 다음 단계로 진행
                     await task()
                         .then(() => {
+                            console.log("[LoadingMgr] Task completed successfully");
                             this.completedTasks++;
                             this.updateProgress();
                             setTimeout(processNextTask, interval);
                         })
                         .catch((err) => {
-                            console.error("Loading task failed:", err);
+                            console.error("[LoadingMgr] Task failed:", err);
                             this.completedTasks++; // 실패해도 진행률은 올림
                             this.updateProgress();
                             setTimeout(processNextTask, interval);
@@ -72,6 +79,7 @@ export default class LoadingMgr {
                 }
             } else {
                 // 모든 작업이 완료된 경우
+                console.log("[LoadingMgr] No more tasks in queue, finishing processing");
                 this.finishProcessing();
             }
         };
@@ -102,6 +110,7 @@ export default class LoadingMgr {
     }
     private close() {
         if (this.loadingCompleteTask) {
+            console.log("[LoadingMgr] Executing loadingCompleteTask");
             this.loadingCompleteTask();
             this.loadingCompleteTask = undefined; // 사용 후 초기화
         }

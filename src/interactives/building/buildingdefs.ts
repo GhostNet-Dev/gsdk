@@ -18,6 +18,9 @@ export type BaseCommandTemplate = {
 export type ProduceCommandTemplate = BaseCommandTemplate & {
     type: "produce";
     targetId: AllyId;
+    cost?: CostVector;
+    productionTime?: number;
+    productionTurns?: number;
 };
 
 export type ResearchCommandTemplate = BaseCommandTemplate & {
@@ -84,6 +87,7 @@ export interface BuildingProperty {
     buildTurns: number; // number of turns
     size: { width: number; depth: number };
     providesPeople?: number; // 제공하는 인구수 (서플라이)
+    peopleRecovery?: number; // 턴/시간 회복 틱마다 회복시키는 인구수
     buildRange?: number; // 파일런처럼 건물을 지을 수 있는 범위를 제공 (그리드 단위)
     provides?: string[];
     desc?: string;
@@ -111,6 +115,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         buildTurns: BASIC_TURN,
         size: { width: 5, depth: 5 },
         providesPeople: 15,
+        peopleRecovery: 1,
         buildRange: 15,
         provides: ["scv"],
         desc: "진영의 핵심 거점입니다.",
@@ -135,6 +140,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         buildTurns: BASIC_TURN,
         size: { width: 2, depth: 2 },
         providesPeople: 8,
+        peopleRecovery: 1,
         desc: "인구수를 늘려주는 주거 시설입니다.",
         commands: []
     },
@@ -150,6 +156,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         buildTurns: MEDIUM_TURN,
         size: { width: 3, depth: 3 },
         providesPeople: 12,
+        peopleRecovery: 2,
         desc: "더 많은 인구를 수용하는 주택입니다.",
         commands: []
     },
@@ -167,7 +174,17 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         provides: [AllyId.Warrior],
         desc: "지상 보병 유닛을 훈련합니다.",
         commands: [
-            { id: "spawn_warrior", name: "전사 훈련", icon: "⚔️", type: "produce", targetId: AllyId.Warrior, shortcut: "W" }
+            {
+                id: "spawn_warrior",
+                name: "전사 훈련",
+                icon: "⚔️",
+                type: "produce",
+                targetId: AllyId.Warrior,
+                shortcut: "W",
+                cost: { [CurrencyType.Gold]: 50, [CurrencyType.People]: 1 },
+                productionTime: 10,
+                productionTurns: 2,
+            }
         ]
     },
     ArcheryRange: {
@@ -184,7 +201,17 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         provides: [AllyId.Archer],
         desc: "원거리 유닛을 훈련합니다.",
         commands: [
-            { id: "spawn_archer", name: "궁수 훈련", icon: "🏹", type: "produce", targetId: AllyId.Archer, shortcut: "A" }
+            {
+                id: "spawn_archer",
+                name: "궁수 훈련",
+                icon: "🏹",
+                type: "produce",
+                targetId: AllyId.Archer,
+                shortcut: "A",
+                cost: { [CurrencyType.Gold]: 70, [CurrencyType.People]: 1 },
+                productionTime: 12,
+                productionTurns: 2,
+            }
         ]
     },
     Blacksmith: {
@@ -320,7 +347,17 @@ export const buildingDefs: Record<string, BuildingProperty> = {
         size: { width: 3, depth: 3 },
         desc: "마법 유닛을 고용합니다.",
         commands: [
-            { id: "spawn_mage", name: "마법사 고용", icon: "✨", type: "produce", targetId: AllyId.Mage, shortcut: "M" }
+            {
+                id: "spawn_mage",
+                name: "마법사 고용",
+                icon: "✨",
+                type: "produce",
+                targetId: AllyId.Mage,
+                shortcut: "M",
+                cost: { [CurrencyType.Gold]: 120, [CurrencyType.People]: 2 },
+                productionTime: 18,
+                productionTurns: 3,
+            }
         ]
     },
     TowerA: {

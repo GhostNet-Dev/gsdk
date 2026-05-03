@@ -27,11 +27,19 @@ export default class GameCenter {
         this.mode.set(mode, obj)
     }
     async ChangeMode(mode: string) {
-        if(this.curr == mode) return
+        console.log(`[GameCenter] ChangeMode requested: ${this.curr} -> ${mode}`);
+        if(this.curr == mode) {
+            console.log(`[GameCenter] Already in mode: ${mode}`);
+            return
+        }
 
         const obj = this.mode.get(mode)
-        if(!obj) throw new Error("undefined mode = " + mode);
+        if(!obj) {
+            console.error(`[GameCenter] Undefined mode: ${mode}`);
+            throw new Error("undefined mode = " + mode);
+        }
 
+        console.log(`[GameCenter] Uninitializing current mode: ${this.curr}`);
         await this.currentMode?.Uninit()
         this.currentMode?.Objects.forEach((obj) => {
             this.scene.remove(obj)
@@ -42,7 +50,11 @@ export default class GameCenter {
         this.currentMode?.Physics.forEach((obj) => {
             this.scene.remove(obj.Meshs)
         })
+
+        console.log(`[GameCenter] Initializing new mode: ${mode}`);
         await obj.Init()
+        console.log(`[GameCenter] New mode Init complete: ${mode}`);
+
         obj.Objects.forEach((o) =>{
             this.scene.add(o)
         })
@@ -54,6 +66,7 @@ export default class GameCenter {
         })
         this.currentMode = obj
         this.curr = mode
+        console.log(`[GameCenter] Mode switch successful: ${mode}`);
         this.eventCtrl.SendEventMessage(EventTypes.LoadingStart, 1)
     }
 }

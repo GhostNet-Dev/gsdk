@@ -24,6 +24,8 @@ import { StrategicPlanetId } from "@Glibs/gameobjects/strategicgalaxy/strategicg
 import { StaticColliderKind, StaticColliderRegistry } from "@Glibs/interactives/environment/staticcolliderregistry";
 import { BuildingRingProgress, BuildingRingProgressState } from "./buildingringprogress";
 
+const PEOPLE_RECOVERY_INTERVAL_SECONDS = 10;
+
 export interface BuildingTask {
   nodeId: string;
   prop: BuildingProperty;
@@ -44,6 +46,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
   private buildingObjects: Map<string, IBuildingObject> = new Map();
   private nextTaskId: number = 0;
   private currentMode: BuildingMode = BuildingMode.Timer; // 기본값 타이머 모드
+  private peopleRecoveryTimer = 0;
 
   private guideModel: THREE.Group | null = null;
   private currentGuideNodeId: string | null = null;
@@ -372,6 +375,14 @@ export class BuildingManager implements ILoop, ITurnParticipant {
       building.update(delta);
     }
 
+    if (this.currentMode === BuildingMode.Timer) {
+      this.peopleRecoveryTimer += delta;
+      while (this.peopleRecoveryTimer >= PEOPLE_RECOVERY_INTERVAL_SECONDS) {
+        this.peopleRecoveryTimer -= PEOPLE_RECOVERY_INTERVAL_SECONDS;
+        this.recoverPeople();
+      }
+    }
+
     // 선택된 건물의 UI 실시간 업데이트
     if (this.selectedBuilding) {
         this.updateUI();
@@ -384,9 +395,11 @@ export class BuildingManager implements ILoop, ITurnParticipant {
 
   setMode(mode: BuildingMode) {
     this.currentMode = mode;
+    this.peopleRecoveryTimer = 0;
     for (const building of this.buildingObjects.values()) {
         building.setMode(mode);
     }
+    this.clampPeopleToCapacity();
   }
 
   canBuild(nodeId: string): { ok: boolean; reason?: string } {
@@ -570,6 +583,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
     for (const building of buildingsToAdvance) {
       building.advanceTurn();
     }
+    this.recoverPeople();
 
     if (ctx?.shared) {
       const { score, resourceOutput } = this.computeCityScore();
@@ -663,7 +677,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
           switch (task.prop.type) {
             case BuildingType.DefenseTurret: buildingObj = new DefenseTurret(id, task.prop, task.pos, model, this.eventCtrl); break;
             case BuildingType.Pilotable: buildingObj = new PilotableBuilding(id, task.prop, task.pos, model, this.eventCtrl); break;
-            case BuildingType.UnitProduction: buildingObj = new UnitProduction(id, task.prop, task.pos, model, this.eventCtrl); break;
+            case BuildingType.UnitProduction: buildingObj = new UnitProduction(id, task.prop, task.pos, model, this.eventCtrl, this.service.ctx.wallet); break;
             case BuildingType.TechResearch: buildingObj = new TechResearch(id, task.prop, task.pos, model, this.eventCtrl); break;
             case BuildingType.ResourceProduction: buildingObj = new ResourceProduction(id, task.prop, task.pos, model, this.eventCtrl); break;
             case BuildingType.Wall: buildingObj = new Wall(id, task.prop, task.pos, model, this.eventCtrl); break;
@@ -687,10 +701,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
               buildRange: task.prop.buildRange,
             });
 
-            // [추가] 인구수 공급 반영
-            if (task.prop.providesPeople) {
-              this.eventCtrl.SendEventMessage(EventTypes.People, task.prop.providesPeople);
-            }
+            this.clampPeopleToCapacity();
           }
         }
       } catch (err) {
@@ -703,6 +714,47 @@ export class BuildingManager implements ILoop, ITurnParticipant {
 
   getTasks() { return Array.from(this.activeTasks.values()); }
   getBuildings() { return Array.from(this.buildingObjects.values()); }
+
+  private getPeopleCapacity(): number {
+    let capacity = 0;
+    for (const building of this.buildingObjects.values()) {
+      capacity += (building.property.providesPeople ?? 0) * Math.max(1, building.level);
+    }
+    return capacity;
+  }
+
+  private getPeopleRecoveryPerTick(): number {
+    let recovery = 0;
+    for (const building of this.buildingObjects.values()) {
+      recovery += (building.property.peopleRecovery ?? 0) * Math.max(1, building.level);
+    }
+    return recovery;
+  }
+
+  private recoverPeople() {
+    const capacity = this.getPeopleCapacity();
+    const current = this.service.ctx.wallet.getAmount(CurrencyType.People);
+    if (capacity <= 0) {
+      this.clampPeopleToCapacity();
+      return;
+    }
+
+    const recovery = this.getPeopleRecoveryPerTick();
+    if (recovery <= 0 || current >= capacity) {
+      this.clampPeopleToCapacity();
+      return;
+    }
+
+    this.service.ctx.wallet.add(CurrencyType.People, Math.min(recovery, capacity - current));
+  }
+
+  private clampPeopleToCapacity() {
+    const capacity = this.getPeopleCapacity();
+    const current = this.service.ctx.wallet.getAmount(CurrencyType.People);
+    if (current > capacity) {
+      this.service.ctx.wallet.subtract(CurrencyType.People, current - capacity);
+    }
+  }
 
   private sendBuildingStatus() {
     const buildings = Array.from(this.buildingObjects.values()).map(b => ({

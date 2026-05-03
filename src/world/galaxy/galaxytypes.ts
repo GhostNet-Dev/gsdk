@@ -91,6 +91,7 @@ export const GalaxyPlanetCommandKind = {
   Reinforce: "reinforce",
   Repair: "repair",
   Claim: "claim",
+  BuildSpaceStation: "build-space-station",
 } as const;
 
 export type GalaxyPlanetCommandKind =
