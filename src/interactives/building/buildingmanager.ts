@@ -235,8 +235,8 @@ export class BuildingManager implements ILoop, ITurnParticipant {
     const target = e.target as HTMLElement;
     
     // UI 창이나 HTML 상호작용 요소(버튼 등)를 클릭한 경우 무시
-    if (target.closest && target.closest('#gnx-building-infobar')) return;
-    if (target.tagName === 'BUTTON' || target.tagName === 'INPUT') return;
+    if (target.closest && (target.closest('#gnx-building-infobar') || target.closest('#bottom-selection-panel'))) return;
+    if (target.tagName === 'BUTTON' || target.tagName === 'INPUT' || target.closest('button')) return;
 
     const rect = target.getBoundingClientRect();
     this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;

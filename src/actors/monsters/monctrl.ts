@@ -17,6 +17,7 @@ import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysys
 import { TargetDistanceMode, TargetRecord, TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 import { GetHorizontalDistanceToBoxSurface, MeleeValidationResult, PendingMeleeImpactContext } from "@Glibs/actors/battle/meleecombat";
 import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes";
+import { CombatDebugInfo, CombatDebugTeam } from "@Glibs/systems/debugger/combatdebugtypes";
 
 class MonsterTargetAdapter implements IPhysicsObject {
     private static readonly fallbackBoxMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1))
@@ -200,6 +201,26 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         this.MonsterBox.position.copy(this.zombie.Pos)
     }
 
+    GetDebugInfo(): CombatDebugInfo {
+        const targetBounds = this.getDebugTargetBounds(this.currentTarget)
+        const targetCenter = targetBounds
+            ? targetBounds.getCenter(new THREE.Vector3())
+            : this.currentTarget?.object.position.clone()
+
+        return {
+            team: CombatDebugTeam.Monster,
+            targetId: this.targetId,
+            damageBox: this.MonsterBox,
+            box: new THREE.Box3().setFromObject(this.MonsterBox),
+            centerPos: this.zombie.CenterPos.clone(),
+            moveDirection: this.moveDirection.clone(),
+            attackRange: this.Spec.AttackRange,
+            currentTargetId: this.currentTarget?.id,
+            currentTargetBounds: targetBounds,
+            currentTargetCenter: targetCenter,
+        }
+    }
+
     update(delta: number): void {
         if (!this.zombie.Visible) return
 
@@ -364,5 +385,15 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
 
         this.targetBounds.setFromObject(target.object)
         return this.targetBounds.isEmpty() ? undefined : this.targetBounds
+    }
+
+    private getDebugTargetBounds(target?: TargetRecord): THREE.Box3 | undefined {
+        if (!target) return undefined
+        if (target.kind === "structure" && target.bounds && !target.bounds.isEmpty()) {
+            return target.bounds.clone()
+        }
+
+        const bounds = new THREE.Box3().setFromObject(target.object)
+        return bounds.isEmpty() ? undefined : bounds
     }
 }

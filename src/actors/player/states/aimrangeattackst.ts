@@ -8,6 +8,7 @@ import { MonsterId } from "@Glibs/types/monstertypes";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
+import { CameraMode } from "@Glibs/systems/camera/cameratypes";
 import { ActionType } from "../playertypes";
 import { IItem } from "@Glibs/interface/iinven";
 import { Item } from "@Glibs/inventory/items/item";
@@ -34,10 +35,12 @@ export class AimRangeAttackState extends AttackState implements IActorState {
     }
 
     private hasFired = false;
+    private keepAimCameraOnExit = false;
 
     Init(): void {
         this.attackProcess = false
         this.hasFired = false
+        this.keepAimCameraOnExit = false
         this.attackSpeed = this.baseSpec.AttackSpeed
         this.attackDist = this.baseSpec.AttackRange
         const handItem = this.playerCtrl.baseSpec.GetRangedItem()
@@ -54,6 +57,8 @@ export class AimRangeAttackState extends AttackState implements IActorState {
         this.clock = new THREE.Clock()
         this.player.createDashedCircle(this.attackDist)
         this.player.EnableAimPitch(true)
+        this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.AimThirdPerson)
+        this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, true)
     }
 
     private startFiring() {
@@ -103,11 +108,15 @@ export class AimRangeAttackState extends AttackState implements IActorState {
 
     override Uninit(): void {
         this.player.EnableAimPitch(false)
+        if (!this.keepAimCameraOnExit) {
+            this.eventCtrl.SendEventMessage(EventTypes.AimOverlay, false)
+            this.eventCtrl.SendEventMessage(EventTypes.CameraMode, CameraMode.ThirdFollowPerson)
+        }
         super.Uninit()
     }
 
     Update(delta: number): IActorState {
-        const d = this.DefaultCheck({ attack: false, run: false })
+        const d = this.DefaultCheck({ attack: false })
         if (d != undefined) {
             this.Uninit()
             return d
@@ -148,6 +157,7 @@ export class AimRangeAttackState extends AttackState implements IActorState {
 
         // If we already fired once and the button is released, return to Aim State
         if (this.hasFired) {
+             this.keepAimCameraOnExit = true
              return this.ChangeMode(this.playerCtrl.RangeAimSt)
         }
 

@@ -6,20 +6,22 @@ export interface IGameMode {
     get TaskObj(): ILoop[] 
     get Physics(): IPhysicsObject[]
     get Objects(): THREE.Object3D[] | THREE.Group[] | THREE.Mesh[]
-    Init(): void
-    Uninit(): void
+    Init(): void | Promise<void>
+    Uninit(): void | Promise<void>
 }
 
 export default class GameCenter {
     mode = new Map<string, IGameMode>();
     curr: string = ""
     currentMode?: IGameMode
+    private isChangingMode = false;
+
     constructor(
       private eventCtrl: IEventController, 
       private scene: THREE.Scene,
     ) {
         this.eventCtrl.RegisterEventListener(EventTypes.GameCenter, (mode: string) => {
-            this.ChangeMode(mode)
+            void this.ChangeMode(mode)
         })
     }
 
@@ -27,6 +29,10 @@ export default class GameCenter {
         this.mode.set(mode, obj)
     }
     async ChangeMode(mode: string) {
+        if (this.isChangingMode) {
+            console.warn(`[GameCenter] ChangeMode ignored: already changing mode. Requested: ${mode}`);
+            return;
+        }
         console.log(`[GameCenter] ChangeMode requested: ${this.curr} -> ${mode}`);
         if(this.curr == mode) {
             console.log(`[GameCenter] Already in mode: ${mode}`);
@@ -39,34 +45,39 @@ export default class GameCenter {
             throw new Error("undefined mode = " + mode);
         }
 
-        console.log(`[GameCenter] Uninitializing current mode: ${this.curr}`);
-        await this.currentMode?.Uninit()
-        this.currentMode?.Objects.forEach((obj) => {
-            this.scene.remove(obj)
-        })
-        this.currentMode?.TaskObj.forEach((obj) => {
-            if ("update" in obj) this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, obj)
-        })
-        this.currentMode?.Physics.forEach((obj) => {
-            this.scene.remove(obj.Meshs)
-        })
+        this.isChangingMode = true;
+        try {
+            console.log(`[GameCenter] Uninitializing current mode: ${this.curr}`);
+            await this.currentMode?.Uninit()
+            this.currentMode?.Objects.forEach((obj) => {
+                this.scene.remove(obj)
+            })
+            this.currentMode?.TaskObj.forEach((obj) => {
+                if ("update" in obj) this.eventCtrl.SendEventMessage(EventTypes.DeregisterLoop, obj)
+            })
+            this.currentMode?.Physics.forEach((obj) => {
+                this.scene.remove(obj.Meshs)
+            })
 
-        console.log(`[GameCenter] Initializing new mode: ${mode}`);
-        await obj.Init()
-        console.log(`[GameCenter] New mode Init complete: ${mode}`);
+            console.log(`[GameCenter] Initializing new mode: ${mode}`);
+            await obj.Init()
+            console.log(`[GameCenter] New mode Init complete: ${mode}`);
 
-        obj.Objects.forEach((o) =>{
-            this.scene.add(o)
-        })
-        obj.TaskObj.forEach((o) =>{
-            if ("update" in o) this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, o)
-        })
-        obj.Physics.forEach((o) =>{
-            this.scene.add(o.Meshs)
-        })
-        this.currentMode = obj
-        this.curr = mode
-        console.log(`[GameCenter] Mode switch successful: ${mode}`);
-        this.eventCtrl.SendEventMessage(EventTypes.LoadingStart, 1)
+            obj.Objects.forEach((o) =>{
+                this.scene.add(o)
+            })
+            obj.TaskObj.forEach((o) =>{
+                if ("update" in o) this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, o)
+            })
+            obj.Physics.forEach((o) =>{
+                this.scene.add(o.Meshs)
+            })
+            this.currentMode = obj
+            this.curr = mode
+            console.log(`[GameCenter] Mode switch successful: ${mode}`);
+            this.eventCtrl.SendEventMessage(EventTypes.LoadingStart, 1)
+        } finally {
+            this.isChangingMode = false;
+        }
     }
 }

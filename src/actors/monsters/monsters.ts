@@ -23,6 +23,7 @@ import { Zombie } from "./zombie";
 import { itemDefs } from "@Glibs/inventory/items/itemdefs";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 import { FactionId } from "@Glibs/gameobjects/turntypes";
+import { CombatDebugInfo } from "@Glibs/systems/debugger/combatdebugtypes";
 
 export type MonsterSpawnOptions = {
     respawn?: boolean
@@ -46,6 +47,7 @@ export interface IMonsterCtrl {
     get TargetId(): string
     Respawning(): void
     Dispose(): void
+    GetDebugInfo(): CombatDebugInfo
     ValidateMeleeAttackTarget(targetId: string, attackRange: number): MeleeValidationResult
     ValidateRangedAttackTarget(targetId: string, attackRange: number): boolean
     ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number): boolean 

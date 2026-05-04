@@ -169,6 +169,11 @@ export default class Input {
         };
 
         window.addEventListener("keydown", (e) => {
+            if (e.code === "F9") {
+                this.eventCtrl.SendEventMessage(EventTypes.ToggleCombatDebug);
+                return;
+            }
+
             const action = keyMap[e.code];
             if (action) {
                 this.keyDownHandlers.get(action)?.();

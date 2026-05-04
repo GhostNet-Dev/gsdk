@@ -8,6 +8,7 @@ import { StatKey } from "@Glibs/types/stattypes";
 import { Char } from "@Glibs/types/assettypes";
 import { IActorState } from "@Glibs/actors/monsters/monstertypes";
 import { ProjectileWeaponDef } from "@Glibs/actors/projectile/projectiletypes";
+import { CombatDebugInfo } from "@Glibs/systems/debugger/combatdebugtypes";
 
 export { IActorState }
 
@@ -40,6 +41,7 @@ export interface IAllyCtrl {
     get DeckLevel(): number
     Summoned(): void
     Dispose(): void
+    GetDebugInfo(): CombatDebugInfo
     ValidateMeleeAttackTarget(targetId: string, attackRange: number): MeleeValidationResult
     ValidateRangedAttackTarget(targetId: string, attackRange: number): boolean
     ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number): boolean

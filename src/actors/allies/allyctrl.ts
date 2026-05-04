@@ -14,6 +14,7 @@ import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysys
 import { TargetDistanceMode, TargetRecord, TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 import { GetHorizontalDistanceToBoxSurface, MeleeValidationResult, PendingMeleeImpactContext } from "@Glibs/actors/battle/meleecombat";
 import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes";
+import { CombatDebugInfo, CombatDebugTeam } from "@Glibs/systems/debugger/combatdebugtypes";
 
 // 타겟 레코드를 IPhysicsObject로 래핑하여 TargetId를 state machine에 전달
 class AllyTargetAdapter implements IPhysicsObject {
@@ -205,6 +206,26 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
         this.AllyBox.position.copy(this.allyModel.Pos)
     }
 
+    GetDebugInfo(): CombatDebugInfo {
+        const targetBounds = this.getDebugTargetBounds(this.currentTarget)
+        const targetCenter = targetBounds
+            ? targetBounds.getCenter(new THREE.Vector3())
+            : this.currentTarget?.object.position.clone()
+
+        return {
+            team: CombatDebugTeam.Ally,
+            targetId: this.targetId,
+            damageBox: this.AllyBox,
+            box: new THREE.Box3().setFromObject(this.AllyBox),
+            centerPos: this.allyModel.CenterPos.clone(),
+            moveDirection: this.moveDirection.clone(),
+            attackRange: this.Spec.AttackRange,
+            currentTargetId: this.currentTarget?.id,
+            currentTargetBounds: targetBounds,
+            currentTargetCenter: targetCenter,
+        }
+    }
+
     update(delta: number): void {
         if (!this.allyModel.Visible) return
 
@@ -344,5 +365,15 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
 
         this.targetBounds.setFromObject(target.object)
         return this.targetBounds.isEmpty() ? undefined : this.targetBounds
+    }
+
+    private getDebugTargetBounds(target?: TargetRecord): THREE.Box3 | undefined {
+        if (!target) return undefined
+        if (target.kind === "structure" && target.bounds && !target.bounds.isEmpty()) {
+            return target.bounds.clone()
+        }
+
+        const bounds = new THREE.Box3().setFromObject(target.object)
+        return bounds.isEmpty() ? undefined : bounds
     }
 }
