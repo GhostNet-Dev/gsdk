@@ -486,5 +486,19 @@ export const buildingDefs: Record<string, BuildingProperty> = {
             turns: 1, 
             resources: { [CurrencyType.Electric]: 10, [CurrencyType.Food]: 10 } 
         }
+    },
+    ArmyFlag: {
+        id: "armyflag",
+        name: "군대 깃발",
+        type: BuildingType.Flag,
+        isUnique: true,
+        assetKey: Char.UltimateLvAndMaGoalFlag,
+        hp: 800,
+        scale: 5,
+        buildTime: 25,
+        buildTurns: BASIC_TURN,
+        size: { width: 1, depth: 1 },
+        desc: "군대가 소환되는 곳 입니다.",
+        commands: [],
     }
 };

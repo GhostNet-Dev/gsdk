@@ -5,13 +5,6 @@ export enum CombatDebugTeam {
     Monster = "monster",
 }
 
-export enum CombatDebugVisualKind {
-    Hitbox = "hitbox",
-    MoveDirection = "move-direction",
-    AttackRange = "attack-range",
-    TargetLine = "target-line",
-}
-
 export interface CombatDebugInfo {
     team: CombatDebugTeam
     targetId: string

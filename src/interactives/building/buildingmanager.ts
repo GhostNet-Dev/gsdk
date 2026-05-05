@@ -13,6 +13,7 @@ import { TechResearch } from "./buildingobjs/techresearch";
 import { ResourceProduction } from "./buildingobjs/resourceproduction";
 import { Wall } from "./buildingobjs/wall";
 import { Bunker } from "./buildingobjs/bunker";
+import { FlagBuilding } from "./buildingobjs/flagbuilding";
 import { CameraMode } from "@Glibs/systems/camera/cameratypes";
 import { CameraInputPreset } from "@Glibs/systems/camera/orbitbroker";
 import { SelectionPanel } from "@Glibs/ux/selectionpanel/selectionpanel";
@@ -682,6 +683,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
             case BuildingType.ResourceProduction: buildingObj = new ResourceProduction(id, task.prop, task.pos, model, this.eventCtrl); break;
             case BuildingType.Wall: buildingObj = new Wall(id, task.prop, task.pos, model, this.eventCtrl); break;
             case BuildingType.Bunker: buildingObj = new Bunker(id, task.prop, task.pos, model, this.eventCtrl); break;
+            case BuildingType.Flag: buildingObj = new FlagBuilding(id, task.prop, task.pos, model, this.eventCtrl); break;
           }
 
           if (buildingObj) {

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { BuildingProperty } from './buildingdefs';
 import { ISelectionData } from '@Glibs/ux/selectionpanel/selectionpanel';
 import IEventController from '@Glibs/interface/ievent';
+import type { CombatDebugInfo } from '@Glibs/systems/debugger/combatdebugtypes';
 
 /**
  * 건물의 성격을 정의하는 Enum
@@ -13,7 +14,8 @@ export enum BuildingType {
     TechResearch = "TechResearch",          // 기술 연구 건물
     ResourceProduction = "ResourceProduction", // 자원 생산 건물
     Wall = "Wall",                          // 성벽
-    Bunker = "Bunker"                       // 벙커
+    Bunker = "Bunker",                      // 벙커
+    Flag = "Flag"                           // 군대 깃발
 }
 
 export enum BuildingMode {
@@ -61,6 +63,11 @@ export interface IBuildingObject {
      * 건물 파괴/제거 시 정리 로직
      */
     destroy(): void;
+
+    /**
+     * 전투 디버그 visual에 표시할 정보. 비전투/파괴/비표시 건물은 undefined를 반환합니다.
+     */
+    GetDebugInfo?(): CombatDebugInfo | undefined;
 
     /**
      * 하단 UI에 표시할 데이터 제공

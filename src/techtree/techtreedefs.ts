@@ -100,6 +100,18 @@ export const DefaultTechTreeDefs: TechTreeDefBase[] = [
         tech: buildingDefs.CommandCenter
     },
     {
+        id: "armyflag",
+        kind: "building",
+        name: "군대 깃발",
+        desc: "아군 유닛의 전투 진입 집결 지점을 지정합니다.",
+        icon: "🚩",
+        rarity: "common",
+        tags: ["combat", "utility"],
+        requires: [{ type: "has", id: "cc", minLv: 1 }],
+        cost: [{ lv: 1 }],
+        tech: buildingDefs.ArmyFlag
+    },
+    {
         id: "well",
         kind: "building",
         name: "우물",
@@ -983,4 +995,3 @@ requires: [{ type: "has", id: "root_license" }],
         tech: MOCK_TECH
     }
 ]
-

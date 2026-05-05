@@ -2,6 +2,7 @@ import * as THREE from "three";
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { Allies } from "@Glibs/actors/allies/allies";
 import { Monsters } from "@Glibs/actors/monsters/monsters";
+import { BuildingManager } from "@Glibs/interactives/building/buildingmanager";
 import { LoopType } from "@Glibs/systems/event/canvas";
 import { CombatDebugInfo, CombatDebugTeam } from "@Glibs/systems/debugger/combatdebugtypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
@@ -44,6 +45,7 @@ export class CombatDebugSystem implements ILoop {
         private readonly eventCtrl: IEventController,
         private readonly monsters: Monsters,
         private readonly allies: Allies,
+        private readonly buildingManager: BuildingManager,
     ) {
         this.eventCtrl.RegisterEventListener(EventTypes.ToggleCombatDebug, this.onToggleCombatDebug);
         this.eventCtrl.SendEventMessage(EventTypes.RegisterLoop, this, LoopType.Systems);
@@ -70,6 +72,13 @@ export class CombatDebugSystem implements ILoop {
                 this.visibleActorIds.add(info.targetId);
                 this.updateActorVisual(info);
             }
+        }
+
+        for (const building of this.buildingManager.getBuildings()) {
+            const info = building.GetDebugInfo?.();
+            if (!info) continue;
+            this.visibleActorIds.add(info.targetId);
+            this.updateActorVisual(info);
         }
 
         this.removeMissingActorVisuals();
@@ -148,8 +157,7 @@ export class CombatDebugSystem implements ILoop {
         bundle.damageBox.visible = true;
         this.setMaterialColor(bundle.damageBox.material, this.getColor(info.team));
         bundle.damageBox.updateWorldMatrix(true, false);
-        bundle.box.setFromObject(bundle.damageBox);
-        info.box.copy(bundle.box);
+        bundle.box.copy(info.box);
     }
 
     private updateMoveArrow(arrow: THREE.ArrowHelper, info: CombatDebugInfo): void {

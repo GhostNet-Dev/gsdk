@@ -8,6 +8,7 @@ import IEventController from '@Glibs/interface/ievent';
 import { TargetRecord } from '@Glibs/systems/targeting/targettypes';
 import { TargetRegistrySystem } from '@Glibs/systems/targeting/targetregistrysystem';
 import { ProjectileWeaponController } from '@Glibs/actors/controllable/projectileweaponcontroller';
+import { CombatDebugInfo, CombatDebugTeam } from '@Glibs/systems/debugger/combatdebugtypes';
 
 export class DefenseTurret extends BaseBuilding {
     private target: TargetRecord | null = null;
@@ -51,6 +52,36 @@ export class DefenseTurret extends BaseBuilding {
     destroy(): void {
         this.eventCtrl.DeregisterEventListener(EventTypes.RegisterTargetSystem, this.setTargetRegistry);
         super.destroy();
+    }
+
+    GetDebugInfo(): CombatDebugInfo | undefined {
+        const weapon = this.property.combat?.weapons?.[0];
+        if (this.isDestroyed || !this.mesh.parent || !this.isAttacking || !weapon) return undefined;
+
+        const damageBox = this.findDebugMesh(this.mesh);
+        if (!damageBox) return undefined;
+
+        this.mesh.updateWorldMatrix(true, true);
+        const box = new THREE.Box3().setFromObject(this.mesh);
+        if (box.isEmpty()) return undefined;
+
+        const targetBounds = this.getDebugTargetBounds(this.target);
+        const targetCenter = targetBounds
+            ? targetBounds.getCenter(new THREE.Vector3())
+            : this.target?.object.position.clone();
+
+        return {
+            team: CombatDebugTeam.Ally,
+            targetId: this.id,
+            damageBox,
+            box,
+            centerPos: this.mesh.position.clone(),
+            moveDirection: new THREE.Vector3(0, 0, 0),
+            attackRange: this.getAttackRange(),
+            currentTargetId: this.target?.id,
+            currentTargetBounds: targetBounds,
+            currentTargetCenter: targetCenter,
+        };
     }
 
     private setTargetRegistry = (targetRegistry?: TargetRegistrySystem) => {
@@ -127,6 +158,31 @@ export class DefenseTurret extends BaseBuilding {
     private getAttackRange(): number {
         const weapon = this.property.combat?.weapons?.[0];
         return this.weaponController.getEffectiveRange(weapon, this.baseSpec.AttackRange);
+    }
+
+    private findDebugMesh(root: THREE.Object3D): THREE.Mesh | undefined {
+        let found: THREE.Mesh | undefined;
+        root.traverse((object) => {
+            if (found || !(object instanceof THREE.Mesh)) return;
+            if (!this.hasColorMaterial(object.material)) return;
+            found = object;
+        });
+        return found;
+    }
+
+    private hasColorMaterial(material: THREE.Material | THREE.Material[]): boolean {
+        const materials = Array.isArray(material) ? material : [material];
+        return materials.some((item) => "color" in item && item.color instanceof THREE.Color);
+    }
+
+    private getDebugTargetBounds(target: TargetRecord | null): THREE.Box3 | undefined {
+        if (!target) return undefined;
+        if (target.kind === "structure" && target.bounds && !target.bounds.isEmpty()) {
+            return target.bounds.clone();
+        }
+
+        const bounds = new THREE.Box3().setFromObject(target.object);
+        return bounds.isEmpty() ? undefined : bounds;
     }
 
     private isValidTarget(target: TargetRecord | null): target is TargetRecord {
