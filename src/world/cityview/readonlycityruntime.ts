@@ -4,7 +4,7 @@ import { ReadonlyCityLayoutSnapshot, ReadonlyCityObjectKind } from "./cityviewty
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { StaticColliderKind, StaticColliderRegistry } from "@Glibs/interactives/environment/staticcolliderregistry";
 import { BuildingType } from "@Glibs/interactives/building/ibuildingobj";
-import { buildingDefs, BuildingProperty } from "@Glibs/interactives/building/buildingdefs";
+import { buildingDefs, BuildingProperty, BuildingRotationMode } from "@Glibs/interactives/building/buildingdefs";
 import { TargetRecord } from "@Glibs/systems/targeting/targettypes";
 import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
 import { ProjectileWeaponController } from "@Glibs/actors/controllable/projectileweaponcontroller";
@@ -286,9 +286,11 @@ class ReadonlyCityDefenseCombatant implements IActionUser {
     }
     if (!this.target) return;
 
-    const lookPos = this.target.object.position.clone();
-    lookPos.y = this.options.mesh.position.y;
-    this.options.mesh.lookAt(lookPos);
+    if (this.shouldTrackTarget()) {
+      const lookPos = this.target.object.position.clone();
+      lookPos.y = this.options.mesh.position.y;
+      this.options.mesh.lookAt(lookPos);
+    }
     this.weaponController.fireAtTarget(this.target.object, this.options.property.combat?.weapons?.[0], {
       defaultRange: this.baseSpec.AttackRange,
     });
@@ -384,6 +386,10 @@ class ReadonlyCityDefenseCombatant implements IActionUser {
       this.options.property.combat?.weapons?.[0],
       this.baseSpec.AttackRange,
     );
+  }
+
+  private shouldTrackTarget(): boolean {
+    return (this.options.property.combat?.rotationMode ?? BuildingRotationMode.TrackTarget) === BuildingRotationMode.TrackTarget;
   }
 
   private isValidTarget(target: TargetRecord | null): target is TargetRecord {

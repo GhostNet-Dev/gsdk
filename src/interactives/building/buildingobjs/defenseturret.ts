@@ -3,18 +3,24 @@ import { BaseBuilding } from './basebuilding';
 import { BuildingType } from '../ibuildingobj';
 import { ICommand } from '@Glibs/ux/selectionpanel/selectionpanel';
 import { EventTypes } from '@Glibs/types/globaltypes';
-import { BuildingProperty } from '../buildingdefs';
+import { BuildingProperty, BuildingRotationMode } from '../buildingdefs';
 import IEventController from '@Glibs/interface/ievent';
 import { TargetRecord } from '@Glibs/systems/targeting/targettypes';
 import { TargetRegistrySystem } from '@Glibs/systems/targeting/targetregistrysystem';
 import { ProjectileWeaponController } from '@Glibs/actors/controllable/projectileweaponcontroller';
 import { CombatDebugInfo, CombatDebugTeam } from '@Glibs/systems/debugger/combatdebugtypes';
 
+type DebugBoxMesh = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
+
 export class DefenseTurret extends BaseBuilding {
     private target: TargetRecord | null = null;
     private isAttacking = true;
     private targetRegistry?: TargetRegistrySystem;
     private readonly weaponController = new ProjectileWeaponController();
+    private debugBox?: DebugBoxMesh;
+    private readonly debugBoxSize = new THREE.Vector3();
+    private readonly tempDebugBoxSize = new THREE.Vector3();
+    private readonly tempDebugBoxCenter = new THREE.Vector3();
 
     constructor(
         id: string,
@@ -42,14 +48,17 @@ export class DefenseTurret extends BaseBuilding {
         }
 
         if (this.target) {
-            const lookPos = this.target.object.position.clone();
-            lookPos.y = this.mesh.position.y;
-            this.mesh.lookAt(lookPos);
+            if (this.shouldTrackTarget()) {
+                const lookPos = this.target.object.position.clone();
+                lookPos.y = this.mesh.position.y;
+                this.mesh.lookAt(lookPos);
+            }
             this.shoot();
         }
     }
 
     destroy(): void {
+        this.disposeDebugBox();
         this.eventCtrl.DeregisterEventListener(EventTypes.RegisterTargetSystem, this.setTargetRegistry);
         super.destroy();
     }
@@ -58,12 +67,11 @@ export class DefenseTurret extends BaseBuilding {
         const weapon = this.property.combat?.weapons?.[0];
         if (this.isDestroyed || !this.mesh.parent || !this.isAttacking || !weapon) return undefined;
 
-        const damageBox = this.findDebugMesh(this.mesh);
-        if (!damageBox) return undefined;
-
-        this.mesh.updateWorldMatrix(true, true);
-        const box = new THREE.Box3().setFromObject(this.mesh);
+        const box = this.getDebugBounds();
         if (box.isEmpty()) return undefined;
+
+        const damageBox = this.getOrCreateDebugBox(box);
+        damageBox.position.copy(box.getCenter(this.tempDebugBoxCenter));
 
         const targetBounds = this.getDebugTargetBounds(this.target);
         const targetCenter = targetBounds
@@ -160,19 +168,62 @@ export class DefenseTurret extends BaseBuilding {
         return this.weaponController.getEffectiveRange(weapon, this.baseSpec.AttackRange);
     }
 
-    private findDebugMesh(root: THREE.Object3D): THREE.Mesh | undefined {
-        let found: THREE.Mesh | undefined;
-        root.traverse((object) => {
-            if (found || !(object instanceof THREE.Mesh)) return;
-            if (!this.hasColorMaterial(object.material)) return;
-            found = object;
-        });
-        return found;
+    private shouldTrackTarget(): boolean {
+        return (this.property.combat?.rotationMode ?? BuildingRotationMode.TrackTarget) === BuildingRotationMode.TrackTarget;
     }
 
-    private hasColorMaterial(material: THREE.Material | THREE.Material[]): boolean {
-        const materials = Array.isArray(material) ? material : [material];
-        return materials.some((item) => "color" in item && item.color instanceof THREE.Color);
+    private getDebugBounds(): THREE.Box3 {
+        const registeredBounds = this.targetRegistry?.get(this.id)?.bounds;
+        if (registeredBounds && !registeredBounds.isEmpty()) return registeredBounds.clone();
+
+        const userDataBounds = this.mesh.userData.bounds;
+        if (userDataBounds instanceof THREE.Box3 && !userDataBounds.isEmpty()) return userDataBounds.clone();
+
+        this.mesh.updateWorldMatrix(true, true);
+        return new THREE.Box3().setFromObject(this.mesh);
+    }
+
+    private getOrCreateDebugBox(bounds: THREE.Box3): DebugBoxMesh {
+        const size = bounds.getSize(this.tempDebugBoxSize);
+        const needsCreate = !this.debugBox || !this.debugBoxSize.equals(size);
+
+        if (needsCreate) {
+            this.disposeDebugBox();
+            const geometry = new THREE.BoxGeometry(size.x, size.y, size.z);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x00ff00,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.6,
+                depthWrite: false,
+                depthTest: false,
+            });
+            this.debugBox = new THREE.Mesh(geometry, material);
+            this.debugBox.visible = false;
+            this.debugBox.renderOrder = 1000;
+            this.debugBoxSize.copy(size);
+        }
+
+        const debugBox = this.debugBox;
+        if (!debugBox) {
+            throw new Error("DefenseTurret debug box was not created.");
+        }
+
+        if (this.mesh.parent && debugBox.parent !== this.mesh.parent) {
+            this.mesh.parent.add(debugBox);
+        }
+
+        return debugBox;
+    }
+
+    private disposeDebugBox(): void {
+        if (!this.debugBox) return;
+
+        this.debugBox.geometry.dispose();
+        this.debugBox.material.dispose();
+        this.debugBox.removeFromParent();
+        this.debugBox = undefined;
+        this.debugBoxSize.set(0, 0, 0);
     }
 
     private getDebugTargetBounds(target: TargetRecord | null): THREE.Box3 | undefined {
