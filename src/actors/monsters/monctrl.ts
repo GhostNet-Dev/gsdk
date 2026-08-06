@@ -1,6 +1,13 @@
 import * as THREE from "three";
+import {
+    FollowPathBehavior,
+    Path,
+    SeparationBehavior,
+    Vehicle,
+    Vector3 as YukaVector3,
+} from "yuka";
 import { Zombie } from "./zombie"
-import { AttackZState, DyingZState, IdleZState, JumpZState, RunZState } from "./zombie/monstate"
+import { AttackZState, DyingZState, HurtZState, IdleZState, JumpZState, RunZState } from "./zombie/monstate"
 import { IMonsterCtrl, MonsterBox } from "./monsters";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
@@ -18,6 +25,9 @@ import { TargetDistanceMode, TargetRecord, TargetTeamId } from "@Glibs/systems/t
 import { GetHorizontalDistanceToBoxSurface, MeleeValidationResult, PendingMeleeImpactContext } from "@Glibs/actors/battle/meleecombat";
 import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes";
 import { CombatDebugInfo, CombatDebugTeam } from "@Glibs/systems/debugger/combatdebugtypes";
+import { LineOfSightTester } from "@Glibs/actors/battle/lineofsight";
+import { INavGridService, NavPathStatus } from "@Glibs/systems/navigation/navtypes";
+import { IYukaEntityManager } from "@Glibs/systems/navigation/yukaentitymanager";
 
 class MonsterTargetAdapter implements IPhysicsObject {
     private static readonly fallbackBoxMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1))
@@ -122,13 +132,32 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     private readonly aggroRange = 60
     private lastSearchTime = 0
     private readonly searchInterval = 500
-    private readonly tempV1 = new THREE.Vector3()
-    private readonly tempV2 = new THREE.Vector3()
-    private readonly tempV3 = new THREE.Vector3()
     private readonly _cp = new THREE.Vector3()
     private readonly targetBounds = new THREE.Box3()
+    private readonly lineOfSight = new LineOfSightTester()
+    private navGrid?: INavGridService
+    private yukaManager?: IYukaEntityManager
+    private vehicle?: Vehicle
+    private followPathBehavior?: FollowPathBehavior
+    private separationBehavior?: SeparationBehavior
+    private currentPathTargetId?: string
+    private currentPathGridVersion = -1
+    private nextRepathElapsed = 0
+    private readonly repathInterval = 0.35
+    private readonly repathJitter = Math.random() * 0.15
+    private readonly vehicleVelocityDir = new THREE.Vector3()
+    private readonly desiredVehiclePos = new THREE.Vector3()
+    private readonly actualMove = new THREE.Vector3()
+    private readonly directPathTarget = new THREE.Vector3()
     private readonly setTargetRegistry = (targetRegistry?: TargetRegistrySystem) => {
         this.targetRegistry = targetRegistry
+    }
+    private readonly setNavGrid = (navGrid?: INavGridService) => {
+        this.navGrid = navGrid
+    }
+    private readonly setYukaManager = (manager?: IYukaEntityManager) => {
+        this.yukaManager = manager
+        this.ensureVehicle()
     }
     private readonly onUpdateBuff = (buff: Buff, level = 0) => {
         this.baseSpec.Buff(buff, level)
@@ -174,7 +203,11 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         eventCtrl.RegisterEventListener(this.updateBuffEvent, this.onUpdateBuff)
         eventCtrl.RegisterEventListener(this.removeBuffEvent, this.onRemoveBuff)
         eventCtrl.RegisterEventListener(EventTypes.RegisterTargetSystem, this.setTargetRegistry)
+        eventCtrl.RegisterEventListener(EventTypes.RegisterNavGridService, this.setNavGrid)
+        eventCtrl.RegisterEventListener(EventTypes.RegisterYukaEntityManager, this.setYukaManager)
         eventCtrl.SendEventMessage(EventTypes.RequestTargetSystem)
+        eventCtrl.SendEventMessage(EventTypes.RequestNavGridService)
+        eventCtrl.SendEventMessage(EventTypes.RequestYukaEntityManager)
     }
     applyAction(action: IActionComponent, ctx?: ActionContext) {
         action.apply?.(this, ctx)
@@ -192,6 +225,12 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         this.eventCtrl.DeregisterEventListener(this.updateBuffEvent, this.onUpdateBuff)
         this.eventCtrl.DeregisterEventListener(this.removeBuffEvent, this.onRemoveBuff)
         this.eventCtrl.DeregisterEventListener(EventTypes.RegisterTargetSystem, this.setTargetRegistry)
+        this.eventCtrl.DeregisterEventListener(EventTypes.RegisterNavGridService, this.setNavGrid)
+        this.eventCtrl.DeregisterEventListener(EventTypes.RegisterYukaEntityManager, this.setYukaManager)
+        if (this.vehicle) {
+            this.yukaManager?.remove(this.vehicle)
+            this.vehicle = undefined
+        }
     }
     Respawning() {
         this.baseSpec.ResetStatus()
@@ -199,6 +238,9 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         this.currentState = this.idleState
         this.currentState.Init()
         this.MonsterBox.position.copy(this.zombie.Pos)
+        this.currentPathTargetId = undefined
+        this.currentPathGridVersion = -1
+        this.syncVehicleFromMesh()
     }
 
     GetDebugInfo(): CombatDebugInfo {
@@ -224,6 +266,8 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     update(delta: number): void {
         if (!this.zombie.Visible) return
 
+        this.ensureVehicle()
+        this.applyVehiclePosition(delta)
         this.targetAdapter.update()
         const target = this.resolveTarget()
         const dist = this.zombie.Pos.distanceTo(target.Pos)
@@ -232,37 +276,172 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
             this.dir.subVectors(target.CenterPos, this.zombie.CenterPos)
             this.raycast.set(this.zombie.CenterPos, this.dir.normalize())
 
-            let find = false
-
-            // this.instanceBlock.forEach((block) => {
-            //     if (block) find = this.CheckVisible(block, dist)
-            // })
-            find = this.CheckVisibleMeshs(target, this.gphysic.GetObjects(), dist)
-            /*
-            if (this.legos.instancedBlock != undefined)
-                find = this.CheckVisible(this.legos.instancedBlock, dist)
-            if (this.legos.bricks2.length > 0 && !find)
-                find = this.CheckVisibleMeshs(this.legos.bricks2, dist)
-            if (this.nonlegos.instancedBlock != undefined)
-                find = this.CheckVisible(this.nonlegos.instancedBlock, dist)
-            if (this.nonlegos.bricks2.length > 0 && !find)
-                find = this.CheckVisibleMeshs(this.nonlegos.bricks2, dist)
-                */
-
-            if (find) {
-                // not visible player
-                this.moveDirection.set(0, 0, 0)
-            } else {
-                this.moveDirection.copy(this.dir)
-            }
+            this.updateNavigation(delta, target)
         }
         this.currentState = this.currentState.Update(delta, this.moveDirection, target)
+        this.applyStateNavigationMode()
 
         this.zombie.update(delta)
 
         this.phybox.position.copy(this.zombie.Pos)
         this.phybox.rotation.copy(this.zombie.Meshs.rotation)
         this.phybox.position.y += this.zombie.Size.y / 2
+    }
+
+    private ensureVehicle() {
+        if (this.vehicle || !this.yukaManager) return
+
+        const vehicle = new Vehicle()
+        vehicle.name = this.targetId
+        vehicle.maxSpeed = this.Spec.Speed
+        vehicle.maxForce = Math.max(20, this.Spec.Speed * 12)
+        vehicle.boundingRadius = Math.max(this.zombie.Size.x, this.zombie.Size.z) * 0.5
+        vehicle.neighborhoodRadius = Math.max(3, vehicle.boundingRadius * 4)
+        vehicle.updateNeighborhood = true
+        vehicle.updateOrientation = false
+        vehicle.position.set(this.zombie.Pos.x, this.zombie.Pos.y, this.zombie.Pos.z)
+
+        const followPath = new FollowPathBehavior(new Path(), 0.75)
+        followPath.active = false
+        const separation = new SeparationBehavior()
+        separation.weight = 0.45
+        vehicle.steering.add(followPath)
+        vehicle.steering.add(separation)
+
+        this.vehicle = vehicle
+        this.followPathBehavior = followPath
+        this.separationBehavior = separation
+        this.yukaManager.add(vehicle)
+    }
+
+    private syncVehicleFromMesh() {
+        if (!this.vehicle) return
+        this.vehicle.position.set(this.zombie.Pos.x, this.zombie.Pos.y, this.zombie.Pos.z)
+        this.vehicle.velocity.set(0, 0, 0)
+    }
+
+    private applyVehiclePosition(delta: number) {
+        const vehicle = this.vehicle
+        if (!vehicle || this.isNavigationSuspended()) {
+            this.syncVehicleFromMesh()
+            return
+        }
+
+        this.desiredVehiclePos.set(vehicle.position.x, vehicle.position.y, vehicle.position.z)
+        this.desiredVehiclePos.y = this.navGrid?.getHeightAt(
+            this.desiredVehiclePos.x,
+            this.desiredVehiclePos.z,
+            this.zombie.Pos.y,
+        ) ?? this.zombie.Pos.y
+
+        this.actualMove.subVectors(this.desiredVehiclePos, this.zombie.Pos)
+        const horizontalMove = this.actualMove.clone()
+        horizontalMove.y = 0
+
+        if (horizontalMove.lengthSq() > 0.0001) {
+            const dir = horizontalMove.clone().normalize()
+            const hit = this.gphysic.CheckDirection(this.zombie, dir, this.Spec.Speed)
+            if (hit.obj && horizontalMove.length() >= Math.max(0, hit.distance)) {
+                this.syncVehicleFromMesh()
+            } else {
+                this.zombie.Pos.copy(this.desiredVehiclePos)
+            }
+        } else {
+            this.zombie.Pos.y = this.desiredVehiclePos.y
+        }
+
+        this.vehicleVelocityDir.set(vehicle.velocity.x, 0, vehicle.velocity.z)
+        if (this.vehicleVelocityDir.lengthSq() > 0.0025) {
+            this.moveDirection.copy(this.vehicleVelocityDir.normalize())
+        } else if (delta > 0 && this.actualMove.lengthSq() > 0.0001) {
+            this.moveDirection.copy(this.actualMove).setY(0).normalize()
+        } else {
+            this.moveDirection.set(0, 0, 0)
+        }
+    }
+
+    private updateNavigation(delta: number, target: IPhysicsObject) {
+        const vehicle = this.vehicle
+        const follow = this.followPathBehavior
+        if (!vehicle || !follow || this.isNavigationSuspended()) {
+            this.moveDirection.set(0, 0, 0)
+            return
+        }
+
+        const attackRange = this.Spec.AttackRange
+        const targetDistance = GetHorizontalDistanceToBoxSurface(this.zombie.Pos, target.Box, target.Pos, this._cp)
+        if (targetDistance <= attackRange * 0.92) {
+            follow.active = false
+            vehicle.velocity.set(0, 0, 0)
+            this.moveDirection.set(0, 0, 0)
+            return
+        }
+
+        this.nextRepathElapsed -= delta
+        const targetId = this.currentTarget?.id ?? target.UUID
+        const gridVersion = this.navGrid?.Version ?? -1
+        const needsPath = !follow.active
+            || this.currentPathTargetId !== targetId
+            || this.currentPathGridVersion !== gridVersion
+
+        if (!needsPath || this.nextRepathElapsed > 0) return
+
+        this.nextRepathElapsed = this.repathInterval + this.repathJitter
+        this.currentPathTargetId = targetId
+        this.currentPathGridVersion = gridVersion
+        const waypoints = this.resolveWaypoints(target)
+        this.applyPath(waypoints)
+    }
+
+    private resolveWaypoints(target: IPhysicsObject): THREE.Vector3[] {
+        if (this.currentTarget && this.navGrid?.IsReady) {
+            const path = this.navGrid.findPath({
+                start: this.zombie.Pos,
+                target: this.currentTarget,
+                attackRange: this.Spec.AttackRange,
+            })
+            if (path.status === NavPathStatus.Complete && path.waypoints.length > 0) {
+                return path.waypoints
+            }
+        }
+
+        this.directPathTarget.copy(target.CenterPos)
+        this.directPathTarget.y = this.navGrid?.getHeightAt(
+            this.directPathTarget.x,
+            this.directPathTarget.z,
+            this.zombie.Pos.y,
+        ) ?? this.zombie.Pos.y
+        return [this.zombie.Pos.clone(), this.directPathTarget.clone()]
+    }
+
+    private applyPath(waypoints: THREE.Vector3[]) {
+        const vehicle = this.vehicle
+        const follow = this.followPathBehavior
+        if (!vehicle || !follow || waypoints.length === 0) return
+
+        const path = new Path()
+        path.loop = false
+        for (const waypoint of waypoints) {
+            path.add(new YukaVector3(waypoint.x, waypoint.y, waypoint.z))
+        }
+        follow.path = path
+        follow.active = waypoints.length > 1
+        vehicle.position.set(this.zombie.Pos.x, this.zombie.Pos.y, this.zombie.Pos.z)
+    }
+
+    private applyStateNavigationMode() {
+        const suspended = this.isNavigationSuspended()
+        if (this.followPathBehavior) this.followPathBehavior.active = !suspended && this.followPathBehavior.active
+        if (this.separationBehavior) this.separationBehavior.active = !suspended
+        if (suspended) this.syncVehicleFromMesh()
+    }
+
+    private isNavigationSuspended(): boolean {
+        return this.currentState instanceof AttackZState
+            || this.currentState instanceof JumpZState
+            || this.currentState instanceof HurtZState
+            || this.currentState instanceof DyingZState
+            || this.Spec.Health <= 0
     }
     
     ReceiveDemage(damage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number): boolean {
@@ -289,6 +468,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
 
         const dist = GetHorizontalDistanceToBoxSurface(this.zombie.Pos, this.targetAdapter.Box, target.object.position, this._cp)
         if (dist > attackRange) return MeleeValidationResult.OutOfRange
+        if (this.isTargetLineOfSightBlocked(target, "monster:melee-validate")) return MeleeValidationResult.InvalidTarget
         return MeleeValidationResult.InRange
     }
 
@@ -297,7 +477,10 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         if (!target || target.id !== targetId) return false
         if (!target.alive || !target.targetable || !target.collidable) return false
 
-        return GetHorizontalDistanceToBoxSurface(this.zombie.Pos, this.targetAdapter.Box, target.object.position, this._cp) <= attackRange
+        if (GetHorizontalDistanceToBoxSurface(this.zombie.Pos, this.targetAdapter.Box, target.object.position, this._cp) > attackRange) {
+            return false
+        }
+        return !this.isTargetLineOfSightBlocked(target, "monster:ranged-validate")
     }
 
     CheckVisible(physBox: THREE.InstancedMesh, dist: number): boolean {
@@ -308,42 +491,25 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         return false
     }
     CheckVisibleMeshs(target: IPhysicsObject, physBox: THREE.Object3D[], dist: number): boolean {
-        return this.getClosestHit(target.CenterPos, this.zombie.CenterPos, physBox, this.zombie.Size.x, target.Meshs)
+        const ignoreStructureId = this.currentTarget?.kind === "structure" ? this.currentTarget.id : undefined
+        return this.getClosestHit(target.CenterPos, this.zombie.CenterPos, physBox, this.zombie.Size.x, target.Meshs, ignoreStructureId, "monster:update")
     }
     getClosestHit(
         p1: THREE.Vector3,
         p2: THREE.Vector3,
         targets: THREE.Object3D[],
         radius = 1,
-        ignore?: THREE.Object3D
-    ) {
-        for (const target of targets) {
-            if (ignore && this.isObjectOrChild(target, ignore)) continue
-            const center = target.position;
-            const seg = this.tempV1.subVectors(p2, p1);
-            const segDir = this.tempV2.copy(seg).normalize();
-            const toCenter = this.tempV3.subVectors(center, p1);
-            const projLen = toCenter.dot(segDir);
-
-            // 충돌 지점 계산
-            const closestPoint = this.tempV1.copy(p1).add(segDir.multiplyScalar(projLen));
-            const distToCenter = closestPoint.distanceTo(center);
-
-            if (distToCenter <= radius) {
-                return true
-            }
-        }
-
-        return false;
-    }
-
-    private isObjectOrChild(candidate: THREE.Object3D, parent: THREE.Object3D) {
-        let current: THREE.Object3D | null = candidate
-        while (current) {
-            if (current === parent) return true
-            current = current.parent
-        }
-        return false
+        ignore?: THREE.Object3D,
+        ignoreStructureId?: string,
+        debugLabel?: string
+    ): boolean {
+        return this.lineOfSight.isBlocked(p1, p2, targets, radius, {
+            ignoreObject: ignore,
+            ignoreObjects: [this.zombie.Meshs],
+            ignoreStructureId,
+            targetRegistry: this.targetRegistry,
+            debugLabel,
+        })
     }
 
     private resolveTarget(): IPhysicsObject {
@@ -385,6 +551,21 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
 
         this.targetBounds.setFromObject(target.object)
         return this.targetBounds.isEmpty() ? undefined : this.targetBounds
+    }
+
+    private isTargetLineOfSightBlocked(target: TargetRecord, debugLabel: string): boolean {
+        return this.lineOfSight.isBlocked(
+            this.zombie.CenterPos,
+            this.targetAdapter.CenterPos,
+            this.gphysic.GetObjects(),
+            this.zombie.Size.x,
+            {
+                ignoreObjects: [target.object, this.zombie.Meshs],
+                ignoreStructureId: target.kind === "structure" ? target.id : undefined,
+                targetRegistry: this.targetRegistry,
+                debugLabel,
+            },
+        )
     }
 
     private getDebugTargetBounds(target?: TargetRecord): THREE.Box3 | undefined {

@@ -382,7 +382,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
       autoAttack: true,
       rotationMode: BuildingRotationMode.Fixed,
       targetKinds: ["ship", "unit"],
-      stats: { attackRanged: 14, attackRange: 90, defense: 8 },
+      stats: { attackRanged: 1, attackRange: 9, defense: 8 },
       weapons: [shipWeaponDefs.AllySupportGun]
     },
     commands: [
@@ -406,7 +406,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
       autoAttack: true,
       rotationMode: BuildingRotationMode.Fixed,
       targetKinds: ["ship", "unit"],
-      stats: { attackRanged: 18, attackRange: 130, defense: 12 },
+      stats: { attackRanged: 1, attackRange: 13, defense: 12 },
       weapons: [shipWeaponDefs.ScoutLaser]
     },
     commands: [
@@ -430,7 +430,7 @@ export const buildingDefs: Record<string, BuildingProperty> = {
       autoAttack: true,
       rotationMode: BuildingRotationMode.Fixed,
       targetKinds: ["ship", "unit"],
-      stats: { attackRanged: 32, attackRange: 180, defense: 16 },
+      stats: { attackRanged: 3, attackRange: 18, defense: 16 },
       weapons: [shipWeaponDefs.FighterAutocannon]
     },
     commands: [

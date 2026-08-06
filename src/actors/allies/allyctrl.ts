@@ -15,6 +15,7 @@ import { TargetDistanceMode, TargetRecord, TargetTeamId } from "@Glibs/systems/t
 import { GetHorizontalDistanceToBoxSurface, MeleeValidationResult, PendingMeleeImpactContext } from "@Glibs/actors/battle/meleecombat";
 import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes";
 import { CombatDebugInfo, CombatDebugTeam } from "@Glibs/systems/debugger/combatdebugtypes";
+import { LineOfSightTester } from "@Glibs/actors/battle/lineofsight";
 
 // 타겟 레코드를 IPhysicsObject로 래핑하여 TargetId를 state machine에 전달
 class AllyTargetAdapter implements IPhysicsObject {
@@ -127,6 +128,7 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
     private readonly searchInterval = 500
     private readonly _cp = new THREE.Vector3()
     private readonly targetBounds = new THREE.Box3()
+    private readonly lineOfSight = new LineOfSightTester()
     private loggedNoTarget = false
 
     private readonly setTargetRegistry = (targetRegistry?: TargetRegistrySystem) => {
@@ -236,7 +238,11 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
             if (this.currentTarget) {
                 this.loggedNoTarget = false
                 this.dir.subVectors(target.CenterPos, this.allyModel.CenterPos)
-                this.moveDirection.copy(this.dir.normalize())
+                if (this.isTargetLineOfSightBlocked(this.currentTarget, "ally:update")) {
+                    this.moveDirection.set(0, 0, 0)
+                } else {
+                    this.moveDirection.copy(this.dir.normalize())
+                }
             } else {
                 if (!this.loggedNoTarget) {
                     console.log("[CombatDebug] NoTarget", {
@@ -288,6 +294,7 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
 
         const dist = GetHorizontalDistanceToBoxSurface(this.allyModel.Pos, this.targetAdapter.Box, target.object.position, this._cp)
         if (dist > attackRange) return MeleeValidationResult.OutOfRange
+        if (this.isTargetLineOfSightBlocked(target, "ally:melee-validate")) return MeleeValidationResult.InvalidTarget
         return MeleeValidationResult.InRange
     }
 
@@ -296,7 +303,10 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
         if (!target || target.id !== targetId) return false
         if (!target.alive || !target.targetable || !target.collidable) return false
 
-        return GetHorizontalDistanceToBoxSurface(this.allyModel.Pos, this.targetAdapter.Box, target.object.position, this._cp) <= attackRange
+        if (GetHorizontalDistanceToBoxSurface(this.allyModel.Pos, this.targetAdapter.Box, target.object.position, this._cp) > attackRange) {
+            return false
+        }
+        return !this.isTargetLineOfSightBlocked(target, "ally:ranged-validate")
     }
 
     private resolveTarget(): IPhysicsObject {
@@ -365,6 +375,21 @@ export class AllyCtrl implements ILoop, IAllyCtrl, IActionUser {
 
         this.targetBounds.setFromObject(target.object)
         return this.targetBounds.isEmpty() ? undefined : this.targetBounds
+    }
+
+    private isTargetLineOfSightBlocked(target: TargetRecord, debugLabel: string): boolean {
+        return this.lineOfSight.isBlocked(
+            this.allyModel.CenterPos,
+            this.targetAdapter.CenterPos,
+            this.gphysic.GetObjects(),
+            this.allyModel.Size.x,
+            {
+                ignoreObjects: [target.object, this.allyModel.Meshs],
+                ignoreStructureId: target.kind === "structure" ? target.id : undefined,
+                targetRegistry: this.targetRegistry,
+                debugLabel,
+            },
+        )
     }
 
     private getDebugTargetBounds(target?: TargetRecord): THREE.Box3 | undefined {

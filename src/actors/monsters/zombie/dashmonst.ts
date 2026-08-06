@@ -329,7 +329,7 @@ export class FastDashRunState extends MonState implements IActorState {
         const checkHit = this.CheckHit(target)
         if (checkHit != undefined) return checkHit
         const dist = this.GetTargetDistance(target)
-        const checkAttack = this.CheckAttack(dist)
+        const checkAttack = this.CheckAttack(target, dist)
         if(checkAttack != undefined) return checkAttack
 
         this.elapsedTime += delta

@@ -133,12 +133,26 @@ export abstract class MonState {
             return this.states.HurtSt
         }
     }
-    CheckAttack(dist: number) {
-        if (dist < this.GetAttackDistance()) {
+    CheckAttack(target: IPhysicsObject, dist: number) {
+        const attackDistance = this.GetAttackDistance()
+        if (dist < attackDistance && this.CanScheduleAttack(target, attackDistance)) {
             this.Uninit()
             this.states.AttackSt.Init()
             return this.states.AttackSt
         }
+    }
+
+    protected CanScheduleAttack(target: IPhysicsObject, attackDistance: number): boolean {
+        const targetId = GetMonsterAttackTargetId(target)
+        if (this.GetMonsterProperty()?.projectileDef) {
+            const validator = this.spec.Owner as RangedTargetValidator
+            return validator.ValidateRangedAttackTarget?.(targetId, attackDistance) === true
+        }
+
+        const validator = GetMeleeTargetValidator(this.spec.Owner)
+        const validation = validator?.ValidateMeleeAttackTarget(targetId, attackDistance)
+            ?? MeleeValidationResult.InvalidTarget
+        return validation === MeleeValidationResult.InRange
     }
 
     protected ValidateTargetHit(target: IPhysicsObject, attackDistance: number): boolean {
@@ -355,6 +369,13 @@ export class AttackZState extends MonState implements IActorState {
             return this
         }
         this.attackTime -= this.attackSpeed
+
+        if (!this.CanScheduleAttack(target, attackDistance)) {
+            this.Uninit()
+            this.states.IdleSt.Init()
+            return this.states.IdleSt
+        }
+
         this.attackProcess = true
         this.scheduledTarget = target
         this.scheduledTargetId = this.targetId
@@ -643,7 +664,7 @@ export class RunZState extends MonState implements IActorState {
         if (checkDying != undefined) return checkDying
 
         const dist = this.GetTargetDistance(target)
-        const checkAttack = this.CheckAttack(dist)
+        const checkAttack = this.CheckAttack(target, dist)
         if(checkAttack != undefined) return checkAttack
 
         if (v.x == 0 && v.z == 0) {
@@ -665,32 +686,6 @@ export class RunZState extends MonState implements IActorState {
             this.zombie.Meshs.quaternion.copy(qt)
         }
 
-        // ✅ 이동 처리
-        const dis = this.gphysic.CheckDirection(this.zombie, this.dir.copy(v), this.speed);
-        const moveAmount = v.clone().multiplyScalar(delta * this.speed);
-        const moveDis = moveAmount.length();
-        // console.log(moveDis, " / ", dis.distance, " / ", dis.move)
-
-        const canMoveWithoutCollision = !dis.obj || (dis.distance > 0 && moveDis < dis.distance);
-        if (dis.move) {
-            this.zombie.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
-        } else if (canMoveWithoutCollision) {
-            this.zombie.Pos.add(moveAmount);
-        }
-        // if (moveDis < dis.distance) {
-        //     this.zombie.Pos.add(moveAmount);
-        // } else if (dis.move) {
-        //     this.zombie.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
-        // }
-
-        // if (this.gphysic.Check(this.zombie)){
-        //     this.zombie.Pos.y += 1 // 계단 체크 
-        //     if (this.gphysic.Check(this.zombie)) {
-        //         this.zombie.Pos.x -= movX
-        //         this.zombie.Pos.z -= movZ
-        //         this.zombie.Pos.y -= 1
-        //     }
-        // }
         return this
     }
 }

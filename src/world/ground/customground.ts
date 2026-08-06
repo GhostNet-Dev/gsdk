@@ -199,6 +199,10 @@ export default class CustomGround implements IWorldMapObject {
     this.isCombatInputBlocked = false;
   };
 
+  get GridSize(): number {
+    return this.gridSize;
+  }
+
   constructor(
     private scene: THREE.Scene,
     private eventCtrl: IEventController,
@@ -811,6 +815,33 @@ export default class CustomGround implements IWorldMapObject {
       this.blendMapData[i + 1] / 255,
       this.blendMapData[i + 2] / 255
     );
+  }
+
+  getHeightAt(worldX: number, worldZ: number): number {
+    if (!this.obj || !this.geometry) return 0;
+
+    const local = this.obj.worldToLocal(this._scratchV3.set(worldX, 0, worldZ));
+    const fx = (local.x + this.planeWidth * 0.5) / this.planeWidth * this.segmentsX;
+    const fz = (local.z + this.planeHeight * 0.5) / this.planeHeight * this.segmentsZ;
+    const i = Math.floor(fx);
+    const j = Math.floor(fz);
+    const tx = fx - i;
+    const tz = fz - j;
+    const i0 = THREE.MathUtils.clamp(i, 0, this.segmentsX);
+    const j0 = THREE.MathUtils.clamp(j, 0, this.segmentsZ);
+    const i1 = THREE.MathUtils.clamp(i + 1, 0, this.segmentsX);
+    const j1 = THREE.MathUtils.clamp(j + 1, 0, this.segmentsZ);
+    const posAttr = this.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const row = this.segmentsX + 1;
+    const h00 = posAttr.getY(j0 * row + i0);
+    const h10 = posAttr.getY(j0 * row + i1);
+    const h01 = posAttr.getY(j1 * row + i0);
+    const h11 = posAttr.getY(j1 * row + i1);
+    const h0 = h00 * (1 - tx) + h10 * tx;
+    const h1 = h01 * (1 - tx) + h11 * tx;
+    const localY = h0 * (1 - tz) + h1 * tz;
+
+    return this.obj.position.y + localY * this.obj.scale.y;
   }
 
   Click(uv: THREE.Vector2) {

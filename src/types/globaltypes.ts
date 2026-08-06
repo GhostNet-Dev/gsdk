@@ -65,6 +65,7 @@ export enum EventTypes {
     BuildRequirementValidatorReady = "buildreqvalidatorready",
     RequestUpgrade = "requestupgrade",
     UpgradeComplete = "upgradecomplete",
+    BuildingDestroyed = "buildingdestroyed",
 
     // ⚔️ 4. 전투 및 스킬 (Combat & Skills)
     Attack = "attack",
@@ -92,6 +93,10 @@ export enum EventTypes {
     UpdateTargetObject = "updatetargetobject",
     RequestTargetSystem = "requesttargetsystem",
     RegisterTargetSystem = "registertargetsystem",
+    RequestNavGridService = "requestnavgridservice",
+    RegisterNavGridService = "registernavgridservice",
+    RequestYukaEntityManager = "requestyukaentitymanager",
+    RegisterYukaEntityManager = "registeryukaentitymanager",
 
     // 💰 5. 자원 및 보상 (Resources & Rewards)
     Exp = "exp",
@@ -242,4 +247,13 @@ export type UnitProducedPayload = {
     allyId: AllyId
     count: number
     buildingId: string
+}
+
+export type BuildingDestroyedPayload = {
+    id: string
+    nodeId: string
+    position: THREE.Vector3
+    width: number
+    depth: number
+    bounds?: THREE.Box3
 }

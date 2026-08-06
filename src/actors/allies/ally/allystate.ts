@@ -125,11 +125,25 @@ export abstract class AllyState {
 
     CheckAttack(target: IPhysicsObject, dist: number) {
         if (!HasAllyAttackTarget(target)) return
-        if (dist < this.GetAttackDistance()) {
+        const attackDistance = this.GetAttackDistance()
+        if (dist < attackDistance && this.CanScheduleAttack(target, attackDistance)) {
             this.Uninit()
             this.states.AttackSt.Init()
             return this.states.AttackSt
         }
+    }
+
+    protected CanScheduleAttack(target: IPhysicsObject, attackDistance: number): boolean {
+        const targetId = GetAllyAttackTargetId(target)
+        if (this.property.projectileDef) {
+            const validator = this.spec.Owner as RangedTargetValidator
+            return validator.ValidateRangedAttackTarget?.(targetId, attackDistance) === true
+        }
+
+        const validator = GetMeleeTargetValidator(this.spec.Owner)
+        const validation = validator?.ValidateMeleeAttackTarget(targetId, attackDistance)
+            ?? MeleeValidationResult.InvalidTarget
+        return validation === MeleeValidationResult.InRange
     }
 }
 
@@ -346,6 +360,13 @@ export class AttackAllyState extends AllyState implements IActorState {
         this.attackTime += delta
         if (this.attackTime / this.attackSpeed < 1) return this
         this.attackTime -= this.attackSpeed
+
+        if (!this.CanScheduleAttack(target, attackDistance)) {
+            this.Uninit()
+            this.states.IdleSt.Init()
+            return this.states.IdleSt
+        }
+
         this.attackProcess = true
         this.scheduledTargetId = this.targetId
         this.scheduledAttackRange = attackDistance

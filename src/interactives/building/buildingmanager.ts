@@ -2,7 +2,7 @@ import * as THREE from "three";
 import IEventController, { ILoop } from "@Glibs/interface/ievent";
 import { TechTreeService } from "@Glibs/techtree/techtreeservice";
 import { BuildingProperty } from "./buildingdefs";
-import { EventTypes } from "@Glibs/types/globaltypes";
+import { BuildingDestroyedPayload, EventTypes } from "@Glibs/types/globaltypes";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 import { IBuildingObject, BuildingType, BuildingMode } from "./ibuildingobj";
 import { Loader } from "@Glibs/loader/loader";
@@ -116,6 +116,7 @@ export class BuildingManager implements ILoop, ITurnParticipant {
     this.eventCtrl.RegisterEventListener(EventTypes.BuildRequirementValidatorReady, this.setBuildRequirementValidator);
     this.eventCtrl.RegisterEventListener(EventTypes.CombatEnter, this.blockCombatInput);
     this.eventCtrl.RegisterEventListener(EventTypes.CombatLeave, this.unblockCombatInput);
+    this.eventCtrl.RegisterEventListener(EventTypes.BuildingDestroyed, this.onBuildingDestroyed);
   }
 
   attachToScene(scene: THREE.Scene): void {
@@ -190,6 +191,21 @@ export class BuildingManager implements ILoop, ITurnParticipant {
 
   private unblockCombatInput = () => {
     this.isCombatInputBlocked = false;
+  };
+
+  private onBuildingDestroyed = (payload: BuildingDestroyedPayload) => {
+    const building = this.buildingObjects.get(payload.id);
+    if (!building) return;
+
+    this.colliderRegistry.unregister(payload.id);
+    PlacementManager.Instance.unregisterFootprint(payload.id);
+    this.eventCtrl.SendEventMessage(EventTypes.DeregisterTarget, payload.id);
+    if (this.selectedBuilding?.id === payload.id) {
+      this.deselectBuilding();
+    }
+    this.buildingObjects.delete(payload.id);
+    this.clampPeopleToCapacity();
+    this.sendBuildingStatus();
   };
 
   private registerBuildingTargetAndCollider(

@@ -3,7 +3,7 @@ import { IBuildingObject, BuildingType, BuildingMode } from '../ibuildingobj';
 import { BuildingProperty } from '../buildingdefs';
 import { ISelectionData, ICommand } from '@Glibs/ux/selectionpanel/selectionpanel';
 import IEventController from '@Glibs/interface/ievent';
-import { EventTypes } from '@Glibs/types/globaltypes';
+import { BuildingDestroyedPayload, EventTypes } from '@Glibs/types/globaltypes';
 import { BaseSpec } from '@Glibs/actors/battle/basespec';
 import { AttackOption, AttackType } from '@Glibs/types/playertypes';
 import { DamageKind } from '@Glibs/actors/battle/damagepacket';
@@ -205,10 +205,21 @@ export abstract class BaseBuilding implements IBuildingObject, IActionUser {
     destroy(): void {
         if (this.isDestroyed) return;
         this.isDestroyed = true;
+        this.mesh.updateWorldMatrix(true, true);
+        const bounds = new THREE.Box3().setFromObject(this.mesh);
+        const destroyedPayload: BuildingDestroyedPayload = {
+            id: this.id,
+            nodeId: this.property.id,
+            position: this.position.clone(),
+            width: this.property.size.width,
+            depth: this.property.size.depth,
+            bounds: bounds.isEmpty() ? undefined : bounds.clone(),
+        };
         this.eventCtrl.DeregisterEventListener(EventTypes.Attack + this.id, this.onAttacked);
         this.eventCtrl.DeregisterEventListener(EventTypes.CombatEnter, this.onCombatEnter);
         this.eventCtrl.DeregisterEventListener(EventTypes.CombatLeave, this.onCombatLeave);
         this.hpRing.dispose();
+        this.eventCtrl.SendEventMessage(EventTypes.BuildingDestroyed, destroyedPayload);
         this.eventCtrl.SendEventMessage(EventTypes.UpdateTargetState, {
             id: this.id,
             alive: false,

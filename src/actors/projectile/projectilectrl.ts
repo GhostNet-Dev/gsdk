@@ -12,8 +12,36 @@ import { MonsterId } from "@Glibs/types/monstertypes";
 import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
 import { ProjectileDamageType } from "./projectiletypes";
 import { GetHorizontalDistanceToBoxSurface } from "@Glibs/actors/battle/meleecombat";
+import { getCombatObstacleBounds, isCombatObstacle } from "@Glibs/actors/battle/combatobstacle";
+
+const COMBAT_COLLISION_DEBUG = false;
+
+type ProjectileDebugUserData = {
+  staticColliderKind?: unknown;
+  staticColliderId?: unknown;
+  buildingId?: unknown;
+  targetMeta?: unknown;
+  excludeFromPhysicsTargets?: unknown;
+};
+
+enum ProjectileHitKind {
+  Target = "target",
+  Obstacle = "obstacle",
+}
+
+type ProjectileHit = {
+  target: THREE.Object3D;
+  hitPoint: THREE.Vector3;
+  distance: number;
+  normal?: THREE.Vector3;
+  kind: ProjectileHitKind;
+};
 
 export class ProjectileCtrl implements IActionUser {
+  private static readonly PROJECTILE_OBSTACLE_PADDING = 0.2;
+  private static readonly PROJECTILE_HIT_LOG_THROTTLE_MS = 1000;
+  private static readonly projectileHitLogTimes = new Map<string, number>();
+
   raycast = new THREE.Raycaster();
   moveDirection = new THREE.Vector3();
   prevPosition = new THREE.Vector3();
@@ -214,11 +242,11 @@ export class ProjectileCtrl implements IActionUser {
 
     if (!this.live || !this.creatorSpec) return false;
 
-    // 기존: closest hit 1개만 처리
+    const targets = this.getCollisionTargets();
     const obj = this.getClosestHit(
       this.prevPosition,
       this.position,
-      this.getCollisionTargets(),
+      targets,
       this.attackDist
     );
 
@@ -232,10 +260,10 @@ export class ProjectileCtrl implements IActionUser {
         obj: obj.target,
       };
 
-      const normal = (obj as any).normal ?? new THREE.Vector3().subVectors(obj.hitPoint, obj.target.position).normalize();
+      const normal = obj.normal ?? new THREE.Vector3().subVectors(obj.hitPoint, obj.target.position).normalize();
       this.projectile.hit?.(obj.hitPoint, normal);
 
-      if (k && this.getCollisionTargets().includes(obj.target)) {
+      if (obj.kind === ProjectileHitKind.Target && k) {
         this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [v]);
       }
       return true;
@@ -269,58 +297,102 @@ export class ProjectileCtrl implements IActionUser {
       obj: hit.target,
     };
 
-    const normal = (hit as any).normal ?? new THREE.Vector3().subVectors(hit.hitPoint, hit.target.position).normalize();
+    const normal = hit.normal ?? new THREE.Vector3().subVectors(hit.hitPoint, hit.target.position).normalize();
     this.projectile.hit?.(hit.hitPoint, normal);
 
-    if (k && this.getCollisionTargets().includes(hit.target)) {
+    if (hit.kind === ProjectileHitKind.Target && k) {
       this.eventCtrl.SendEventMessage(EventTypes.Attack + k, [v]);
     }
   }
 
   // Ray + Box3 정밀 판정 (invisible 메시에서도 동작)
-  private getRaycastHit(): { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number; normal?: THREE.Vector3 } | null {
+  private getRaycastHit(): ProjectileHit | null {
     const origin = this.prevPosition.clone();
     const direction = this.moveDirection.clone().normalize();
     const ray = new THREE.Ray(origin, direction);
 
-    let closest: { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number; normal?: THREE.Vector3 } | null = null;
+    let closest: ProjectileHit | null = null;
+    const targets = this.getCollisionTargets();
+    const targetIds = this.getTargetIds(targets);
 
-    const checkList = [...this.getCollisionTargets(), ...this.physicList];
-
-    for (const target of checkList) {
+    for (const target of targets) {
       if (this.isOwnerOrSelfTarget(target)) continue;
 
-      const box = this.getTargetBounds(target);
-      if (box.isEmpty()) continue;
+      const hit = this.getRayBoxHit(ray, origin, target, ProjectileHitKind.Target);
+      if (!hit) continue;
 
-      const hitPoint = new THREE.Vector3();
-      if (!ray.intersectBox(box, hitPoint)) continue;
-
-      const distance = origin.distanceTo(hitPoint);
-      if (distance > this.range) continue;
-
-      if (!closest || distance < closest.distance) {
-        // 박스 표면 법선 근사값 (가장 가까운 축)
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-        const localHit = new THREE.Vector3().subVectors(hitPoint, center);
-        const size = new THREE.Vector3();
-        box.getSize(size).multiplyScalar(0.5);
-        
-        const normal = new THREE.Vector3();
-        const dx = Math.abs(localHit.x / size.x);
-        const dy = Math.abs(localHit.y / size.y);
-        const dz = Math.abs(localHit.z / size.z);
-
-        if (dx > dy && dx > dz) normal.set(localHit.x > 0 ? 1 : -1, 0, 0);
-        else if (dy > dz) normal.set(0, localHit.y > 0 ? 1 : -1, 0);
-        else normal.set(0, 0, localHit.z > 0 ? 1 : -1);
-
-        closest = { target, hitPoint, distance, normal };
+      if (!closest || hit.distance < closest.distance) {
+        closest = hit;
       }
     }
 
+    for (const target of this.physicList) {
+      if (this.isOwnerOrSelfTarget(target)) continue;
+      if (!isCombatObstacle(target, this.targetRegistry)) continue;
+      if (this.isAlreadyHandledAsTarget(target, targetIds, targets)) continue;
+
+      const hit = this.getRayBoxHit(ray, origin, target, ProjectileHitKind.Obstacle);
+      if (!hit) continue;
+
+      if (!closest || hit.distance < closest.distance) {
+        closest = hit;
+      }
+    }
+
+    if (closest?.kind === ProjectileHitKind.Obstacle) {
+      this.logProjectilePhysicsHit(closest, this.prevPosition, this.position, ProjectileCtrl.PROJECTILE_OBSTACLE_PADDING);
+    }
+
     return closest;
+  }
+
+  private getRayBoxHit(
+    ray: THREE.Ray,
+    origin: THREE.Vector3,
+    target: THREE.Object3D,
+    kind: ProjectileHitKind,
+  ): ProjectileHit | null {
+    const box = kind === ProjectileHitKind.Obstacle
+      ? getCombatObstacleBounds(target, this.tmpBox, this.targetRegistry)
+      : this.getTargetBounds(target);
+    if (box.isEmpty()) return null;
+
+    const hitBox = kind === ProjectileHitKind.Obstacle
+      ? this.tmpExpandedBox.copy(box).expandByScalar(ProjectileCtrl.PROJECTILE_OBSTACLE_PADDING)
+      : box;
+    const hitPoint = new THREE.Vector3();
+    if (!ray.intersectBox(hitBox, hitPoint)) return null;
+
+    const distance = origin.distanceTo(hitPoint);
+    if (distance > this.range) return null;
+
+    return {
+      target,
+      hitPoint,
+      distance,
+      normal: this.getBoxNormal(box, hitPoint),
+      kind,
+    };
+  }
+
+  private getTargetIds(targets: THREE.Object3D[]): Set<string> {
+    const ids = new Set<string>();
+    for (const target of targets) {
+      const id = this.targetRegistry.getByObject(target)?.id;
+      if (id) ids.add(id);
+    }
+    return ids;
+  }
+
+  private isAlreadyHandledAsTarget(
+    obstacle: THREE.Object3D,
+    targetIds: Set<string>,
+    targets: THREE.Object3D[],
+  ): boolean {
+    if (targets.some((target) => target === obstacle)) return true;
+
+    const obstacleRecord = this.targetRegistry.getByObject(obstacle);
+    return obstacleRecord?.id !== undefined && targetIds.has(obstacleRecord.id);
   }
 
   // (기존 코드 유지) 필요 시 라인 히트용
@@ -445,43 +517,85 @@ export class ProjectileCtrl implements IActionUser {
     p2: THREE.Vector3,
     targets: THREE.Object3D[],
     radius = 1
-  ): { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number; normal?: THREE.Vector3 } | null {
-    let closest: { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number; normal?: THREE.Vector3 } | null = null;
+  ): ProjectileHit | null {
+    let closest: ProjectileHit | null = null;
+    const targetIds = this.getTargetIds(targets);
 
-    const checkList = (this.isHitscan || this.useRaycast) ? [...targets, ...this.physicList] : targets;
+    for (const target of targets) {
+      const hit = this.getTargetHit(p1, p2, target, radius);
+      if (!hit) continue;
 
-    for (const target of checkList) {
-      const dis = this.getHorizontalDistanceToTargetSurface(p1, target);
-      if (dis > this.range) continue;
-
-      if (this.isOwnerOrSelfTarget(target)) continue;
-
-      const boxHit = this.getSegmentBoxHit(p1, p2, target, radius);
-      if (boxHit) {
-        if (!closest || boxHit.distance < closest.distance) {
-          closest = boxHit;
-        }
-        continue;
-      }
-
-      const center = target.position;
-      const closestPoint = this.getClosestPointOnSegment(p1, p2, center);
-      const distToCenter = closestPoint.distanceTo(center);
-      const targetRadius = this.getTargetRadius(target) + radius;
-
-      if (distToCenter <= targetRadius) {
-        const distFromStart = p1.distanceTo(closestPoint);
-        if (!closest || distFromStart < closest.distance) {
-          closest = {
-            target,
-            hitPoint: closestPoint,
-            distance: distFromStart,
-          };
-        }
+      if (!closest || hit.distance < closest.distance) {
+        closest = hit;
       }
     }
 
+    for (const obstacle of this.physicList) {
+      const hit = this.getObstacleHit(p1, p2, obstacle, targetIds, targets);
+      if (!hit) continue;
+
+      if (!closest || hit.distance < closest.distance) {
+        closest = hit;
+      }
+    }
+
+    if (closest?.kind === ProjectileHitKind.Obstacle) {
+      this.logProjectilePhysicsHit(closest, p1, p2, ProjectileCtrl.PROJECTILE_OBSTACLE_PADDING);
+    }
+
     return closest;
+  }
+
+  private getTargetHit(
+    p1: THREE.Vector3,
+    p2: THREE.Vector3,
+    target: THREE.Object3D,
+    radius: number,
+  ): ProjectileHit | null {
+    const dis = this.getHorizontalDistanceToTargetSurface(p1, target);
+    if (dis > this.range) return null;
+
+    if (this.isOwnerOrSelfTarget(target)) return null;
+
+    const boxHit = this.getSegmentBoxHit(p1, p2, target, radius, ProjectileHitKind.Target);
+    if (boxHit) return boxHit;
+
+    const center = target.position;
+    const closestPoint = this.getClosestPointOnSegment(p1, p2, center);
+    const distToCenter = closestPoint.distanceTo(center);
+    const targetRadius = this.getTargetRadius(target) + radius;
+
+    if (distToCenter > targetRadius) return null;
+
+    return {
+      target,
+      hitPoint: closestPoint,
+      distance: p1.distanceTo(closestPoint),
+      kind: ProjectileHitKind.Target,
+    };
+  }
+
+  private getObstacleHit(
+    p1: THREE.Vector3,
+    p2: THREE.Vector3,
+    obstacle: THREE.Object3D,
+    targetIds: Set<string>,
+    targets: THREE.Object3D[],
+  ): ProjectileHit | null {
+    if (this.isOwnerOrSelfTarget(obstacle)) return null;
+    if (!isCombatObstacle(obstacle, this.targetRegistry)) return null;
+    if (this.isAlreadyHandledAsTarget(obstacle, targetIds, targets)) return null;
+
+    const dis = this.getHorizontalDistanceToTargetSurface(p1, obstacle);
+    if (dis > this.range) return null;
+
+    return this.getSegmentBoxHit(
+      p1,
+      p2,
+      obstacle,
+      ProjectileCtrl.PROJECTILE_OBSTACLE_PADDING,
+      ProjectileHitKind.Obstacle,
+    );
   }
 
   private getTargetBounds(target: THREE.Object3D): THREE.Box3 {
@@ -508,8 +622,11 @@ export class ProjectileCtrl implements IActionUser {
     p2: THREE.Vector3,
     target: THREE.Object3D,
     radius: number,
-  ): { target: THREE.Object3D; hitPoint: THREE.Vector3; distance: number; normal?: THREE.Vector3 } | null {
-    const bounds = this.getTargetBounds(target);
+    kind: ProjectileHitKind,
+  ): ProjectileHit | null {
+    const bounds = kind === ProjectileHitKind.Obstacle
+      ? getCombatObstacleBounds(target, this.tmpBox, this.targetRegistry)
+      : this.getTargetBounds(target);
     if (bounds.isEmpty()) return null;
 
     const expandedBox = this.tmpExpandedBox.copy(bounds).expandByScalar(radius);
@@ -519,6 +636,7 @@ export class ProjectileCtrl implements IActionUser {
         hitPoint: p1.clone(),
         distance: 0,
         normal: this.getBoxNormal(bounds, p1),
+        kind,
       };
     }
 
@@ -538,6 +656,7 @@ export class ProjectileCtrl implements IActionUser {
       hitPoint,
       distance,
       normal: this.getBoxNormal(bounds, hitPoint),
+      kind,
     };
   }
 
@@ -556,6 +675,78 @@ export class ProjectileCtrl implements IActionUser {
     if (dx > dy && dx > dz) return new THREE.Vector3(localHit.x >= 0 ? 1 : -1, 0, 0);
     if (dy > dz) return new THREE.Vector3(0, localHit.y >= 0 ? 1 : -1, 0);
     return new THREE.Vector3(0, 0, localHit.z >= 0 ? 1 : -1);
+  }
+
+  private logProjectilePhysicsHit(
+    hit: ProjectileHit,
+    p1: THREE.Vector3,
+    p2: THREE.Vector3,
+    radius: number,
+  ): void {
+    if (!COMBAT_COLLISION_DEBUG) return;
+
+    const key = `${this.projectileId ?? "unknown"}:${hit.target.uuid}`;
+    const now = Date.now();
+    const last = ProjectileCtrl.projectileHitLogTimes.get(key) ?? 0;
+    if (now - last < ProjectileCtrl.PROJECTILE_HIT_LOG_THROTTLE_MS) return;
+    ProjectileCtrl.projectileHitLogTimes.set(key, now);
+
+    const bounds = hit.kind === ProjectileHitKind.Obstacle
+      ? getCombatObstacleBounds(hit.target, this.tmpBox, this.targetRegistry)
+      : this.getTargetBounds(hit.target);
+    const containsPoint = !bounds.isEmpty()
+      ? this.tmpExpandedBox.copy(bounds).expandByScalar(radius).containsPoint(p1)
+      : false;
+    const userData = hit.target.userData as ProjectileDebugUserData;
+    const record = this.targetRegistry.getByObject(hit.target);
+    const ownerObj = this.creatorSpec?.Owner?.objs as THREE.Object3D | undefined;
+    const owner = this.creatorSpec?.Owner as ({ TargetId?: string; name?: string } & IActionUser) | undefined;
+
+    console.warn("[CombatDebug] ProjectilePhysicsHit", {
+      projectileId: this.projectileId,
+      owner: {
+        id: owner?.TargetId,
+        name: owner?.name,
+        objectName: ownerObj?.name,
+        objectUuid: ownerObj?.uuid,
+      },
+      target: {
+        name: hit.target.name,
+        uuid: hit.target.uuid,
+        type: hit.target.type,
+        isCollisionTarget: hit.kind === ProjectileHitKind.Target,
+        registryRecord: record
+          ? {
+              id: record.id,
+              kind: record.kind,
+              teamId: record.teamId,
+              alive: record.alive,
+              targetable: record.targetable,
+              collidable: record.collidable,
+            }
+          : undefined,
+        userData: {
+          staticColliderKind: userData.staticColliderKind,
+          staticColliderId: userData.staticColliderId,
+          buildingId: userData.buildingId,
+          targetMeta: userData.targetMeta,
+          excludeFromPhysicsTargets: userData.excludeFromPhysicsTargets,
+        },
+      },
+      hitPoint: hit.hitPoint.toArray(),
+      distance: hit.distance,
+      immediate: hit.distance <= 0.000001,
+      containsPoint,
+      p1: p1.toArray(),
+      p2: p2.toArray(),
+      radius,
+      bounds: bounds.isEmpty()
+        ? undefined
+        : {
+            min: bounds.min.toArray(),
+            max: bounds.max.toArray(),
+          },
+    });
   }
 
   private getCollisionTargets() {

@@ -21,6 +21,8 @@ export default class WheelLoader {
   private textDom: HTMLDivElement = document.createElement("div")
   private needToTap: boolean = false
   private fullscreen: boolean = false
+  private isClosed: boolean = false
+  private closeTimeout?: ReturnType<typeof setTimeout>
 
   constructor(eventCtrl: IEventController, {
     fullscreen = false, needToTap = false, soundWarning = false
@@ -87,6 +89,11 @@ export default class WheelLoader {
 
     // 상태 초기화
     this.isRunning = true;
+    this.isClosed = false;
+    if (this.closeTimeout) {
+      clearTimeout(this.closeTimeout);
+      this.closeTimeout = undefined;
+    }
     this.completedTasks = 0;
     this.totalTasks = this.taskQueue.length;
     this.updateProgress();
@@ -126,6 +133,8 @@ export default class WheelLoader {
    * 모든 작업이 완료되었을 때 호출되는 정리 함수.
    */
   private finishProcessing(): void {
+    if (!this.isRunning || this.isClosed) return;
+
     this.isRunning = false;
     if (this.needToTap) {
       Object.assign(this.textDom.style, {
@@ -198,11 +207,15 @@ export default class WheelLoader {
   }
 
   private close() {
+    if (this.isClosed) return;
+
+    this.isClosed = true;
     this.loadingCompleteTask?.()
+    this.loadingCompleteTask = undefined
 
     if (this.progressElement && this.cogsElement) {
       // Animate progress element (width)
-      setTimeout(() => {
+      this.closeTimeout = setTimeout(() => {
         this.progressElement.style.display = "none";
 
         // Animate cogs element (opacity and margin-top)
@@ -210,8 +223,13 @@ export default class WheelLoader {
         this.cogsElement.style.marginTop = "-50px";
         this.cogsElement.style.opacity = "0";
         this.wrapper.style.display = "none"
-        document.body.removeChild(this.wrapper)
-        document.body.removeChild(this.extension)
+        if (this.wrapper.parentNode === document.body) {
+          document.body.removeChild(this.wrapper)
+        }
+        if (this.extension.parentNode === document.body) {
+          document.body.removeChild(this.extension)
+        }
+        this.closeTimeout = undefined;
       }, 500);
     }
     console.log("모든 작업 완료.");
