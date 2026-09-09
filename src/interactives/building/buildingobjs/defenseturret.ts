@@ -9,6 +9,8 @@ import { TargetRecord } from '@Glibs/systems/targeting/targettypes';
 import { TargetRegistrySystem } from '@Glibs/systems/targeting/targetregistrysystem';
 import { ProjectileWeaponController } from '@Glibs/actors/controllable/projectileweaponcontroller';
 import { CombatDebugInfo, CombatDebugTeam } from '@Glibs/systems/debugger/combatdebugtypes';
+import { resolveBuildingProjectileWeapon } from '../buildingweaponstats';
+import type { ProjectileWeaponDef } from '@Glibs/actors/projectile/projectiletypes';
 
 type DebugBoxMesh = THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
 
@@ -17,6 +19,7 @@ export class DefenseTurret extends BaseBuilding {
     private isAttacking = true;
     private targetRegistry?: TargetRegistrySystem;
     private readonly weaponController = new ProjectileWeaponController();
+    private readonly resolvedWeapon?: ProjectileWeaponDef;
     private debugBox?: DebugBoxMesh;
     private readonly debugBoxSize = new THREE.Vector3();
     private readonly tempDebugBoxSize = new THREE.Vector3();
@@ -30,6 +33,11 @@ export class DefenseTurret extends BaseBuilding {
         eventCtrl: IEventController
     ) {
         super(id, BuildingType.DefenseTurret, property, position, mesh, eventCtrl);
+        this.resolvedWeapon = resolveBuildingProjectileWeapon(
+            this.property.combat?.weapons?.[0],
+            this.property.combat?.stats,
+            this.baseSpec,
+        );
         this.weaponController.configure({
             eventEmitter: (msg) => this.eventCtrl.SendEventMessage(EventTypes.SpawnProjectile, msg),
             ownerSpec: this.baseSpec,
@@ -64,7 +72,7 @@ export class DefenseTurret extends BaseBuilding {
     }
 
     GetDebugInfo(): CombatDebugInfo | undefined {
-        const weapon = this.property.combat?.weapons?.[0];
+        const weapon = this.resolvedWeapon;
         if (this.isDestroyed || !this.mesh.parent || !this.isAttacking || !weapon) return undefined;
 
         const box = this.getDebugBounds();
@@ -99,7 +107,7 @@ export class DefenseTurret extends BaseBuilding {
 
     private findTarget() {
         const registry = this.targetRegistry;
-        const weapon = this.property.combat?.weapons?.[0];
+        const weapon = this.resolvedWeapon;
         if (!registry || !weapon) {
             this.target = null;
             return;
@@ -115,8 +123,7 @@ export class DefenseTurret extends BaseBuilding {
 
     private shoot() {
         if (!this.target) return;
-        const weapon = this.property.combat?.weapons?.[0];
-        this.weaponController.fireAtTarget(this.target.object, weapon, {
+        this.weaponController.fireAtTarget(this.target.object, this.resolvedWeapon, {
             defaultRange: this.baseSpec.AttackRange,
         });
     }
@@ -157,15 +164,13 @@ export class DefenseTurret extends BaseBuilding {
     }
 
     protected getSpecificProgress(): number | undefined {
-        const weapon = this.property.combat?.weapons?.[0];
         return (this.isAttacking && this.target)
-            ? this.weaponController.getCooldownProgress(weapon)
+            ? this.weaponController.getCooldownProgress(this.resolvedWeapon)
             : undefined;
     }
 
     private getAttackRange(): number {
-        const weapon = this.property.combat?.weapons?.[0];
-        return this.weaponController.getEffectiveRange(weapon, this.baseSpec.AttackRange);
+        return this.weaponController.getEffectiveRange(this.resolvedWeapon, this.baseSpec.AttackRange);
     }
 
     private shouldTrackTarget(): boolean {

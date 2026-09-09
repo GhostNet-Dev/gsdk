@@ -59,12 +59,14 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
     hp: 110,
     defense: 15,
     block: 10,
+    speed: 0.35,
     attackSpeedMelee: 1.8,
   },
   [MonsterId.Builder]: {
     hp: 100,
     defense: 10,
     strength: 8,
+    speed: 0.5,
     attackSpeedMelee: 1.5,
   },
   [MonsterId.Golem]: {
@@ -86,6 +88,7 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
     attackMelee: 10,
     wisdom: 12,
     hpRegen: 2,
+    speed: 0.7,
     attackSpeedMelee: 1.1,
   },
   [MonsterId.Skeleton]: {
@@ -110,6 +113,7 @@ export const baseStatPresets: Record<MonsterIdType, Partial<Record<StatKey, numb
     magicAttack: 18,
     intelligence: 15,
     mp: 50,
+    speed: 0.45,
     attackRange: 20,
     attackSpeedMelee: 2.0,
     attackSpeedRanged: 1.4,

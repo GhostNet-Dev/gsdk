@@ -39,6 +39,8 @@ export class NavGridService implements INavGridService {
   private radius = 0;
   private inflateWorld = DEFAULT_INFLATE_WORLD;
   private readonly blocked = new Set<CellKey>();
+  // 경로 실패 경고 스팸 억제: (타겟 + 그리드버전 + 실패유형)당 1회만 warn.
+  private readonly warnedFailures = new Set<string>();
   private heightProvider?: { getHeightAt(worldX: number, worldZ: number): number };
 
   private readonly requestListener = () => {
@@ -83,6 +85,7 @@ export class NavGridService implements INavGridService {
 
     this.ready = true;
     this.version++;
+    this.warnedFailures.clear();
   }
 
   clear(): void {
@@ -90,10 +93,12 @@ export class NavGridService implements INavGridService {
     this.blocked.clear();
     this.heightProvider = undefined;
     this.version++;
+    this.warnedFailures.clear();
   }
 
   findPath(request: NavPathRequest): NavPathResult {
     if (!this.ready) {
+      this.warnPathFailure("no-grid", request.target, undefined);
       return {
         status: NavPathStatus.NoGrid,
         gridVersion: this.version,
@@ -103,16 +108,19 @@ export class NavGridService implements INavGridService {
 
     const start = this.snapCellToWalkable(this.worldToCell(request.start));
     if (!start) {
+      this.warnPathFailure("start-unsnappable", request.target, this.worldToCell(request.start));
       return { status: NavPathStatus.NoPath, gridVersion: this.version, waypoints: [] };
     }
     const goals = this.resolveGoalCells(request.target, request.attackRange, start);
     if (goals.length === 0) {
+      this.warnPathFailure("no-goal-cells", request.target, start);
       return { status: NavPathStatus.NoPath, gridVersion: this.version, waypoints: [] };
     }
 
     const goalKeys = new Set(goals.map((cell) => this.cellKey(cell)));
     const path = this.search(start, goals, goalKeys);
     if (path.length === 0) {
+      this.warnPathFailure("no-route", request.target, start);
       return { status: NavPathStatus.NoPath, gridVersion: this.version, waypoints: [] };
     }
 
@@ -191,16 +199,21 @@ export class NavGridService implements INavGridService {
   }
 
   private resolveGoalCells(target: TargetRecord, attackRange: number, start: NavGridCell): NavGridCell[] {
+    // 유닛도 히트박스(colliderObject) 기준. 비주얼 모델 그룹은 네임플레이트·이펙터로 AABB가 부푼다.
+    const geomObject = target.colliderObject ?? target.object;
+
     if (target.kind !== "structure") {
-      const cell = this.snapCellToWalkable(this.worldToCell(target.object.position));
+      // 유닛은 타겟 위치 셀 1개만 목표로 삼는다 (몬스터 참조 구현과 동일). 최종 접근·정지는
+      // updateNavigation 조기 정지 / 상태머신 CheckAttack이 처리한다.
+      const cell = this.snapCellToWalkable(this.worldToCell(geomObject.position));
       return cell ? [cell] : [];
     }
 
     const bounds = target.bounds && !target.bounds.isEmpty()
       ? target.bounds
-      : new THREE.Box3().setFromObject(target.object);
+      : new THREE.Box3().setFromObject(geomObject);
     if (bounds.isEmpty()) {
-      const cell = this.snapCellToWalkable(this.worldToCell(target.object.position));
+      const cell = this.snapCellToWalkable(this.worldToCell(geomObject.position));
       return cell ? [cell] : [];
     }
 
@@ -215,7 +228,7 @@ export class NavGridService implements INavGridService {
         const cell = { x, z };
         if (!this.isWalkable(cell)) continue;
         const pos = this.cellToWorld(cell);
-        const dist = GetHorizontalDistanceToBoxSurface(pos, bounds, target.object.position, closest);
+        const dist = GetHorizontalDistanceToBoxSurface(pos, bounds, geomObject.position, closest);
         if (dist > range) continue;
         const score = this.heuristic(start, cell) + dist * 0.1;
         candidates.push({ cell, score });
@@ -223,14 +236,33 @@ export class NavGridService implements INavGridService {
     }
 
     candidates.sort((a, b) => a.score - b.score);
-    return candidates.slice(0, 24).map((candidate) => candidate.cell);
+    if (candidates.length > 0) return candidates.slice(0, 24).map((candidate) => candidate.cell);
+
+    // 사거리 밴드가 전부 막혀 있으면 타겟 위치 셀로 폴백.
+    const fallback = this.snapCellToWalkable(this.worldToCell(geomObject.position));
+    return fallback ? [fallback] : [];
+  }
+
+  private warnPathFailure(reason: string, target: TargetRecord, cell: NavGridCell | undefined): void {
+    const key = `${target.id}:${this.version}:${reason}`;
+    if (this.warnedFailures.has(key)) return;
+    this.warnedFailures.add(key);
+    console.warn("[NavGridService] path failed", {
+      reason,
+      targetId: target.id,
+      targetKind: target.kind,
+      gridVersion: this.version,
+      cell,
+      gridBounds: { minX: this.minX, maxX: this.maxX, minZ: this.minZ, maxZ: this.maxZ },
+      gridSize: this.gridSize,
+    });
   }
 
   private resolveTargetPoint(target: TargetRecord): THREE.Vector3 {
     if (target.bounds && !target.bounds.isEmpty()) {
       return target.bounds.getCenter(new THREE.Vector3());
     }
-    return target.object.position.clone();
+    return (target.colliderObject ?? target.object).position.clone();
   }
 
   private search(start: NavGridCell, goals: NavGridCell[], goalKeys: Set<CellKey>): NavGridCell[] {

@@ -46,16 +46,21 @@ export class TargetRegistrySystem {
     const prev = this.byId.get(msg.id)
     if (prev) {
       this.unindexObject(prev.object)
+      if (prev.colliderObject && prev.colliderObject !== prev.object) {
+        this.unindexObject(prev.colliderObject)
+      }
     }
     const objectMeta = this.getObjectMeta(msg.object)
     const kind = msg.kind ?? objectMeta?.kind ?? prev?.kind ?? "other"
     const bounds = kind === "structure"
       ? msg.bounds ?? prev?.bounds
       : undefined
+    const colliderObject = msg.colliderObject ?? prev?.colliderObject
 
     const record: TargetRecord = {
       id: msg.id ?? objectMeta?.id ?? prev?.id ?? msg.object.uuid,
       object: msg.object,
+      colliderObject,
       teamId: msg.teamId ?? objectMeta?.teamId ?? prev?.teamId,
       factionId: msg.factionId ?? objectMeta?.factionId ?? prev?.factionId,
       fleetId: msg.fleetId ?? objectMeta?.fleetId ?? prev?.fleetId,
@@ -74,12 +79,24 @@ export class TargetRegistrySystem {
 
     this.byId.set(msg.id, record)
     this.indexObject(record.id, record.object)
+    if (record.colliderObject && record.colliderObject !== record.object) {
+      // 히트박스 콜라이더(예: MonsterBox/AllyBox)를 맞춘 raycast/투사체도 같은 레코드를 찾도록.
+      record.colliderObject.userData.targetMeta = {
+        id: record.id,
+        teamId: record.teamId,
+        kind: record.kind,
+      }
+      this.indexObject(record.id, record.colliderObject)
+    }
   }
 
   deregister(id: string) {
     const record = this.byId.get(id)
     if (!record) return
     this.unindexObject(record.object)
+    if (record.colliderObject && record.colliderObject !== record.object) {
+      this.unindexObject(record.colliderObject)
+    }
     this.byId.delete(id)
   }
 
@@ -176,11 +193,33 @@ export class TargetRegistrySystem {
     return nearest
   }
 
+  /** 전투·이동 기하 판정용 대표 오브젝트. `colliderObject`(히트박스)가 있으면 그것, 없으면 `object`. */
+  getColliderObject(target: TargetRecord): THREE.Object3D {
+    return target.colliderObject ?? target.object
+  }
+
+  /** 거리/사거리 판정용 bounds. 구조물은 등록된 `bounds`, 나머지는 콜라이더의 월드 AABB. */
+  getTargetBounds(target: TargetRecord): THREE.Box3 | undefined {
+    return this.getDistanceBounds(target)
+  }
+
+  /** 거리 계산의 기준점(타겟 표면 clamp 대상). bounds 중심이 있으면 그것, 없으면 콜라이더 위치. */
+  getTargetCenter(target: TargetRecord, out: THREE.Vector3 = new THREE.Vector3()): THREE.Vector3 {
+    const bounds = this.getDistanceBounds(target)
+    if (bounds && !bounds.isEmpty()) return bounds.getCenter(out)
+    return out.copy(this.getColliderObject(target).position)
+  }
+
+  /** BoundsSurface 모드에서 bounds가 비었을 때 쓰는 폴백 위치. */
+  getTargetDistanceFallback(target: TargetRecord, out: THREE.Vector3 = new THREE.Vector3()): THREE.Vector3 {
+    return out.copy(this.getColliderObject(target).position)
+  }
+
   private getDistance(sourcePos: THREE.Vector3, target: TargetRecord, mode: TargetDistanceMode) {
     if (mode === TargetDistanceMode.BoundsSurface) {
-      return GetHorizontalDistanceToBoxSurface(sourcePos, this.getDistanceBounds(target), target.object.position, this.closestPoint)
+      return GetHorizontalDistanceToBoxSurface(sourcePos, this.getDistanceBounds(target), this.getColliderObject(target).position, this.closestPoint)
     }
-    return sourcePos.distanceTo(target.object.position)
+    return sourcePos.distanceTo(this.getColliderObject(target).position)
   }
 
   private getDistanceBounds(target: TargetRecord): THREE.Box3 | undefined {
@@ -188,7 +227,7 @@ export class TargetRegistrySystem {
       return target.bounds
     }
 
-    this.distanceBox.setFromObject(target.object)
+    this.distanceBox.setFromObject(this.getColliderObject(target))
     return this.distanceBox.isEmpty() ? undefined : this.distanceBox
   }
 

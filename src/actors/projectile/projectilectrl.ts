@@ -609,7 +609,8 @@ export class ProjectileCtrl implements IActionUser {
       if (userBounds && !userBounds.isEmpty()) return userBounds;
     }
 
-    return this.tmpBox.setFromObject(target);
+    // 유닛은 히트박스(colliderObject) 기준으로 명중 판정 — 접근/사거리 판정과 통일.
+    return this.tmpBox.setFromObject(record?.colliderObject ?? target);
   }
 
   private getHorizontalDistanceToTargetSurface(origin: THREE.Vector3, target: THREE.Object3D): number {

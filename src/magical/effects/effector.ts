@@ -121,11 +121,11 @@ export class Effector {
         return ret
     }
     StartEffector(type: EffectType, ...arg: any) {
-        this.effects[type].Start(...arg)
+        this.effects[type]?.Start(...arg)
     }
 
     Complete(type:EffectType) {
-        this.effects[type].Complete()
+        this.effects[type]?.Complete()
     }
     CompleteIfEnabled(type: EffectType) {
         this.effects[type]?.Complete()

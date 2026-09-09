@@ -8,7 +8,9 @@ import { buildingDefs, BuildingProperty, BuildingRotationMode } from "@Glibs/int
 import { TargetRecord } from "@Glibs/systems/targeting/targettypes";
 import { TargetRegistrySystem } from "@Glibs/systems/targeting/targetregistrysystem";
 import { ProjectileWeaponController } from "@Glibs/actors/controllable/projectileweaponcontroller";
+import { resolveBuildingProjectileWeapon } from "@Glibs/interactives/building/buildingweaponstats";
 import { WeaponMode } from "@Glibs/actors/projectile/projectiletypes";
+import type { ProjectileWeaponDef } from "@Glibs/actors/projectile/projectiletypes";
 import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { ActionContext, IActionComponent, IActionUser } from "@Glibs/types/actiontypes";
 import { EventTypes } from "@Glibs/types/globaltypes";
@@ -224,6 +226,7 @@ interface ReadonlyCityDefenseCombatantOptions {
 class ReadonlyCityDefenseCombatant implements IActionUser {
   readonly baseSpec: BaseSpec;
   private readonly weaponController = new ProjectileWeaponController();
+  private readonly resolvedWeapon?: ProjectileWeaponDef;
   private readonly hpRing: BuildingRingProgress;
   private target: TargetRecord | null = null;
   private destroyed = false;
@@ -243,6 +246,11 @@ class ReadonlyCityDefenseCombatant implements IActionUser {
       hp: this.options.property.hp,
     }, this);
     this.baseSpec.lastUsedWeaponMode = WeaponMode.Ranged;
+    this.resolvedWeapon = resolveBuildingProjectileWeapon(
+      this.options.property.combat?.weapons?.[0],
+      this.options.property.combat?.stats,
+      this.baseSpec,
+    );
     this.weaponController.configure({
       eventEmitter: (msg) => this.options.eventCtrl.SendEventMessage(EventTypes.SpawnProjectile, msg),
       ownerSpec: this.baseSpec,
@@ -291,7 +299,7 @@ class ReadonlyCityDefenseCombatant implements IActionUser {
       lookPos.y = this.options.mesh.position.y;
       this.options.mesh.lookAt(lookPos);
     }
-    this.weaponController.fireAtTarget(this.target.object, this.options.property.combat?.weapons?.[0], {
+    this.weaponController.fireAtTarget(this.target.object, this.resolvedWeapon, {
       defaultRange: this.baseSpec.AttackRange,
     });
   }
@@ -382,10 +390,7 @@ class ReadonlyCityDefenseCombatant implements IActionUser {
   }
 
   private getAttackRange(): number {
-    return this.weaponController.getEffectiveRange(
-      this.options.property.combat?.weapons?.[0],
-      this.baseSpec.AttackRange,
-    );
+    return this.weaponController.getEffectiveRange(this.resolvedWeapon, this.baseSpec.AttackRange);
   }
 
   private shouldTrackTarget(): boolean {

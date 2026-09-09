@@ -29,6 +29,9 @@ import { LineOfSightTester } from "@Glibs/actors/battle/lineofsight";
 import { INavGridService, NavPathStatus } from "@Glibs/systems/navigation/navtypes";
 import { IYukaEntityManager } from "@Glibs/systems/navigation/yukaentitymanager";
 
+// speed 스탯이 누락된 프리셋이 Vehicle maxSpeed = 0 으로 고정되어 영구 정지하는 것을 막는 하한.
+const MIN_MOVE_SPEED = 0.3
+
 class MonsterTargetAdapter implements IPhysicsObject {
     private static readonly fallbackBoxMesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1))
     private target?: TargetRecord
@@ -97,7 +100,8 @@ class MonsterTargetAdapter implements IPhysicsObject {
         if (target.kind === "structure" && target.bounds && !target.bounds.isEmpty()) {
             this.box.copy(target.bounds)
         } else {
-            this.box.setFromObject(object)
+            // 거리/사거리 판정은 히트박스(colliderObject) 기준.
+            this.box.setFromObject(target.colliderObject ?? object)
         }
         if (this.box.isEmpty()) {
             this.size.set(1, 1, 1)
@@ -129,7 +133,8 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     private disposed = false
     private updateBuffEvent = ""
     private removeBuffEvent = ""
-    private readonly aggroRange = 60
+    // 고웨이브 스폰 링 반지름(35 + wave*8)이 60을 초과하면 갓 스폰된 몬스터가 타겟을 못 잡는다.
+    private readonly aggroRange = 80
     private lastSearchTime = 0
     private readonly searchInterval = 500
     private readonly _cp = new THREE.Vector3()
@@ -161,9 +166,11 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
     }
     private readonly onUpdateBuff = (buff: Buff, level = 0) => {
         this.baseSpec.Buff(buff, level)
+        this.applyVehicleSpeedFromSpec()
     }
     private readonly onRemoveBuff = (buff: Buff) => {
         this.baseSpec.RemoveBuff(buff)
+        this.applyVehicleSpeedFromSpec()
     }
     get Drop() { return this.property.drop }
     get MonsterBox() { return this.phybox }
@@ -247,7 +254,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         const targetBounds = this.getDebugTargetBounds(this.currentTarget)
         const targetCenter = targetBounds
             ? targetBounds.getCenter(new THREE.Vector3())
-            : this.currentTarget?.object.position.clone()
+            : this.currentTarget ? this.targetGeomObject(this.currentTarget).position.clone() : undefined
 
         return {
             team: CombatDebugTeam.Monster,
@@ -288,13 +295,25 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         this.phybox.position.y += this.zombie.Size.y / 2
     }
 
+    private getMoveSpeed(): number {
+        return Math.max(this.Spec.Speed, MIN_MOVE_SPEED)
+    }
+
+    private applyVehicleSpeedFromSpec() {
+        if (!this.vehicle) return
+        const speed = this.getMoveSpeed()
+        this.vehicle.maxSpeed = speed
+        this.vehicle.maxForce = Math.max(20, speed * 12)
+    }
+
     private ensureVehicle() {
         if (this.vehicle || !this.yukaManager) return
 
         const vehicle = new Vehicle()
         vehicle.name = this.targetId
-        vehicle.maxSpeed = this.Spec.Speed
-        vehicle.maxForce = Math.max(20, this.Spec.Speed * 12)
+        const speed = this.getMoveSpeed()
+        vehicle.maxSpeed = speed
+        vehicle.maxForce = Math.max(20, speed * 12)
         vehicle.boundingRadius = Math.max(this.zombie.Size.x, this.zombie.Size.z) * 0.5
         vehicle.neighborhoodRadius = Math.max(3, vehicle.boundingRadius * 4)
         vehicle.updateNeighborhood = true
@@ -340,7 +359,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
 
         if (horizontalMove.lengthSq() > 0.0001) {
             const dir = horizontalMove.clone().normalize()
-            const hit = this.gphysic.CheckDirection(this.zombie, dir, this.Spec.Speed)
+            const hit = this.gphysic.CheckDirection(this.zombie, dir, this.getMoveSpeed())
             if (hit.obj && horizontalMove.length() >= Math.max(0, hit.distance)) {
                 this.syncVehicleFromMesh()
             } else {
@@ -466,7 +485,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         if (!target.alive) return MeleeValidationResult.DeadTarget
         if (!target.targetable || !target.collidable) return MeleeValidationResult.InvalidTarget
 
-        const dist = GetHorizontalDistanceToBoxSurface(this.zombie.Pos, this.targetAdapter.Box, target.object.position, this._cp)
+        const dist = GetHorizontalDistanceToBoxSurface(this.zombie.Pos, this.targetAdapter.Box, this.targetGeomObject(target).position, this._cp)
         if (dist > attackRange) return MeleeValidationResult.OutOfRange
         if (this.isTargetLineOfSightBlocked(target, "monster:melee-validate")) return MeleeValidationResult.InvalidTarget
         return MeleeValidationResult.InRange
@@ -477,7 +496,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
         if (!target || target.id !== targetId) return false
         if (!target.alive || !target.targetable || !target.collidable) return false
 
-        if (GetHorizontalDistanceToBoxSurface(this.zombie.Pos, this.targetAdapter.Box, target.object.position, this._cp) > attackRange) {
+        if (GetHorizontalDistanceToBoxSurface(this.zombie.Pos, this.targetAdapter.Box, this.targetGeomObject(target).position, this._cp) > attackRange) {
             return false
         }
         return !this.isTargetLineOfSightBlocked(target, "monster:ranged-validate")
@@ -540,8 +559,13 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
 
     private isValidTarget(target?: TargetRecord): target is TargetRecord {
         if (!target?.alive || !target.targetable || !target.collidable) return false
-        if (GetHorizontalDistanceToBoxSurface(this.zombie.Pos, this.getTargetBounds(target), target.object.position, this._cp) > this.aggroRange) return false
+        if (GetHorizontalDistanceToBoxSurface(this.zombie.Pos, this.getTargetBounds(target), this.targetGeomObject(target).position, this._cp) > this.aggroRange) return false
         return this.targetRegistry?.isHostile(this.targetId, target.id) ?? false
+    }
+
+    // 전투·이동 기하 판정 기준 오브젝트 (히트박스 우선, 없으면 비주얼 모델).
+    private targetGeomObject(target: TargetRecord): THREE.Object3D {
+        return target.colliderObject ?? target.object
     }
 
     private getTargetBounds(target: TargetRecord): THREE.Box3 | undefined {
@@ -549,7 +573,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
             return target.bounds
         }
 
-        this.targetBounds.setFromObject(target.object)
+        this.targetBounds.setFromObject(this.targetGeomObject(target))
         return this.targetBounds.isEmpty() ? undefined : this.targetBounds
     }
 
@@ -574,7 +598,7 @@ export class MonsterCtrl implements ILoop, IMonsterCtrl, IActionUser {
             return target.bounds.clone()
         }
 
-        const bounds = new THREE.Box3().setFromObject(target.object)
+        const bounds = new THREE.Box3().setFromObject(this.targetGeomObject(target))
         return bounds.isEmpty() ? undefined : bounds
     }
 }

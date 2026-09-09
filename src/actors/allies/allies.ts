@@ -118,6 +118,7 @@ export class Allies {
         this.eventCtrl.SendEventMessage(EventTypes.RegisterTarget, {
             id: allySet.allyCtrl.TargetId,
             object: allySet.allyModel.Meshs,
+            colliderObject: allySet.allyCtrl.AllyBox,
             teamId: TargetTeamId.Player,
             kind: "unit",
             alive: true,

@@ -345,6 +345,7 @@ export class Monsters {
         this.eventCtrl.SendEventMessage(EventTypes.RegisterTarget, {
             id: monSet.monCtrl.TargetId,
             object: monSet.monModel.Meshs,
+            colliderObject: monSet.monCtrl.MonsterBox,
             teamId,
             kind: "unit",
             alive: true,

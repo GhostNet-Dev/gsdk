@@ -19,6 +19,11 @@ export enum TargetDistanceMode {
 export type TargetRecord = {
   id: string
   object: THREE.Object3D
+  /**
+   * 전투·이동 기하(거리/사거리/경로 목표) 판정에 쓰는 대표 오브젝트.
+   * 없으면 `object`를 사용한다. 가시성·아이덴티티·메타는 항상 `object` 기준.
+   */
+  colliderObject?: THREE.Object3D
   teamId?: string
   factionId?: string
   fleetId?: string
@@ -32,6 +37,7 @@ export type TargetRecord = {
 export type RegisterTargetMsg = {
   id: string
   object: THREE.Object3D
+  colliderObject?: THREE.Object3D
   teamId?: string
   factionId?: string
   fleetId?: string

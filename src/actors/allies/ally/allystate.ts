@@ -694,13 +694,8 @@ export class RunAllyState extends AllyState implements IActorState {
             this.allyModel.Meshs.quaternion.copy(qt)
         }
 
-        const dis = this.gphysic.CheckDirection(this.allyModel, this.dir.copy(v), this.speed)
-        if (dis.move) {
-            this.allyModel.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed))
-        } else {
-            this.allyModel.Pos.add(v.clone().multiplyScalar(delta * this.speed))
-        }
-
+        // 실제 이동은 AllyCtrl.applyVehiclePosition(Yuka Vehicle)이 담당한다.
+        // Run 상태는 애니메이션 재생과 바라보는 방향만 처리 (RunZState와 동일).
         return this
     }
 }
