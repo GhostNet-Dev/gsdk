@@ -70,6 +70,7 @@ export class MeleeAttackState extends AttackState implements IActorState {
                 distance: this.attackDist,
                 knockbackDistance,
                 attackerObjectId: this.player.UUID,
+                attackerTargetId: this.player.Meshs.name,
             }
             if (targetMessages == undefined) {
                 messages.set(obj.name, [msg])

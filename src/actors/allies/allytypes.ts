@@ -9,6 +9,8 @@ import { Char } from "@Glibs/types/assettypes";
 import { IActorState } from "@Glibs/actors/monsters/monstertypes";
 import { ProjectileWeaponDef } from "@Glibs/actors/projectile/projectiletypes";
 import { CombatDebugInfo } from "@Glibs/systems/debugger/combatdebugtypes";
+import { AttackerRef } from "@Glibs/actors/battle/combatattribution";
+import { TargetPolicyConfig } from "@Glibs/systems/targeting/targetselectionpolicy";
 
 export { IActorState }
 
@@ -44,7 +46,7 @@ export interface IAllyCtrl {
     GetDebugInfo(): CombatDebugInfo
     ValidateMeleeAttackTarget(targetId: string, attackRange: number): MeleeValidationResult
     ValidateRangedAttackTarget(targetId: string, attackRange: number): boolean
-    ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number): boolean
+    ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number, attacker?: AttackerRef): boolean
 }
 
 export class AllyBox extends THREE.Mesh {
@@ -67,4 +69,5 @@ export type AllyProperty = {
     projectileDef?: ProjectileWeaponDef
     attackAction?: ActionType
     idleStates?: (...params: any[]) => IActorState
+    targetPolicy?: TargetPolicyConfig
 }

@@ -11,6 +11,8 @@ import {
   TargetRecord,
   UpdateTargetStateMsg,
 } from "./targettypes"
+import { TargetSelectionContext, TargetSelectionPolicy } from "./targetselectionpolicy"
+import { NearestHostilePolicy } from "./policies/nearesthostilepolicy"
 
 type TargetObjectMeta = Partial<RegisterTargetMsg> & { id?: string }
 
@@ -23,6 +25,7 @@ export class TargetRegistrySystem {
   constructor(
     private readonly eventCtrl: IEventController,
     private readonly relationResolver: RelationResolver = new DefaultRelationResolver(),
+    private readonly defaultSelectionPolicy: TargetSelectionPolicy = new NearestHostilePolicy(),
   ) {
     this.eventCtrl.RegisterEventListener(EventTypes.RegisterTarget, (msg: RegisterTargetMsg) => {
       this.register(msg)
@@ -191,6 +194,18 @@ export class TargetRegistrySystem {
     }
 
     return nearest
+  }
+
+  selectTarget(ctx: TargetSelectionContext, policy: TargetSelectionPolicy = this.defaultSelectionPolicy) {
+    return policy.selectTarget(ctx)
+  }
+
+  getDistanceToTarget(
+    sourcePos: THREE.Vector3,
+    target: TargetRecord,
+    mode: TargetDistanceMode = TargetDistanceMode.Center,
+  ) {
+    return this.getDistance(sourcePos, target, mode)
   }
 
   /** 전투·이동 기하 판정용 대표 오브젝트. `colliderObject`(히트박스)가 있으면 그것, 없으면 `object`. */

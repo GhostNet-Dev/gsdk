@@ -19,6 +19,7 @@ import {
     ValidateReceivedMeleeAttack,
 } from "../battle/meleecombat";
 import { BaseSpec } from "../battle/basespec";
+import { AttackerRef } from "../battle/combatattribution";
 import { Zombie } from "./zombie";
 import { itemDefs } from "@Glibs/inventory/items/itemdefs";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
@@ -50,7 +51,7 @@ export interface IMonsterCtrl {
     GetDebugInfo(): CombatDebugInfo
     ValidateMeleeAttackTarget(targetId: string, attackRange: number): MeleeValidationResult
     ValidateRangedAttackTarget(targetId: string, attackRange: number): boolean
-    ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number): boolean 
+    ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number, attacker?: AttackerRef): boolean 
 }
 
 export class MonsterBox extends THREE.Mesh {
@@ -130,10 +131,10 @@ export class Monsters {
         return bounds.isEmpty() ? undefined : bounds
     }
 
-    ReceiveDemage(z: MonsterSet, damage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number) {
+    ReceiveDemage(z: MonsterSet, damage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number, attacker?: AttackerRef) {
         if (!z.live) return
 
-        if (!z.monCtrl.ReceiveDemage(damage, effect, attackRange, knockbackDist)) {
+        if (!z.monCtrl.ReceiveDemage(damage, effect, attackRange, knockbackDist, attacker)) {
             z.live = false
             z.deadtime = new Date().getTime()
             this.mobCount = Math.max(0, this.mobCount - 1)
@@ -205,7 +206,12 @@ export class Monsters {
         const attackRange = IsMeleeAttackType(opt.type) ? opt.distance : undefined;
         const knockbackDist = IsMeleeAttackType(opt.type) ? opt.knockbackDistance : undefined;
 
-        this.ReceiveDemage(z, damage.finalDamage, opt.effect, attackRange, knockbackDist)
+        this.ReceiveDemage(z, damage.finalDamage, opt.effect, attackRange, knockbackDist, {
+            attackerTargetId: opt.attackerTargetId,
+            spec: opt.spec,
+            obj: opt.obj,
+            objectId: opt.attackerObjectId,
+        })
     }
     async RandomDeckMonsters(deck: DeckType) {
         console.log("Start Random Deck---------------", deck.id)

@@ -9,8 +9,9 @@ import { ActionType } from "@Glibs/types/playertypes";
 import IEventController from "@Glibs/interface/ievent";
 import { EventTypes } from "@Glibs/types/globaltypes";
 import { FloatingName } from "@Glibs/ux/text/floatingtxt";
+import { IActorModel } from "@Glibs/actors/battle/iactormodel";
 
-export class AllyModel extends PhysicsObject {
+export class AllyModel extends PhysicsObject implements IActorModel {
     mixer?: THREE.AnimationMixer
     currentAni?: THREE.AnimationAction
     currentClip?: THREE.AnimationClip

@@ -257,6 +257,7 @@ export class ProjectileCtrl implements IActionUser {
         spec: VirtualActorFactory.createFusionActor(this.creatorSpec!, [this.baseSpec]),
         damage: this.damage,
         damageType: this.damageType,
+        attackerTargetId: this.getAttackerTargetId(),
         obj: obj.target,
       };
 
@@ -294,6 +295,7 @@ export class ProjectileCtrl implements IActionUser {
       spec: VirtualActorFactory.createFusionActor(this.creatorSpec!, [this.baseSpec]),
       damage: this.damage,
       damageType: this.damageType,
+      attackerTargetId: this.getAttackerTargetId(),
       obj: hit.target,
     };
 
@@ -412,6 +414,7 @@ export class ProjectileCtrl implements IActionUser {
         type: AttackType.NormalSwing,
         spec: [this.creatorSpec, this.baseSpec],
         damage: this.damage,
+        attackerTargetId: this.getAttackerTargetId(),
         obj: obj,
       };
 
@@ -780,6 +783,11 @@ export class ProjectileCtrl implements IActionUser {
       targetableOnly: true,
       collidableOnly: true,
     })
+  }
+
+  private getAttackerTargetId(): string | undefined {
+    const owner = this.creatorSpec?.Owner as ({ TargetId?: string; objs?: THREE.Object3D } & IActionUser) | undefined
+    return owner?.TargetId ?? this.targetRegistry.getByObject(owner?.objs)?.id
   }
 
   private getTargetEventId(target: THREE.Object3D): string | undefined {

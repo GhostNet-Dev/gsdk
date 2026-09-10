@@ -5,6 +5,7 @@ import { ActionDef } from "@Glibs/actions/actiontypes"
 import { IActorState } from "@Glibs/actors/player/states/playerstate"
 import { ActionType } from "@Glibs/types/playertypes"
 import { ProjectileWeaponDef } from "@Glibs/actors/projectile/projectiletypes"
+import { TargetPolicyConfig } from "@Glibs/systems/targeting/targetselectionpolicy"
 
 export { IActorState }
 
@@ -70,4 +71,5 @@ export type MonsterProperty = {
     projectileDef?: ProjectileWeaponDef
     attackAction?: ActionType
     idleStates?: (...params: any) => IActorState
+    targetPolicy?: TargetPolicyConfig
 }

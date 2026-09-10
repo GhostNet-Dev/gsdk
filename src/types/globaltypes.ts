@@ -97,6 +97,7 @@ export enum EventTypes {
     RegisterNavGridService = "registernavgridservice",
     RequestYukaEntityManager = "requestyukaentitymanager",
     RegisterYukaEntityManager = "registeryukaentitymanager",
+    SetActorTargetPolicy = "setactortargetpolicy",
 
     // 💰 5. 자원 및 보상 (Resources & Rewards)
     Exp = "exp",

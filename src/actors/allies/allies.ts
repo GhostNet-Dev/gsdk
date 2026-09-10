@@ -12,6 +12,7 @@ import { EventTypes } from "@Glibs/types/globaltypes";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 import { Loader } from "@Glibs/loader/loader";
 import { calculateCompositeDamage } from "@Glibs/actors/battle/damagecalc";
+import { AttackerRef } from "@Glibs/actors/battle/combatattribution";
 import {
     GetHorizontalDistanceToBoxSurface,
     IsMeleeAttackType,
@@ -175,10 +176,11 @@ export class Allies {
         effect?: EffectType,
         attackRange?: number,
         knockbackDist?: number,
+        attacker?: AttackerRef,
     ): void {
         if (!z.live) return
 
-        if (!z.allyCtrl.ReceiveDemage(damage, effect, attackRange, knockbackDist)) {
+        if (!z.allyCtrl.ReceiveDemage(damage, effect, attackRange, knockbackDist, attacker)) {
             z.live = false
             z.deadtime = Date.now()
             this.allyCount = Math.max(0, this.allyCount - 1)
@@ -241,6 +243,11 @@ export class Allies {
         const attackRange = IsMeleeAttackType(opt.type) ? opt.distance : undefined
         const knockbackDist = IsMeleeAttackType(opt.type) ? opt.knockbackDistance : undefined
 
-        this.ReceiveDemage(z, damage.finalDamage, opt.effect, attackRange, knockbackDist)
+        this.ReceiveDemage(z, damage.finalDamage, opt.effect, attackRange, knockbackDist, {
+            attackerTargetId: opt.attackerTargetId,
+            spec: opt.spec,
+            obj: opt.obj,
+            objectId: opt.attackerObjectId,
+        })
     }
 }

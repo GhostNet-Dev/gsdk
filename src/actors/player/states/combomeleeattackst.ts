@@ -309,6 +309,7 @@ export class ComboMeleeState extends AttackState implements IActorState {
                     distance: baseRange,
                     knockbackDistance,
                     attackerObjectId: this.player.UUID,
+                    attackerTargetId: this.player.Meshs.name,
                 });
                 buckets.set(obj.name, arr);
             }

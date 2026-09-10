@@ -8,37 +8,42 @@ import { BaseSpec } from "@Glibs/actors/battle/basespec";
 import { MeleeValidationResult } from "@Glibs/actors/battle/meleecombat";
 import { IActorState, MonsterProperty } from "../monstertypes";
 import { IPhysicsObject } from "@Glibs/interface/iobject";
-import { DyingZState, GetMonsterAttackTargetId, HurtZState, IdleZState, JumpZState, MonState } from "./monstate";
+import { IActorModel } from "@Glibs/actors/battle/iactormodel";
+import {
+    ActorCombatState,
+    ActorStateConfig,
+    ActorStates,
+    BuildActorStateSet,
+} from "@Glibs/actors/battle/actorcombatstates";
+import { BuildMonsterStateConfig } from "./monstate";
 import { Buff } from "@Glibs/magical/buff/buff";
 import { buffDefs } from "@Glibs/magical/buff/buffdefs";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 
-type States = Record<string, IActorState>
+type States = ActorStates
 
 export function NewDashMonsterState(
     id: number,
-    zombie: Zombie, 
+    zombie: Zombie,
     prop: MonsterProperty,
-    gphysic: IGPhysic,  
-    eventCtrl: IEventController, 
-    spec: BaseSpec): IActorState 
-{ 
-    const defSt: States = {}
-    defSt["IdleSt"] = new IdleZState(defSt, zombie, gphysic, spec)
-    defSt["AttackSt"] = new DashAttackState(defSt, zombie, gphysic, eventCtrl, spec)
-    defSt["JumpSt"] = new JumpZState(defSt, zombie, gphysic, spec)
-    defSt["RunSt"] =  new DashRunState(defSt, zombie, gphysic, spec)
-    defSt["DashRunSt"] = new FastDashRunState(defSt, zombie, gphysic, spec)
-    defSt["AgonizingSt"] = new DashAgonizingState(id, defSt, zombie, gphysic, eventCtrl, spec)
-    defSt["DyingSt"] = new DyingZState(defSt, zombie, prop, gphysic, eventCtrl, spec)
-    defSt["HurtSt"] = new HurtZState(defSt, zombie, gphysic, spec)
+    gphysic: IGPhysic,
+    eventCtrl: IEventController,
+    spec: BaseSpec): IActorState
+{
+    const cfg = BuildMonsterStateConfig(prop, spec, eventCtrl, "dash_monster")
+    // 공용 Idle/Jump/Dying/Hurt 는 그대로 재사용하고, 대시 고유 상태만 교체한다.
+    const defSt = BuildActorStateSet(zombie, gphysic, eventCtrl, spec, cfg)
+    defSt["AttackSt"] = new DashAttackState(defSt, zombie, gphysic, spec, cfg, eventCtrl)
+    defSt["RunSt"] = new DashRunState(defSt, zombie, gphysic, spec, cfg, eventCtrl)
+    defSt["DashRunSt"] = new FastDashRunState(defSt, zombie, gphysic, spec, cfg, eventCtrl)
+    defSt["AgonizingSt"] = new DashAgonizingState(id, defSt, zombie, gphysic, spec, cfg, eventCtrl)
 
     return defSt.IdleSt
 }
 
-export class DashAttackState extends MonState implements IActorState {
-    keytimeout?:NodeJS.Timeout
-    attackTime = 0
+export class DashAttackState extends ActorCombatState implements IActorState {
+    keytimeout?: NodeJS.Timeout
+    attackTime = this.spec.AttackSpeed
     attackSpeed = this.spec.AttackSpeed
     attackDamageMax = this.spec.AttackDamageMax
     attackDamageMin = this.spec.AttackDamageMin
@@ -53,11 +58,6 @@ export class DashAttackState extends MonState implements IActorState {
     private readonly MX = new THREE.Matrix4()
     private readonly QT = new THREE.Quaternion()
 
-    constructor(states: States, zombie: Zombie, gphysic: IGPhysic,
-        private eventCtrl: IEventController, spec: BaseSpec
-    ) {
-        super(states, zombie, gphysic, spec)
-    }
     Init(): void {
         this.attackSpeed = this.ChangeAttackAction(ActionType.MonBiteNeck)
         this.attackDamageMax = this.spec.AttackDamageMax
@@ -72,7 +72,7 @@ export class DashAttackState extends MonState implements IActorState {
         this.scheduledLookDir.set(0, 0, 0)
     }
     Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
-        this.targetId = GetMonsterAttackTargetId(target)
+        this.targetId = this.AttackTargetId(target)
         const checkHit = this.CheckHit(target)
         if (checkHit != undefined) return checkHit
         const dist = this.GetTargetDistance(target)
@@ -84,10 +84,10 @@ export class DashAttackState extends MonState implements IActorState {
         }
         this.attackTime += delta
 
-        if( this.isAttacking) {
+        if (this.isAttacking) {
             this.applyLookDirection(this.scheduledLookDir)
             this.hitDelay -= delta
-            if(this.hitDelay <= 0) {
+            if (this.hitDelay <= 0) {
                 this.attack(target, this.scheduledTargetId)
                 this.isAttacking = false
             }
@@ -105,27 +105,19 @@ export class DashAttackState extends MonState implements IActorState {
         this.scheduledLookDir.copy(v)
         this.scheduledLookDir.y = 0
         if (this.scheduledLookDir.lengthSq() <= 0.0001) {
-            this.scheduledLookDir.subVectors(target.CenterPos, this.zombie.CenterPos)
+            this.scheduledLookDir.subVectors(target.CenterPos, this.model.CenterPos)
             this.scheduledLookDir.y = 0
         }
         this.applyLookDirection(this.scheduledLookDir)
         this.hitDelay = this.attackSpeed * 0.1
-        this.zombie.ChangeAction(ActionType.MonBiteNeck, this.attackSpeed)
+        this.model.ChangeAction(ActionType.MonBiteNeck, this.attackSpeed)
         console.log("[CombatDebug] AttackScheduled", {
             actor: "dash_monster",
-            actorId: this.zombie.UUID,
+            actorId: this.model.UUID,
             targetId: this.scheduledTargetId,
-            currentTargetId: GetMonsterAttackTargetId(target),
-            actorPos: {
-                x: this.zombie.Pos.x,
-                y: this.zombie.Pos.y,
-                z: this.zombie.Pos.z,
-            },
-            targetPos: {
-                x: target.Pos.x,
-                y: target.Pos.y,
-                z: target.Pos.z,
-            },
+            currentTargetId: this.AttackTargetId(target),
+            actorPos: { x: this.model.Pos.x, y: this.model.Pos.y, z: this.model.Pos.z },
+            targetPos: { x: target.Pos.x, y: target.Pos.y, z: target.Pos.z },
             distance: dist,
             attackRange: attackDistance,
             validation: undefined,
@@ -139,28 +131,20 @@ export class DashAttackState extends MonState implements IActorState {
         if (lookDir.lengthSq() > 0) {
             const mx = this.MX.lookAt(lookDir, this.ZeroV, this.YV)
             const qt = this.QT.setFromRotationMatrix(mx)
-            this.zombie.Meshs.quaternion.copy(qt)
+            this.model.Meshs.quaternion.copy(qt)
         }
     }
     attack(target: IPhysicsObject, expectedTargetId: string) {
-        const currentTargetId = GetMonsterAttackTargetId(target)
+        const currentTargetId = this.AttackTargetId(target)
         if (currentTargetId !== expectedTargetId) {
             console.log("[CombatDebug] AttackCanceled", {
                 actor: "dash_monster",
                 reason: "target_changed_hit",
-                actorId: this.zombie.UUID,
+                actorId: this.model.UUID,
                 targetId: expectedTargetId,
                 currentTargetId,
-                actorPos: {
-                    x: this.zombie.Pos.x,
-                    y: this.zombie.Pos.y,
-                    z: this.zombie.Pos.z,
-                },
-                targetPos: {
-                    x: target.Pos.x,
-                    y: target.Pos.y,
-                    z: target.Pos.z,
-                },
+                actorPos: { x: this.model.Pos.x, y: this.model.Pos.y, z: this.model.Pos.z },
+                targetPos: { x: target.Pos.x, y: target.Pos.y, z: target.Pos.z },
                 distance: this.GetTargetDistance(target),
                 attackRange: this.GetAttackDistance(),
                 validation: MeleeValidationResult.InvalidTarget,
@@ -174,19 +158,11 @@ export class DashAttackState extends MonState implements IActorState {
             console.log("[CombatDebug] AttackCanceled", {
                 actor: "dash_monster",
                 reason: "validator_failed",
-                actorId: this.zombie.UUID,
+                actorId: this.model.UUID,
                 targetId: expectedTargetId,
                 currentTargetId,
-                actorPos: {
-                    x: this.zombie.Pos.x,
-                    y: this.zombie.Pos.y,
-                    z: this.zombie.Pos.z,
-                },
-                targetPos: {
-                    x: target.Pos.x,
-                    y: target.Pos.y,
-                    z: target.Pos.z,
-                },
+                actorPos: { x: this.model.Pos.x, y: this.model.Pos.y, z: this.model.Pos.z },
+                targetPos: { x: target.Pos.x, y: target.Pos.y, z: target.Pos.z },
                 distance: hitDistance,
                 attackRange: attackDistance,
                 validation: hitDistance > attackDistance
@@ -197,29 +173,26 @@ export class DashAttackState extends MonState implements IActorState {
             return
         }
 
-        this.eventCtrl.SendEventMessage(EventTypes.Attack + expectedTargetId, [{
+        this.eventCtrl?.SendEventMessage(EventTypes.Attack + expectedTargetId, [{
             type: AttackType.NormalSwing,
             spec: this.spec,
             damage: THREE.MathUtils.randInt(this.attackDamageMin, this.attackDamageMax),
             targetId: expectedTargetId,
             distance: attackDistance,
-            attackerObjectId: this.zombie.UUID,
-            obj: this.zombie.Meshs
+            attackerObjectId: this.model.UUID,
+            attackerTargetId: (this.spec.Owner as { TargetId?: string }).TargetId,
+            obj: this.model.Meshs
         }])
     }
 }
 
-export class DashRunState extends MonState implements IActorState {
+export class DashRunState extends ActorCombatState implements IActorState {
     speed = this.spec.Speed
-    constructor(states: States, zombie: Zombie, gphysic: IGPhysic, spec: BaseSpec) {
-        super(states, zombie, gphysic, spec)
-    }
+
     Init(): void {
-        this.zombie.ChangeAction(ActionType.Run)
+        this.model.ChangeAction(ActionType.Run)
     }
-    Uninit(): void {
-        
-    }
+    Uninit(): void { }
 
     ZeroV = new THREE.Vector3(0, 0, 0)
     YV = new THREE.Vector3(0, 1, 0)
@@ -246,52 +219,52 @@ export class DashRunState extends MonState implements IActorState {
         if (lookDir.lengthSq() > 0) {
             const mx = this.MX.lookAt(lookDir, this.ZeroV, this.YV)
             const qt = this.QT.setFromRotationMatrix(mx)
-            this.zombie.Meshs.quaternion.copy(qt)
+            this.model.Meshs.quaternion.copy(qt)
         }
 
-        const dist = this.zombie.Pos.distanceTo(target.Pos)
-        if(dist < 15) {
+        const dist = this.model.Pos.distanceTo(target.Pos)
+        if (dist < 15) {
             this.states.DashRunSt.Init(v)
             return this.states.DashRunSt
         }
 
         // ✅ 이동 처리
-        const dis = this.gphysic.CheckDirection(this.zombie, this.dir.copy(v), this.speed);
+        const dis = this.gphysic.CheckDirection(this.model, this.dir.copy(v), this.speed);
         const moveAmount = v.clone().multiplyScalar(delta * this.speed);
-        const moveDis = moveAmount.length();
-        // console.log(moveDis, " / ", dis.distance, " / ", dis.move)
 
         if (dis.move) {
-            this.zombie.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
+            this.model.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed));
         } else {
-            this.zombie.Pos.add(moveAmount);
+            this.model.Pos.add(moveAmount);
         }
         return this
     }
 }
-export class DashAgonizingState extends MonState implements IActorState {
+
+export class DashAgonizingState extends ActorCombatState implements IActorState {
     runningTime = 5
     elapsedTime = 0
     buf = new Buff(buffDefs.StunStar)
     constructor(
-        private id: number, state: States, zombie: Zombie, 
-        gphysic: IGPhysic, private eventCtrl: IEventController, spec: BaseSpec
+        private id: number,
+        states: States, model: IActorModel, gphysic: IGPhysic, spec: BaseSpec,
+        cfg: ActorStateConfig, eventCtrl?: IEventController,
     ) {
-        super(state, zombie, gphysic, spec)
+        super(states, model, gphysic, spec, cfg, eventCtrl)
     }
     Init(): void {
         this.elapsedTime = 0
-        this.zombie.ChangeAction(ActionType.MonAgonizing)
-        this.eventCtrl.SendEventMessage(EventTypes.UpdateBuff + "mon" + this.id, this.buf)
+        this.model.ChangeAction(ActionType.MonAgonizing)
+        this.eventCtrl?.SendEventMessage(EventTypes.UpdateBuff + "mon" + this.id, this.buf)
     }
     Uninit(): void {
-        this.eventCtrl.SendEventMessage(EventTypes.RemoveBuff + "mon" + this.id, this.buf)
+        this.eventCtrl?.SendEventMessage(EventTypes.RemoveBuff + "mon" + this.id, this.buf)
     }
     Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
         const checkHit = this.CheckHit(target)
         if (checkHit != undefined) return checkHit
         this.elapsedTime += delta
-        if(this.elapsedTime > this.runningTime) {
+        if (this.elapsedTime > this.runningTime) {
             this.Uninit()
             this.states.IdleSt.Init()
             return this.states.IdleSt
@@ -302,22 +275,19 @@ export class DashAgonizingState extends MonState implements IActorState {
         return this
     }
 }
-export class FastDashRunState extends MonState implements IActorState {
+
+export class FastDashRunState extends ActorCombatState implements IActorState {
     speed = this.spec.Speed
     runningTime = 5
     elapsedTime = 0
     v = new THREE.Vector3()
-    constructor(states: States, zombie: Zombie, gphysic: IGPhysic, spec: BaseSpec) {
-        super(states, zombie, gphysic, spec)
-    }
+
     Init(v: THREE.Vector3): void {
         this.v.copy(v)
         this.elapsedTime = 0
-        this.zombie.ChangeAction(ActionType.MonRunningCrawl)
+        this.model.ChangeAction(ActionType.MonRunningCrawl)
     }
-    Uninit(): void {
-        
-    }
+    Uninit(): void { }
 
     ZeroV = new THREE.Vector3(0, 0, 0)
     YV = new THREE.Vector3(0, 1, 0)
@@ -330,22 +300,22 @@ export class FastDashRunState extends MonState implements IActorState {
         if (checkHit != undefined) return checkHit
         const dist = this.GetTargetDistance(target)
         const checkAttack = this.CheckAttack(target, dist)
-        if(checkAttack != undefined) return checkAttack
+        if (checkAttack != undefined) return checkAttack
 
         this.elapsedTime += delta
-        if(this.elapsedTime > this.runningTime) {
+        if (this.elapsedTime > this.runningTime) {
             this.states.AgonizingSt.Init()
             return this.states.AgonizingSt
         }
 
         // ✅ 이동 처리
-        const dis = this.gphysic.CheckDirection(this.zombie, this.dir.copy(this.v), this.speed);
+        const dis = this.gphysic.CheckDirection(this.model, this.dir.copy(this.v), this.speed);
         const moveAmount = this.v.clone().multiplyScalar(delta * this.speed * 10);
 
         if (dis.move) {
-            this.zombie.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed * 10));
+            this.model.Pos.add(dis.move.normalize().multiplyScalar(delta * this.speed * 10));
         } else {
-            this.zombie.Pos.add(moveAmount);
+            this.model.Pos.add(moveAmount);
         }
         return this
     }

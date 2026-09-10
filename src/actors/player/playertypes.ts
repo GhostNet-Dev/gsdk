@@ -93,6 +93,7 @@ export type AttackOption = {
     targetId?: string
     distance?: number
     attackerObjectId?: string
+    attackerTargetId?: string
     knockbackDistance?: number
     obj?: THREE.Object3D
     srcMonsterId?: string,
