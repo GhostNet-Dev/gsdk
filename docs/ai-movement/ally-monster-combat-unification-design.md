@@ -151,8 +151,8 @@ ActorCombatController (abstract)
 ├─ resolveTarget ──► targetPolicy.selectTarget(ctx)  ◄── B
 ├─ threatBook (decay/record)                         ◄── C
 ├─ ReceiveDemage(...attacker) ──► resolveAttackerId ──► threatBook.record
-└─ 추상 훅: model / idPrefix / aggroRange / property / debugTeam /
-            createPhybox / createDefaultTargetPolicy / getFallbackTarget
+└─ 사이드별 표면: model / idPrefix / property(생성자 옵션) + aggroRange / debugTeam /
+                  createPhybox / createDefaultTargetPolicy / getFallbackTargetId(추상 훅)
      ▲                                   ▲
  MonsterCtrl                          AllyCtrl
  (Zombie, player 폴백,                (AllyModel, 폴백 없음,
@@ -197,18 +197,18 @@ export interface IActorModel extends IPhysicsObject {
   `getDebugTargetBounds` / `getEffectiveAttackRange` / `ValidateMeleeAttackTarget` /
   `ValidateRangedAttackTarget` / `applyAction` / `removeAction` / `GetDebugInfo` /
   `ReceiveDemage`(공격자 인자 포함) / `update(delta)` 템플릿 / `resetForSpawn()` / `Dispose()`.
-- **추상 훅** (사이드별 차이):
+- **사이드별 차이** (구현 시 일부는 추상 getter 대신 생성자 옵션으로 주입됨 — 결과는 동일하나 표면이 다르다):
 
-  | 훅 | Monster | Ally |
-  | --- | --- | --- |
-  | `get model(): IActorModel` | `this.zombie` | `this.allyModel` |
-  | `get idPrefix(): string` | `"mon"` | `"ally"` |
-  | `get aggroRange(): number` | `80` | `60` |
-  | `get property(): ActorCombatProperty` | `MonsterProperty` | `AllyProperty` |
-  | `get debugTeam(): CombatDebugTeam` | `Monster` | `Ally` |
-  | `createPhybox(id, geo, mat): THREE.Mesh` | `new MonsterBox(...)` | `new AllyBox(...)` |
-  | `createDefaultTargetPolicy(): TargetSelectionPolicy` | `new ThreatAwareNearestPolicy()` | `new NearestHostilePolicy()` |
-  | `getFallbackTarget(): IPhysicsObject \| undefined` | `this.player` | `undefined` |
+  | 항목 | 실제 형태 | Monster | Ally |
+  | --- | --- | --- | --- |
+  | `model` | 생성자 옵션(`ActorCombatControllerOptions.model`) | `this.zombie` | `this.allyModel` |
+  | `idPrefix` | 생성자 옵션 | `"mon"` | `"ally"` |
+  | `property` | 생성자 옵션 | `MonsterProperty` | `AllyProperty` |
+  | `get aggroRange(): number` | 추상 getter (설계대로) | `80` | `60` |
+  | `get debugTeam(): CombatDebugTeam` | 추상 getter (설계대로) | `Monster` | `Ally` |
+  | `createPhybox(id, size: THREE.Vector3): THREE.Mesh` | 추상 메서드 (지오메트리/머티리얼은 서브클래스가 자체 생성 — 설계의 `(id, geo, mat)` 시그니처보다 축소) | `new MonsterBox(...)` | `new AllyBox(...)` |
+  | `createDefaultTargetPolicy(): TargetSelectionPolicy` | 추상 메서드 (설계대로) | `new ThreatAwareNearestPolicy()` | `new NearestHostilePolicy()` |
+  | `getFallbackTargetId(): string \| undefined` | 추상 메서드 (설계의 `getFallbackTarget(): IPhysicsObject`를 id 기반으로 변경 — §6.3 알고리즘이 `registry.get(fallbackTargetId)`로 id를 쓰므로 더 정합적) | `TargetTeamId.Player` | `undefined` |
 
   `ActorCombatProperty` = `MonsterProperty`/`AllyProperty` 가 공통으로 갖는
   `{ id, idleStates, projectileDef?, attackAction?, targetPolicy? }` 유니온 타입.
@@ -434,31 +434,53 @@ export function createTargetPolicy(config: TargetPolicyConfig): TargetSelectionP
 1. `current = ctx.registry.get(ctx.currentTargetId)`;
    `currentValid = current && matchesQuery(current) && isHostile(selfId, current.id)
    && dist(selfPos, current) <= maxDistance * threatLeash`.
-2. `topThreat = ctx.threats[0]` → 레코드 해석 + 유효성 검사.
-3. **현재 유지** 조건: `currentValid` **AND** `ctx.currentTargetReachable !== false` **AND**
-   NOT(`topThreat` 유효 && `topThreat.threat >= threatOf(current) * switchMargin`)
+2. **`excludedTargetId` 산출**: `ctx.currentTargetReachable === false` 이면 `current?.id`,
+   아니면 `undefined`. *(도달 불가 타겟은 이후 모든 후보 탐색에서 제외 — 이유는 아래 참고)*
+3. `topThreat` 해석: `ctx.threats` 를 위협 내림차순으로 **순회하며 `excludedTargetId` 를 건너뛰고
+   첫 유효(`isAllowed`) 레코드**를 채택 (단순히 `threats[0]` 하나만 보지 않는다 — 최상위 위협이
+   무효/제외 대상이어도 다음 순위를 계속 검사).
+4. **현재 유지** 조건: `currentValid` **AND** `ctx.currentTargetReachable !== false` **AND**
+   NOT(`topThreat` 유효 && `topThreat.id !== current.id` && `topThreat.threat >= threatOf(current) * switchMargin`)
    → `current` 반환. *(스티키니스)*
-4. 아니고 `topThreat` 유효 → `topThreat` 레코드 반환. **← 터렛/적 캐릭터 전환 지점**
-5. 아니면 `registry.findNearestHostile(selfId, maxDistance, query)`.
-6. 아니면 `ctx.fallbackTargetId` → `registry.get(fallbackTargetId)` (몬스터 → 플레이어).
-7. 아니면 `undefined`.
+5. 아니고 `topThreat` 유효 → `topThreat` 레코드 반환. **← 터렛/적 캐릭터 전환 지점**
+6. 아니면 `findNearest(excludedTargetId)`: `excludedTargetId` 가 없으면 `registry.findNearestHostile`
+   그대로 위임, 있으면 그 id 를 제외하고 `getTargetsForTeam` 을 순회하는 자체 구현으로 최근접 탐색.
+7. 아니면 `ctx.fallbackTargetId` (단, `excludedTargetId` 와 같으면 스킵) → `registry.get(fallbackTargetId)`
+   (몬스터 → 플레이어).
+8. 아니면 `undefined`.
 
-`NearestHostilePolicy` = 5 → 7 만 (아군은 `fallbackTargetId` 없음 → 타겟 없으면 대기).
+**왜 `excludedTargetId` 배제가 필요한가**: §5.7 의 "도달 불가 전환"(교착 탈출)이 성립하려면, 현재 타겟이
+`currentTargetReachable=false` 로 스티키니스를 벗어난 뒤 6단계 `findNearestHostile` 이 **같은 타겟을
+다시 반환하지 않아야** 한다. 도달 불가 타겟이라도 물리적으로는 여전히 최근접일 수 있으므로, 배제하지
+않으면 매 프레임 같은 타겟을 재선택 → 재탐색 없이 영구 정지(§2.3 과 동형의 버그)가 재발한다.
+`registry.findNearestHostile` 는 제외 id 인자를 지원하지 않으므로 이 경우에만 `getTargetsForTeam`
+기반 자체 탐색으로 대체한다(로직이 일부 중복되나, 레지스트리 API 확장보다 정책 내부에 국한하는 쪽을
+택함).
+
+`NearestHostilePolicy` = 6(excludedTargetId 없이) → 8 만 (아군은 `fallbackTargetId` 없음 → 타겟 없으면 대기).
 
 ### 6.4 주입 (3중)
 
 1. **전역 기본값** — `TargetRegistrySystem` 생성자에
-   `defaultSelectionPolicy: TargetSelectionPolicy = new NearestHostilePolicy()` 추가
-   (`RelationResolver` 와 동형, 옵셔널 인자). `playfab.ts:24` 에서 선택 지정. 얇은 위임 메서드
-   `selectTarget(ctx, policy?)` 추가.
+   `defaultSelectionPolicy?: TargetSelectionPolicy` 추가, 미지정 시 내부에서
+   `new NearestHostilePolicy()` 로 폴백 (`RelationResolver` 와 동형, 옵셔널 인자).
+   얇은 위임 메서드 `selectTarget(ctx, policy?)` 추가.
+   컨트롤러는 `registry.resolveSelectionPolicy(defaultTargetPolicy)` 로 조회하는데, 이는
+   "명시적으로 주입된 경우에만 전역값을 쓰고, 아니면 호출자(액터)의 자체 기본값을 유지"하는
+   오버라이드 방식이다 — 즉 **`playfab.ts:24` 가 아무것도 주입하지 않으면(현재 상태) 몬스터/아군은
+   각자 `createDefaultTargetPolicy()` 를 그대로 쓴다.** `RelationResolver` 도 현재 `playfab.ts` 에서
+   전혀 오버라이드되지 않는 것과 동일한 패턴이므로, 별도 모드에서 전역 강제가 필요할 때만 쓰는
+   미사용 확장점으로 둔다(강제 주입 시 §3 결정 4번의 "아군 순수 최근접" 차등이 깨지므로 신중히).
 2. **프리셋 데이터 (enum id + config)** — `MonsterProperty.targetPolicy?: TargetPolicyConfig` /
    `AllyProperty.targetPolicy?: TargetPolicyConfig` (`monstertypes.ts` / `allytypes.ts`).
    값은 `monsterdb.ts` / `allydb.ts` 에서 `{ id: TargetPolicyId.StructureFirst }` 처럼 **데이터로만** 지정.
    베이스가 `createTargetPolicy(config)` 팩토리로 인스턴스화.
 3. **런타임 세터** — `ActorCombatController.setTargetPolicy(policyOrConfig: TargetSelectionPolicy | TargetPolicyConfig)`.
-   런타임 코드는 인스턴스를 직접 넘겨도 되고 config 를 넘기면 팩토리 경유. 선택적 이벤트
-   `EventTypes.SetActorTargetPolicy`(대상 필터 + config)로 게임스테이트가 방어전/공격전 진입 시
-   일괄 주입 (`basecitycombat.ts`).
+   런타임 코드는 인스턴스를 직접 넘겨도 되고 config 를 넘기면 팩토리 경유. `EventTypes.SetActorTargetPolicy`
+   리스너(대상 필터 + config)도 구현돼 있어 게임스테이트가 방어전/공격전 진입 시 일괄 주입할 수 있는
+   경로는 열려 있다. **현재 이 이벤트를 실제로 발행하는 게임스테이트는 없다** (`basecitycombat.ts` 는
+   저장소에 존재하지 않음) — 구체적인 모드별 정책 전환 요구사항이 확정되면 그때 배선한다. 그 전까지는
+   런타임 세터를 직접 호출하는 방식으로도 충분하다.
 
 베이스 생성자:
 `this.targetPolicy = property.targetPolicy ? createTargetPolicy(property.targetPolicy) : this.createDefaultTargetPolicy()`.
@@ -529,11 +551,15 @@ export function resolveAttackerId(
     receiverId?: string,         // self 로 역참조되는 후보를 건너뛰기 위함
 ): string | undefined {
     // 후보를 순서대로 시도하되, receiverId 와 같은 값은 skip:
-    // 1) attacker.attackerTargetId                       (송신자가 명시)
-    // 2) attacker.spec?.Owner?.objs → registry.getByObject(...)?.id   (일관되게 owner, 투사체·터렛 포함)
-    // 3) attacker.obj → registry.getByObject(...)?.id    (근접만 공격자, 투사체는 피격자이므로 receiverId 필터로 걸러짐)
-    // 4) attacker.obj?.userData?.targetMeta?.id
-    // 5) undefined
+    // 1) attacker.attackerTargetId                              (송신자가 명시)
+    // 2) attacker.spec?.Owner?.TargetId                         (owner 가 ActorCombatController 자신인 경우
+    //                                                             — 레지스트리 왕복 없이 직접 반환. §5.2 A-1
+    //                                                             에서 컨트롤러가 `get TargetId()` 를 노출하게
+    //                                                             되어 이 base 통합 작업 이후에만 가능해진 경로)
+    // 3) attacker.spec?.Owner?.objs → registry.getByObject(...)?.id   (owner 가 objs 만 아는 경우, 투사체·터렛 포함)
+    // 4) attacker.obj → registry.getByObject(...)?.id    (근접만 공격자, 투사체는 피격자이므로 receiverId 필터로 걸러짐)
+    // 5) attacker.obj?.userData?.targetMeta?.id
+    // 6) undefined
 }
 ```
 

@@ -92,7 +92,8 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
     protected targetRegistry?: TargetRegistrySystem
     protected currentTarget?: TargetRecord
     protected readonly threatBook = new ThreatBook()
-    protected targetPolicy: TargetSelectionPolicy
+    protected readonly defaultTargetPolicy: TargetSelectionPolicy
+    protected targetPolicy?: TargetSelectionPolicy
     protected lastPathStatus: NavPathStatus = NavPathStatus.Complete
     protected noPathStreak = 0
     protected currentTargetReachable = true
@@ -186,9 +187,10 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
 
         this.targetId = `${this.idPrefix}:${property.id}:${id}`
         this.targetAdapter = new ActorTargetAdapter(opts.adapterEmptyTargetId, opts.adapterFallback)
+        this.defaultTargetPolicy = this.createDefaultTargetPolicy()
         this.targetPolicy = property.targetPolicy
             ? createTargetPolicy(property.targetPolicy)
-            : this.createDefaultTargetPolicy()
+            : undefined
 
         this.idleState = this.currentState = opts.idleStates(id, model, property, gphysic, eventCtrl, this.baseSpec)
 
@@ -423,25 +425,28 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
         this.nextRepathElapsed -= delta
         const targetId = this.currentTarget?.id ?? target.UUID
         const gridVersion = this.navGrid?.Version ?? -1
-        const needsPath = !follow.active
-            || this.currentPathTargetId !== targetId
-            || this.currentPathGridVersion !== gridVersion
+        const targetChanged = this.currentPathTargetId !== targetId
+        const gridChanged = this.currentPathGridVersion !== gridVersion
+        const forceRepath = targetChanged || gridChanged
+        const needsPath = !follow.active || forceRepath || this.nextRepathElapsed <= 0
 
-        if (!needsPath || this.nextRepathElapsed > 0) return
+        if (!needsPath || (!forceRepath && this.nextRepathElapsed > 0)) return
 
         this.nextRepathElapsed = this.repathInterval + this.repathJitter
-        if (this.currentPathTargetId !== targetId) {
+        if (targetChanged) {
             this.noPathStreak = 0
             this.currentTargetReachable = true
         }
         this.currentPathTargetId = targetId
         this.currentPathGridVersion = gridVersion
         const waypoints = this.resolveWaypoints(target)
-        this.applyPath(waypoints)
+        this.applyPath(waypoints, target)
     }
 
     private resolveWaypoints(target: IPhysicsObject): THREE.Vector3[] {
-        if (this.currentTarget && this.navGrid?.IsReady) {
+        if (this.currentTarget && !this.navGrid?.IsReady) {
+            this.lastPathStatus = NavPathStatus.NoGrid
+        } else if (this.currentTarget && this.navGrid) {
             const path = this.navGrid.findPath({
                 start: this.model.Pos,
                 target: this.currentTarget,
@@ -467,18 +472,48 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
         return [this.model.Pos.clone(), this.directPathTarget.clone()]
     }
 
-    private applyPath(waypoints: THREE.Vector3[]) {
+    private applyPath(waypoints: THREE.Vector3[], target: IPhysicsObject) {
         const vehicle = this.vehicle
         const follow = this.followPathBehavior
         if (!vehicle || !follow || waypoints.length === 0) return
 
         const path = new Path()
         path.loop = false
-        for (const waypoint of waypoints) {
+        let waypointCount = 0
+        let lastWaypoint: THREE.Vector3 | undefined
+
+        // NavGrid 경로의 첫 점은 현재 위치를 스냅한 셀 중심이다. 재경로마다 이 점을 다시
+        // 추종하면 진행 방향과 반대로 되돌아가는 현상이 생기므로 이동 경로에서는 제외한다.
+        for (let i = 1; i < waypoints.length; i++) {
+            const waypoint = waypoints[i]
             path.add(new YukaVector3(waypoint.x, waypoint.y, waypoint.z))
+            lastWaypoint = waypoint
+            waypointCount++
+        }
+
+        // 유닛 경로는 타겟의 셀 중심에서 끝난다. 같은 셀에 있거나 타겟이 이동한 경우에도
+        // 실제 위치까지 계속 접근할 수 있도록 현재 타겟 위치를 마지막 점으로 보강한다.
+        if (this.currentTarget?.kind !== "structure") {
+            this.directPathTarget.copy(target.CenterPos)
+            this.directPathTarget.y = this.navGrid?.getHeightAt(
+                this.directPathTarget.x,
+                this.directPathTarget.z,
+                this.model.Pos.y,
+            ) ?? this.model.Pos.y
+            const dx = lastWaypoint ? lastWaypoint.x - this.directPathTarget.x : 0
+            const dz = lastWaypoint ? lastWaypoint.z - this.directPathTarget.z : 0
+            const needsTargetWaypoint = !lastWaypoint || (dx * dx) + (dz * dz) > 0.01
+            if (needsTargetWaypoint) {
+                path.add(new YukaVector3(
+                    this.directPathTarget.x,
+                    this.directPathTarget.y,
+                    this.directPathTarget.z,
+                ))
+                waypointCount++
+            }
         }
         follow.path = path
-        follow.active = waypoints.length > 1
+        follow.active = waypointCount > 0
         vehicle.position.set(this.model.Pos.x, this.model.Pos.y, this.model.Pos.z)
     }
 
@@ -588,6 +623,8 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
             kinds: ["unit", "structure"] as TargetRecord["kind"][],
             distanceMode: TargetDistanceMode.BoundsSurface,
         }
+        const selectionPolicy = this.targetPolicy
+            ?? registry.resolveSelectionPolicy(this.defaultTargetPolicy)
         return registry.selectTarget({
             selfId: this.targetId,
             selfTeamId: registry.get(this.targetId)?.teamId,
@@ -599,7 +636,7 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
             threats: this.threatBook.list(now),
             registry,
             query,
-        }, this.targetPolicy)
+        }, selectionPolicy)
     }
 
     private isValidTarget(target?: TargetRecord): target is TargetRecord {

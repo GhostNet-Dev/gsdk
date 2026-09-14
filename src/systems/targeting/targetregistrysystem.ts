@@ -21,12 +21,16 @@ export class TargetRegistrySystem {
   private readonly idByObject = new WeakMap<THREE.Object3D, string>()
   private readonly closestPoint = new THREE.Vector3()
   private readonly distanceBox = new THREE.Box3()
+  private readonly defaultSelectionPolicy: TargetSelectionPolicy
+  private readonly hasInjectedSelectionPolicy: boolean
 
   constructor(
     private readonly eventCtrl: IEventController,
     private readonly relationResolver: RelationResolver = new DefaultRelationResolver(),
-    private readonly defaultSelectionPolicy: TargetSelectionPolicy = new NearestHostilePolicy(),
+    defaultSelectionPolicy?: TargetSelectionPolicy,
   ) {
+    this.hasInjectedSelectionPolicy = defaultSelectionPolicy != undefined
+    this.defaultSelectionPolicy = defaultSelectionPolicy ?? new NearestHostilePolicy()
     this.eventCtrl.RegisterEventListener(EventTypes.RegisterTarget, (msg: RegisterTargetMsg) => {
       this.register(msg)
     })
@@ -198,6 +202,11 @@ export class TargetRegistrySystem {
 
   selectTarget(ctx: TargetSelectionContext, policy: TargetSelectionPolicy = this.defaultSelectionPolicy) {
     return policy.selectTarget(ctx)
+  }
+
+  /** 명시적으로 주입된 전역 정책이 있으면 사용하고, 없으면 호출자별 기본 정책을 유지한다. */
+  resolveSelectionPolicy(fallback: TargetSelectionPolicy): TargetSelectionPolicy {
+    return this.hasInjectedSelectionPolicy ? this.defaultSelectionPolicy : fallback
   }
 
   getDistanceToTarget(

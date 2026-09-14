@@ -25,6 +25,7 @@ import { itemDefs } from "@Glibs/inventory/items/itemdefs";
 import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 import { FactionId } from "@Glibs/gameobjects/turntypes";
 import { CombatDebugInfo } from "@Glibs/systems/debugger/combatdebugtypes";
+import { TargetPolicyConfig, TargetSelectionPolicy } from "@Glibs/systems/targeting/targetselectionpolicy";
 
 export type MonsterSpawnOptions = {
     respawn?: boolean
@@ -51,7 +52,8 @@ export interface IMonsterCtrl {
     GetDebugInfo(): CombatDebugInfo
     ValidateMeleeAttackTarget(targetId: string, attackRange: number): MeleeValidationResult
     ValidateRangedAttackTarget(targetId: string, attackRange: number): boolean
-    ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number, attacker?: AttackerRef): boolean 
+    setTargetPolicy(policyOrConfig: TargetSelectionPolicy | TargetPolicyConfig): void
+    ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number, attacker?: AttackerRef): boolean
 }
 
 export class MonsterBox extends THREE.Mesh {

@@ -10,7 +10,7 @@ import { IActorState } from "@Glibs/actors/monsters/monstertypes";
 import { ProjectileWeaponDef } from "@Glibs/actors/projectile/projectiletypes";
 import { CombatDebugInfo } from "@Glibs/systems/debugger/combatdebugtypes";
 import { AttackerRef } from "@Glibs/actors/battle/combatattribution";
-import { TargetPolicyConfig } from "@Glibs/systems/targeting/targetselectionpolicy";
+import { TargetPolicyConfig, TargetSelectionPolicy } from "@Glibs/systems/targeting/targetselectionpolicy";
 
 export { IActorState }
 
@@ -46,6 +46,7 @@ export interface IAllyCtrl {
     GetDebugInfo(): CombatDebugInfo
     ValidateMeleeAttackTarget(targetId: string, attackRange: number): MeleeValidationResult
     ValidateRangedAttackTarget(targetId: string, attackRange: number): boolean
+    setTargetPolicy(policyOrConfig: TargetSelectionPolicy | TargetPolicyConfig): void
     ReceiveDemage(demage: number, effect?: EffectType, attackRange?: number, knockbackDist?: number, attacker?: AttackerRef): boolean
 }
 

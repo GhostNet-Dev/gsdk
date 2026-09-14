@@ -429,6 +429,7 @@ export class AttackActorState extends ActorCombatState implements IActorState {
             this.scheduledLookDir.y = 0
         }
         this.applyLookDirection(this.scheduledLookDir)
+        this.onAttackScheduled()
 
         console.log("[CombatDebug] AttackScheduled", {
             actor: this.cfg.debugActor,
@@ -448,7 +449,7 @@ export class AttackActorState extends ActorCombatState implements IActorState {
             if (this.scheduledTarget) {
                 this.attack(this.scheduledTarget, this.scheduledAttackRange, this.scheduledTargetId)
             }
-        }, this.attackSpeed * 1000 * 0.4)
+        }, this.getAttackHitDelayMs())
 
         return this
     }
@@ -461,6 +462,14 @@ export class AttackActorState extends ActorCombatState implements IActorState {
             const qt = this.QT.setFromRotationMatrix(mx)
             this.model.Meshs.quaternion.copy(qt)
         }
+    }
+
+    /** 스윙별 애니메이션 재시작 등 특수 공격 상태가 끼워 넣는 훅. */
+    protected onAttackScheduled(): void { }
+
+    /** 기본 액터는 공격 주기의 40% 지점에서 판정을 수행한다. */
+    protected getAttackHitDelayMs(): number {
+        return this.attackSpeed * 1000 * 0.4
     }
 
     protected attack(target: IPhysicsObject, attackDistance: number, expectedTargetId: string) {
