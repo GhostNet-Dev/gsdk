@@ -60,9 +60,24 @@ export function GetActorAttackTargetId(target: IPhysicsObject | undefined, cfg: 
     return (target as ActorAttackTarget | undefined)?.TargetId ?? cfg.fallbackTargetId
 }
 
-function HasActorAttackTarget(target?: IPhysicsObject) {
+export function HasActorAttackTarget(target?: IPhysicsObject) {
     return (target as ActorAttackTarget | undefined)?.HasTarget !== false
 }
+
+export enum ActorRunStartReason {
+    Normal = "normal",
+    HurtRecovery = "hurt_recovery",
+}
+
+export type ActorRunInitOptions = {
+    reason?: ActorRunStartReason
+}
+
+/**
+ * Hurt 복귀 직후 RunSt 가 moveDirection=0 을 받아도 IdleSt 로 떨어지지 않고 버티는 시간(초).
+ * 경로 재계산 + Yuka velocity 반영에 필요한 몇 프레임을 저프레임에서도 덮도록 둔다.
+ */
+export const HURT_RECOVERY_GRACE_SEC = 0.15
 
 // ────────────────────────────────────────────────────────────────────────────
 // 베이스
@@ -206,6 +221,8 @@ export class HurtActorState extends ActorCombatState implements IActorState {
     private maxPushDistance = 0
     private currentPushedDistance = 0
 
+    get suspendsNavigation(): boolean { return this.maxPushDistance > 0 }
+
     Init(knockbackVector?: THREE.Vector3): void {
         this.spec.Status.hit = false
         if (knockbackVector) {
@@ -256,8 +273,9 @@ export class HurtActorState extends ActorCombatState implements IActorState {
         this.hurtTime += delta
         if (this.hurtTime >= this.hurtDuration) {
             this.Uninit()
-            if (v.x || v.z) {
-                this.states.RunSt.Init()
+            if (v.x || v.z || HasActorAttackTarget(target)) {
+                const runInitOptions: ActorRunInitOptions = { reason: ActorRunStartReason.HurtRecovery }
+                this.states.RunSt.Init(runInitOptions)
                 return this.states.RunSt
             }
             this.states.IdleSt.Init()
@@ -636,6 +654,7 @@ export class DyingActorState extends ActorCombatState implements IActorState {
 
 export class RunActorState extends ActorCombatState implements IActorState {
     speed = this.spec.Speed
+    private zeroVectorGraceTime = 0
 
     ZeroV = new THREE.Vector3(0, 0, 0)
     YV = new THREE.Vector3(0, 1, 0)
@@ -643,12 +662,14 @@ export class RunActorState extends ActorCombatState implements IActorState {
     QT = new THREE.Quaternion()
     dir = new THREE.Vector3()
 
-    Init(): void {
+    Init(options?: ActorRunInitOptions): void {
         this.model.ChangeAction(ActionType.Run)
+        this.zeroVectorGraceTime =
+            options?.reason === ActorRunStartReason.HurtRecovery ? HURT_RECOVERY_GRACE_SEC : 0
     }
     Uninit(): void { }
 
-    Update(_delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
+    Update(delta: number, v: THREE.Vector3, target: IPhysicsObject): IActorState {
         const checkHit = this.CheckHit(target)
         if (checkHit != undefined) return checkHit
         const checkGravity = this.CheckGravity()
@@ -666,9 +687,14 @@ export class RunActorState extends ActorCombatState implements IActorState {
         if (checkAttack != undefined) return checkAttack
 
         if (v.x == 0 && v.z == 0) {
+            if (this.zeroVectorGraceTime > 0 && HasActorAttackTarget(target)) {
+                this.zeroVectorGraceTime -= delta
+                return this
+            }
             this.states.IdleSt.Init()
             return this.states.IdleSt
         }
+        this.zeroVectorGraceTime = 0
         v.y = 0
 
         const lookDir = v.clone()

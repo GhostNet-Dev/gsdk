@@ -22,6 +22,8 @@
 
 ### 3.1 PlayerDefenseState (방어전 몬스터 스폰 변경)
 
+> **대체됨**: 방어전 몬스터 스폰은 `src/gsdk/docs/strategic/player-defense-monster-placement-analysis.md` §9(방사형 도로 끝 진입점 스폰)를 따릅니다. 군기(`ArmyFlag`)는 아군 스폰 지점으로만 사용하며, 아래 내용은 참고용으로 남겨 둡니다.
+
 기존 방어전은 `this.spawnPos`(주로 맵 중앙 또는 `ArmyFlag` 위치)를 중심으로 큰 반경 원호 상에 몬스터를 360도로 흩뿌렸습니다. 이를 개선하기 위해 **전투 진입 시 적이 몰려올 무작위 방향 벡터(`enemySpawnDir`)**를 설정하고, 웨이브 스폰 중심(`center`)을 해당 방향으로 밀어냅니다.
 
 `resolveWaveSpawnParams`를 오버라이드하여 `center`를 `enemySpawnDir` 방향으로 40~50미터 밀어내고, `radius`를 8~10미터 정도로 좁혀 군집을 형성합니다.

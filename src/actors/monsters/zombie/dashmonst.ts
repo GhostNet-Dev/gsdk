@@ -10,10 +10,14 @@ import { IPhysicsObject } from "@Glibs/interface/iobject";
 import { IActorModel } from "@Glibs/actors/battle/iactormodel";
 import {
     ActorCombatState,
+    ActorRunInitOptions,
+    ActorRunStartReason,
     ActorStateConfig,
     ActorStates,
     AttackActorState,
     BuildActorStateSet,
+    HasActorAttackTarget,
+    HURT_RECOVERY_GRACE_SEC,
 } from "@Glibs/actors/battle/actorcombatstates";
 import { BuildMonsterStateConfig } from "./monstate";
 import { Buff } from "@Glibs/magical/buff/buff";
@@ -55,9 +59,12 @@ export class DashAttackState extends AttackActorState {
 
 export class DashRunState extends ActorCombatState implements IActorState {
     speed = this.spec.Speed
+    private zeroVectorGraceTime = 0
 
-    Init(): void {
+    Init(options?: ActorRunInitOptions): void {
         this.model.ChangeAction(ActionType.Run)
+        this.zeroVectorGraceTime =
+            options?.reason === ActorRunStartReason.HurtRecovery ? HURT_RECOVERY_GRACE_SEC : 0
     }
     Uninit(): void { }
 
@@ -76,9 +83,14 @@ export class DashRunState extends ActorCombatState implements IActorState {
         if (checkDying != undefined) return checkDying
 
         if (v.x == 0 && v.z == 0) {
+            if (this.zeroVectorGraceTime > 0 && HasActorAttackTarget(target)) {
+                this.zeroVectorGraceTime -= delta
+                return this
+            }
             this.states.IdleSt.Init()
             return this.states.IdleSt
         }
+        this.zeroVectorGraceTime = 0
         v.y = 0
 
         const lookDir = v.clone();
@@ -163,8 +175,9 @@ export class FastDashRunState extends ActorCombatState implements IActorState {
     dir = new THREE.Vector3()
 
     Update(delta: number, _: THREE.Vector3, target: IPhysicsObject): IActorState {
-        const checkHit = this.CheckHit(target)
-        if (checkHit != undefined) return checkHit
+        // 대시 중에는 피격으로 Hurt 전환하지 않는다. 데미지는 ReceiveDemage 에서 이미 적용된다.
+        this.spec.Status.hit = false
+
         const dist = this.GetTargetDistance(target)
         const checkAttack = this.CheckAttack(target, dist)
         if (checkAttack != undefined) return checkAttack

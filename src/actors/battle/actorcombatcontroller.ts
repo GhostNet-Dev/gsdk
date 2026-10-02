@@ -115,6 +115,8 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
     protected currentPathTargetId?: string
     protected currentPathGridVersion = -1
     protected nextRepathElapsed = 0
+    private wasKnockbackHurt = false
+    private wasNavigationSuspended = false
     protected readonly repathInterval = 0.35
     protected readonly repathJitter = Math.random() * 0.15
     private readonly vehicleVelocityDir = new THREE.Vector3()
@@ -249,6 +251,8 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
         this.phybox.position.copy(this.model.Pos)
         this.currentPathTargetId = undefined
         this.currentPathGridVersion = -1
+        this.wasKnockbackHurt = false
+        this.wasNavigationSuspended = false
         this.noPathStreak = 0
         this.currentTargetReachable = true
         this.threatBook.clear()
@@ -519,16 +523,32 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
 
     private applyStateNavigationMode() {
         const suspended = this.isNavigationSuspended()
+        const inKnockbackHurt = this.currentState instanceof HurtActorState
+            && this.currentState.suspendsNavigation
+
+        if (this.wasKnockbackHurt && !inKnockbackHurt) {
+            // 넉백 Hurt 종료 프레임에는 얼어있던 repath 타이머를 무효화한다.
+            this.nextRepathElapsed = 0
+        }
+        if (this.wasNavigationSuspended && !suspended && this.currentState instanceof HurtActorState) {
+            // Attack/Jump 등에서 넉백 없는 Hurt 로 넘어온 경우 꺼져 있던 followPath 를 즉시 복구한다.
+            this.nextRepathElapsed = 0
+        }
+        this.wasKnockbackHurt = inKnockbackHurt
+        this.wasNavigationSuspended = suspended
+
         if (this.followPathBehavior) this.followPathBehavior.active = !suspended && this.followPathBehavior.active
         if (this.separationBehavior) this.separationBehavior.active = !suspended
         if (suspended) this.syncVehicleFromMesh()
     }
 
-    /** Attack/Jump/Hurt/Dying 상태 또는 사망 시 Yuka 네비 정지. */
+    /** Attack/Jump/Dying 상태, 넉백 Hurt 또는 사망 시 Yuka 네비 정지. */
     protected isNavigationSuspended(): boolean {
+        if (this.currentState instanceof HurtActorState) {
+            return this.currentState.suspendsNavigation
+        }
         return this.currentState instanceof AttackActorState
             || this.currentState instanceof JumpActorState
-            || this.currentState instanceof HurtActorState
             || this.currentState instanceof DyingActorState
             || this.Spec.Health <= 0
     }
