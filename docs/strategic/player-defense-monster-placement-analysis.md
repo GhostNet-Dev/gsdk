@@ -166,7 +166,8 @@ const pos = center.clone().add(new THREE.Vector3(
 | 덱 스케일링 | `armyDeck`은 정적 정의 | 라이벌 도시의 성장, 점수, 레벨이 침공군 강도에 반영되지 않는다. | 범위 밖(별도 과제) |
 | 전체 스폰 실패 | `waveIndex`가 증가하지 않고 1초마다 재시도, 상한 없음 | 특정 `MonsterId`가 영구적으로 생성에 실패하면 전투가 끝나지 않는다. | 범위 밖(별도 과제) |
 | 부분 스폰 실패 | 1마리 이상 생성되면 성공 처리 | 실패한 몬스터는 보충되지 않아 웨이브가 약해진다. | 범위 밖(별도 과제) |
-| 패배 판정 대상 | id가 `_cc`로 끝나거나 `:cc`를 포함하는 구조물, 없으면 첫 번째 플레이어 structure | CC가 없으면 임의 건물 하나가 파괴되어도 패배한다. targetRegistry가 없거나 구조물이 없으면 패배 조건이 사라진다. | 범위 밖(별도 과제) |
+| 패배 판정 대상 | id가 `_cc`로 끝나거나 `:cc`를 포함하는 구조물, 없으면 첫 번째 플레이어 structure | CC가 없으면 임의 건물 하나가 파괴되어도 패배한다. targetRegistry가 없거나 구조물이 없으면 패배 조건이 사라진다. | 해결(§2.1, §2.4.2: CC 파괴만 패배, CC가 없으면 초기화 중단) |
+| 타겟 탐지 거리 | `MonCtrl.aggroRange = 80`. 범위 안에 적이 없으면 `NearestHostilePolicy`가 `fallbackTargetId`(`TargetTeamId.Player`)를 반환하지만, `isValidTarget()`이 80m 초과로 다시 탈락시킨다. | 스폰 지점에서 80m 안에 아군·건물이 없으면 몬스터가 제자리에 머문다. 링 중심이 군기이므로 다른 건물까지는 80m를 넘을 수 있다. | 해결(§2.4.2: 진군 목표) |
 
 ### 1.8 현재 구조 기준 수정 지점
 
@@ -189,7 +190,8 @@ const pos = center.clone().add(new THREE.Vector3(
 
 - **역할 분리**: 군기(`BuildingType.Flag`)는 아군 스폰 지점이다. 몬스터 스폰 위치 계산에는 사용하지 않는다.
 - **맵 가장자리 진입**: 몬스터는 도시 근처가 아니라 맵 가장자리에서 생성되어 도시 쪽으로 진군한다.
-- **도로 끝 진입점**: 진입점은 숲 배치가 만든 도로의 바깥쪽 끝이다.
+- **도로 끝 진입점**: 진입점은 preset 도로 레이아웃(§2.3)에서 각 도로의 바깥쪽 끝, 즉 맵 가장자리 지점이다.
+- **진군 목표와 패배 조건**: 몬스터의 최종 공성 목표는 플레이어 도시의 **CC(Command Center) 파괴**이며, CC가 파괴되면 플레이어가 패배한다. CC 외의 모든 건물도 공격·파괴할 수 있으므로, 도로를 건물로 막으면 몬스터는 그 건물을 부수고 CC를 향한 진군을 재개한다. 건물 배치는 진입 도로를 바꾸지 않는다.
 - **데이터 기반 도로**: 도로 모양은 코드 리터럴이 아니라 preset 데이터로 정의한다. **도시별 지정**과 **행성 프로필별 기본값**으로 달라질 수 있어야 한다.
 - **도로 형태**: 방사형 직선과 폴리라인(꺾인 도로)을 지원한다.
 - **숲과의 독립성**: 도로 레이아웃과 진입점은 숲 유무와 무관하게 유효하다. `CitySceneService`처럼 행성 프로필에 따라 숲을 끄는 경우(`PROFILE_NATURAL_FOREST_COUNTS`가 0)에도 같은 레이아웃으로 진입점을 계산한다. 숲은 도로를 시각적으로 드러낼 뿐이다.
@@ -213,6 +215,8 @@ const pos = center.clone().add(new THREE.Vector3(
 - **표현력 부족**: `RadialPathOpeningOptions`와 `isInsideRadialPathOpening()`은 "균등 각도의 방사형 직선"만 표현할 수 있다. 도로별 각도·폭이나 꺾인 도로는 표현할 수 없다.
 - **선택 불가**: 도시나 행성에 따라 다른 도로를 쓸 방법이 없다.
 
+- **중심점만 판정**: `isInsideRadialPathOpening()`은 나무 footprint가 아니라 배치 **중심점**만 검사한다. 중심이 도로 경계(6m) 바로 바깥인 나무는 footprint(`pine_tree` 1×1셀 = 4m)와 콜라이더가 도로 안으로 들어온다. 시각적으로는 문제없지만, 나무를 NavGrid 장애물로 등록하면 도로가 좁아지거나 끊긴다(§2.7).
+
 도로 기하는 게임 진행 중에 바뀌지 않는다. 숲은 `envManager`가 없을 때 한 번만 생성되고 이후에는 재부착된다. 방어전 진입 시 `SimcityState.Uninit()`은 지면과 숲을 씬에 유지하므로, 방어전 맵에도 같은 도로가 존재한다. 다만 도로 **상태**(건물·벌목)는 바뀔 수 있다(§2.8).
 
 ### 2.3 도로 레이아웃 preset
@@ -228,6 +232,8 @@ export enum CityRoadLayoutId {
   // 예: Radial3 = "radial3", Canyon = "canyon", ...
 }
 
+// 좌표 규약(기존 isInsideRadialPathOpening과 동일): 방향 = (cos θ, 0, sin θ).
+// 0° = +X, 90° = +Z, -90° = -Z. 위(+Y)에서 내려다보면 각도가 커질수록 시계 방향으로 돈다.
 export type CityRoadPoint = { x: number; z: number }; // 도시 중심 기준 로컬 좌표(m)
 
 export type CityRoadDef =
@@ -235,13 +241,13 @@ export type CityRoadDef =
       kind: "radial";
       angleDeg: number;          // 도로 방향
       width: number;
-      startRadius?: number;      // 기본 = layout.clearingRadius
+      startRadius?: number;      // 기본 = layout.clearingRadius. clearingRadius 이하여야 함(빈터와 도로 사이 틈 금지)
     }                            // startRadius → 지면 끝까지 직선
   | {
       kind: "polyline";
-      points: CityRoadPoint[];   // 첫 점: 빈터 경계 부근, 마지막 점: 바깥쪽 끝
+      points: CityRoadPoint[];   // 첫 점: 중심에서 clearingRadius 이하(빈터 안), 마지막 점: 바깥쪽 끝
       width: number;
-      extendToEdge?: boolean;    // true면 마지막 선분 방향으로 지면 끝까지 연장
+      extendToEdge?: boolean;    // 기본 true. false면 마지막 점이 지면 가장자리 허용 오차 안에 있어야 함
     };
 
 export interface CityRoadLayoutDef {
@@ -250,7 +256,8 @@ export interface CityRoadLayoutDef {
   roads: CityRoadDef[];
   rotationDeg?: number;          // 레이아웃 전체 회전
   entryEdgeMargin?: number;      // 진입점을 지면 끝에서 안쪽으로 당기는 거리, 기본 16m
-  blockConstruction?: boolean;   // 도로 위 건설 금지 여부, 기본 false (§2.8)
+  entryZoneLength?: number;      // 진입점에서 도시 방향으로 항상 건설 금지인 구간 길이, 기본 30m (§2.8)
+  blockConstruction?: boolean;   // 진입 구간 외 도로 위 건설 금지 여부, 기본 false (§2.8)
 }
 ```
 
@@ -289,21 +296,26 @@ export interface CityRoadLayoutDef {
 - **컨텍스트 전달**: `SimcityState.enterCityDefense()`는 placement의 `roadLayoutId`를 `CityCombatContext.roadLayoutId` (제안 필드)에 저장한다. 방어전은 이 id로 레이아웃을 조회하므로 숲 생성과 같은 레이아웃을 보장받는다. 값이 없으면 `planetId`로 resolver를 다시 호출한다.
 - **세이브 불필요**: 위 입력은 모두 정의 데이터(행성 정의, 라이벌 도시 정의, 프로필 매핑)에서 나온다. 따라서 도로 레이아웃을 세이브 데이터에 저장할 필요가 없고, 같은 정의에서는 항상 같은 결과가 나온다.
 - **기하 입력 분리**: resolver는 레이아웃 정의만 반환한다. 도로 중심과 범위는 호출자마다 다르므로(§2.2) 기하 함수(`isInsideRoadLayoutOpening`, `computeRoadEntries`)의 인자로 넘긴다.
+  - `PlayerDefenseState`는 반드시 `SimcityState`와 같은 방식, 즉 `CustomGround.obj`의 `Box3.setFromObject()` 중심과 범위를 사용한다. 다른 기준(CC 위치, `TOWN_CENTER` 등)을 쓰면 진입점이 실제 숲의 도로와 어긋난다.
+- **숲 재생성 조건**: 숲은 `envManager`가 없을 때 한 번만 생성된다(§2.2). 같은 런타임에서 새 게임이나 로드로 플레이어 도시의 행성이 바뀌어 resolve 결과 `roadLayoutId`가 달라지면, 기존 숲은 이전 레이아웃의 도로를 유지한다. `SimcityState`는 숲 생성 시 사용한 `roadLayoutId`를 기억하고, 값이 바뀌면 기존 `envManager.dispose()` (제안)를 호출한 뒤 새 숲을 생성한다. `dispose()`는 해당 매니저가 등록한 렌더 오브젝트, 물리 콜라이더, 루프, `PlacementManager`의 environment footprint와 내부 인덱스를 모두 정리해야 한다. 단순히 참조만 버리거나 `detachFromScene()`만 호출하면 보이지 않는 이전 footprint가 남으므로 허용하지 않는다.
 
 #### 2.3.3 도로 판정 일반화
 
 숲 배치의 도로 판정을 레이아웃 기반으로 바꾼다.
 
-- `isInsideRoadLayoutOpening(pos, layout, center, bounds)` (제안): 다음 중 하나면 true를 반환한다.
-  - 빈터 원(`clearingRadius`) 안에 있다.
-  - 어떤 도로 선분까지의 수평 거리가 `width / 2` 이하다.
+- `isInsideRoadLayoutOpening(pos, layout, center, bounds, clearanceRadius = 0)` (제안): 다음 중 하나면 true를 반환한다. `clearanceRadius`는 나무처럼 footprint/콜라이더가 있는 오브젝트를 배치할 때 중심점뿐 아니라 실제 점유 영역이 도로에 침범하는지 보수적으로 판정하는 여유 반경이다.
+  - 중심까지의 거리가 `clearingRadius + clearanceRadius` 이하다. 빈터 경계 밖 나무의 콜라이더가 빈터 안으로 들어오면 NavGrid mask(§2.7)가 walkable로 둔 셀이 물리적으로 막히기 때문이다.
+  - 어떤 도로 선분까지의 수평 거리가 `width / 2 + clearanceRadius` 이하다.
 - 선분 변환 규칙:
   - radial: `center + dir * startRadius` → 지면 bounds 경계까지의 한 선분.
   - polyline: 인접한 점 쌍마다 선분 하나. `extendToEdge`면 마지막 선분을 지면 경계까지 연장한다.
+  - 바깥 끝 처리: radial과 `extendToEdge` polyline의 마지막 선분은 지면 경계에서 끝나는 선분이 아니라 **반직선(ray)**으로 판정한다. 선분 거리로 판정하면 끝점이 둥근 캡이 되어, 사선 도로가 경계와 만나는 곳에 작은 삼각형 틈이 생기고 도로 입구에 나무가 남을 수 있다. 현재 `isInsideRadialPathOpening()`의 `forward >= clearingRadius` 반무한 띠와 같은 결과를 내기 위해서도 필요하다. 시작 쪽 캡은 빈터 원 안에 있으므로 영향이 없다.
   - `rotationDeg`는 변환 전에 모든 방향과 점에 적용한다.
 - 선분 목록은 레이아웃마다 한 번만 계산해 캐시한다. 숲 판정은 셀마다 호출되기 때문이다.
-- 기존 `isInsideRadialPathOpening()`과 `RadialPathOpeningOptions`는 `radial5`와 같은 결과를 내는 호환 래퍼로 남기고, 호출부 이전 후 제거한다.
-- `createRadialEnvironmentPattern()`과 `EnvironmentManager.populateGroundWithRadialPaths()`는 개별 옵션(`roadCount`, `roadWidth`, `roadAngleOffset`, `clearingRadius`) 대신 `CityRoadLayoutDef`를 받도록 바꾼다.
+- 기존 `isInsideRadialPathOpening()`과 `RadialPathOpeningOptions`는 `radial5`, `clearanceRadius = 0`과 같은 결과를 내는 호환 래퍼로 남기고, 호출부 이전 후 제거한다.
+- **clearanceRadius 정의**: 나무 콜라이더는 `getEnvironmentCollisionSize()` 기준으로 `size × gridSize × footprintScale × instanceScale` 크기의 박스이고, `instanceScale`은 `randomScaleRange` 안에서 무작위로 정해진다. 반면 `PlacementManager` footprint는 스케일을 반영하지 않은 4m다. 따라서 `clearanceRadius = (√(w² + d²) × gridSize / 2) × footprintScale × max(randomScaleRange[1], 1) × scale`로 정의한다. `pine_tree`(1×1, 최대 1.2배)는 약 3.4m다. 이 계산은 gsdk의 `resolveEnvironmentClearanceRadius(prop)` (제안) 한 곳에 두고, `EnvironmentManager`(플레이어 도시)와 `CitySceneService.placeNaturalRadialForest()`(NPC/라이벌 도시 뷰)가 같은 함수를 쓴다. 호출부마다 값이 다르면 같은 레이아웃에서도 화면마다 도로 폭이 달라진다.
+- **시각 변화**: `clearanceRadius > 0`을 적용하면 나무 중심이 도로 중심선에서 `width / 2 + clearanceRadius`(radial5 기준 약 9.4m) 밖으로 밀려, 보이는 도로 폭이 12m에서 약 19m로 넓어진다. 나무 상태는 세이브되지 않고 매번 다시 생성되므로 세이브 호환 문제는 없다. 기존 시각 폭을 유지하려면 preset `width`를 줄이되, 그 경우 §2.4.1의 `usableHalfWidth`가 양수인지 다시 확인한다.
+- `createRadialEnvironmentPattern()`과 `EnvironmentManager.populateGroundWithRadialPaths()`는 개별 옵션(`roadCount`, `roadWidth`, `roadAngleOffset`, `clearingRadius`) 대신 `CityRoadLayoutDef`를 받도록 바꾼다. 숲 생성 호출부는 환경 오브젝트의 실제 충돌 footprint를 감싸는 수평 반경을 `clearanceRadius`로 넘겨 나무 콜라이더가 도로 안으로 들어오지 않게 한다.
 
 #### 2.3.4 진입점 계산
 
@@ -313,7 +325,7 @@ export interface CityRoadLayoutDef {
 | --- | --- | --- |
 | radial | 도로 방향으로 지면 bounds 경계까지 간 지점에서 `entryEdgeMargin`만큼 안쪽 | 도로 방향 |
 | polyline + `extendToEdge` | 마지막 선분을 지면 경계까지 연장한 지점에서 `entryEdgeMargin`만큼 안쪽 | 마지막 선분 방향 |
-| polyline | 마지막 점. 지면 bounds 밖이면 bounds 안으로 클램프한 뒤 `entryEdgeMargin`을 적용한다. | 마지막 선분 방향 |
+| polyline (`extendToEdge: false`) | 마지막 점. 지면 bounds 밖이면 bounds 안으로 클램프한 뒤 `entryEdgeMargin`을 적용한다. 가장자리 허용 오차 밖(맵 내부)에서 끝나면 제외한다. | 마지막 선분 방향 |
 
 사각형 bounds에서 경계까지의 거리는 다음과 같이 구한다.
 
@@ -325,19 +337,66 @@ const entry = p.clone().addScaledVector(dir, edgeDist - margin);
 ```
 
 - 최종 진입점이 빈터 원 안에 들어오면(지면이 너무 작거나 클램프로 끌려 들어온 경우) 그 도로는 진입점으로 쓰지 않는다.
+- `polyline.extendToEdge`의 기본값은 `true`다. 명시적으로 `false`인 경우 마지막 점이 지면 가장자리에서 `entryEdgeMargin` 이내인지 검증하고, 맵 내부에서 끝나는 polyline은 preset 오류로 제외한다. 따라서 모든 유효 진입점은 맵 가장자리 도로 끝이라는 요구사항을 만족한다.
 - 이 계산은 `EnvironmentManager` 인스턴스와 NavGrid에 의존하지 않는 순수 함수 `computeRoadEntries(layout, center, bounds)` (제안)로 둔다. NavGrid 빌드 전에 호출할 수 있어야 한다(§2.5.1 초기화 순서).
 
 ### 2.4 웨이브 배치
 
-- **도로 선택**: 전투 세션 시작(`initMode`) 시 유효한 진입 도로(§2.8 검증 통과)의 순서를 무작위로 정한다. 각 웨이브는 그 순서에 따라 도로 하나를 사용한다(웨이브마다 다른 방향에서 진입). 한 웨이브를 여러 도로로 나누는 방식은 이후 확장 옵션으로 둔다.
+#### 2.4.1 스폰 배치
+
+- **도로 선택**: 전투 세션 시작(`initMode`) 시 유효한 진입 도로(§2.8 검증 통과)의 순서를 무작위로 정한다. 각 웨이브는 그 순서에 따라 도로 하나를 사용한다(웨이브마다 다른 방향에서 진입). 웨이브 수가 유효 도로 수보다 많으면 `roads[waveIndex % roads.length]`로 순환한다. 한 바퀴를 돌 때 다시 섞지 않는다. 한 웨이브를 여러 도로로 나누는 방식은 이후 확장 옵션으로 둔다.
 - **대형**: 원형 링 대신 진입 도로를 따른 종대로 배치한다.
   - 위치 = `entry - dir * (row * RowSpacing) + perp * colOffset`
-  - `perp`는 `dir`에 수직인 수평 벡터이고, `colOffset`은 `±(width/2 - 1)` 안에서 균등 분배한다.
-  - 열 수 = `min(DesiredCols, floor((width - 2) / ColSpacing) + 1)`. 도로 폭을 넘는 열은 만들지 않는다.
-  - 제안값: `DesiredCols` 3, `ColSpacing` 3m, `RowSpacing` 3m (폭 12m 도로면 열 수 상한 4).
+  - `perp`는 `dir`에 수직인 수평 벡터다. `usableHalfWidth = width / 2 - maxMonsterRadius - SpawnSideMargin`으로 실제 사용 가능한 반폭을 계산하고, `colOffset`은 `±usableHalfWidth` 안에서 균등 분배한다. `maxMonsterRadius`는 해당 웨이브의 `MonsterProperty.navigationRadius` (제안) 중 최댓값이며, 제안 `SpawnSideMargin`은 0.5m다. 모델을 생성해야만 알 수 있는 동적 bounds에 초기 검증을 의존하지 않는다.
+  - `usableWidth = max(0, usableHalfWidth * 2)`로 두고, 열 수는 `min(DesiredCols, floor(usableWidth / ColSpacing) + 1)`로 계산한다. 도로의 실제 충돌 안전 폭을 넘는 열은 만들지 않는다.
+  - 제안값: `DesiredCols` 3, `ColSpacing` 3m, `RowSpacing` 3m. 폭 12m 도로의 기하상 열 수가 더 크더라도 `DesiredCols`에 의해 최종 3열로 제한된다.
+  - `usableHalfWidth <= 0`이면 해당 도로에는 그 웨이브를 배치할 수 없다. 열 수 계산에도 실제 충돌 반경을 반영하고, 한 열도 안전하게 만들 수 없으면 §2.6 폴백을 사용한다.
   - 종대가 마지막 선분 길이를 넘으면, 남은 행은 폴리라인을 따라 이전 선분 방향으로 이어 붙인다(도시 방향). radial 도로는 선분이 하나이므로 그대로 도로를 따라 이어진다.
 - **스냅**: 각 위치를 `navGrid.snapToWalkable()`로 보정한다. 결과가 도로 폭 밖이면 §2.8의 슬라이드 규칙을 적용한다.
+  - 스냅 결과는 셀 중심(4m 간격)으로 정렬되므로, 3m 간격 종대에서는 두 몬스터가 같은 셀에 스냅될 수 있다. 이미 사용한 셀에 스냅되면 도로를 따라 도시 반대 방향(`+dir`)으로 한 셀 밀어 다시 스냅한다. 그 셀이 도로 폭이나 지면 범위를 벗어나면 같은 셀 겹침을 허용한다.
 - **팀**: `TargetTeamId.Monster`를 유지한다(faction 반영은 별도 과제).
+- **진입 예고**: 웨이브를 스폰한 직후 진입 도로 방향을 알린다(예: `EventTypes.AlarmNormal`로 "북동쪽 도로에서 적 접근"). 몬스터는 도시까지 100m 이상을 이동하므로 플레이어가 방향을 알아야 대응할 수 있다. 미니맵 표시는 이후 확장으로 둔다.
+
+#### 2.4.2 진군 목표
+
+현재 몬스터는 `aggroRange`(80m) 안에서만 타겟을 잡는다(§1.7). 진입점은 지면 중심에서 최소 약 234m(`250 - 16`, 축 정렬 도로 기준. 사선 도로는 더 멀다), 빈터 경계에서도 130m 이상 떨어져 있다. 따라서 진입점에서 생성된 몬스터는 별도 목표가 없으면 움직이지 않는다. 몬스터에 진군 목표를 부여해 이를 해결한다.
+
+- **목표**: 플레이어 도시의 CC를 파괴하는 것이다(§2.1). `resolvePlayerDefenseCoreTargetId()`는 target id의 `_cc`/`:cc` 문자열 규약 대신 `BuildingManager`에서 `building.property.id === buildingDefs.CommandCenter.id`인 건물을 찾아 그 건물의 target id를 반환한다. CC를 찾지 못했을 때 임의의 첫 번째 structure로 폴백하지 않는다.
+- **진군 단계(도로 이동)**: 웨이브 스폰 시 각 몬스터에 해당 도로의 waypoint 목록(진입점 → 도로 중심선의 꺾임점들 → 빈터 경계 지점)을 부여한다(`MarchOrder` (제안)). 몬스터는 `aggroRange` 안에 적이 없는 동안 waypoint를 차례로 따라간다. 이 구간은 A* 대신 도로 기하를 그대로 쓰므로 숲 장애물이나 NavGrid 커버 범위와 무관하게 도로를 따른다.
+- **공성 접근 단계(빈터 도달 후)**: 마지막 waypoint에 도달한 뒤에도 탐지 범위 안에 적이 없으면 CC를 전략 이동 목표로 삼아 NavGrid 경로로 접근한다. CC가 `aggroRange` 밖에 있어도 이동해야 하지만, 이를 일반 전투 타겟으로 등록하지 않는다. 일반 전투 타겟은 기존 `aggroRange` 규칙을 유지하고, CC 접근은 별도의 이동 목표로 처리한다.
+- **전투 전환**: 진군 중 `aggroRange` 안에 적(아군 유닛, 건물)이 들어오면 일반 타겟팅으로 전환한다. 그 타겟을 잃으면 진군을 이어간다. 진군 단계에서 멈춘 waypoint부터 재개한다.
+- **도로 위 건물**: 도로를 막은 건물은 진군 경로상 `aggroRange` 안에 들어오므로 일반 타겟팅으로 공격된다. 파괴되면 진군을 재개한다. 건물 때문에 진입 도로를 바꾸거나 제외하지 않는다(§2.8).
+- **CC 파괴**: CC가 파괴되면 `PlayerDefenseState`가 즉시 패배를 확정한다. CC 외의 건물이 파괴되면 해당 전투 타겟만 해제하고 `MarchOrder`를 재개한다.
+- **구현 위치와 상태 계약**: 진군 목표는 `ActorCombatController.update()`의 "일반 전투 타겟 없음" 분기에서 별도의 이동 목표로 실행한다. 현재처럼 즉시 `moveDirection`을 0으로 만드는 대신 `MarchOrder`가 있으면 아래 우선순위를 적용한다. 범위 밖 타겟 탐지 자체(`aggroRange` 확대)는 맵 전체 탐지가 되므로 사용하지 않는다. `MarchOrder`가 없는 몬스터(다른 모드, 일반 필드 몬스터)의 동작은 바뀌지 않아야 한다.
+  1. 유효한 일반 전투 타겟이 있으면 `MonsterAdvancePhase.Combat`으로 전투한다.
+  2. 일반 타겟이 없고 남은 도로 waypoint가 있으면 `MonsterAdvancePhase.RoadMarch`로 이동한다.
+  3. 도로 waypoint를 모두 통과했으면 `MonsterAdvancePhase.SiegeApproach`로 CC에 접근한다.
+  4. 전투 타겟을 잃으면 중단했던 도로 waypoint 또는 CC 접근 단계로 복귀한다.
+
+```typescript
+// (제안)
+export enum MonsterAdvancePhase {
+  RoadMarch = "road-march",
+  SiegeApproach = "siege-approach",
+  Combat = "combat",
+}
+
+export interface MarchOrder {
+  waypoints: readonly THREE.Vector3[];
+  siegeTargetId: string; // PlayerDefense의 CC target id
+}
+
+export interface CityCombatMonsterSpawnPlan {
+  position: THREE.Vector3;
+  marchOrder?: MarchOrder;
+}
+```
+
+`MarchOrder`는 일반 타겟과 구분되는 전략 이동 명령이다. `siegeTargetId`가 `aggroRange` 밖에 있다는 이유로 `isValidTarget()`에서 폐기되어서는 안 되며, 공격 가능한 거리 안에 들어왔을 때만 일반 전투 타겟으로 승격한다.
+
+- `resolveWaveSpawnPlans()`는 웨이브 원소와 같은 순서·길이의 plan을 반환한다.
+- `BaseCityCombat.spawnCombatWave()`는 `CreateMonster(monsterId, { ..., marchOrder }, position)` 형태로 명령을 전달하고, `MonsterSpawnOptions`와 `IMonsterCtrl`이 이를 명시적으로 지원한다.
+- 재사용 또는 respawn되는 몬스터에 이전 전투의 명령이 남지 않도록 `resetForSpawn()`에서 기존 `MarchOrder`, waypoint index, `MonsterAdvancePhase`를 먼저 초기화한 뒤 새 명령을 설정한다. 전달된 waypoint는 몬스터별로 복제해 공유 배열의 변경을 막는다.
 
 ### 2.5 구조 변경
 
@@ -348,15 +407,20 @@ const entry = p.clone().addScaledVector(dir, edgeDist - margin);
 | `StrategicPlanetDef` | 선택 필드 `playerCityRoadLayoutId?: CityRoadLayoutId`를 추가한다. |
 | `StrategicCityPlacement`, `StrategicPlayerCityPlacement`, `StrategicGalaxyManager` | 런타임 배치에 resolve 결과 `roadLayoutId`를 싣는다. |
 | `CityCombatContext` | 선택 필드 `roadLayoutId?: CityRoadLayoutId`를 추가한다. |
-| `radialenvironmentpattern.ts` | 도로 판정을 `isInsideRoadLayoutOpening()`으로 일반화한다. `createRadialEnvironmentPattern()`은 개별 도로 옵션 대신 레이아웃을 입력으로 받는다. 기존 판정 함수는 호환 래퍼로 남긴다. |
-| `EnvironmentManager.populateGroundWithRadialPaths()` | 개별 도로 옵션 대신 `CityRoadLayoutDef`를 받는다. |
+| `radialenvironmentpattern.ts` | 도로 판정을 `isInsideRoadLayoutOpening()`으로 일반화한다. `createRadialEnvironmentPattern()`은 개별 도로 옵션 대신 레이아웃과 환경 오브젝트의 `clearanceRadius`를 입력으로 받는다. 기존 판정 함수는 호환 래퍼로 남긴다. |
+| `EnvironmentManager` | `populateGroundWithRadialPaths()`가 개별 도로 옵션 대신 `CityRoadLayoutDef`를 받고 실제 충돌 footprint 기반 `clearanceRadius`를 적용한다. 살아 있고 고갈되지 않은 환경 장애물만 반환하는 `getActiveObstacleFootprints()`와, 자신이 등록한 렌더·콜라이더·루프·placement footprint를 모두 정리하는 `dispose()`를 추가한다. |
 | `SimcityState` | 숲 배치 리터럴을 `resolveCityRoadLayout()` 결과로 교체하고, `enterCityDefense()`에서 `roadLayoutId`를 컨텍스트에 저장한다. |
 | `CitySceneService` | `NATURAL_FOREST_ROAD_*`, `NATURAL_FOREST_CLEARING_RADIUS` 상수를 `resolveCityRoadLayout()` 결과로 교체한다. 밀도 관련 상수는 유지한다. |
-| `BaseCityCombat` | 스폰 위치 목록을 반환하는 훅 `resolveWaveSpawnPositions(wave, spawnWaveNumber): THREE.Vector3[]` (제안)를 추가한다. 기본 구현은 현재 원형 링 로직이고, `spawnCombatWave()`는 이 훅의 결과를 사용한다. `RivalAssault`의 동작은 바뀌지 않는다. |
-| `BaseCityCombat.resolveNavGridArea()` | 현재는 `resolveWaveSpawnParams()` 기반 링만 포함한다. 모드가 제공하는 진입점을 포함하도록 훅 `resolveNavGridExtraPoints()` (제안)를 추가한다. |
-| `BaseCityCombat.collectNavGridObstacles()` | structure 외에 숲 셀을 blocked 장애물로 추가한다. `isDepleted`인 나무는 제외한다(§2.7, §2.8). |
-| `PlacementSource`, `PlacementManager` | `blockConstruction`이 true인 레이아웃이면 도로 셀을 footprint로 등록한다. 이를 위해 `PlacementSource`에 `'road'` (제안)를 추가한다(§2.8). |
-| `PlayerDefenseState` | 레이아웃 조회 → 진입점 계산 → 검증(§2.8) → 종대 배치로 위 훅을 오버라이드한다. `spawnPos`(군기 → CC+오프셋 → 기본값)는 아군 소환에만 사용한다. |
+| `BaseCityCombat` | 위치와 선택적 진군 명령을 함께 반환하는 훅 `resolveWaveSpawnPlans(wave, spawnWaveNumber): CityCombatMonsterSpawnPlan[]` (제안)를 추가한다. 기본 구현은 현재 원형 링 위치와 `marchOrder: undefined`를 반환한다. `spawnCombatWave()`는 plan별로 몬스터를 생성하고 진군 명령을 전달한다. `RivalAssault`의 동작은 바뀌지 않는다. |
+| `BaseCityCombat.resolveNavGridArea()` | 현재는 `resolveWaveSpawnParams()` 기반 링만 포함한다. 모드가 제공하는 진입점을 포함하도록 훅 `resolveNavGridExtraPoints()` (제안)를 추가한다. PlayerDefense에서는 이 링도 군기(`spawnPos`)가 아니라 CC 기준이어야 한다(아래 `PlayerDefenseState` 행). |
+| `BaseCityCombat.collectNavGridObstacles()` | 모드별 추가 장애물 훅 `resolveNavGridExtraObstacles()` (제안)를 호출한다. 숲 데이터 출처가 모드마다 다르므로 base에서 숲을 직접 읽지 않는다. PlayerDefense는 `EnvironmentManager.getActiveObstacleFootprints()`, RivalAssault는 `NpcEnvironmentRenderer`/`snapshot.environment`가 출처다. RivalAssault는 이 설계 범위에서 훅을 구현하지 않는다. |
+| `navtypes.ts`, `navgridservice.ts` | `NavObstacleSource.EnvironmentTree` (제안), 장애물별 `inflateWorld`, source별 `NavGridObstacleCellMask` (제안)를 지원한다. 도로·빈터 mask는 environment source에만 적용하며 structure 셀을 walkable로 되돌리지 않는다(§2.7). |
+| `PlayerDefenseState.resolveNavGridExtraObstacles()` (제안) | 고갈되지 않은 숲 footprint를 `NavObstacleSource.EnvironmentTree`, `inflateWorld: 0` 장애물로 반환하고 도로·빈터 셀 mask를 제공한다. |
+| `MonsterProperty` 및 몬스터 정의 | 스폰·도로 검증 전에 사용할 양수 `navigationRadius` (제안)를 정의한다. 실제 `MonsterCtrl` 충돌체의 수평 반경 이상이어야 하며, 개발 검증에서 누락·과소값을 검사한다. |
+| `MonsterSpawnOptions`, `IMonsterCtrl`, `ActorCombatController`, `MonsterCtrl` | `MarchOrder` 전달·설정 계약과 `MonsterAdvancePhase`를 추가한다. 일반 전투 타겟이 없을 때 도로 waypoint → CC 접근 순으로 이동하고, 일반 전투 후 중단 지점에서 재개한다(§2.4.2). |
+| `PlacementSource`, `PlacementManager` | 진입 구간(`entryZoneLength`) 셀은 항상, 나머지 도로 셀은 `blockConstruction`이 true일 때 footprint로 등록한다. 이를 위해 `PlacementSource`에 `'road'` (제안)를 추가한다(§2.8). `validatePlacement()`/`isFootprintOccupied()`는 source 필터 없이 검사하므로 등록만으로 건설이 막힌다. |
+| `CustomGround` | `updateEnvironmentOccupancyOverlay()`는 현재 `'environment'` footprint만 표시한다. `'road'` footprint도 다른 색으로 표시해, 진입 구간이나 `blockConstruction` 도로에서 건설이 막힌 이유를 플레이어가 볼 수 있게 한다. |
+| `PlayerDefenseState` | `BuildingManager`의 Command Center 정의로 CC target을 식별하고, CC만 방어 핵심으로 인정해 파괴 시 패배시킨다. 레이아웃 조회 → 진입점 계산 → 검증(§2.8) → 종대 배치로 위 훅을 오버라이드한다. `resolveWaveSpawnParams()`도 오버라이드해 center를 CC 위치로, 반지름을 `clearingRadius + RingFallbackMargin` (제안) 이상으로 바꾼다. 이 값은 NavGrid 영역 계산(`resolveNavGridArea()`)과 §2.6 링 폴백에 공통으로 쓰인다. `spawnPos`(군기 → CC+오프셋 → 기본값)는 아군 소환에만 사용하며, 몬스터 위치·NavGrid 영역 계산 경로에서는 참조하지 않는다. |
 
 #### 2.5.1 목표 초기화 순서
 
@@ -365,50 +429,93 @@ const entry = p.clone().addScaledVector(dir, edgeDist - margin);
 1. `resetForInit()`: `resolveWaves()`로 웨이브를 결정한다(변경 없음).
 2. `initMode()`:
    1. 스카이박스, 지평선, `refreshBuildingColliders()` (변경 없음)
-   2. `spawnPos` 결정 → `startAllies()`: 아군 전용이다.
-   3. 방어 핵심 건물 결정.
-   4. 레이아웃 조회(`ctx.roadLayoutId`) → `computeRoadEntries()`로 **기하 진입점** 계산(NavGrid 불필요).
-   5. `buildCombatNavGrid()`: `resolveNavGridExtraPoints()`로 4의 진입점을 영역에 포함하고, 숲 장애물을 등록한다.
-   6. §2.8 검증과 슬라이드 → 유효 도로 목록 확정 → 도로 순서 무작위화.
-   7. `spawnCombatWave()` → `resolveWaveSpawnPositions()`로 종대 배치.
+   2. CC target을 방어 핵심으로 결정한다. CC를 찾지 못하면 경고와 사용자 알림을 남기고 초기화를 중단한 뒤 `returnModeId`로 돌아간다. 임의의 첫 번째 structure로 폴백하지 않는다.
+   3. `spawnPos` 결정 → `startAllies()`: 군기 우선이며, 이 값은 아군 소환에만 사용한다.
+   4. 레이아웃 조회(`ctx.roadLayoutId`) → `CustomGround.obj`의 bounds 중심과 범위(§2.3.2)로 `computeRoadEntries()`를 호출해 **기하 진입점**과 도로 waypoint를 계산한다(NavGrid 불필요).
+   5. `buildCombatNavGrid()`: `resolveNavGridExtraPoints()`로 4의 진입점을 영역에 포함하고, environment 전용 도로 mask와 `resolveNavGridExtraObstacles()`로 숲 장애물을 등록한다.
+   6. 가장 큰 웨이브의 종대 길이와 몬스터 충돌 반경을 기준으로 §2.8 검증과 슬라이드를 수행한다 → 모든 웨이브에 안전한 유효 도로 목록 확정 → 도로 순서 무작위화.
+   7. `spawnCombatWave()` → `resolveWaveSpawnPlans()`로 종대 위치와 `MarchOrder`를 함께 결정 → 각 몬스터 생성 시 명령 전달(§2.4.2) → 진입 예고.
 
 ### 2.6 폴백
 
 | 상황 | 동작 |
 | --- | --- |
-| 지면(`CustomGround`)이 없거나 bounds가 비어 있음 | 현재 원형 링 배치를 사용한다. 단, 중심은 군기가 아니라 방어 핵심 건물(CC) 위치로 한다. 방어 핵심 건물이 없으면 `DefaultCityCombatSpawnPosition`을 쓴다. |
+| CC가 없거나 살아 있는 target으로 등록되지 않음 | 방어전 초기화를 중단하고 경고 및 사용자 알림을 남긴 뒤 `returnModeId`로 돌아간다. 임의 건물이나 `DefaultCityCombatSpawnPosition`으로 전투를 계속하지 않는다. |
+| 지면(`CustomGround`)이 없거나 bounds가 비어 있음 | 원형 링 배치를 사용한다. 단, 중심은 군기가 아니라 방어 핵심 건물(CC) 위치로 하고, 반지름은 `clearingRadius`보다 크게 잡아 빈터 안쪽(건물 사이)에서 스폰되지 않게 한다(`PlayerDefenseState.resolveWaveSpawnParams()` 오버라이드, §2.5). 경고 로그를 남긴다. |
 | 레이아웃에 도로가 없거나 계산된 진입점이 없음 | 위와 같다. |
-| 모든 도로가 §2.8 검증에 실패함 | 위와 같다. |
+| 모든 도로가 §2.8 검증에 실패함 | 위와 같다. 진입 구간은 건설 금지이므로(§2.8) 건물 배치로는 도로가 검증에 실패하지 않는다. 이 경우는 지형이나 preset 데이터 문제다. |
+| NavGrid가 없거나 준비되지 않음 | 기하 진입점을 그대로 사용하고(검증과 슬라이드 생략), 진군은 waypoint만 따른다. 공성 접근 단계에서는 CC까지 직선 이동으로 대체한다. 경고 로그를 남긴다. |
 | `roadLayoutId`가 정의에 없는 값 | 경고 로그를 남기고 resolver 우선순위의 다음 단계로 내려간다. |
 
 ### 2.7 고려 사항
 
-- **NavGrid 규모**: 지면 bounds 전체를 덮으면 셀 수가 크게 늘어난다. `planeWidth: 500`, `gridSize` 4m 기준으로 약 125×125 셀이다. 빌드 비용과 A* 탐색 비용을 측정해야 한다.
-- **숲 장애물**: 나무는 NavGrid 장애물로 등록되지 않는다. 따라서 A* 경로가 도로를 벗어나 숲을 가로지를 수 있다. 몬스터가 도로를 따라 진군하게 하려면 숲 셀을 blocked로 등록해야 한다. 이때 `isDepleted`(벌목된) 나무는 제외한다(§2.8).
-- **진군 시간**: 도로 끝에서 도시까지 150m 이상을 이동한다. 웨이브 간격(`waveDelay`)이나 "이전 웨이브 전멸 후 다음 웨이브" 규칙이 템포에 맞는지 조정이 필요하다. 폴리라인 도로는 경로가 더 길어질 수 있다.
-- **진입 예고**: 진입 방향이 매 웨이브 달라지므로 HUD 알림이나 미니맵 표시로 진입 도로를 예고하는 것을 권장한다.
-- **preset 검증**: 새 preset을 추가할 때 도로 선분이 서로 겹치거나 빈터 원을 가로지르지 않는지, 진입점이 지면 안에 생기는지를 확인하는 개발용 검사(디버그 시각화 또는 단위 테스트)를 두는 것을 권장한다.
+- **NavGrid 규모**: 지면 bounds 전체를 덮으면 셀 수가 크게 늘어난다. `planeWidth: 500`, `gridSize` 4m 기준으로 약 125×125 셀이다. 빌드 비용(blocked 셀 집합 구성)과 A* 탐색 비용을 측정해야 한다. 도로 구간은 waypoint 진군(§2.4.2)으로 이동하므로 A*는 주로 빈터 안 CC 접근 단계와 진입점 검증에만 쓰인다.
+- **숲 장애물(마스크 규칙)**: 현재 나무는 NavGrid 장애물로 등록되지 않으므로 A* 경로가 숲을 가로지를 수 있다. 그러나 나무 footprint를 그대로 장애물로 등록하면 도로가 끊길 수 있다.
+  - 현재 숲 판정은 나무 중심만 보므로 footprint가 도로 안으로 들어온다(§2.2). 목표 구현에서는 §2.3.3의 `clearanceRadius`로 물리 침범을 먼저 방지한다.
+  - NavGrid는 장애물 bounds를 `inflateWorld`(기본 1.2m)만큼 부풀리고(`NavGridService.getObstacleCells()`), 대각 이동 시 모서리 통과를 막는다(`getNeighbors()`).
+  - 그 결과 12m 도로(3셀)의 실효 폭이 1셀 이하로 줄고, 축과 나란하지 않은 도로(-18°, 54° 등)는 계단형 셀 사이에서 연결이 끊길 수 있다.
+  - 따라서 다음 마스크 규칙을 쓴다. `NavObstacleSource.EnvironmentTree` 장애물은 `inflateWorld: 0`으로 래스터화한다. 셀 중심이 `isInsideRoadLayoutOpening()`을 만족하는 도로·빈터 셀은 environment source에 대해서만 제외하고, 그 밖의 셀은 고갈되지 않은 나무 footprint가 덮을 때 blocked로 둔다.
+  - structure obstacle은 기존 inflate를 유지한다. `NavGridObstacleCellMask`는 적용할 `source`를 필수로 가지며, environment mask가 같은 셀의 structure block을 해제해서는 안 된다. NavGrid는 source별 obstacle 셀을 먼저 만든 뒤 마지막에 합집합한다.
+  - `EnvironmentManager.getActiveObstacleFootprints()`는 `isDepleted`인 나무를 제외한 복사본을 반환한다. `PlayerDefenseState`가 `EnvironmentManager`의 private 상태나 `PlacementManager` footprint만으로 고갈 여부를 추측하지 않는다.
+
+```typescript
+// (제안)
+export interface NavGridObstacle {
+  // 기존 필드 생략
+  source: NavObstacleSource;
+  inflateWorld?: number; // 미지정 시 build 기본값, EnvironmentTree는 0
+}
+
+export interface NavGridObstacleCellMask {
+  source: NavObstacleSource;
+  walkableCells: readonly NavGridCell[];
+}
+
+export interface NavGridBuildOptions {
+  // 기존 필드 생략
+  obstacleCellMasks?: readonly NavGridObstacleCellMask[];
+}
+```
+
+mask는 obstacle을 셀로 변환하는 단계에서 같은 `source`에만 적용한다. 모든 source를 합친 뒤 셀을 강제로 walkable로 바꾸는 후처리 방식은 structure 장애물까지 지울 수 있으므로 사용하지 않는다.
+
+- **물리 콜라이더와 실효 도로 폭**: 방어전에서는 숲이 씬에 남아 있으므로(§2.2) 나무 콜라이더도 유효하다. NavGrid mask만으로 물리 충돌을 무시할 수 없으므로 다음 두 조건을 모두 보장한다.
+  - 숲 생성 시 §2.3.3의 `clearanceRadius`를 적용해 나무의 실제 충돌 footprint가 도로 경계를 침범하지 않게 한다.
+  - 종대 생성 시 §2.4.1의 `usableHalfWidth`를 사용해 몬스터 충돌 반경이 도로 경계를 넘지 않게 한다. 이 두 조건을 만족하지 못하는 도로는 유효 진입 도로로 사용하지 않는다.
+- **진군 시간**: 도로 끝에서 도시까지 130m 이상을 이동한다. 웨이브 간격(`waveDelay`)이나 "이전 웨이브 전멸 후 다음 웨이브" 규칙이 템포에 맞는지 조정이 필요하다. 폴리라인 도로는 경로가 더 길어질 수 있다.
+- **CC와 빈터 중심의 관계**: 빈터와 도로의 중심은 지면 bounds 중심이고, 플레이어 건물 위치와는 무관하다. 건물이 빈터 중심에서 한쪽으로 치우치면 도로마다 도시까지의 진군 거리가 크게 달라진다. build range가 빈터 안으로 제한되는지 확인하고, 아니라면 도로별 진군 거리를 측정 항목에 넣는다.
+- **preset 검증**: 새 preset을 추가할 때 다음을 확인하는 개발용 검사(디버그 시각화 또는 단위 테스트)를 두는 것을 권장한다.
+  - 도로 선분이 서로 겹치거나 빈터 원을 가로지르지 않는다.
+  - radial `startRadius`와 polyline 첫 점이 `clearingRadius` 이하다. 빈터 밖에서 시작하면 그 사이에 숲이 생성되어 도로가 빈터와 끊기고, 도로 waypoint 진군이 나무 콜라이더에 막힌다.
+  - radial 도로와 `extendToEdge` polyline의 진입점이 지면 안에 생기며, `extendToEdge: false` polyline의 마지막 점은 지면 가장자리 허용 오차 안에 있다.
+  - 각 `MonsterProperty.navigationRadius`가 실제 몬스터 충돌체의 수평 반경 이상인 양수다.
+  - 가장 큰 몬스터의 충돌 반경을 적용한 `usableHalfWidth`가 양수다.
+  - 최대 웨이브의 종대 깊이가 `entryZoneLength` 이하다.
+  - 위 마스크 규칙으로 만든 NavGrid에서 각 진입점부터 빈터 경계까지 경로가 존재한다(사선 도로의 셀 연결 확인).
 
 ### 2.8 도로 상태 변화와 적응형 진입점
 
 도로 기하는 고정이지만, 도로 상태는 다음 이유로 바뀐다.
 
 - **건물**: `PlacementManager.validatePlacement()`는 footprint 겹침과 build range만 검사한다. 도로는 footprint로 등록되지 않으므로, build range가 넓어지면 도로 위나 도로 끝에도 건물을 지을 수 있다.
-- **벌목**: 나무는 `harvest()`로 `isDepleted`가 되면 렌더와 콜라이더에서 빠지고, `regenerationRate`에 따라 턴마다 회복된다. 숲에 일시적인 빈 공간이 생긴다. 나무 footprint는 등록이 유지되므로 벌목지에 건물을 지을 수는 없다.
+- **벌목**: 나무는 `harvest()`로 `currentAmount`가 0이 되면 `isDepleted`가 되어 렌더와 콜라이더에서 빠진다. `regenerationRate`에 따른 턴당 회복은 고갈 전 나무에만 적용된다(`Tree.advanceTurn()`은 `isDepleted`면 바로 반환한다). 따라서 고갈된 나무는 되살아나지 않고, 벌목지는 **영구적인** 숲 통로가 된다. 나무 footprint는 등록이 유지되므로 벌목지에 건물을 지을 수는 없다.
 
-따라서 진입점은 매 방어전마다 검증한다.
+모든 건물은 파괴 가능하고 몬스터는 도로를 막은 건물을 부수며 진군한다(§2.1, §2.4.2). 따라서 건물은 진입 도로의 유효성에 영향을 주지 않는다. 검증은 건물이 진입점 자체나 종대 위치를 차지한 경우의 **스폰 위치 보정**만 다룬다.
 
-- **계산 시점**: 기하 진입점은 NavGrid 빌드 전에 계산하고, 검증은 NavGrid 빌드 직후에 한다(§2.5.1). 전투 중에는 건물이 추가되지 않으므로 재검증하지 않는다.
+- **계산 시점**: 기하 진입점은 NavGrid 빌드 전에 계산하고, 검증은 NavGrid 빌드 직후에 한다(§2.5.1). 전투 중에는 건물이 추가되지 않으므로 재검증하지 않는다. 검증은 한 번만 수행하는 대신 현재 `currentWaves` 전체에서 필요한 최대 몬스터 충돌 반경과 도로별 최대 종대 깊이를 사용한다. 따라서 뒤의 큰 웨이브도 처음 검증된 도로에 안전하게 배치할 수 있다.
 - **도로별 검증**:
-  1. 진입점 셀이 walkable인지 확인한다.
-  2. 도로 선분 위에 structure 장애물이 있으면, 가장 바깥쪽 장애물보다 바깥 구간에서만 진입점과 종대를 유효로 본다. 종대를 세울 여유가 부족하면 그 도로를 제외한다.
-  3. `navGrid.findPath({ start: entry, target: 방어 핵심 타겟, attackRange })`로 경로가 있는지 확인한다. 방어 핵심 타겟이 없으면 이 검증은 건너뛴다.
-- **슬라이드**: 진입점과 종대의 각 위치에 공통으로 적용한다. 위치가 walkable이 아니거나 스냅 결과가 도로 폭 밖이면, 도로를 따라 도시 방향으로 한 셀씩 옮기며 다시 확인한다. 옆 방향 이동은 도로 폭 안으로 제한해 숲 속 셀로 옮겨지지 않게 한다. 진입점의 슬라이드가 2의 유효 구간을 벗어나면 그 도로를 제외한다.
+  1. 진입점 셀이 walkable인지 확인한다. 아니면 아래 슬라이드를 적용한다.
+  2. 각 도로의 폭으로 만들 수 있는 안전 열 수를 먼저 계산한다. `currentWaves`의 각 웨이브에 필요한 행 수를 계산하고 그중 가장 긴 종대 깊이와 여유를 검증 범위로 사용한다.
+  3. 진입 구간(진입점부터 도시 방향으로 `entryZoneLength`까지의 도로 구간)은 `blockConstruction`과 무관하게 항상 건설 금지다(아래 '진입 구간 건설 금지'). 따라서 이 구간에는 structure 장애물이 없어야 한다. 그래도 발견되면(이전 세이브 등) 경고 로그를 남기고 진입점과 종대를 그 장애물보다 **바깥쪽**(지면 경계 방향)에 둔다. 바깥쪽에 종대를 세울 여유가 없으면 건물 셀과의 겹침을 허용하고 스폰한다. 건물 때문에 도로를 제외하지 않는다.
+  4. 경로 검증은 건물을 무시한 지형 연결성만 본다. 진입점에서 빈터 경계까지 waypoint 구간의 셀이 숲 마스크(§2.7) 기준으로 이어져 있는지 확인한다. structure 장애물은 진군 중 파괴될 대상이므로 이 검사에서 통과 가능으로 취급한다. 이 검사는 preset 데이터 오류(사선 도로 끊김 등)를 잡기 위한 것이다.
+- **슬라이드**: 진입점과 종대의 각 위치에 공통으로 적용한다. 위치가 walkable이 아니거나 스냅 결과가 도로 폭 밖이면, 도로를 따라 한 셀씩 옮기며 다시 확인한다. 기본 방향은 도시 방향이지만, 3에 따라 건물 바깥쪽으로 밀어야 하는 경우에는 지면 경계 방향으로 옮긴다. 옆 방향 이동은 `usableHalfWidth` 안으로 제한해 숲 속 셀로 옮겨지지 않게 한다. 도로 방향 이동은 최대 `MaxEntrySlide` (제안, 최대 종대 깊이 + 2셀)까지만 허용하고, 이를 넘어야 하면 그 도로를 제외한다. 진입점이 빈터 쪽으로 끌려들어 가장자리 진입이 깨지는 것을 막기 위해서다.
 - **제외**: 검증에 실패한 도로는 이번 전투에서 제외한다. 유효 도로가 0개면 §2.6 폴백을 사용한다.
-- **벌목 공간**: 진입점으로 쓰지 않는다(진입점은 preset의 도로만 쓴다). 대신 NavGrid 숲 장애물 등록 시 depleted 나무를 제외해, 벌목으로 뚫린 길이 실제 경로에 반영되게 한다.
-- **도로 위 건설 정책**: preset의 `blockConstruction`으로 선택한다.
-  - `false`(기본): 도로 위 건설을 허용한다. 도로 봉쇄가 방어 전략이 되고, 진입점은 위 규칙으로 적응한다.
-  - `true`: 도로 셀을 `PlacementManager`에 footprint로 등록해 건설을 막는다. 이를 위해 `PlacementSource`에 `'road'` (제안)를 추가한다. 진입점이 항상 고정된다.
+- **벌목 공간**: 진입점으로 쓰지 않는다(진입점은 preset의 도로만 쓴다). 몬스터는 진군 단계에서 도로 waypoint를 따르므로 벌목 통로로 우회하지 않는다. CC 접근 단계(빈터 도달 후)의 A* 경로에는 NavGrid 숲 장애물에서 depleted 나무를 제외해 벌목지를 반영한다.
+- **진입 구간 건설 금지**: 진입 구간(3에서 정의)은 레이아웃 적용 시점에 항상 `PlacementManager`에 `'road'` footprint로 등록한다. 건설은 방어전 밖(`SimcityState`)에서 일어나므로 구간 길이는 웨이브가 아니라 preset의 `entryZoneLength`로 고정한다. 검증 시 최대 종대 깊이가 `entryZoneLength`를 넘으면 경고 로그를 남긴다(preset 검증 항목, §2.7).
+- **road footprint 셀 규칙**: 진입 구간과 `blockConstruction` 도로 모두 지면 그리드와 같은 4m 격자를 쓰고, 셀 중심이 `isInsideRoadLayoutOpening(clearanceRadius = 0)`의 도로 조건(빈터 제외)을 만족하는 셀마다 1×1 footprint를 등록한다. 나무는 `createAlignedPatternPosition()`으로 같은 격자의 셀 중심에 놓이고 clearance로 도로에서 떨어져 있으므로, 이 규칙이면 나무 footprint와 셀이 겹치지 않는다.
+- **도로 위 건설 정책**: 진입 구간을 제외한 나머지 도로 구간은 preset의 `blockConstruction`으로 선택한다.
+  - `false`(기본): 도로 위 건설을 허용한다. 도로를 막은 건물(벽, 포탑 등)은 몬스터가 부숴야 지나갈 수 있으므로 진군을 지연시키는 방어 수단이 된다. 진입 도로는 바뀌지 않는다.
+  - `true`: 도로 셀을 `PlacementManager`에 footprint로 등록해 건설을 막는다. 이를 위해 `PlacementSource`에 `'road'` (제안)를 추가한다. footprint id에는 `roadLayoutId`와 셀 좌표를 포함하고, 레이아웃 교체나 새 게임/로드 시 이전 layout의 `'road'` footprint를 먼저 모두 해제한다.
 
 ### 2.9 관련 문서
 

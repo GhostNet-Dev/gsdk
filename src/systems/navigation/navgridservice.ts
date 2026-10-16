@@ -8,10 +8,12 @@ import {
   NavGridBuildOptions,
   NavGridCell,
   NavGridObstacle,
+  NavGridObstacleCellMask,
   NavObstacleSource,
   NavPathRequest,
   NavPathResult,
   NavPathStatus,
+  NavQueryOptions,
 } from "./navtypes";
 
 type CellKey = string;
@@ -38,10 +40,13 @@ export class NavGridService implements INavGridService {
   private center = new THREE.Vector3();
   private radius = 0;
   private inflateWorld = DEFAULT_INFLATE_WORLD;
-  private readonly blocked = new Set<CellKey>();
+  // source별 blocked 셀. 셀은 어느 source에든 있으면 막힌 것으로 본다(합집합).
+  private readonly blockedBySource = new Map<NavObstacleSource, Set<CellKey>>();
   // 경로 실패 경고 스팸 억제: (타겟 + 그리드버전 + 실패유형)당 1회만 warn.
   private readonly warnedFailures = new Set<string>();
   private heightProvider?: { getHeightAt(worldX: number, worldZ: number): number };
+  // 질의 중에만 설정되는 무시 source 목록(findPathToPoint/isWalkableAt options)
+  private ignoredSources?: readonly NavObstacleSource[];
 
   private readonly requestListener = () => {
     this.eventCtrl.SendEventMessage(EventTypes.RegisterNavGridService, this);
@@ -77,10 +82,16 @@ export class NavGridService implements INavGridService {
     this.maxX = Math.ceil((options.center.x + options.radius) / this.gridSize);
     this.minZ = Math.floor((options.center.z - options.radius) / this.gridSize);
     this.maxZ = Math.ceil((options.center.z + options.radius) / this.gridSize);
-    this.blocked.clear();
+    this.blockedBySource.clear();
 
+    const masks = new Map<NavObstacleSource, NavGridObstacleCellMask[]>();
+    for (const mask of options.obstacleCellMasks ?? []) {
+      const list = masks.get(mask.source) ?? [];
+      list.push(mask);
+      masks.set(mask.source, list);
+    }
     for (const obstacle of options.obstacles) {
-      this.blockObstacle(obstacle);
+      this.blockObstacle(obstacle, masks.get(obstacle.source));
     }
 
     this.ready = true;
@@ -90,7 +101,7 @@ export class NavGridService implements INavGridService {
 
   clear(): void {
     this.ready = false;
-    this.blocked.clear();
+    this.blockedBySource.clear();
     this.heightProvider = undefined;
     this.version++;
     this.warnedFailures.clear();
@@ -131,6 +142,48 @@ export class NavGridService implements INavGridService {
     };
   }
 
+  findPathToPoint(start: THREE.Vector3, goal: THREE.Vector3, options?: NavQueryOptions): NavPathResult {
+    return this.withQueryOptions(options, () => this.findPathToPointInternal(start, goal));
+  }
+
+  private findPathToPointInternal(start: THREE.Vector3, goal: THREE.Vector3): NavPathResult {
+    if (!this.ready) {
+      return { status: NavPathStatus.NoGrid, gridVersion: this.version, waypoints: [start.clone(), goal.clone()] };
+    }
+
+    const startCell = this.snapCellToWalkable(this.worldToCell(start));
+    const goalCell = this.snapCellToWalkable(this.worldToCell(goal));
+    if (!startCell || !goalCell) {
+      return { status: NavPathStatus.NoPath, gridVersion: this.version, waypoints: [] };
+    }
+
+    const path = this.search(startCell, [goalCell], new Set([this.cellKey(goalCell)]));
+    if (path.length === 0) {
+      return { status: NavPathStatus.NoPath, gridVersion: this.version, waypoints: [] };
+    }
+
+    return {
+      status: NavPathStatus.Complete,
+      gridVersion: this.version,
+      waypoints: this.smoothCells(path).map((cell) => this.cellToWorld(cell)),
+    };
+  }
+
+  isWalkableAt(pos: THREE.Vector3, options?: NavQueryOptions): boolean {
+    return this.withQueryOptions(options, () => this.ready && this.isWalkable(this.worldToCell(pos)));
+  }
+
+  private withQueryOptions<T>(options: NavQueryOptions | undefined, run: () => T): T {
+    if (!options?.ignoreSources?.length) return run();
+    const previous = this.ignoredSources;
+    this.ignoredSources = options.ignoreSources;
+    try {
+      return run();
+    } finally {
+      this.ignoredSources = previous;
+    }
+  }
+
   snapToWalkable(pos: THREE.Vector3, maxRing = WALKABLE_SEARCH_RING): THREE.Vector3 {
     if (!this.ready) return pos.clone();
     const cell = this.snapCellToWalkable(this.worldToCell(pos), maxRing);
@@ -141,27 +194,50 @@ export class NavGridService implements INavGridService {
     return this.heightProvider?.getHeightAt(worldX, worldZ) ?? fallbackY;
   }
 
-  private blockObstacle(obstacle: NavGridObstacle): void {
+  private blockObstacle(obstacle: NavGridObstacle, masks?: readonly NavGridObstacleCellMask[]): void {
+    let blocked = this.blockedBySource.get(obstacle.source);
+    if (!blocked) {
+      blocked = new Set<CellKey>();
+      this.blockedBySource.set(obstacle.source, blocked);
+    }
     for (const cell of this.getObstacleCells(obstacle)) {
-      if (this.isInBounds(cell)) this.blocked.add(this.cellKey(cell));
+      if (!this.isInBounds(cell)) continue;
+      if (masks && masks.length > 0) {
+        const x = cell.x * this.gridSize;
+        const z = cell.z * this.gridSize;
+        if (masks.some((mask) => mask.isWalkableAt(x, z))) continue;
+      }
+      blocked.add(this.cellKey(cell));
     }
   }
 
   private unblockObstacle(obstacle: NavGridObstacle): void {
     if (!this.ready) return;
+    // 파괴된 건물은 structure 셀만 해제한다. 같은 셀의 환경 장애물 block은 유지된다.
+    const blocked = this.blockedBySource.get(NavObstacleSource.StructureTarget);
+    if (!blocked) return;
     let changed = false;
     for (const cell of this.getObstacleCells(obstacle)) {
-      if (this.blocked.delete(this.cellKey(cell))) changed = true;
+      if (blocked.delete(this.cellKey(cell))) changed = true;
     }
     if (changed) this.version++;
   }
 
+  private isBlocked(key: CellKey): boolean {
+    for (const [source, blocked] of this.blockedBySource) {
+      if (this.ignoredSources?.includes(source)) continue;
+      if (blocked.has(key)) return true;
+    }
+    return false;
+  }
+
   private getObstacleCells(obstacle: NavGridObstacle): NavGridCell[] {
     const box = obstacle.bounds?.clone() ?? this.createFootprintBox(obstacle);
-    box.min.x -= this.inflateWorld;
-    box.min.z -= this.inflateWorld;
-    box.max.x += this.inflateWorld;
-    box.max.z += this.inflateWorld;
+    const inflate = obstacle.inflateWorld ?? this.inflateWorld;
+    box.min.x -= inflate;
+    box.min.z -= inflate;
+    box.max.x += inflate;
+    box.max.z += inflate;
 
     const minCell = this.worldToCell(new THREE.Vector3(box.min.x, 0, box.min.z));
     const maxCell = this.worldToCell(new THREE.Vector3(box.max.x, 0, box.max.z));
@@ -389,7 +465,7 @@ export class NavGridService implements INavGridService {
   }
 
   private isWalkable(cell: NavGridCell): boolean {
-    return this.isInBounds(cell) && !this.blocked.has(this.cellKey(cell));
+    return this.isInBounds(cell) && !this.isBlocked(this.cellKey(cell));
   }
 
   private isInBounds(cell: NavGridCell): boolean {

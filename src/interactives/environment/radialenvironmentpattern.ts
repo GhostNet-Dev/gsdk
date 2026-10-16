@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { ImprovedNoise } from "three/examples/jsm/math/ImprovedNoise";
 import { getFootprintGridCellKeys, hasGridCellOverlap } from "@Glibs/interactives/placement/gridrangeutils";
+import { CityRoadLayoutDef } from "@Glibs/world/cityroad/cityroadtypes";
+import { isInsideRoadLayoutOpening } from "@Glibs/world/cityroad/cityroadgeometry";
 
 export interface RadialEnvironmentPatternCell {
   gridX: number;
@@ -22,24 +24,15 @@ export interface RadialEnvironmentPatternOptions {
   density: number;
   threshold: number;
   noiseScale: number;
-  clearingRadius: number;
-  roadCount: number;
-  roadWidth: number;
-  roadAngleOffset?: number;
+  /** 빈터와 도로 레이아웃. 도로 중심은 centerX/centerZ다. */
+  roadLayout: CityRoadLayoutDef;
+  /** 배치 오브젝트의 점유 반경. 도로·빈터 경계에서 이만큼 더 떨어뜨린다. */
+  clearanceRadius?: number;
   noise?: ImprovedNoise;
   random?: () => number;
   occupied?: ReadonlySet<string>;
   maxCount?: number;
   selectionMode?: "scan" | "shuffle";
-}
-
-export interface RadialPathOpeningOptions {
-  centerX: number;
-  centerZ: number;
-  clearingRadius: number;
-  roadCount: number;
-  roadWidth: number;
-  roadAngleOffset?: number;
 }
 
 const defaultNoise = new ImprovedNoise();
@@ -49,7 +42,8 @@ export function createRadialEnvironmentPattern(
 ): RadialEnvironmentPatternCell[] {
   const noise = options.noise ?? defaultNoise;
   const random = options.random ?? Math.random;
-  const roadAngleOffset = options.roadAngleOffset ?? -Math.PI / 2;
+  const roadCenter = new THREE.Vector3(options.centerX, 0, options.centerZ);
+  const clearanceRadius = options.clearanceRadius ?? 0;
   const results: RadialEnvironmentPatternCell[] = [];
 
   for (let gridX = options.minGridX; gridX <= options.maxGridX; gridX++) {
@@ -62,14 +56,7 @@ export function createRadialEnvironmentPattern(
         options.gridSize,
       );
 
-      if (isInsideRadialPathOpening(position, {
-        centerX: options.centerX,
-        centerZ: options.centerZ,
-        clearingRadius: options.clearingRadius,
-        roadCount: options.roadCount,
-        roadWidth: options.roadWidth,
-        roadAngleOffset,
-      })) {
+      if (isInsideRoadLayoutOpening(position, options.roadLayout, roadCenter, clearanceRadius)) {
         continue;
       }
 
@@ -112,45 +99,6 @@ function shuffleCells(cells: RadialEnvironmentPatternCell[], random: () => numbe
     const swapIndex = Math.floor(random() * (index + 1));
     [cells[index], cells[swapIndex]] = [cells[swapIndex], cells[index]];
   }
-}
-
-export function isInsideRadialPathOpening(
-  position: THREE.Vector3,
-  options: RadialPathOpeningOptions,
-): boolean {
-  const dx = position.x - options.centerX;
-  const dz = position.z - options.centerZ;
-  const distSq = (dx * dx) + (dz * dz);
-
-  if (distSq <= options.clearingRadius * options.clearingRadius) {
-    return true;
-  }
-
-  if (options.roadCount <= 0 || options.roadWidth <= 0) {
-    return false;
-  }
-
-  const halfRoadWidth = options.roadWidth * 0.5;
-  const angleStep = Math.PI * 2 / options.roadCount;
-  const roadAngleOffset = options.roadAngleOffset ?? -Math.PI / 2;
-
-  for (let index = 0; index < options.roadCount; index++) {
-    const angle = roadAngleOffset + (angleStep * index);
-    const dirX = Math.cos(angle);
-    const dirZ = Math.sin(angle);
-    const forward = (dx * dirX) + (dz * dirZ);
-
-    if (forward < options.clearingRadius) {
-      continue;
-    }
-
-    const side = Math.abs((dx * dirZ) - (dz * dirX));
-    if (side <= halfRoadWidth) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 export function createAlignedPatternPosition(

@@ -5,6 +5,7 @@ import {
   StrategicPlanetSpecialResourceBag,
 } from "@Glibs/gameobjects/strategicgalaxy/strategicgalaxytypes";
 import { MonsterId } from "@Glibs/types/monstertypes";
+import type { CityRoadLayoutId } from "@Glibs/world/cityroad/cityroadtypes";
 
 export type { CityScore };
 
@@ -134,6 +135,8 @@ export interface RivalCityDef {
   policyWeights: Partial<Record<RivalPolicyId, number>>;
   scoreWeights: RivalScoreWeights;
   armyDeck?: readonly (readonly MonsterId[])[];
+  /** archetype 성격의 기본 도로 레이아웃 */
+  roadLayoutId?: CityRoadLayoutId;
 }
 
 // ─── 도시 배치 seed ───────────────────────────────────────────────────────────

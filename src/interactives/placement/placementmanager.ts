@@ -22,6 +22,12 @@ export class PlacementManager {
     this.footprints.delete(id);
   }
 
+  unregisterFootprintsBySource(source: PlacementSource): void {
+    for (const [id, item] of this.footprints) {
+      if (item.source === source) this.footprints.delete(id);
+    }
+  }
+
   getFootprints(source?: PlacementSource): PlacementFootprint[] {
     const items = Array.from(this.footprints.values());
     return source ? items.filter(item => item.source === source) : items;

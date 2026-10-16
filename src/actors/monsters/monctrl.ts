@@ -52,6 +52,8 @@ export class MonsterCtrl extends ActorCombatController<MonsterProperty> implemen
     }
 
     get Drop() { return this.property.drop }
+    /** MonsterBox(BoxGeometry(size.x * 2, size.y, size.z))의 수평 반경 */
+    get CollisionRadius() { return Math.max(this.model.Size.x, this.model.Size.z * 0.5) }
     get MonsterBox() { return this.phybox as MonsterBox }
     get MonsterProperty() { return this.property }
 

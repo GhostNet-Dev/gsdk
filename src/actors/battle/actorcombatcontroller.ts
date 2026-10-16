@@ -31,12 +31,18 @@ import { IYukaEntityManager } from "@Glibs/systems/navigation/yukaentitymanager"
 import { TargetPolicyConfig, TargetSelectionPolicy } from "@Glibs/systems/targeting/targetselectionpolicy"
 import { createTargetPolicy } from "@Glibs/systems/targeting/policies/targetpolicyfactory"
 import { IActorState } from "@Glibs/actors/monsters/monstertypes"
+import { MarchOrder, MonsterAdvancePhase } from "@Glibs/actors/battle/marchorder"
 import {
     AttackActorState,
     DyingActorState,
     HurtActorState,
     JumpActorState,
 } from "@Glibs/actors/battle/actorcombatstates"
+
+// 진군 waypoint 도달 판정 반경(m). 종대 열 간격과 도로 반폭을 고려한다.
+const MARCH_WAYPOINT_ARRIVE_RADIUS = 5
+// 공성 접근 단계 A* 재계산 주기(초). 진군 중에는 경로가 크게 바뀌지 않으므로 전투 repath보다 길게 둔다.
+const SIEGE_REPATH_INTERVAL = 1.5
 
 // speed 스탯이 누락된 프리셋이 Vehicle maxSpeed = 0 으로 고정되어 영구 정지하는 것을 막는 하한.
 export const MIN_MOVE_SPEED = 0.3
@@ -124,6 +130,14 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
     private readonly actualMove = new THREE.Vector3()
     private readonly directPathTarget = new THREE.Vector3()
 
+    // 진군 명령 (PlayerDefense 등). 없으면 기존 동작과 동일하다.
+    protected marchOrder?: MarchOrder
+    protected marchWaypointIndex = 0
+    protected advancePhase?: MonsterAdvancePhase
+    private marchPathDirty = true
+    private nextSiegeRepathElapsed = 0
+    private siegePathGridVersion = -1
+
     protected readonly idPrefix: string
 
     // ── 사이드별 훅 ──────────────────────────────────────────────────────────
@@ -165,6 +179,28 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
     }
 
     get Spec() { return this.baseSpec }
+    get AdvancePhase() { return this.advancePhase }
+
+    /** 진군 명령을 설정한다. waypoint는 몬스터별로 복제해 공유 배열 변경을 막는다. undefined면 해제한다. */
+    setMarchOrder(order?: MarchOrder): void {
+        this.clearMarchOrder()
+        if (!order) return
+        this.marchOrder = {
+            siegeTargetId: order.siegeTargetId,
+            waypoints: order.waypoints.map((waypoint) => waypoint.clone()),
+        }
+        this.advancePhase = this.resolveMarchPhase()
+        this.lastSearchTime = 0
+    }
+
+    protected clearMarchOrder(): void {
+        this.marchOrder = undefined
+        this.marchWaypointIndex = 0
+        this.advancePhase = undefined
+        this.marchPathDirty = true
+        this.nextSiegeRepathElapsed = 0
+        this.siegePathGridVersion = -1
+    }
     get TargetId() { return this.targetId }
     get objs() { return this.model.Meshs }
 
@@ -256,6 +292,16 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
         this.noPathStreak = 0
         this.currentTargetReachable = true
         this.threatBook.clear()
+        // 재사용/리스폰 시 이전 전투의 타겟·경로·진군 명령이 남지 않게 한다.
+        this.currentTarget = undefined
+        this.targetAdapter.Target = undefined
+        this.lastSearchTime = 0
+        this.nextRepathElapsed = 0
+        if (this.followPathBehavior) {
+            this.followPathBehavior.path = new Path()
+            this.followPathBehavior.active = false
+        }
+        this.clearMarchOrder()
         this.syncVehicleFromMesh()
     }
 
@@ -288,8 +334,16 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
         this.targetAdapter.update()
         const target = this.resolveTarget()
 
-        if (this.Spec.Health > 0 && this.targetAdapter.HasTarget) {
+        if (this.Spec.Health > 0 && this.marchOrder && !this.isValidTarget(this.currentTarget)) {
+            // 진군 명령이 있으면 범위 안 적이 없을 때 player 폴백 대신 도로/공성 목표로 이동한다.
             this.loggedNoTarget = false
+            this.updateMarch(delta)
+        } else if (this.Spec.Health > 0 && this.targetAdapter.HasTarget) {
+            this.loggedNoTarget = false
+            if (this.marchOrder && this.advancePhase !== MonsterAdvancePhase.Combat) {
+                this.advancePhase = MonsterAdvancePhase.Combat
+                this.currentPathTargetId = undefined
+            }
             this.updateNavigation(delta, target)
         } else {
             if (this.verboseTargetLogs && this.Spec.Health > 0 && !this.currentTarget && !this.loggedNoTarget) {
@@ -476,6 +530,107 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
         return [this.model.Pos.clone(), this.directPathTarget.clone()]
     }
 
+    private resolveMarchPhase(): MonsterAdvancePhase {
+        const waypointCount = this.marchOrder?.waypoints.length ?? 0
+        return this.marchWaypointIndex < waypointCount
+            ? MonsterAdvancePhase.RoadMarch
+            : MonsterAdvancePhase.SiegeApproach
+    }
+
+    /** 일반 전투 타겟이 없을 때 도로 waypoint → 공성 목표 순으로 이동한다. 전투 후에는 중단 지점부터 재개한다. */
+    private updateMarch(delta: number) {
+        const order = this.marchOrder
+        const vehicle = this.vehicle
+        const follow = this.followPathBehavior
+        if (!order || !vehicle || !follow || this.isNavigationSuspended()) {
+            this.moveDirection.set(0, 0, 0)
+            return
+        }
+
+        const pos = this.model.Pos
+        let advanced = false
+        while (this.marchWaypointIndex < order.waypoints.length) {
+            const waypoint = order.waypoints[this.marchWaypointIndex]
+            const dx = waypoint.x - pos.x
+            const dz = waypoint.z - pos.z
+            if ((dx * dx) + (dz * dz) > MARCH_WAYPOINT_ARRIVE_RADIUS * MARCH_WAYPOINT_ARRIVE_RADIUS) break
+            this.marchWaypointIndex++
+            advanced = true
+        }
+
+        const phase = this.resolveMarchPhase()
+        if (this.advancePhase !== phase) {
+            // 전투 → 진군 복귀 또는 도로 → 공성 전환
+            this.advancePhase = phase
+            this.marchPathDirty = true
+            this.currentPathTargetId = undefined
+        }
+
+        if (phase === MonsterAdvancePhase.RoadMarch) {
+            // 도로 구간은 A* 대신 도로 기하를 그대로 따른다. 지나간 waypoint는 Yuka Path가 처리하므로
+            // 시작/재개 시점과 남은 waypoint가 바뀐 시점에만 경로를 다시 만든다.
+            if (!this.marchPathDirty && !advanced && follow.active) return
+            this.marchPathDirty = false
+            this.applyMarchPath([pos.clone(), ...order.waypoints.slice(this.marchWaypointIndex)])
+            return
+        }
+
+        this.updateSiegeApproach(delta, order)
+    }
+
+    private updateSiegeApproach(delta: number, order: MarchOrder) {
+        const follow = this.followPathBehavior!
+        this.nextSiegeRepathElapsed -= delta
+        const gridVersion = this.navGrid?.Version ?? -1
+        const needsPath = this.marchPathDirty
+            || !follow.active
+            || gridVersion !== this.siegePathGridVersion
+            || this.nextSiegeRepathElapsed <= 0
+        if (!needsPath) return
+
+        this.marchPathDirty = false
+        this.nextSiegeRepathElapsed = SIEGE_REPATH_INTERVAL + this.repathJitter
+        this.siegePathGridVersion = gridVersion
+
+        const siegeTarget = this.targetRegistry?.get(order.siegeTargetId)
+        if (!siegeTarget?.alive) {
+            this.moveDirection.set(0, 0, 0)
+            follow.active = false
+            return
+        }
+
+        const goal = siegeTarget.bounds && !siegeTarget.bounds.isEmpty()
+            ? siegeTarget.bounds.getCenter(new THREE.Vector3())
+            : this.targetGeomObject(siegeTarget).position.clone()
+        const path = this.navGrid?.findPathToPoint(this.model.Pos, goal)
+        if (path?.status === NavPathStatus.Complete && path.waypoints.length > 0) {
+            this.applyMarchPath(path.waypoints)
+            return
+        }
+
+        // NavGrid가 없거나 경로를 못 찾으면 CC까지 직선 이동으로 대체한다.
+        goal.y = this.navGrid?.getHeightAt(goal.x, goal.z, this.model.Pos.y) ?? this.model.Pos.y
+        this.applyMarchPath([this.model.Pos.clone(), goal])
+    }
+
+    /** 첫 점(현재 위치)을 제외한 waypoint로 Yuka Path를 구성한다. */
+    private applyMarchPath(waypoints: THREE.Vector3[]) {
+        const vehicle = this.vehicle
+        const follow = this.followPathBehavior
+        if (!vehicle || !follow) return
+
+        const path = new Path()
+        path.loop = false
+        for (let i = 1; i < waypoints.length; i++) {
+            const waypoint = waypoints[i]
+            const y = this.navGrid?.getHeightAt(waypoint.x, waypoint.z, waypoint.y) ?? waypoint.y
+            path.add(new YukaVector3(waypoint.x, y, waypoint.z))
+        }
+        follow.path = path
+        follow.active = waypoints.length > 1
+        vehicle.position.set(this.model.Pos.x, this.model.Pos.y, this.model.Pos.z)
+    }
+
     private applyPath(waypoints: THREE.Vector3[], target: IPhysicsObject) {
         const vehicle = this.vehicle
         const follow = this.followPathBehavior
@@ -652,11 +807,18 @@ export abstract class ActorCombatController<P extends ActorControllerProperty>
             maxDistance: this.aggroRange,
             currentTargetId: current?.id,
             currentTargetReachable: this.currentTargetReachable,
-            fallbackTargetId: this.getFallbackTargetId(),
+            fallbackTargetId: this.marchOrder ? undefined : this.getFallbackTargetId(),
             threats: this.threatBook.list(now),
             registry,
             query,
-        }, selectionPolicy)
+        }, selectionPolicy) ?? this.resolveSiegeTarget(registry)
+    }
+
+    /** 진군 중 범위 안 적이 없으면, aggroRange 안에 들어온 공성 목표를 일반 전투 타겟으로 승격한다. */
+    private resolveSiegeTarget(registry: TargetRegistrySystem): TargetRecord | undefined {
+        if (!this.marchOrder) return undefined
+        const siegeTarget = registry.get(this.marchOrder.siegeTargetId)
+        return this.isValidTarget(siegeTarget) ? siegeTarget : undefined
     }
 
     private isValidTarget(target?: TargetRecord): target is TargetRecord {

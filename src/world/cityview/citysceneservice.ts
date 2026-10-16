@@ -16,6 +16,8 @@ import {
 import { buildingDefs, BuildingProperty } from "@Glibs/interactives/building/buildingdefs";
 import { EnvironmentType, environmentDefs } from "@Glibs/interactives/environment/environmentdefs";
 import { createRadialEnvironmentPattern } from "@Glibs/interactives/environment/radialenvironmentpattern";
+import { resolveEnvironmentClearanceRadius } from "@Glibs/interactives/environment/staticcolliderregistry";
+import { resolveCityRoadLayout } from "@Glibs/world/cityroad/cityroadresolver";
 import { getFootprintGridCellKeys, hasGridCellOverlap } from "@Glibs/interactives/placement/gridrangeutils";
 import { Char } from "@Glibs/loader/assettypes";
 import { CurrencyType } from "@Glibs/inventory/wallet";
@@ -35,10 +37,6 @@ const RESOURCE_TREE_CLUSTER_COUNT = 10;
 const RESOURCE_GOLD_CLUSTER_COUNT = 4;
 const AMBIENT_ENVIRONMENT_CLUSTER_COUNT = 5;
 const NATURAL_FOREST_HALF_EXTENT = 250;
-const NATURAL_FOREST_CLEARING_RADIUS = 100;
-const NATURAL_FOREST_ROAD_COUNT = 5;
-const NATURAL_FOREST_ROAD_WIDTH = 12;
-const NATURAL_FOREST_ROAD_ANGLE_OFFSET = -Math.PI / 2;
 const NATURAL_FOREST_DENSITY = 0.6;
 const NATURAL_FOREST_NOISE_SCALE = 40;
 const NATURAL_FOREST_NOISE_THRESHOLD = 0.5;
@@ -346,10 +344,13 @@ export class CitySceneService {
       density: this.resolveNaturalForestDensity(planetDef, cityState),
       threshold: NATURAL_FOREST_NOISE_THRESHOLD,
       noiseScale: NATURAL_FOREST_NOISE_SCALE,
-      clearingRadius: NATURAL_FOREST_CLEARING_RADIUS,
-      roadCount: NATURAL_FOREST_ROAD_COUNT,
-      roadWidth: NATURAL_FOREST_ROAD_WIDTH,
-      roadAngleOffset: NATURAL_FOREST_ROAD_ANGLE_OFFSET,
+      roadLayout: resolveCityRoadLayout({
+        planetDef,
+        placementDef: planetDef.cityPlacements?.find((placement) => placement.id === cityState.id),
+        cityDef: rivalCityDefs[cityState.cityDefId],
+        isPlayerCity: false,
+      }),
+      clearanceRadius: resolveEnvironmentClearanceRadius(prop, GRID_SIZE),
       noise: this.forestNoise,
       random: mulberry32(seedFromCityId(`${cityId}:natural-forest`)),
       occupied,

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export type PlacementSource = 'building' | 'environment' | 'obstacle';
+export type PlacementSource = 'building' | 'environment' | 'obstacle' | 'road';
 export type PlacementState = 'pending' | 'active';
 
 export interface PlacementFootprint {

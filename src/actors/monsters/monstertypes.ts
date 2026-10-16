@@ -72,4 +72,12 @@ export type MonsterProperty = {
     attackAction?: ActionType
     idleStates?: (...params: any) => IActorState
     targetPolicy?: TargetPolicyConfig
+    /**
+     * 스폰 배치·도로 폭 검증에 쓰는 수평 충돌 반경(m). 실제 MonsterBox 수평 반경 이상이어야 한다.
+     * 모델 bounds는 생성 후에만 알 수 있으므로 정의 데이터로 둔다.
+     */
+    navigationRadius?: number
 }
+
+/** navigationRadius가 정의되지 않은 몬스터의 배치용 기본 반경 */
+export const DefaultMonsterNavigationRadius = 1.5

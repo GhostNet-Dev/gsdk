@@ -95,6 +95,9 @@ export interface PatternBandSplatOptions {
 }
 
 /* ============================ Class ============================ */
+const EnvironmentOccupancyColor = new THREE.Color(0xffe599);
+const RoadOccupancyColor = new THREE.Color(0xff6b6b);
+
 export default class CustomGround implements IWorldMapObject {
   Type: MapEntryType = MapEntryType.CustomGround;
 
@@ -245,8 +248,9 @@ export default class CustomGround implements IWorldMapObject {
 
     const geom = new THREE.PlaneGeometry(1, 1);
     geom.rotateX(-Math.PI / 2);
+    // 색은 인스턴스별로 지정한다(environment / road).
     const mat = new THREE.MeshBasicMaterial({
-      color: 0xffe599,
+      color: 0xffffff,
       transparent: true,
       opacity: 0.25,
       side: THREE.DoubleSide,
@@ -267,7 +271,9 @@ export default class CustomGround implements IWorldMapObject {
   private updateEnvironmentOccupancyOverlay() {
     if (!this.obj) return;
 
-    const footprints = PlacementManager.Instance.getFootprints('environment');
+    // 도로 진입 구간 등 건설 금지 도로('road')도 다른 색으로 함께 표시한다.
+    const placement = PlacementManager.Instance;
+    const footprints = [...placement.getFootprints('environment'), ...placement.getFootprints('road')];
     const overlay = this.ensureEnvironmentOccupancyOverlay(footprints.length);
     const s = this.gridSize / this.scale;
     const matrix = new THREE.Matrix4();
@@ -282,10 +288,12 @@ export default class CustomGround implements IWorldMapObject {
       scale.set(footprint.width * s, 1, footprint.depth * s);
       matrix.compose(pos, quat, scale);
       overlay.setMatrixAt(i, matrix);
+      overlay.setColorAt(i, footprint.source === 'road' ? RoadOccupancyColor : EnvironmentOccupancyColor);
     }
 
     overlay.count = footprints.length;
     overlay.instanceMatrix.needsUpdate = true;
+    if (overlay.instanceColor) overlay.instanceColor.needsUpdate = true;
     overlay.visible = !!this.gridHelper?.visible && footprints.length > 0;
   }
 

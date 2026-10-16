@@ -1,6 +1,7 @@
 import { CurrencyType } from "@Glibs/inventory/wallet";
 import { FactionId } from "@Glibs/gameobjects/turntypes";
 import { MonsterId } from "@Glibs/actors/monsters/monstertypes";
+import type { CityRoadLayoutId } from "@Glibs/world/cityroad/cityroadtypes";
 import {
   GalaxyMarketResourceViewModel,
   GalaxyMapDef,
@@ -137,6 +138,8 @@ export interface StrategicPlanetCityPlacement<TCityDefId extends string = string
   name?: string;
   cityDefId?: TCityDefId;
   startingInfluence?: number;
+  /** 도시 도로 레이아웃 지정. 없으면 RivalCityDef → 행성 프로필 → 기본값 순으로 결정한다. */
+  roadLayoutId?: CityRoadLayoutId;
 }
 
 export interface StrategicPlanetDef<TCityDefId extends string = string> {
@@ -152,6 +155,8 @@ export interface StrategicPlanetDef<TCityDefId extends string = string> {
   specialResources: StrategicPlanetSpecialResourceType[];
   baseStats: StrategicPlanetStats;
   combatWaves?: readonly (readonly MonsterId[])[];
+  /** 이 행성에 세워지는 플레이어 도시의 도로 레이아웃 */
+  playerCityRoadLayoutId?: CityRoadLayoutId;
 }
 
 export interface StrategicCityPlacement<TCityDefId extends string = string> {
@@ -166,6 +171,8 @@ export interface StrategicCityPlacement<TCityDefId extends string = string> {
   cityDefId?: TCityDefId;
   score?: number;
   description?: string;
+  /** resolveCityRoadLayoutId() 결과 */
+  roadLayoutId?: CityRoadLayoutId;
 }
 
 export interface GalaxyPlanetVisualDef {

@@ -119,6 +119,19 @@ export function getEnvironmentCollisionSize(
   );
 }
 
+/**
+ * 환경 오브젝트의 실제 점유 영역(콜라이더와 placement footprint)을 감싸는 수평 반경.
+ * 숲 배치 시 도로·빈터 경계에서 이만큼 떨어뜨려 콜라이더가 도로 안으로 들어오지 않게 한다.
+ */
+export function resolveEnvironmentClearanceRadius(prop: EnvironmentProperty, gridSize = GRID_SIZE): number {
+  const halfDiagonal = Math.hypot(prop.size.width, prop.size.depth) * gridSize * 0.5;
+  const maxInstanceScale = prop.scale * Math.max(prop.randomScaleRange?.[1] ?? 1, 1);
+  const colliderScale = isEnvironmentCollisionEnabled(prop)
+    ? getEnvironmentCollisionFootprintScale(prop) * maxInstanceScale
+    : 0;
+  return halfDiagonal * Math.max(colliderScale, 1);
+}
+
 export function getEnvironmentCollisionCenter(
   position: THREE.Vector3,
   prop: EnvironmentProperty,

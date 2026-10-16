@@ -14,6 +14,7 @@ export class MonsterDb {
     constructor() {
         this.monDb.set(MonsterId.Bee, {
             id: MonsterId.Bee,
+            navigationRadius: 0.8,
             type: MonsterType.Insect,
             model: Char.CharAniBee,
             stats: baseStatPresets[MonsterId.Bee],
@@ -21,6 +22,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.Zombie, {
             id: MonsterId.Zombie,
+            navigationRadius: 1.2,
             type: MonsterType.Undead,
             model: Char.CharMonZombie,
             drop: [
@@ -32,6 +34,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.DashZombie, {
             id: MonsterId.DashZombie,
+            navigationRadius: 1.2,
             type: MonsterType.Undead,
             model: Char.CharMonZombie,
             drop: [
@@ -43,6 +46,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.Minotaur, {
             id: MonsterId.Minotaur,
+            navigationRadius: 1.8,
             type: MonsterType.Beast,
             model: Char.CharMonMinataur,
             drop: [
@@ -55,6 +59,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.Batpig, {
             id: MonsterId.Batpig,
+            navigationRadius: 1.2,
             type: MonsterType.Beast,
             model: Char.CharMonBatPig,
             drop: [
@@ -66,6 +71,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.Bilby, {
             id: MonsterId.Bilby,
+            navigationRadius: 0.8,
             type: MonsterType.Beast,
             model: Char.CharAniBilby,
             drop: [
@@ -76,6 +82,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.Birdmon, {
             id: MonsterId.Birdmon,
+            navigationRadius: 1.2,
             type: MonsterType.Beast,
             model: Char.CharMonBird,
             drop: [
@@ -86,6 +93,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.Crab, {
             id: MonsterId.Crab,
+            navigationRadius: 1.2,
             type: MonsterType.Beast,
             model: Char.CharMonCrab,
             drop: [
@@ -96,6 +104,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.Builder, {
             id: MonsterId.Builder,
+            navigationRadius: 1.2,
             type: MonsterType.Warrior,
             model: Char.CharHumanBuilder,
             drop: [
@@ -106,6 +115,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.Golem, {
             id: MonsterId.Golem,
+            navigationRadius: 2.2,
             type: MonsterType.Element,
             model: Char.CharMonGolem,
             drop: [
@@ -116,6 +126,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.BigGolem, {
             id: MonsterId.BigGolem,
+            navigationRadius: 3.0,
             type: MonsterType.Element,
             model: Char.CharMonBigGolem,
             drop: [
@@ -126,6 +137,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.KittenMonk, {
             id: MonsterId.KittenMonk,
+            navigationRadius: 1.0,
             type: MonsterType.Beast,
             model: Char.CharMonKittenMonk,
             drop: [
@@ -136,6 +148,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.Skeleton, {
             id: MonsterId.Skeleton,
+            navigationRadius: 1.2,
             type: MonsterType.Undead,
             model: Char.CharMonSkeleton,
             drop: [
@@ -145,6 +158,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.Snake, {
             id: MonsterId.Snake,
+            navigationRadius: 1.2,
             type: MonsterType.Beast,
             model: Char.CharMonSnake,
             drop: [
@@ -154,6 +168,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.ToadMage, {
             id: MonsterId.ToadMage,
+            navigationRadius: 1.2,
             type: MonsterType.Beast,
             model: Char.CharMonToadMage,
             drop: [
@@ -167,6 +182,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.Viking, {
             id: MonsterId.Viking,
+            navigationRadius: 1.2,
             type: MonsterType.Warrior,
             model: Char.CharHumanViking,
             drop: [
@@ -176,6 +192,7 @@ export class MonsterDb {
         })
         this.monDb.set(MonsterId.WereWolf, {
             id: MonsterId.WereWolf,
+            navigationRadius: 1.5,
             type: MonsterType.Beast,
             model: Char.CharMonWereWolf,
             drop: [

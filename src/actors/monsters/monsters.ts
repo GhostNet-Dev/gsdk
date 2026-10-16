@@ -9,6 +9,7 @@ import { DeckType } from "@Glibs/types/inventypes";
 import IEventController from "@Glibs/interface/ievent";
 import { IGPhysic } from "@Glibs/interface/igphysics";
 import { MonsterDb } from "./monsterdb";
+import { DefaultMonsterNavigationRadius } from "./monstertypes";
 import { Loader } from "@Glibs/loader/loader";
 import { Effector } from "@Glibs/magical/effects/effector";
 import { calculateCompositeDamage } from "../battle/damagecalc";
@@ -26,11 +27,14 @@ import { TargetTeamId } from "@Glibs/systems/targeting/targettypes";
 import { FactionId } from "@Glibs/gameobjects/turntypes";
 import { CombatDebugInfo } from "@Glibs/systems/debugger/combatdebugtypes";
 import { TargetPolicyConfig, TargetSelectionPolicy } from "@Glibs/systems/targeting/targetselectionpolicy";
+import { MarchOrder, MonsterAdvancePhase } from "@Glibs/actors/battle/marchorder";
 
 export type MonsterSpawnOptions = {
     respawn?: boolean
     timer?: number
     teamId?: TargetTeamId | FactionId
+    /** 진군 명령. 지정하면 범위 안 적이 없을 때 플레이어 대신 도로/공성 목표로 이동한다. */
+    marchOrder?: MarchOrder
 }
 
 export type MonsterSet = {
@@ -47,7 +51,11 @@ export interface IMonsterCtrl {
     get MonsterBox(): MonsterBox
     get Drop(): MonDrop[] | undefined
     get TargetId(): string
+    /** MonsterBox의 수평 반경(m) */
+    get CollisionRadius(): number
+    get AdvancePhase(): MonsterAdvancePhase | undefined
     Respawning(): void
+    setMarchOrder(order?: MarchOrder): void
     Dispose(): void
     GetDebugInfo(): CombatDebugInfo
     ValidateMeleeAttackTarget(targetId: string, attackRange: number): MeleeValidationResult
@@ -68,6 +76,7 @@ export class MonsterBox extends THREE.Mesh {
 export class Monsters {
     monsters = new Map<MonsterId, MonsterSet[]>()
     private readonly nextMonsterIds = new Map<MonsterId, number>()
+    private readonly navigationRadiusChecked = new Set<MonsterId>()
     keytimeout?:NodeJS.Timeout
     respawntimeout?:NodeJS.Timeout
     mode = false
@@ -246,7 +255,7 @@ export class Monsters {
     }
     async CreateMonster(
         monId: MonsterId,
-        { respawn = false, timer = 5000, teamId = TargetTeamId.Monster }: MonsterSpawnOptions = {},
+        { respawn = false, timer = 5000, teamId = TargetTeamId.Monster, marchOrder }: MonsterSpawnOptions = {},
         pos?: THREE.Vector3,
     ) {
         let set
@@ -255,8 +264,27 @@ export class Monsters {
             set = await this.Resurrection(monId, timer)
         }
         console.log("Create", set, this.monsters.get(monId))
-        return this.Spawning(monId, respawn, set, pos, teamId)
+        return this.Spawning(monId, respawn, set, pos, teamId, marchOrder)
     }
+    /** 스폰 배치·도로 폭 검증용 수평 반경. 정의가 없으면 기본값을 쓴다. */
+    GetNavigationRadius(monId: MonsterId): number {
+        const radius = this.monDb.GetItem(monId)?.navigationRadius
+        return radius !== undefined && radius > 0 ? radius : DefaultMonsterNavigationRadius
+    }
+
+    /** 개발 검증: 정의된 navigationRadius가 누락되었거나 실제 충돌체 반경보다 작으면 몬스터별로 한 번 경고한다. */
+    private validateNavigationRadius(monId: MonsterId, monCtrl: IMonsterCtrl) {
+        if (this.navigationRadiusChecked.has(monId)) return
+        this.navigationRadiusChecked.add(monId)
+        const radius = this.monDb.GetItem(monId)?.navigationRadius
+        const actual = monCtrl.CollisionRadius
+        if (!(radius !== undefined && radius > 0)) {
+            console.warn(`[Monsters] ${monId} navigationRadius is missing (collision radius ${actual.toFixed(2)}m).`)
+        } else if (radius + 0.01 < actual) {
+            console.warn(`[Monsters] ${monId} navigationRadius ${radius}m is smaller than collision radius ${actual.toFixed(2)}m.`)
+        }
+    }
+
     ReleaseMonster() {
         this.monsters.forEach((mon) => {
             mon.forEach((z) => {
@@ -294,6 +322,7 @@ export class Monsters {
         monSet?: MonsterSet,
         pos?: THREE.Vector3,
         teamId: TargetTeamId | FactionId = TargetTeamId.Monster,
+        marchOrder?: MarchOrder,
     ) {
         //const zSet = await this.CreateZombie()
         if (!this.mode) return
@@ -342,6 +371,9 @@ export class Monsters {
         monSet.live = true
         this.mobCount++
         monSet.monCtrl.Respawning()
+        // Respawning()이 이전 명령을 초기화한 뒤 새 명령을 설정한다.
+        monSet.monCtrl.setMarchOrder(marchOrder)
+        this.validateNavigationRadius(monId, monSet.monCtrl)
         monSet.monModel.Meshs.name = monSet.monCtrl.TargetId
         monSet.monModel.Meshs.userData.targetMeta = {
             id: monSet.monCtrl.TargetId,

@@ -10,10 +10,13 @@ import { PlacementManager } from "@Glibs/interactives/placement/placementmanager
 import { collectCircularGridCellKeys, getFootprintGridCellKeys, hasGridCellOverlap } from "@Glibs/interactives/placement/gridrangeutils";
 import { createRadialEnvironmentPattern } from "./radialenvironmentpattern";
 import { packVisibleInstances } from "./instancecullingutils";
+import { CityRoadLayoutDef } from "@Glibs/world/cityroad/cityroadtypes";
+import { resolveGroundRoadFrame } from "@Glibs/world/cityroad/cityroadgeometry";
 import {
     getEnvironmentCollisionCenter,
     getEnvironmentCollisionSize,
     isEnvironmentCollisionEnabled,
+    resolveEnvironmentClearanceRadius,
     StaticColliderKind,
     StaticColliderRegistry,
 } from "./staticcolliderregistry";
@@ -32,10 +35,15 @@ type RadialPathPopulateOptions = {
     density: number,
     threshold: number,
     noiseScale: number,
-    clearingRadius: number,
-    roadCount: number,
-    roadWidth: number,
-    roadAngleOffset?: number,
+    roadLayout: CityRoadLayoutDef,
+}
+
+export type EnvironmentObstacleFootprint = {
+    id: string,
+    nodeId: string,
+    position: THREE.Vector3,
+    width: number,
+    depth: number,
 }
 
 type GroundRadialPathPopulateOptions = Omit<RadialPathPopulateOptions, 'centerX' | 'centerZ' | 'width' | 'depth'>;
@@ -174,20 +182,19 @@ export class EnvironmentManager implements ILoop {
         const prop = environmentDefs[nodeId];
         if (!prop) throw new Error(`Unknown nodeId: ${nodeId}`);
 
-        ground.updateWorldMatrix(true, true);
-        const bounds = new THREE.Box3().setFromObject(ground);
-        if (bounds.isEmpty()) {
+        const frame = resolveGroundRoadFrame(ground);
+        if (!frame) {
             console.warn(`[EnvironmentManager] Ground bounds are empty. Skip populating ${nodeId}.`);
             return;
         }
 
-        const center = bounds.getCenter(new THREE.Vector3());
+        const { center, bounds } = frame;
         const footprintHalfX = prop.size.width * this.gridSize * 0.5;
         const footprintHalfZ = prop.size.depth * this.gridSize * 0.5;
-        const minX = bounds.min.x + footprintHalfX;
-        const maxX = bounds.max.x - footprintHalfX;
-        const minZ = bounds.min.z + footprintHalfZ;
-        const maxZ = bounds.max.z - footprintHalfZ;
+        const minX = bounds.minX + footprintHalfX;
+        const maxX = bounds.maxX - footprintHalfX;
+        const minZ = bounds.minZ + footprintHalfZ;
+        const maxZ = bounds.maxZ - footprintHalfZ;
 
         if (minX > maxX || minZ > maxZ) {
             console.warn(`[EnvironmentManager] Ground is too small for ${nodeId} footprints.`);
@@ -219,10 +226,8 @@ export class EnvironmentManager implements ILoop {
             density: options.density,
             threshold: options.threshold,
             noiseScale: options.noiseScale,
-            clearingRadius: options.clearingRadius,
-            roadCount: options.roadCount,
-            roadWidth: options.roadWidth,
-            roadAngleOffset: options.roadAngleOffset,
+            roadLayout: options.roadLayout,
+            clearanceRadius: resolveEnvironmentClearanceRadius(prop, this.gridSize),
             noise: this.noise,
             occupied: occupiedKeys,
         });
@@ -246,10 +251,7 @@ export class EnvironmentManager implements ILoop {
             density,
             threshold,
             noiseScale,
-            clearingRadius,
-            roadCount,
-            roadWidth,
-            roadAngleOffset = -Math.PI / 2,
+            roadLayout,
         } = options;
         const startX = centerX - width / 2;
         const startZ = centerZ - depth / 2;
@@ -279,10 +281,8 @@ export class EnvironmentManager implements ILoop {
             density,
             threshold,
             noiseScale,
-            clearingRadius,
-            roadCount,
-            roadWidth,
-            roadAngleOffset,
+            roadLayout,
+            clearanceRadius: resolveEnvironmentClearanceRadius(prop, this.gridSize),
             noise: this.noise,
             occupied: occupiedKeys,
         });
@@ -733,6 +733,59 @@ export class EnvironmentManager implements ILoop {
         for (const envObj of this.envObjectsArray) {
             if (envObj.mesh) envObj.mesh.parent?.remove(envObj.mesh);
         }
+    }
+
+    /** 고갈되지 않은 환경 장애물의 footprint 복사본. NavGrid 숲 장애물 등록에 쓴다. */
+    getActiveObstacleFootprints(): EnvironmentObstacleFootprint[] {
+        const footprints: EnvironmentObstacleFootprint[] = [];
+        for (const envObj of this.envObjectsArray) {
+            if (envObj.isDepleted) continue;
+            footprints.push({
+                id: envObj.id,
+                nodeId: envObj.property.id,
+                position: envObj.position.clone(),
+                width: envObj.property.size.width,
+                depth: envObj.property.size.depth,
+            });
+        }
+        return footprints;
+    }
+
+    /**
+     * 이 매니저가 등록한 렌더 오브젝트, 물리 콜라이더, 루프, placement footprint와 내부 인덱스를 모두 정리한다.
+     * dispose 후에는 새 EnvironmentManager를 만들어야 한다.
+     */
+    dispose(): void {
+        this.detachFromScene();
+        for (const envObj of this.envObjectsArray) {
+            PlacementManager.Instance.unregisterFootprint(envObj.id);
+        }
+        for (const meshes of this.instancedMeshes.values()) {
+            for (const mesh of meshes) {
+                mesh.geometry.dispose();
+                const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+                materials.forEach((material) => material.dispose());
+                mesh.dispose();
+            }
+        }
+
+        this.envObjects.clear();
+        this.envObjectsArray = [];
+        this.instancedMeshes.clear();
+        this.baseMatrices.clear();
+        this.nextInstanceIndex.clear();
+        this.instanceIndexMap.clear();
+        this.instanceCullRadius.clear();
+        this.clusters.clear();
+        this._clusterVisibility.clear();
+        this._renderSlotToLogical.clear();
+        this._logicalToRenderSlot.clear();
+        this._visibleCount.clear();
+        this._spatialGrid.clear();
+        this._dirtyNodes.clear();
+
+        if (EnvironmentManager._instance === this) EnvironmentManager._instance = null;
+        this.sendEnvironmentStatus();
     }
 
     attachToScene(scene: THREE.Scene): void {

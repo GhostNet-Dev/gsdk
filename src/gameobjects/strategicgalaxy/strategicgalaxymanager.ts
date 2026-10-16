@@ -27,12 +27,15 @@ import { updateMarketFromCityOutputs } from "./trademarket";
 import { strategicRouteDefs } from "./strategicgalaxydefs";
 import { DefaultStrategicGalaxySelectedPlanetId, galaxyPlanetVisualDefs } from "./strategicgalaxymapdefs";
 import { GalaxyCityKind, GalaxyCityViewModel, GalaxyPlanetAssetKey, GalaxyPlanetCommandKind } from "@Glibs/world/galaxy/galaxytypes";
+import { CityRoadLayoutId } from "@Glibs/world/cityroad/cityroadtypes";
+import { resolveCityRoadLayoutId } from "@Glibs/world/cityroad/cityroadresolver";
 
 export interface StrategicPlayerCityPlacement {
   id: string;
   name: string;
   planetId: StrategicPlanetId;
   factionId: FactionId;
+  roadLayoutId: CityRoadLayoutId;
 }
 
 const FACTION_LABELS: Record<FactionId, string> = {
@@ -194,6 +197,7 @@ export class StrategicGalaxyManager implements ITurnParticipant {
       name: player.name,
       planetId,
       factionId: player.factionId,
+      roadLayoutId: player.roadLayoutId ?? this.resolvePlayerCityRoadLayoutId(planetId),
     };
   }
 
@@ -218,6 +222,7 @@ export class StrategicGalaxyManager implements ITurnParticipant {
       kindLabel: CITY_KIND_LABELS[GalaxyCityKind.Player],
       factionLabel: FACTION_LABELS[factionId],
       description: "플레이어가 직접 건설하고 운영하는 시작 도시입니다.",
+      roadLayoutId: this.resolvePlayerCityRoadLayoutId(parsedPlanetId),
     });
     this.syncCityIdsFromPlacements();
     this.emitGalaxyViewModel();
@@ -460,7 +465,17 @@ export class StrategicGalaxyManager implements ITurnParticipant {
       cityDefId: seed.cityDefId,
       score,
       description: def.desc,
+      roadLayoutId: resolveCityRoadLayoutId({
+        planetDef: this.planetDefs.get(seed.planetId),
+        placementDef: this.planetDefs.get(seed.planetId)?.cityPlacements?.find((item) => item.id === seed.id),
+        cityDef: def,
+        isPlayerCity: false,
+      }),
     };
+  }
+
+  private resolvePlayerCityRoadLayoutId(planetId: StrategicPlanetId): CityRoadLayoutId {
+    return resolveCityRoadLayoutId({ planetDef: this.planetDefs.get(planetId), isPlayerCity: true });
   }
 
   private registerDefinedCityPlacements(): void {
@@ -498,6 +513,7 @@ export class StrategicGalaxyManager implements ITurnParticipant {
         kindLabel: CITY_KIND_LABELS[kind],
         factionLabel: FACTION_LABELS[factionId],
         description: "플레이어가 직접 건설하고 운영하는 시작 도시입니다.",
+        roadLayoutId: this.resolvePlayerCityRoadLayoutId(parsedPlanetId),
       });
       return;
     }
