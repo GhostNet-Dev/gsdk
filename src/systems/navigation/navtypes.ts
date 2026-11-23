@@ -39,6 +39,12 @@ export type NavGridObstacleCellMask = {
   isWalkableAt(worldX: number, worldZ: number): boolean;
 }
 
+/**
+ * grid 하나를 구축한 주체를 가리키는 불투명 값. build()마다 새로 발급된다.
+ * Version과 달리 unblockObstacle()(BuildingDestroyed)로 바뀌지 않는다.
+ */
+export type NavGridOwnerToken = { readonly id: number } & { readonly __brand: "NavGridOwnerToken" };
+
 export type NavGridBuildOptions = {
   center: THREE.Vector3;
   radius: number;
@@ -69,7 +75,11 @@ export type NavPathResult = {
 export interface INavGridService {
   readonly Version: number;
   readonly IsReady: boolean;
-  build(options: NavGridBuildOptions): void;
+  /** grid를 구축하고 이 grid의 owner token을 반환한다. */
+  build(options: NavGridBuildOptions): NavGridOwnerToken;
+  /** token이 현재 grid의 owner일 때만 clear하고 true를 반환한다. */
+  clearIfOwner(token: NavGridOwnerToken): boolean;
+  /** owner와 무관하게 정리한다. 전투 State는 clearIfOwner를 사용한다. */
   clear(): void;
   findPath(request: NavPathRequest): NavPathResult;
   /** 월드 지점까지의 경로. 진군 명령의 공성 접근처럼 타겟 레코드가 아닌 목표에 쓴다. */

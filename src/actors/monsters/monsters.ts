@@ -45,6 +45,8 @@ export type MonsterSet = {
     deadtime: number
     initPos?: THREE.Vector3
     attackListener?: (opts: AttackOption[]) => void
+    /** pool 밖에서 완전히 정리됨(ReleaseMonster 또는 고아 set의 ReleaseMonsterSet) */
+    disposed?: boolean
 }
 export interface IMonsterCtrl {
     get Spec(): BaseSpec
@@ -285,27 +287,69 @@ export class Monsters {
         }
     }
 
+    /**
+     * set 하나를 정리한다.
+     * - 이 Monsters pool에 있는 set: pool로 반환한다. 사망한 set과 같은 비활성 상태가 되며 다음 Resurrection에서 즉시 재사용된다.
+     *   재사용 시 Spawning()이 teamId와 marchOrder를 다시 설정하므로 이전 전투 값은 남지 않는다.
+     * - pool에 없는 set(생성 중 ReleaseMonster로 pool이 비워진 뒤 도착한 set): 완전히 dispose한다.
+     * 이미 죽었거나 반환·정리된 set은 무시하고 false를 반환한다. Drop·Death 이벤트는 보내지 않는다.
+     */
+    ReleaseMonsterSet(set: MonsterSet): boolean {
+        if (set.disposed || !set.live) return false
+        const list = this.monsters.get(set.monCtrl.MonsterBox.MonId)
+        if (!list || list[set.monCtrl.MonsterBox.Id] !== set) {
+            // 고아 set도 Spawning()에서 mobCount를 올렸다.
+            this.mobCount = Math.max(0, this.mobCount - 1)
+            this.disposeMonsterSet(set)
+            return true
+        }
+
+        set.live = false
+        set.respawn = false
+        set.deadtime = 0
+        this.mobCount = Math.max(0, this.mobCount - 1)
+        set.monCtrl.setMarchOrder(undefined)
+        this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, set.monCtrl.MonsterBox)
+        this.eventCtrl.SendEventMessage(EventTypes.UpdateTargetState, {
+            id: set.monCtrl.TargetId,
+            alive: false,
+            targetable: false,
+            collidable: false,
+        })
+        set.monModel.Visible = false
+        this.removeFromScene(set)
+        return true
+    }
+
+    private removeFromScene(z: MonsterSet) {
+        if (z.monModel.Meshs.parent) {
+            this.game.remove(z.monModel.Meshs)
+        }
+        if (z.monCtrl.MonsterBox.parent) {
+            this.game.remove(z.monCtrl.MonsterBox)
+        }
+    }
+
+    private disposeMonsterSet(z: MonsterSet) {
+        if (z.disposed) return
+        if (z.live) {
+            this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, z.monCtrl.MonsterBox)
+        }
+        z.disposed = true
+        z.monModel.Visible = false
+        z.live = false
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterTarget, z.monCtrl.TargetId)
+        if (z.attackListener) {
+            this.eventCtrl.DeregisterEventListener(EventTypes.Attack + z.monCtrl.TargetId, z.attackListener)
+            z.attackListener = undefined
+        }
+        z.monCtrl.Dispose()
+        this.removeFromScene(z)
+    }
+
     ReleaseMonster() {
         this.monsters.forEach((mon) => {
-            mon.forEach((z) => {
-                if (z.live) {
-                    this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, z.monCtrl.MonsterBox)
-                }
-                z.monModel.Visible = false
-                z.live = false
-                this.eventCtrl.SendEventMessage(EventTypes.DeregisterTarget, z.monCtrl.TargetId)
-                if (z.attackListener) {
-                    this.eventCtrl.DeregisterEventListener(EventTypes.Attack + z.monCtrl.TargetId, z.attackListener)
-                    z.attackListener = undefined
-                }
-                z.monCtrl.Dispose()
-                if (z.monModel.Meshs.parent) {
-                    this.game.remove(z.monModel.Meshs)
-                }
-                if (z.monCtrl.MonsterBox.parent) {
-                    this.game.remove(z.monCtrl.MonsterBox)
-                }
-            })
+            mon.forEach((z) => this.disposeMonsterSet(z))
             console.log("Release", mon)
         })
         this.monsters.clear()

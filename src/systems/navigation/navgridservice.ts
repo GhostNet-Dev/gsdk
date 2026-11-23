@@ -9,6 +9,7 @@ import {
   NavGridCell,
   NavGridObstacle,
   NavGridObstacleCellMask,
+  NavGridOwnerToken,
   NavObstacleSource,
   NavPathRequest,
   NavPathResult,
@@ -32,6 +33,8 @@ const SURFACE_EPSILON = 0.001;
 export class NavGridService implements INavGridService {
   private version = 0;
   private ready = false;
+  private ownerSeq = 0;
+  private owner?: NavGridOwnerToken;
   private gridSize = 4;
   private minX = 0;
   private maxX = 0;
@@ -72,7 +75,7 @@ export class NavGridService implements INavGridService {
   get Version() { return this.version; }
   get IsReady() { return this.ready; }
 
-  build(options: NavGridBuildOptions): void {
+  build(options: NavGridBuildOptions): NavGridOwnerToken {
     this.gridSize = options.gridSize;
     this.center.copy(options.center);
     this.radius = options.radius;
@@ -97,9 +100,19 @@ export class NavGridService implements INavGridService {
     this.ready = true;
     this.version++;
     this.warnedFailures.clear();
+    const token = { id: ++this.ownerSeq } as NavGridOwnerToken;
+    this.owner = token;
+    return token;
+  }
+
+  clearIfOwner(token: NavGridOwnerToken): boolean {
+    if (!this.owner || this.owner.id !== token.id) return false;
+    this.clear();
+    return true;
   }
 
   clear(): void {
+    this.owner = undefined;
     this.ready = false;
     this.blockedBySource.clear();
     this.heightProvider = undefined;

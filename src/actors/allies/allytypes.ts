@@ -28,6 +28,8 @@ export type AllySet = {
     deadtime: number
     initPos?: THREE.Vector3
     attackListener?: (opts: AttackOption[]) => void
+    /** ReleaseAllySet()으로 개별 정리됨. 슬롯 index를 유지하려고 목록에는 남긴다. */
+    released?: boolean
 }
 
 export type AllySpawnSpec = {

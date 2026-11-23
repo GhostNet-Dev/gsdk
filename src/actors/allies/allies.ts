@@ -136,9 +136,49 @@ export class Allies {
         return allySet
     }
 
+    /**
+     * set 하나를 완전히 정리한다(target·interactive·attack listener·scene 제거, Dispose).
+     * Allies는 set을 재사용하지 않으므로 pool 반환이 아니라 dispose다. 목록 슬롯은 index 유지를 위해 남긴다.
+     * 이미 정리된 set, 이 Allies가 관리하지 않는 set은 무시하고 false를 반환한다.
+     */
+    ReleaseAllySet(set: AllySet): boolean {
+        if (set.released) return false
+        const list = this.allies.get(set.allyCtrl.AllyBox.AllyId)
+        if (!list || !list.includes(set)) return false
+        this.disposeAllySet(set)
+        return true
+    }
+
+    private disposeAllySet(z: AllySet): void {
+        if (z.released) return
+        if (z.live) {
+            this.allyCount = Math.max(0, this.allyCount - 1)
+            this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, z.allyCtrl.AllyBox)
+        }
+        z.released = true
+        z.allyModel.Visible = false
+        z.live = false
+        this.eventCtrl.SendEventMessage(EventTypes.DeregisterTarget, z.allyCtrl.TargetId)
+        if (z.attackListener) {
+            this.eventCtrl.DeregisterEventListener(
+                EventTypes.Attack + z.allyCtrl.TargetId,
+                z.attackListener
+            )
+            z.attackListener = undefined
+        }
+        z.allyCtrl.Dispose()
+        if (z.allyModel.Meshs.parent) {
+            this.game.remove(z.allyModel.Meshs)
+        }
+        if (z.allyCtrl.AllyBox.parent) {
+            this.game.remove(z.allyCtrl.AllyBox)
+        }
+    }
+
     Release(): void {
         this.allies.forEach((list) => {
             list.forEach((z) => {
+                if (z.released) return
                 if (z.live) {
                     this.eventCtrl.SendEventMessage(EventTypes.DelInteractive, z.allyCtrl.AllyBox)
                 }
