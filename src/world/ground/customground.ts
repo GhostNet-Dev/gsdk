@@ -10,6 +10,15 @@ import { BuildingProperty, buildingDefs } from '../../interactives/building/buil
 import { PlacementManager } from '../../interactives/placement/placementmanager';
 import { BuildRequirementValidator, validateBuildRequirements } from '../../interactives/building/buildrequirementvalidator';
 import { collectCircularGridCells, gridCellCenter, gridCellKey } from '../../interactives/placement/gridrangeutils';
+import { GroundPalette } from './groundpalette';
+
+// blendMap 텍스처는 SRGBColorSpace로 샘플링되므로 바이트에는 sRGB 값을 기록해야 한다.
+// (THREE.Color 내부 r/g/b는 선형 값이라 그대로 *255 하면 이중 변환되어 어둡고 짙어짐)
+const _srgbTmp = { r: 0, g: 0, b: 0 };
+function toSRGB8(c: THREE.Color): [number, number, number] {
+  c.getRGB(_srgbTmp, THREE.SRGBColorSpace);
+  return [Math.round(_srgbTmp.r * 255), Math.round(_srgbTmp.g * 255), Math.round(_srgbTmp.b * 255)];
+}
 
 /* ----------------------------- Helpers ----------------------------- */
 function toU8(a: Uint8Array | Uint8ClampedArray): Uint8Array {
@@ -91,7 +100,7 @@ export interface PatternBandSplatOptions {
   warpFreq?: number;          // default 0.08
 
   /** ‘풀 구멍’ 채우기에 쓸 풀 색상(원본을 저장 안 하는 구조라서 필요) */
-  grassFallback?: THREE.Color;  // default new Color(0xA6C954)
+  grassFallback?: THREE.Color;  // default new Color(GroundPalette.Grass)
 }
 
 /* ============================ Class ============================ */
@@ -153,7 +162,7 @@ export default class CustomGround implements IWorldMapObject {
   private mouse = new THREE.Vector2();
   private lastWidth = 1;
   private lastDepth = 1;
-  private lastColor = new THREE.Color(0xBAD98A);
+  private lastColor = new THREE.Color(GroundPalette.Grass);
   private loader = new Loader();
 
   private lastNodeId?: string;
@@ -587,7 +596,7 @@ export default class CustomGround implements IWorldMapObject {
    * planeSize(legacy) 사용 시 정사각형으로 간주하여 planeWidth/Height 및 segments를 동일 값으로 설정합니다.
    */
   Create({
-    color = new THREE.Color(0xBAD98A),
+    color = new THREE.Color(GroundPalette.Grass),
     width, height,                      // blendMap 픽셀 해상도 (선택)
     planeWidth = 256 * 1.5, planeHeight = 256 * 3,            // 지오메트리 월드 크기
     segmentsX = 256 * 1.5, segmentsZ = 256 * 3,               // 세그먼트
@@ -634,7 +643,7 @@ export default class CustomGround implements IWorldMapObject {
 
     // --- 텍스처 초기화 ---
     this.blendMapData = new Uint8Array(4 * this.blendMapSize);
-    const r = (color.r * 255) | 0, g = (color.g * 255) | 0, b = (color.b * 255) | 0;
+    const [r, g, b] = toSRGB8(color);
     for (let i = 0; i < this.blendMapData.length;) {
       this.blendMapData[i++] = r;
       this.blendMapData[i++] = g;
@@ -818,10 +827,11 @@ export default class CustomGround implements IWorldMapObject {
     const x = (u * this.width) | 0;
     const y = (v * this.height) | 0;
     const i = (y * this.width + x) * 4;
-    return new THREE.Color(
+    return new THREE.Color().setRGB(
       this.blendMapData[i] / 255,
       this.blendMapData[i + 1] / 255,
-      this.blendMapData[i + 2] / 255
+      this.blendMapData[i + 2] / 255,
+      THREE.SRGBColorSpace
     );
   }
 
@@ -890,7 +900,7 @@ export default class CustomGround implements IWorldMapObject {
   ClickColor(uv: THREE.Vector2, color: THREE.Color) {
     const cx = Math.floor(uv.x * this.width);
     const cy = Math.floor(uv.y * this.height);
-    const r = (color.r * 255) | 0, g = (color.g * 255) | 0, b = (color.b * 255) | 0;
+    const [r, g, b] = toSRGB8(color);
     for (let y = -this.radius; y <= this.radius; y++) {
       for (let x = -this.radius; x <= this.radius; x++) {
         const tx = cx + x, ty = cy + y;
@@ -988,8 +998,8 @@ export default class CustomGround implements IWorldMapObject {
       profilePower = 1.0,
 
       colorMode = 'sandToGrass',
-      sandColor = new THREE.Color(0xE5D2B0),
-      grassColor = new THREE.Color(0xBAD98A),
+      sandColor = new THREE.Color(GroundPalette.Sand),
+      grassColor = new THREE.Color(GroundPalette.Grass),
       colorNoiseAmp = 0.12,
     } = opts;
 
@@ -1064,8 +1074,8 @@ export default class CustomGround implements IWorldMapObject {
 
     /* -------------------- 2) 색상(블렌드맵) -------------------- */
     if (colorMode !== 'none' && this.blendMapData) {
-      const sr = Math.round(sandColor.r * 255), sg = Math.round(sandColor.g * 255), sb = Math.round(sandColor.b * 255);
-      const gr = Math.round(grassColor.r * 255), gg = Math.round(grassColor.g * 255), gb = Math.round(grassColor.b * 255);
+      const [sr, sg, sb] = toSRGB8(sandColor);
+      const [gr, gg, gb] = toSRGB8(grassColor);
 
       const applyPixel = (xi: number, yi: number, wSand: number) => {
         const idx = (yi * this.width + xi) * 4;
@@ -1153,7 +1163,7 @@ export default class CustomGround implements IWorldMapObject {
       rotateMaxDeg = 360,
       warpAmpPx = 4,
       warpFreq = 0.08,
-      grassFallback = new THREE.Color(0xA6C954),
+      grassFallback = new THREE.Color(GroundPalette.Grass),
     } = opts;
 
     const clamp01 = (v:number)=>Math.max(0,Math.min(1,v));
@@ -1266,7 +1276,7 @@ export default class CustomGround implements IWorldMapObject {
 
     const irr = splatIrregularity;
     const cos = Math.cos, sin = Math.sin;
-    const gR = (c:THREE.Color)=>[Math.round(c.r*255), Math.round(c.g*255), Math.round(c.b*255)] as [number,number,number];
+    const gR = toSRGB8;
     const [grR,grG,grB] = gR(grassFallback);
 
     for (const s of seeds){

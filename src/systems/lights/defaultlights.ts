@@ -8,21 +8,21 @@ import { LoopType } from '../event/canvas';
 export default class DefaultLights extends THREE.DirectionalLight implements ILoop {
     LoopId: number = 0;
     private player?: IPhysicsObject
-    // 파스텔 하늘(복숭아), 파스텔 땅(크림) → 전체를 따뜻하게 감싸는 환경광
-    hemi = new THREE.HemisphereLight(0xffd6b0, 0xfff0d6, 1.2);
-    // 밝은 크림-화이트 기저 앰비언트
-    ambient = new THREE.AmbientLight(0xfff5e8, 1.4);
-    // 반대편 소프트 라벤더-핑크 필라이트 (그림자 없음)
-    fill = new THREE.DirectionalLight(0xffd6e8, 0.45);
-    // 측면 파스텔 피치 보조광
-    rimLight = new THREE.DirectionalLight(0xffe0b0, 0.35);
+    // 중립 하늘광과 옅은 지면 반사광으로 재질의 고유색을 유지한다.
+    hemi = new THREE.HemisphereLight(0xffffff, 0xe1e9d3, 0.5);
+    // 중립 화이트 기저 앰비언트
+    ambient = new THREE.AmbientLight(0xffffff, 0.3);
+    // 중립 보조광으로 그림자를 밝히되 색상을 바꾸지 않는다.
+    fill = new THREE.DirectionalLight(0xffffff, 0.2);
+    // 약한 온기의 측면 보조광
+    rimLight = new THREE.DirectionalLight(0xfff8ed, 0.15);
     lightOffset = new THREE.Vector3(12, 20, 8);
     constructor(
         private scene: THREE.Scene,
         private eventCtrl: IEventController,
     ) {
-        // 따뜻한 파스텔 황금빛 태양
-        super(0xffcf8a, 1.3)
+        // 살짝 따뜻한 거의-흰색 태양 (흰색이 누렇게 물들지 않도록)
+        super(0xfff8ed, 1.8)
 
         this.hemi.position.set(0, 80, 0);
 
@@ -44,7 +44,7 @@ export default class DefaultLights extends THREE.DirectionalLight implements ILo
         sun.shadow.bias = -0.0004;
         sun.shadow.normalBias = 0.03;
 
-        // 라벤더-핑크 필라이트 (좌측 후방)
+        // 중립 필라이트 (좌측 후방)
         this.fill.position.set(-10, 10, -6);
         this.fill.castShadow = false;
 

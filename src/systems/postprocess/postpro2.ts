@@ -4,6 +4,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass'
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass'
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass'
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass'
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass'
 import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader'
 import IEventController from '@Glibs/interface/ievent'
@@ -18,124 +19,24 @@ export interface IPostPro {
 
 const BLOOM_LAYER = 1
 
-// -------------------- Pastel Color Grade Shader (linear-space) --------------------
-const PastelColorGradeShader = {
-    uniforms: {
-        tDiffuse: { value: null },   // input (linear)
-        saturation: { value: 0.90 },   // < 1.0 → 살짝 탈채
-        contrast: { value: 0.95 },   // < 1.0 → 소프트 콘트라스트
-        lift: { value: 0.04 },   // 그림자 올리기 (파스텔 밝음)
-        gammaVal: { value: 1.10 },   // 감마 >1 → 중간톤 완화
-        gain: { value: 0.95 },   // 하이라이트 살짝 내리기
-        warmth: { value: 0.03 },   // +R, -B
-        highlightDesat: { value: 0.35 },   // 밝을수록 채도 감소
-        tint: { value: new THREE.Vector3(1.00, 0.85, 0.80) }, // 살구빛
-        tintAmount: { value: 0.12 }    // 틴트 가중
-    },
-    vertexShader: `
-    varying vec2 vUv;
-    void main(){
-      vUv = uv;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-    }
-  `,
-    fragmentShader: `
-    precision mediump float;
-    varying vec2 vUv;
-    uniform sampler2D tDiffuse;
-
-    uniform float saturation;
-    uniform float contrast;
-    uniform float lift;
-    uniform float gammaVal;
-    uniform float gain;
-    uniform float warmth;
-    uniform float highlightDesat;
-    uniform vec3  tint;
-    uniform float tintAmount;
-
-    // Rec.709 luma
-    float luma(vec3 c){ return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
-
-    vec3 applySaturation(vec3 c, float s){
-      float g = luma(c);
-      return mix(vec3(g), c, s);
-    }
-
-    vec3 applyContrast(vec3 c, float k){
-      // 소프트 콘트라스트: 회색(0.5) 기준
-      return mix(vec3(0.5), c, k);
-    }
-
-    vec3 liftGammaGain(vec3 c, float l, float g, float gn){
-      // lift: +, gamma: pow, gain: *
-      c = c + l;
-      c = pow(max(c, 0.0), vec3(1.0 / g));
-      c = c * gn;
-      return c;
-    }
-
-    vec3 applyWarmth(vec3 c, float w){
-      // 간단한 화이트밸런스: +R, -B
-      c.r += w;
-      c.b -= w;
-      return max(c, 0.0);
-    }
-
-    vec3 highlightDesaturate(vec3 c, float amount){
-      float g = luma(c);
-      // 밝을수록 더 많이 탈채 (곡선: g^2)
-      float f = clamp(g*g * amount, 0.0, 1.0);
-      return mix(c, vec3(g), f);
-    }
-
-    void main(){
-      vec3 col = texture2D(tDiffuse, vUv).rgb; // linear
-
-      // 1) 소프트 콘트라스트 & 리프트/감마/게인
-      col = applyContrast(col, contrast);
-      col = liftGammaGain(col, lift, gammaVal, gain);
-
-      // 2) 살짝 웜톤
-      col = applyWarmth(col, warmth);
-
-      // 3) 전체 채도 약간 감소
-      col = applySaturation(col, saturation);
-
-      // 4) 하이라이트 탈채
-      col = highlightDesaturate(col, highlightDesat);
-
-      // 5) 파스텔 틴트 섞기
-      col = mix(col, tint, tintAmount);
-
-      gl_FragColor = vec4(max(col, 0.0), 1.0); // 인코딩/톤매핑은 renderer에서
-    }
-  `
-}
-
-// -----------------------------------------------------------------------------
-
 export class Postpro2 implements IPostPro {
     private renderScene = new RenderPass(this.scene, this.camera)
 
     // Bloom: 번짐 완화 & 부드러운 확산
     private bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        1.1,  // strength ↓
-        0.55, // radius ↑
-        0.30  // threshold ↑
+        0.45, // strength
+        0.4,  // radius
+        0.8   // threshold
     )
 
     private bloomComposer: EffectComposer
     private finalComposer: EffectComposer
     private _finalPass!: ShaderPass
-    private _pastelPass!: ShaderPass
 
     // AA
     private _useSMAA: boolean
-    private _smaa1?: SMAAPass
     private _smaa2?: SMAAPass
-    private _fxaa1?: ShaderPass
     private _fxaa2?: ShaderPass
 
     // outline & occlusion
@@ -154,9 +55,10 @@ export class Postpro2 implements IPostPro {
         private renderer: THREE.WebGLRenderer,
         eventCtrl: IEventController
     ) {
-        // ── Renderer: Neutral + 낮은 노출 (과한 웜톤 억제)
-        this.renderer.toneMapping = THREE.ReinhardToneMapping
-        this.renderer.toneMappingExposure = 1.1
+        // ── Renderer: 톤매핑/sRGB 변환은 OutputPass에서 이 설정을 읽어 적용한다.
+        //    원색을 섞거나 탈채하지 않고 노출만 적용한다.
+        this.renderer.toneMapping = THREE.LinearToneMapping
+        this.renderer.toneMappingExposure = 1.0
         this.renderer.outputColorSpace = THREE.SRGBColorSpace
 
         const w = window.innerWidth, h = window.innerHeight
@@ -183,8 +85,7 @@ export class Postpro2 implements IPostPro {
             uniforms: {
                 postBaseTexture: { value: null },
                 postBloomTexture: { value: null },
-                useScreenBlend: { value: 1 },   // 0=ADD, 1=SCREEN
-                bloomGain: { value: 0.85 } // 살짝 억제
+                bloomGain: { value: 0.6 }
             },
             vertexShader: `
         varying vec2 vUv;
@@ -194,22 +95,16 @@ export class Postpro2 implements IPostPro {
         }
       `,
             fragmentShader: `
-        precision mediump float;
+        precision highp float;
         varying vec2 vUv;
         uniform sampler2D postBaseTexture;   // linear
         uniform sampler2D postBloomTexture;  // linear
-        uniform int   useScreenBlend;
         uniform float bloomGain;
 
-        vec3 screenBlend(vec3 a, vec3 b){
-          return 1.0 - (1.0 - a) * (1.0 - b);
-        }
-
         void main(){
-          vec3 base  = texture2D(postBaseTexture,  vUv).rgb;
-          vec3 bloom = texture2D(postBloomTexture, vUv).rgb * bloomGain;
-          vec3 outc  = (useScreenBlend == 1) ? screenBlend(base, bloom) : (base + bloom);
-          gl_FragColor = vec4(outc, 1.0);
+          vec4 base = texture2D(postBaseTexture, vUv);
+          vec3 bloom = texture2D(postBloomTexture, vUv).rgb;
+          gl_FragColor = vec4(base.rgb + bloom * bloomGain, base.a);
         }
       `
         })
@@ -237,36 +132,17 @@ export class Postpro2 implements IPostPro {
         this.outlinePass.selectedObjects = []
         this.finalComposer.addPass(this.outlinePass)
 
-        // ── Pastel Color Grade Pass (outline까지 포함한 뒤 적용)
-        this._pastelPass = new ShaderPass(PastelColorGradeShader as any)
-        // 필요시 초깃값 조정: this._pastelPass.uniforms.saturation.value = 0.88;
-        const pastel = this._pastelPass.uniforms;
-        pastel.saturation.value = 0.94;
-        pastel.contrast.value = 1.0;
-        pastel.lift.value = 0.02;
-        pastel.gammaVal.value = 1.04;
-        pastel.gain.value = 0.98;
-        pastel.warmth.value = 0.07;  // 웜톤 강화 (R↑ B↓)
-        pastel.highlightDesat.value = 0.18;
-        pastel.tint.value.set(1.00, 0.86, 0.78); // 살구-오렌지 틴트
-        pastel.tintAmount.value = 0.10;  // 틴트 강도 증가
-        this.finalComposer.addPass(this._pastelPass)
+        // ── 출력 변환: 톤매핑 + linear→sRGB (EffectComposer 경로에서는 renderer가 자동 적용하지 않음)
+        //    AA(FXAA/SMAA)는 sRGB 입력을 전제로 하므로 그 앞에 둔다.
+        this.finalComposer.addPass(new OutputPass())
 
         // ── AA
         if (this._useSMAA) {
-            this._smaa1 = new SMAAPass(w, h)
             this._smaa2 = new SMAAPass(w, h)
-            this.bloomComposer.addPass(this._smaa1)
             this.finalComposer.addPass(this._smaa2) // AA는 항상 제일 마지막
         } else {
-            const makeFXAA = () => {
-                const fx = new ShaderPass(FXAAShader)
-                fx.uniforms['resolution'].value.set(1 / (w * pr), 1 / (h * pr))
-                return fx
-            }
-            this._fxaa1 = makeFXAA()
-            this._fxaa2 = makeFXAA()
-            this.bloomComposer.addPass(this._fxaa1)
+            this._fxaa2 = new ShaderPass(FXAAShader)
+            this._fxaa2.uniforms['resolution'].value.set(1 / (w * pr), 1 / (h * pr))
             this.finalComposer.addPass(this._fxaa2)
         }
 
@@ -329,9 +205,8 @@ export class Postpro2 implements IPostPro {
         this.outlinePass.setSize(w, h)
         this.bloomComposer.setPixelRatio(this._useSMAA ? 1 : pr)
         this.finalComposer.setPixelRatio(this._useSMAA ? 1 : pr)
-        if (this._useSMAA) { this._smaa1?.setSize(w, h); this._smaa2?.setSize(w, h) }
+        if (this._useSMAA) { this._smaa2?.setSize(w, h) }
         else {
-            this._fxaa1?.uniforms['resolution'].value.set(1 / (w * pr), 1 / (h * pr))
             this._fxaa2?.uniforms['resolution'].value.set(1 / (w * pr), 1 / (h * pr))
         }
     }
@@ -354,7 +229,7 @@ export class Postpro2 implements IPostPro {
         (this.renderScene as any).scene = prevScene;
         this.scene.background = prevBg;
 
-        // 최종 합성 + 아웃라인 + 파스텔 그레이딩 + AA
+        // 최종 합성 + 아웃라인 + 출력 변환 + AA
         this.camera.layers.set(0);
         this.camera.layers.enable(BLOOM_LAYER);
         this.updateOutlineSelection();
@@ -381,7 +256,7 @@ export class Postpro2 implements IPostPro {
 
     // ---------- Internal: bloom helpers ----------
     private _getBloomTexture(): THREE.Texture {
-        const c: any = this.bloomComposer
-        return c.readBuffer?.texture || c.renderTarget2?.texture || c.writeBuffer?.texture
+        // Three.js r160: 원본 영상이 합쳐지기 전의 블룸 텍스처만 사용한다.
+        return this.bloomPass.renderTargetsHorizontal[0].texture
     }
 }

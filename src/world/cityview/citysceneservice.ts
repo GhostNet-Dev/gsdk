@@ -23,6 +23,7 @@ import { Char } from "@Glibs/loader/assettypes";
 import { CurrencyType } from "@Glibs/inventory/wallet";
 import { CitySceneSelection } from "@Glibs/systems/gamecenter/cityscenesessionstore";
 import { mulberry32, seedFromCityId } from "@Glibs/helper/seededrandom";
+import { GroundPalette } from "@Glibs/world/ground/groundpalette";
 import {
   CityGroundTheme,
   NpcEnvironmentNodeId,
@@ -58,10 +59,10 @@ const FACTION_LABELS: Record<FactionId, string> = {
 };
 
 const PROFILE_THEME_COLORS: Record<StrategicPlanetProfileId, number> = {
-  [StrategicPlanetProfileId.Gateworld]: 0xb8cda1,
+  [StrategicPlanetProfileId.Gateworld]: GroundPalette.Grass,
   [StrategicPlanetProfileId.Industrial]: 0x7b7f85,
   [StrategicPlanetProfileId.IceMoon]: 0xd7e7f4,
-  [StrategicPlanetProfileId.Biosphere]: 0x97c26b,
+  [StrategicPlanetProfileId.Biosphere]: 0x529738,
   [StrategicPlanetProfileId.Frontier]: 0xc0a26d,
   [StrategicPlanetProfileId.GasFrontier]: 0xd1b16d,
   [StrategicPlanetProfileId.Trade]: 0xc7b377,
