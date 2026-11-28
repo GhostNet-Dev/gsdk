@@ -170,6 +170,13 @@ export enum EventTypes {
     BrickInfo = "bsize",
     TerrainInfo = "tsize",
     SceneClear = "clear",
+    MinimapRegister = "minimapreg",       // (param: MinimapMarkerParam | MinimapMarkerParam[])
+    MinimapUnregister = "minimapunreg",   // (id: string | string[])
+    MinimapUpdate = "minimapupd",         // (id: string, patch: Partial<MinimapMarkerParam>)
+    MinimapClear = "minimapclear",        // ()
+    MinimapConfig = "minimapcfg",         // (opts: MinimapRuntimeOptions)
+    MinimapFollow = "minimapfollow",      // (target?: THREE.Vector3 | THREE.Object3D, heading?: () => number)
+    MinimapVisible = "minimapvis",        // (visible: boolean)
     Reload = "reload",
     AppMode = "appmode",
     PlayMode = "playmode",
